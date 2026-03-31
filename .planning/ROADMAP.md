@@ -78,8 +78,8 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Type foundations: expanded Creature interface, Action type system, degree-of-success module, performRecoveryCheck refactor
 - [x] 04-02-PLAN.md — Action data: ingest 545 entries from refs/, hand-code ~40 combat outcome descriptors
-- [ ] 04-03-PLAN.md — Statistic system: Statistic class, selector resolver, CreatureStatistics adapter, condition auto-injection, MAP attack sets
-- [ ] 04-04-PLAN.md — Barrel export: wire all Phase 4 modules into engine/index.ts
+- [x] 04-03-PLAN.md — Statistic system: Statistic class, selector resolver, CreatureStatistics adapter, condition auto-injection, MAP attack sets
+- [x] 04-04-PLAN.md — Barrel export: wire all Phase 4 modules into engine/index.ts
 
 ## Progress
 
@@ -90,7 +90,7 @@ Plans:
 | 1. Cleanup + Architecture | v0.2.2 | 2/2 | Complete |  |
 | 2. Reference Analysis | v0.2.2 | 0/1 | Planned | - |
 | 3. Conditions & Statuses | v0.2.2 | 0/TBD | Not started | - |
-| 4. Actions & Modifier Math | v0.2.2 | 2/4 | In Progress | - |
+| 4. Actions & Modifier Math | v0.2.2 | 3/4 | In Progress | - |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*

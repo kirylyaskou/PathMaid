@@ -26,7 +26,7 @@ Requirements for PF2e Engine milestone. Each maps to roadmap phases.
 
 - [ ] **ENG-01**: Missing conditions/statuses implemented per analysis results
 - [x] **ENG-02**: Missing actions implemented per analysis results
-- [ ] **ENG-03**: Modifier math reworked — correct calculation of final values with bonuses, penalties, and stacking
+- [x] **ENG-03**: Modifier math reworked — correct calculation of final values with bonuses, penalties, and stacking
 
 ## Future Requirements
 
@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANAL-02 | Phase 2 | Complete |
 | ENG-01 | Phase 3 | Pending |
 | ENG-02 | Phase 4 | Complete |
-| ENG-03 | Phase 4 | Pending |
+| ENG-03 | Phase 4 | Complete |
 
 **Coverage:**
 - v0.2.2 requirements: 9 total
