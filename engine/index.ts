@@ -4,7 +4,7 @@
 // No per-subdirectory index.ts files (D-02).
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type { WeakEliteTier, Creature } from './types'
+export type { WeakEliteTier, Creature, AbilityKey, CreatureSize, Rarity, CreatureSense, CreatureSpeed, DamageRoll, CreatureAttack } from './types'
 
 // ── Conditions ────────────────────────────────────────────────────────────────
 export {
@@ -102,6 +102,32 @@ export {
   DamageDicePF2e,
 } from './modifiers/modifiers'
 export type { ModifierType } from './modifiers/modifiers'
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+export { ACTIONS } from './actions/action-data'
+export { ACTION_OUTCOMES } from './actions/action-outcomes'
+export type {
+  ActionType,
+  ActionCost,
+  ActionCategory,
+  DegreeKey,
+  ActionOutcome,
+  ActionOutcomeMap,
+  Action,
+} from './actions/types'
+
+// ── Degree of Success ────────────────────────────────────────────────────────
+export {
+  calculateDegreeOfSuccess,
+  upgradeDegree,
+  downgradeDegree,
+  INCAPACITATION_ADJUSTMENT,
+  basicSaveDamageMultiplier,
+} from './degree-of-success/degree-of-success'
+export type {
+  DegreeOfSuccess,
+  DegreeAdjustment,
+} from './degree-of-success/degree-of-success'
 
 // ── Encounter ─────────────────────────────────────────────────────────────────
 export {
