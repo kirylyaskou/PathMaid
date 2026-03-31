@@ -122,3 +122,8 @@ export type {
 } from './encounter/xp'
 
 export { getHpAdjustment } from './encounter/weak-elite'
+
+// ── Statistics ───────────────────────────────────────────────────────────────
+export { Statistic } from './statistics/statistic'
+export { resolveSelector } from './statistics/selector-resolver'
+export { CreatureStatistics, buildAttackModifierSets } from './statistics/creature-statistics'
