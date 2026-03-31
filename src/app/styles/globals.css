@@ -1,0 +1,237 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* PF2e GM Tool - GOLDEN PARCHMENT Theme */
+/* Inspired by ancient tomes, golden artifacts, and warm brown leather */
+:root {
+  --background: oklch(0.96 0.015 70);
+  --foreground: oklch(0.20 0.02 55);
+  --card: oklch(0.98 0.012 65);
+  --card-foreground: oklch(0.20 0.02 55);
+  --popover: oklch(0.98 0.012 65);
+  --popover-foreground: oklch(0.20 0.02 55);
+  --primary: oklch(0.55 0.14 65);
+  --primary-foreground: oklch(0.98 0.01 65);
+  --secondary: oklch(0.91 0.02 60);
+  --secondary-foreground: oklch(0.20 0.02 55);
+  --muted: oklch(0.89 0.02 65);
+  --muted-foreground: oklch(0.45 0.03 55);
+  --accent: oklch(0.50 0.12 55);
+  --accent-foreground: oklch(0.98 0.01 65);
+  --destructive: oklch(0.50 0.20 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.82 0.03 60);
+  --input: oklch(0.86 0.02 65);
+  --ring: oklch(0.55 0.14 65);
+  --chart-1: oklch(0.55 0.14 65);
+  --chart-2: oklch(0.50 0.12 145);
+  --chart-3: oklch(0.50 0.12 55);
+  --chart-4: oklch(0.45 0.15 285);
+  --chart-5: oklch(0.40 0.08 200);
+  --radius: 0.375rem;
+  --sidebar: oklch(0.93 0.015 65);
+  --sidebar-foreground: oklch(0.20 0.02 55);
+  --sidebar-primary: oklch(0.55 0.14 65);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.89 0.025 60);
+  --sidebar-accent-foreground: oklch(0.20 0.02 55);
+  --sidebar-border: oklch(0.82 0.03 60);
+  --sidebar-ring: oklch(0.55 0.14 65);
+
+  /* PF2e colors - light mode (gold/brown theme) */
+  --pf-gold: oklch(0.62 0.15 70);
+  --pf-gold-dim: oklch(0.48 0.12 65);
+  --pf-parchment: oklch(0.94 0.025 65);
+  --pf-blood: oklch(0.45 0.18 25);
+  --pf-threat-trivial: oklch(0.50 0.02 55);
+  --pf-threat-low: oklch(0.50 0.12 145);
+  --pf-threat-moderate: oklch(0.60 0.14 70);
+  --pf-threat-severe: oklch(0.58 0.16 50);
+  --pf-threat-extreme: oklch(0.48 0.20 25);
+  --pf-rarity-common: oklch(0.45 0 0);
+  --pf-rarity-uncommon: oklch(0.55 0.14 65);
+  --pf-rarity-rare: oklch(0.50 0.18 285);
+  --pf-rarity-unique: oklch(0.52 0.18 320);
+}
+
+.dark {
+  /* Deep espresso brown with rich golden metallic accents */
+  --background: oklch(0.14 0.025 50);
+  --foreground: oklch(0.90 0.04 75);
+  --card: oklch(0.17 0.03 50);
+  --card-foreground: oklch(0.90 0.04 75);
+  --popover: oklch(0.18 0.03 50);
+  --popover-foreground: oklch(0.90 0.04 75);
+  /* Rich gold primary - more saturated */
+  --primary: oklch(0.72 0.18 75);
+  --primary-foreground: oklch(0.14 0.03 50);
+  --secondary: oklch(0.22 0.035 50);
+  --secondary-foreground: oklch(0.88 0.04 75);
+  --muted: oklch(0.22 0.03 50);
+  --muted-foreground: oklch(0.62 0.05 70);
+  /* Bronze accent */
+  --accent: oklch(0.58 0.14 55);
+  --accent-foreground: oklch(0.95 0.03 75);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.95 0 0);
+  --border: oklch(0.30 0.04 55);
+  --input: oklch(0.20 0.03 50);
+  --ring: oklch(0.72 0.18 75);
+  /* Golden chart colors */
+  --chart-1: oklch(0.72 0.18 75);
+  --chart-2: oklch(0.55 0.15 145);
+  --chart-3: oklch(0.60 0.14 55);
+  --chart-4: oklch(0.55 0.18 285);
+  --chart-5: oklch(0.50 0.12 200);
+  /* Sidebar with warm dark tones */
+  --sidebar: oklch(0.15 0.028 50);
+  --sidebar-foreground: oklch(0.88 0.04 75);
+  --sidebar-primary: oklch(0.72 0.18 75);
+  --sidebar-primary-foreground: oklch(0.14 0 0);
+  --sidebar-accent: oklch(0.24 0.04 55);
+  --sidebar-accent-foreground: oklch(0.88 0.04 75);
+  --sidebar-border: oklch(0.30 0.04 55);
+  --sidebar-ring: oklch(0.72 0.18 75);
+
+  /* PF2e colors - dark mode (gold/bronze metallic theme) */
+  --pf-gold: oklch(0.75 0.18 75);
+  --pf-gold-dim: oklch(0.55 0.14 70);
+  --pf-parchment: oklch(0.22 0.04 55);
+  --pf-blood: oklch(0.55 0.22 25);
+  --pf-threat-trivial: oklch(0.50 0.03 55);
+  --pf-threat-low: oklch(0.55 0.15 145);
+  --pf-threat-moderate: oklch(0.72 0.18 75);
+  --pf-threat-severe: oklch(0.65 0.18 50);
+  --pf-threat-extreme: oklch(0.58 0.22 25);
+  --pf-rarity-common: oklch(0.60 0.03 55);
+  --pf-rarity-uncommon: oklch(0.68 0.16 70);
+  --pf-rarity-rare: oklch(0.58 0.20 285);
+  --pf-rarity-unique: oklch(0.60 0.20 320);
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Geist', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* PF2e specific theme colors */
+  --color-pf-gold: var(--pf-gold);
+  --color-pf-gold-dim: var(--pf-gold-dim);
+  --color-pf-parchment: var(--pf-parchment);
+  --color-pf-blood: var(--pf-blood);
+  --color-pf-threat-trivial: var(--pf-threat-trivial);
+  --color-pf-threat-low: var(--pf-threat-low);
+  --color-pf-threat-moderate: var(--pf-threat-moderate);
+  --color-pf-threat-severe: var(--pf-threat-severe);
+  --color-pf-threat-extreme: var(--pf-threat-extreme);
+  --color-pf-rarity-common: var(--pf-rarity-common);
+  --color-pf-rarity-uncommon: var(--pf-rarity-uncommon);
+  --color-pf-rarity-rare: var(--pf-rarity-rare);
+  --color-pf-rarity-unique: var(--pf-rarity-unique);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Golden Metallic visual enhancements */
+@layer utilities {
+  .golden-glow {
+    box-shadow: 0 0 25px -5px oklch(0.72 0.18 75 / 0.5);
+  }
+
+  .golden-border {
+    border-color: oklch(0.72 0.18 75 / 0.5);
+  }
+
+  .text-gold {
+    color: var(--pf-gold);
+  }
+
+  .bg-gold {
+    background-color: var(--pf-gold);
+  }
+
+  /* Metallic shimmer effect for buttons and highlights */
+  .metallic-gold {
+    background: linear-gradient(
+      135deg,
+      oklch(0.68 0.16 70) 0%,
+      oklch(0.78 0.18 80) 50%,
+      oklch(0.65 0.15 65) 100%
+    );
+  }
+
+  /* Subtle parchment texture overlay */
+  .parchment-texture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.04;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* Warm card hover with golden glow */
+  .card-grimdark {
+    transition: all 0.2s ease;
+  }
+
+  .card-grimdark:hover {
+    box-shadow: 0 4px 24px -5px oklch(0.72 0.18 75 / 0.35),
+                0 0 0 1px oklch(0.72 0.18 75 / 0.2);
+  }
+
+  /* Stat block styling with golden accent */
+  .stat-block-header {
+    background: linear-gradient(
+      to right,
+      oklch(0.72 0.18 75 / 0.2),
+      transparent
+    );
+    border-left: 3px solid var(--pf-gold);
+  }
+}
