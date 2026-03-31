@@ -4,7 +4,7 @@
 // No per-subdirectory index.ts files (D-02).
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type { WeakEliteTier } from './types'
+export type { WeakEliteTier, Creature } from './types'
 
 // ── Conditions ────────────────────────────────────────────────────────────────
 export {
@@ -14,6 +14,26 @@ export {
   ConditionManager,
 } from './conditions/conditions'
 export type { ConditionSlug, ValuedCondition } from './conditions/conditions'
+
+export {
+  CONDITION_EFFECTS,
+  CONDITION_OVERRIDES,
+  CONDITION_GROUPS_EXTENDED,
+  EXCLUSIVE_GROUPS,
+} from './conditions/condition-effects'
+export type {
+  ConditionSelector,
+  ConditionModifierEffect,
+  ConditionGrantEffect,
+  ConditionDrainedHpEffect,
+  ConditionEffect,
+} from './conditions/condition-effects'
+
+export { performRecoveryCheck } from './conditions/death-progression'
+export type {
+  RecoveryCheckOutcome,
+  RecoveryCheckResult,
+} from './conditions/death-progression'
 
 // ── Damage ────────────────────────────────────────────────────────────────────
 export {
@@ -49,6 +69,8 @@ export {
   WEAKNESS_TYPES,
   RESISTANCE_TYPES,
   DOUBLE_VS_CONDITIONS,
+  CONDITION_IMMUNITY_TYPES,
+  EFFECT_IMMUNITY_TYPES,
   createImmunity,
   createWeakness,
   createResistance,
@@ -59,6 +81,8 @@ export type {
   WeaknessType,
   ResistanceType,
   DoubleVsCondition,
+  ConditionImmunityType,
+  EffectImmunityType,
   DamageInstance,
   Immunity,
   Weakness,
