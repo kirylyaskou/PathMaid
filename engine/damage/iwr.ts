@@ -11,26 +11,57 @@ import { DamageCategorization } from './damage-helpers'
 
 // ─── IWR Type Constants ───────────────────────────────────────────────────────
 
-/** All valid immunity targets: damage types, damage categories, plus special cases. */
+// Source: Foundry VTT PF2e refs/pf2e/conditions/*.json (condition immunities found in content)
+// D-20: Add ~50 missing immunity types split into condition and effect sub-arrays
+export const CONDITION_IMMUNITY_TYPES = [
+  'blinded', 'clumsy', 'confused', 'controlled', 'dazzled', 'deafened',
+  'doomed', 'drained', 'enfeebled', 'fascinated', 'fatigued', 'grabbed',
+  'immobilized', 'off-guard', 'paralyzed', 'persistent-damage', 'petrified',
+  'prone', 'restrained', 'sickened', 'slowed', 'stunned', 'stupefied', 'unconscious',
+] as const
+export type ConditionImmunityType = (typeof CONDITION_IMMUNITY_TYPES)[number]
+
+// Source: Foundry VTT PF2e refs/pf2e/bestiary/ (effect immunity types in creature stat blocks)
+export const EFFECT_IMMUNITY_TYPES = [
+  'auditory', 'curse', 'death-effects', 'disease', 'emotion', 'fear-effects',
+  'fortune-effects', 'healing', 'illusion', 'inhaled', 'light', 'magic',
+  'misfortune-effects', 'nonlethal-attacks', 'object-immunities', 'olfactory',
+  'polymorph', 'possession', 'radiation', 'scrying', 'sleep', 'spell-deflection',
+  'swarm-attacks', 'swarm-mind', 'visual',
+] as const
+export type EffectImmunityType = (typeof EFFECT_IMMUNITY_TYPES)[number]
+
+/** All valid immunity targets: damage types, damage categories, special cases, condition types, and effect types. */
 export const IMMUNITY_TYPES = [
   ...DAMAGE_TYPES,
   ...DAMAGE_CATEGORIES,
   'critical-hits',
   'precision',
+  ...CONDITION_IMMUNITY_TYPES,
+  ...EFFECT_IMMUNITY_TYPES,
 ] as const
 export type ImmunityType = (typeof IMMUNITY_TYPES)[number]
 
-/** All valid weakness targets: damage types and damage categories. */
+// Source: Foundry VTT PF2e refs/pf2e/bestiary/ (weakness types in creature stat blocks)
+// D-21: Add ~17 missing weakness type strings; holy/unholy flow in via DAMAGE_TYPES spread
+/** All valid weakness targets: damage types, damage categories, and material/special weaknesses. */
 export const WEAKNESS_TYPES = [
   ...DAMAGE_TYPES,
   ...DAMAGE_CATEGORIES,
+  'alchemical', 'area-damage', 'axe-vulnerability', 'cold-iron', 'earth',
+  'orichalcum', 'peachwood', 'salt', 'salt-water', 'silver', 'splash-damage',
+  'vorpal', 'vulnerable-to-sunlight', 'water', 'air',
 ] as const
 export type WeaknessType = (typeof WEAKNESS_TYPES)[number]
 
-/** All valid resistance targets: damage types and damage categories. */
+// Source: Foundry VTT PF2e refs/pf2e/bestiary/ (resistance types in creature stat blocks)
+// D-22: Add ~14 missing resistance type strings; unholy flows in via DAMAGE_TYPES spread
+/** All valid resistance targets: damage types, damage categories, and special resistances including all-damage. */
 export const RESISTANCE_TYPES = [
   ...DAMAGE_TYPES,
   ...DAMAGE_CATEGORIES,
+  'all-damage', 'critical-hits', 'earth', 'metal', 'mythic', 'plant',
+  'precision', 'protean-anatomy', 'silver', 'spells', 'water', 'wood', 'air',
 ] as const
 export type ResistanceType = (typeof RESISTANCE_TYPES)[number]
 
@@ -126,6 +157,8 @@ export function createResistance(
  * (either by exact damage type or by category-level match).
  */
 function typeMatches(iwrType: ImmunityType | WeaknessType | ResistanceType, instance: DamageInstance): boolean {
+  // D-24: all-damage resistance matches any damage type (special case, must be first)
+  if (iwrType === 'all-damage') return true
   return (
     iwrType === instance.type ||
     iwrType === DamageCategorization.getCategory(instance.type)

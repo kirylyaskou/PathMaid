@@ -11,7 +11,7 @@ export type PhysicalDamageType = (typeof PHYSICAL_DAMAGE_TYPES)[number]
 export const ENERGY_DAMAGE_TYPES = ['fire', 'cold', 'electricity', 'acid', 'sonic', 'force', 'vitality', 'void'] as const
 export type EnergyDamageType = (typeof ENERGY_DAMAGE_TYPES)[number]
 
-export const OTHER_DAMAGE_TYPES = ['spirit', 'mental', 'poison', 'untyped'] as const
+export const OTHER_DAMAGE_TYPES = ['spirit', 'mental', 'poison', 'untyped', 'holy', 'unholy'] as const
 export type OtherDamageType = (typeof OTHER_DAMAGE_TYPES)[number]
 
 export const DAMAGE_TYPES = [...PHYSICAL_DAMAGE_TYPES, ...ENERGY_DAMAGE_TYPES, ...OTHER_DAMAGE_TYPES] as const
@@ -23,6 +23,7 @@ export const DAMAGE_TYPE_CATEGORY: Record<DamageType, DamageCategory> = {
   fire: 'energy', cold: 'energy', electricity: 'energy', acid: 'energy',
   sonic: 'energy', force: 'energy', vitality: 'energy', void: 'energy',
   spirit: 'other', mental: 'other', poison: 'other', untyped: 'other',
+  holy: 'other', unholy: 'other',
 }
 
 // ─── Material Effects ────────────────────────────────────────────────────────
