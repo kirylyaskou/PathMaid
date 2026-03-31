@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-31T17:45:32.828Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-31T17:54:36.354Z"
 last_activity: 2026-03-31
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-31)
 ## Current Position
 
 Phase: 05 (vite-scaffold-nextjs-teardown) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-31
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
 | 9. Bestiary + Encounter | TBD | - | - |
 | 10. P2 Differentiators | TBD | - | - |
 | Phase 05 P01 | 6min | 2 tasks | 17 files |
+| Phase 05 P02 | 6min | 2 tasks | 85 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,10 @@ Key decisions carrying forward from prior milestones:
 - [Phase 05]: @vitejs/plugin-react downgraded from ^6.0.1 to ^5.2.0 (v6 requires Vite 8, project uses Vite 6)
 - [Phase 05]: eslint downgraded from ^10.1.0 to ^9.22.0 (eslint-plugin-import only supports up to eslint 9)
 - [Phase 05]: npm install ran without --legacy-peer-deps — no Radix peer dep conflicts with React 19.2.4
+- [Phase 05]: Hooks (use-mobile, use-toast) moved from shared/ui/ to shared/hooks/ for FSD convention
+- [Phase 05]: PF2e mock data imports replaced with local type stubs (Creature, ActionCost, XP thresholds) in shared/ui components
+- [Phase 05]: AppHeader simplified to theme toggle only for Phase 5 (no campaign selector, no sync status)
+- [Phase 05]: Sidebar Ctrl+K (not Cmd+K) since Tauri target is Windows desktop
 
 ### Pending Todos
 
@@ -94,7 +99,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T17:45:32.825Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-31T17:54:36.351Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
 Next step: `/gsd:plan-phase 5`

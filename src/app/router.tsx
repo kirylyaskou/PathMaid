@@ -8,7 +8,7 @@ import { ConditionsPage } from '@/pages/conditions'
 import { SpellsPage } from '@/pages/spells'
 import { ItemsPage } from '@/pages/items'
 import { SettingsPage } from '@/pages/settings'
-import { PATHS } from '@/shared/routes/paths'
+import { PATHS } from '@/shared/routes'
 
 const router = createHashRouter([
   {

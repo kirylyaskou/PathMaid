@@ -34,9 +34,9 @@ Requirements for Frontend Rebuild + Engine Integration milestone.
 ### Foundation
 
 - [x] **FND-01**: Next.js prototype ported to Vite 6 + React 19 SPA with Tauri 2 dev mode working
-- [ ] **FND-02**: React Router v7 (library mode, `createHashRouter`) replaces Next.js App Router with all page routes
+- [x] **FND-02**: React Router v7 (library mode, `createHashRouter`) replaces Next.js App Router with all page routes
 - [x] **FND-03**: Tailwind v4 `@theme inline` configured with all PF2e OKLCH color tokens from prototype
-- [ ] **FND-04**: shadcn/ui re-initialized for Vite (`rsc: false`), all 60+ Radix components available
+- [x] **FND-04**: shadcn/ui re-initialized for Vite (`rsc: false`), all 60+ Radix components available
 - [ ] **FND-05**: `steiger` FSD linter + `eslint-plugin-boundaries` enforce layer import direction
 
 ### Architecture
@@ -112,9 +112,9 @@ Deferred to future milestones.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FND-01 | Phase 5 | Complete |
-| FND-02 | Phase 5 | Pending |
+| FND-02 | Phase 5 | Complete |
 | FND-03 | Phase 5 | Complete |
-| FND-04 | Phase 5 | Pending |
+| FND-04 | Phase 5 | Complete |
 | FND-05 | Phase 5 | Pending |
 | ARCH-03 | Phase 6 | Pending |
 | ARCH-04 | Phase 6 | Pending |
