@@ -156,7 +156,12 @@ Plans:
   3. The DM can add a condition to a combatant from a dropdown and see a badge appear with the correct icon and numeric value for valued conditions (Frightened 2, Sickened 1, etc.)
   4. Clicking "End Turn" for a combatant with Frightened or Sickened automatically decrements the condition value by 1 (or removes it at 0) via engine CONDITION_EFFECTS
   5. The active turn is highlighted; round and turn counters increment correctly when advancing through the initiative order
-**Plans**: TBD
+**Plans:** 4/4 plans created
+Plans:
+- [x] 08-01-PLAN.md — Infrastructure: combat DB schema, @dnd-kit install, store refactors, ConditionManager bridge
+- [x] 08-02-PLAN.md — 3-panel layout + initiative list (DnD) + bestiary search panel + creature/PC add
+- [x] 08-03-PLAN.md — Combatant detail panel + HP controls + condition combobox + condition badges
+- [x] 08-04-PLAN.md — Turn advancement + auto-decrement + previous turn + toasts + SQLite auto-save
 **UI hint**: yes
 
 ### Phase 9: Bestiary Browser + Encounter Builder
@@ -197,10 +202,10 @@ Plans:
 | 5. Vite Scaffold + Next.js Teardown | v0.3.0 | 3/3 | Complete | 2026-04-01 |
 | 6. FSD Structure + Zustand Stores | v0.3.0 | 4/4 | Complete | 2026-04-01 |
 | 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/5 | Planned | - |
-| 8. Combat Tracker + Engine Integration | v0.3.0 | 0/TBD | Not started | - |
+| 8. Combat Tracker + Engine Integration | v0.3.0 | 0/4 | Planned | - |
 | 9. Bestiary Browser + Encounter Builder | v0.3.0 | 0/TBD | Not started | - |
 | 10. P2 Differentiators | v0.3.0 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-01 — Phase 7 planned (5 plans in 3 waves)*
+*Last updated: 2026-04-01 — Phase 8 planned (4 plans in 3 waves)*

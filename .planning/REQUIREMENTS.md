@@ -58,15 +58,15 @@ Requirements for Frontend Rebuild + Engine Integration milestone.
 
 - [ ] **BEST-01**: User can browse 28K+ creatures with FTS5 search, level/type/rarity/source filters
 - [ ] **BEST-02**: User can view creature stat block with real Foundry data (HP, AC, saves, IWR, strikes, abilities)
-- [ ] **BEST-03**: User can add creature from bestiary to active combat encounter
+- [x] **BEST-03**: User can add creature from bestiary to active combat encounter
 
 ### Combat
 
-- [ ] **CMB-01**: User can create combat with initiative order, active-turn highlight, round/turn counter
-- [ ] **CMB-02**: User can track HP and tempHP per combatant with increment/decrement controls
-- [ ] **CMB-03**: User can apply/remove conditions on combatants, wired to engine ConditionManager
-- [ ] **CMB-04**: Conditions auto-decrement (frightened, sickened) at turn end via engine CONDITION_EFFECTS
-- [ ] **CMB-05**: Condition badges show valued-condition numerics and grant chain indicators
+- [x] **CMB-01**: User can create combat with initiative order, active-turn highlight, round/turn counter
+- [x] **CMB-02**: User can track HP and tempHP per combatant with increment/decrement controls
+- [x] **CMB-03**: User can apply/remove conditions on combatants, wired to engine ConditionManager
+- [x] **CMB-04**: Conditions auto-decrement (frightened, sickened) at turn end via engine CONDITION_EFFECTS
+- [x] **CMB-05**: Condition badges show valued-condition numerics and grant chain indicators
 
 ### Encounter
 

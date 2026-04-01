@@ -7,6 +7,20 @@ export type { DisplaySize } from '@/shared/lib/size-map'
 // UI action cost — includes reaction/free/0 for display (engine ActionCost is 1|2|3|null)
 export type DisplayActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
 
+export interface CreatureStatBlockData extends Creature {
+  immunities: string[]
+  weaknesses: { type: string; value: number }[]
+  resistances: { type: string; value: number }[]
+  speeds: Record<string, number | null>
+  strikes: { name: string; modifier: number; damage: string; traits: string[] }[]
+  abilities: { name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] }[]
+  skills: { name: string; modifier: number }[]
+  languages: string[]
+  senses: string[]
+  description?: string
+  source: string
+}
+
 // Serializable creature entity for display and SQLite persistence.
 // Engine Creature has non-serializable ConditionManager and nested hp/saves —
 // Phase 7 maps Foundry VTT data → this interface.

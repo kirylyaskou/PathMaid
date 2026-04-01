@@ -10,23 +10,7 @@ import { ChevronDown } from "lucide-react"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
-import type { Creature, DisplayActionCost } from '../model/types'
-
-// Extended creature with full stat block fields for detailed display.
-// The base entity Creature has core fields; stat block needs more.
-interface CreatureStatBlockData extends Creature {
-  immunities: string[]
-  weaknesses: { type: string; value: number }[]
-  resistances: { type: string; value: number }[]
-  speeds: Record<string, number | null>
-  strikes: { name: string; modifier: number; damage: string; traits: string[] }[]
-  abilities: { name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] }[]
-  skills: { name: string; modifier: number }[]
-  languages: string[]
-  senses: string[]
-  description?: string
-  source: string
-}
+import type { CreatureStatBlockData } from '../model/types'
 
 interface CreatureStatBlockProps {
   creature: CreatureStatBlockData
