@@ -4,6 +4,7 @@ export {
   applyCondition,
   removeCondition,
   endTurnConditions,
+  setConditionValue,
   setConditionLocked,
   clearCombatantManager,
   clearAllManagers,

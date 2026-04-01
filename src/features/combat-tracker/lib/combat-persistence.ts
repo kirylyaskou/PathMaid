@@ -89,15 +89,22 @@ export async function loadActiveCombat(): Promise<boolean> {
       conditionsByComba.get(c.combatantId)!.push(c)
     }
     for (const [combatantId, conditions] of conditionsByComba) {
+      // Hydrate engine-managed conditions only (not persistent-*)
+      const engineConditions = conditions.filter((c) => !c.slug.startsWith('persistent-'))
       hydrateManager(
         combatantId,
-        conditions.map((c) => ({
+        engineConditions.map((c) => ({
           slug: c.slug as ConditionSlug,
           value: c.value ?? 1,
           isLocked: !!c.isLocked,
           grantedBy: c.grantedBy as ConditionSlug | undefined,
         }))
       )
+      // Restore persistent conditions directly to store (preserves formula)
+      const persistentConditions = conditions.filter((c) => c.slug.startsWith('persistent-'))
+      for (const pc of persistentConditions) {
+        useConditionStore.getState().setCondition(pc)
+      }
     }
 
     return true

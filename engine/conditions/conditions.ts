@@ -186,6 +186,14 @@ export class ConditionManager {
     return this.conditions.get(slug)
   }
 
+  /** Set value directly without gain/add special-case logic (e.g., dying+wounded).
+   *  Use for adjusting an existing condition value (recovery checks, etc.). */
+  setValue(slug: ConditionSlug, value: number): void {
+    if (this.conditions.has(slug)) {
+      this.conditions.set(slug, value)
+    }
+  }
+
   // Source: PF2e CRB — frightened/sickened/stunned/slowed reduce by 1 at end of owner's turn
   endTurn(): void {
     const autoDecrement: ConditionSlug[] = ['frightened', 'sickened', 'stunned', 'slowed']

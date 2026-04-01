@@ -11,7 +11,7 @@ import { Input } from '@/shared/ui/input'
 import { performRecoveryCheck } from '@engine'
 import type { RecoveryCheckResult } from '@engine'
 import { useConditionStore } from '@/entities/condition'
-import { applyCondition, removeCondition } from '@/features/combat-tracker'
+import { applyCondition, removeCondition, setConditionValue } from '@/features/combat-tracker'
 import type { ConditionSlug } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -45,10 +45,10 @@ export function DyingCascadeDialog({
   const doomedValue = conditions.find((c) => c.slug === 'doomed')?.value ?? 0
 
   // Apply initial dying on open if not already dying
+  // Engine cm.add('dying') already adds wounded value, so pass base value (1) only
   useEffect(() => {
     if (open && dyingValue === 0) {
-      const initialDying = 1 + woundedValue
-      applyCondition(combatantId, 'dying' as ConditionSlug, initialDying)
+      applyCondition(combatantId, 'dying' as ConditionSlug, 1)
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -72,7 +72,8 @@ export function DyingCascadeDialog({
     )
   )
 
-  const dc = 10 + dyingValue
+  const liveDc = 10 + dyingValue
+  const dc = checkResult ? checkResult.dc : liveDc
 
   const handleRecoveryCheck = () => {
     const roll = rollMode === 'manual' ? parseInt(manualRoll, 10) : undefined
@@ -84,10 +85,11 @@ export function DyingCascadeDialog({
     if (result.newDyingValue === -1) {
       setIsDead(true)
     } else if (result.stabilized) {
+      // Engine cm.remove('dying') already increments wounded
       removeCondition(combatantId, 'dying' as ConditionSlug)
-      applyCondition(combatantId, 'wounded' as ConditionSlug, woundedValue + 1)
     } else {
-      applyCondition(combatantId, 'dying' as ConditionSlug, result.newDyingValue)
+      // Use setValue to avoid re-adding wounded (cm.add('dying') always adds wounded)
+      setConditionValue(combatantId, 'dying' as ConditionSlug, result.newDyingValue)
     }
   }
 
@@ -224,7 +226,7 @@ export function DyingCascadeDialog({
                 </div>
                 {checkResult.stabilized && (
                   <p className="text-emerald-400 font-medium text-center pt-1">
-                    Stabilized! Wounded increases to {woundedValue + 1}
+                    Stabilized! Wounded increased.
                   </p>
                 )}
               </div>

@@ -94,8 +94,14 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     setError(null)
     try {
       setStatus('migrating')
-      await initDatabase()
-      await useEncounterBuilderStore.getState().loadConfig()
+      const minDelay = new Promise((r) => setTimeout(r, 2000))
+      await Promise.all([
+        (async () => {
+          await initDatabase()
+          await useEncounterBuilderStore.getState().loadConfig()
+        })(),
+        minDelay,
+      ])
       setStatus('ready')
       setFading(true)
       setTimeout(onReady, 150)

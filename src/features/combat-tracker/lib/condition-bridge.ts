@@ -24,14 +24,16 @@ function syncToStore(combatantId: string): void {
     useConditionStore.getState().clearCombatantConditions(combatantId)
     return
   }
-  const conditions: ActiveCondition[] = cm.getAll().map(({ slug, value }) => ({
-    combatantId,
-    slug,
-    value: (VALUED_CONDITIONS as readonly string[]).includes(slug) ? value : undefined,
-    isLocked: cm.isProtected(slug) || undefined,
-    grantedBy: cm.getGranter(slug),
-  }))
-  // Only replace engine-managed conditions; persistent-* with formula stay untouched
+  const conditions: ActiveCondition[] = cm
+    .getAll()
+    .filter(({ slug }) => !slug.startsWith('persistent-'))
+    .map(({ slug, value }) => ({
+      combatantId,
+      slug,
+      value: (VALUED_CONDITIONS as readonly string[]).includes(slug) ? value : undefined,
+      isLocked: cm.isProtected(slug) || undefined,
+      grantedBy: cm.getGranter(slug),
+    }))
   useConditionStore.getState().syncEngineConditions(combatantId, conditions)
 }
 
@@ -82,6 +84,18 @@ export function endTurnConditions(
   }
   syncToStore(combatantId)
   return changes
+}
+
+/** Set a condition's value directly without gain logic (no wounded added for dying). */
+export function setConditionValue(
+  combatantId: string,
+  slug: ConditionSlug,
+  value: number
+): void {
+  const cm = managers.get(combatantId)
+  if (!cm) return
+  cm.setValue(slug, value)
+  syncToStore(combatantId)
 }
 
 export function setConditionLocked(

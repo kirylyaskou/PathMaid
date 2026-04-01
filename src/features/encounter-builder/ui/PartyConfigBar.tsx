@@ -4,7 +4,6 @@ import { cn } from '@/shared/lib/utils'
 import {
   useEncounterBuilderStore,
   selectEncounterResult,
-  selectThreatRating,
 } from '../model/store'
 import { useShallow } from 'zustand/react/shallow'
 import type { ThreatRating } from '@engine'
@@ -27,8 +26,8 @@ export function PartyConfigBar() {
     }))
   )
 
-  const result = useEncounterBuilderStore(selectEncounterResult)
-  const threat = useEncounterBuilderStore(selectThreatRating)
+  const totalXp = useEncounterBuilderStore((s) => selectEncounterResult(s).totalXp)
+  const threat = useEncounterBuilderStore((s) => selectEncounterResult(s).rating)
 
   return (
     <div className="flex items-center gap-4 p-3 border-b border-border/50 bg-card/50">
@@ -93,7 +92,7 @@ export function PartyConfigBar() {
 
       {/* XP Badge */}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-sm font-bold">{result.totalXp} XP</span>
+        <span className="font-mono text-sm font-bold">{totalXp} XP</span>
         <span
           className={cn(
             'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest',

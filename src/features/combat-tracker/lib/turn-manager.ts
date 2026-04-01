@@ -100,7 +100,10 @@ export function reverseTurn(): void {
 
   const { combatantId, conditionsBefore } = lastSnapshot
 
-  const conditionsForHydrate = conditionsBefore.map((c) => ({
+  const engineConditions = conditionsBefore.filter((c) => !c.slug.startsWith('persistent-'))
+  const persistentConditions = conditionsBefore.filter((c) => c.slug.startsWith('persistent-'))
+
+  const conditionsForHydrate = engineConditions.map((c) => ({
     slug: c.slug as ConditionSlug,
     value: c.value ?? 1,
     isLocked: !!c.isLocked,
@@ -109,6 +112,10 @@ export function reverseTurn(): void {
 
   clearCombatantManager(combatantId)
   hydrateManager(combatantId, conditionsForHydrate)
+  // Restore persistent conditions directly (preserves formula)
+  for (const pc of persistentConditions) {
+    useConditionStore.getState().setCondition(pc)
+  }
 
   toast('Reversed to previous turn')
 
