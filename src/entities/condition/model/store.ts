@@ -8,6 +8,7 @@ export interface ConditionState {
   removeCondition: (combatantId: string, slug: string) => void
   decrementCondition: (combatantId: string, slug: string) => void
   clearCombatantConditions: (combatantId: string) => void
+  setAllForCombatant: (combatantId: string, conditions: ActiveCondition[]) => void
   clearAll: () => void
 }
 
@@ -48,6 +49,13 @@ export const useConditionStore = create<ConditionState>()(
         state.activeConditions = state.activeConditions.filter(
           (c) => c.combatantId !== combatantId
         )
+      }),
+    setAllForCombatant: (combatantId, conditions) =>
+      set((state) => {
+        state.activeConditions = state.activeConditions.filter(
+          (c) => c.combatantId !== combatantId
+        )
+        state.activeConditions.push(...conditions)
       }),
     clearAll: () =>
       set((state) => {

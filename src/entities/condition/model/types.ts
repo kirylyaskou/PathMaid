@@ -1,9 +1,11 @@
 export type { ConditionSlug, ValuedCondition } from '@engine'
 
-// ActiveCondition: flat record stored per combatant in the entity store.
-// Flat array is SQLite-serialization-friendly (easier to upsert than nested Map).
+// ActiveCondition: flat record per combatant condition for UI rendering.
+// ConditionManager is source of truth — this is the reactive view synced to Zustand.
 export interface ActiveCondition {
   combatantId: string
   slug: string         // ConditionSlug value
-  value?: number       // Only present for valued conditions (frightened, sickened, etc.)
+  value?: number       // Only present for valued conditions
+  isLocked?: boolean   // Locked conditions skip auto-decrement
+  grantedBy?: string   // Slug of condition that granted this one (chain icon)
 }

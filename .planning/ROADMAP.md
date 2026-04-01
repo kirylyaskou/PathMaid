@@ -138,7 +138,13 @@ Plans:
   2. Triggering Foundry VTT sync downloads the latest release ZIP and upserts 28K+ entities into SQLite without errors
   3. Typing a creature name in FTS5 search returns matching results in under 200ms with the full 28K+ entity dataset loaded
   4. `src/lib/pf2e-data.ts` (or equivalent mock data file) does not exist anywhere in the codebase — `git ls-files | grep pf2e-data` returns nothing
-**Plans**: TBD
+**Plans:** 5/5 plans created
+Plans:
+- [x] 07-01-PLAN.md — Tauri SQL plugin + DB schema + migrations + entity type fixes (DATA-01)
+- [x] 07-02-PLAN.md — Rust sync command: download ZIP, extract JSON, return entities (DATA-02)
+- [x] 07-03-PLAN.md — Splash screen gate component with branded PF2e aesthetic (DATA-04)
+- [x] 07-04-PLAN.md — Frontend sync pipeline + FTS5 search queries (DATA-02, DATA-03)
+- [ ] 07-05-PLAN.md — Settings page sync UI + mock data cleanup (DATA-02, DATA-05)
 
 ### Phase 8: Combat Tracker + Engine Integration
 **Goal**: The DM can run a full combat encounter — adding creatures from the bestiary, tracking initiative order, adjusting HP/tempHP, and managing conditions — with the engine ConditionManager handling all PF2e condition rules including auto-decrement at turn end
@@ -190,11 +196,11 @@ Plans:
 | 4. Actions & Modifier Math | v0.2.2 | 4/4 | Complete | 2026-03-31 |
 | 5. Vite Scaffold + Next.js Teardown | v0.3.0 | 3/3 | Complete | 2026-04-01 |
 | 6. FSD Structure + Zustand Stores | v0.3.0 | 4/4 | Complete | 2026-04-01 |
-| 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/TBD | Not started | - |
+| 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/5 | Planned | - |
 | 8. Combat Tracker + Engine Integration | v0.3.0 | 0/TBD | Not started | - |
 | 9. Bestiary Browser + Encounter Builder | v0.3.0 | 0/TBD | Not started | - |
 | 10. P2 Differentiators | v0.3.0 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-01 — Phase 6 planned (4 plans in 3 waves)*
+*Last updated: 2026-04-01 — Phase 7 planned (5 plans in 3 waves)*

@@ -8,9 +8,9 @@ export interface CombatantState {
   removeCombatant: (id: string) => void
   updateHp: (id: string, delta: number) => void
   updateTempHp: (id: string, tempHp: number) => void
-  addCondition: (id: string, slug: string) => void
-  removeCondition: (id: string, slug: string) => void
+  setInitiative: (id: string, initiative: number) => void
   reorderInitiative: (orderedIds: string[]) => void
+  setCombatants: (combatants: Combatant[]) => void
   clearAll: () => void
 }
 
@@ -35,21 +35,20 @@ export const useCombatantStore = create<CombatantState>()(
         const c = state.combatants.find((c) => c.id === id)
         if (c) c.tempHp = Math.max(0, tempHp)
       }),
-    addCondition: (id, slug) =>
+    setInitiative: (id, initiative) =>
       set((state) => {
         const c = state.combatants.find((c) => c.id === id)
-        if (c && !c.conditions.includes(slug)) c.conditions.push(slug)
-      }),
-    removeCondition: (id, slug) =>
-      set((state) => {
-        const c = state.combatants.find((c) => c.id === id)
-        if (c) c.conditions = c.conditions.filter((s) => s !== slug)
+        if (c) c.initiative = initiative
       }),
     reorderInitiative: (orderedIds) =>
       set((state) => {
         state.combatants.sort(
           (a, b) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id)
         )
+      }),
+    setCombatants: (combatants) =>
+      set((state) => {
+        state.combatants = combatants
       }),
     clearAll: () =>
       set((state) => {
