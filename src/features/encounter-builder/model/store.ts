@@ -6,8 +6,16 @@ import {
   type EncounterResult,
   type ThreatRating,
   type WeakEliteTier,
+  type HazardType,
 } from '@engine'
 import { loadPartyConfig, savePartyConfig } from '@/shared/api'
+
+export interface DraftHazard {
+  instanceId: string
+  name: string
+  level: number
+  type: HazardType
+}
 
 export interface DraftCreature {
   instanceId: string
@@ -20,12 +28,15 @@ export interface DraftCreature {
 
 export interface EncounterBuilderState {
   draftCreatures: DraftCreature[]
+  draftHazards: DraftHazard[]
   partyLevel: number
   partySize: number
   isLoaded: boolean
 
   addCreatureToDraft: (creature: { creatureId: string; name: string; level: number; tier?: WeakEliteTier }) => void
   removeCreatureFromDraft: (instanceId: string) => void
+  addHazardToDraft: (hazard: { name: string; level: number; type: HazardType }) => void
+  removeHazardFromDraft: (instanceId: string) => void
   setPartyLevel: (level: number) => void
   setPartySize: (size: number) => void
   clearDraft: () => void
@@ -37,6 +48,7 @@ let instanceCounter = 0
 export const useEncounterBuilderStore = create<EncounterBuilderState>()(
   immer((set, get) => ({
     draftCreatures: [],
+    draftHazards: [],
     partyLevel: 1,
     partySize: 4,
     isLoaded: false,
@@ -63,6 +75,21 @@ export const useEncounterBuilderStore = create<EncounterBuilderState>()(
         state.draftCreatures = state.draftCreatures.filter((c) => c.instanceId !== instanceId)
       }),
 
+    addHazardToDraft: (hazard) =>
+      set((state) => {
+        state.draftHazards.push({
+          instanceId: `hazard-${++instanceCounter}`,
+          name: hazard.name,
+          level: hazard.level,
+          type: hazard.type,
+        })
+      }),
+
+    removeHazardFromDraft: (instanceId) =>
+      set((state) => {
+        state.draftHazards = state.draftHazards.filter((h) => h.instanceId !== instanceId)
+      }),
+
     setPartyLevel: (level) => {
       set((state) => {
         state.partyLevel = Math.max(1, Math.min(20, level))
@@ -82,6 +109,7 @@ export const useEncounterBuilderStore = create<EncounterBuilderState>()(
     clearDraft: () =>
       set((state) => {
         state.draftCreatures = []
+        state.draftHazards = []
       }),
 
     loadConfig: async () => {
@@ -97,7 +125,8 @@ export const useEncounterBuilderStore = create<EncounterBuilderState>()(
 
 export function selectEncounterResult(state: EncounterBuilderState): EncounterResult {
   const levels = state.draftCreatures.map((c) => c.adjustedLevel)
-  return calculateXP(levels, [], state.partyLevel, state.partySize)
+  const hazards = state.draftHazards.map((h) => ({ level: h.level, type: h.type }))
+  return calculateXP(levels, hazards, state.partyLevel, state.partySize)
 }
 
 export function selectBudgets(state: EncounterBuilderState): Record<ThreatRating, number> {
