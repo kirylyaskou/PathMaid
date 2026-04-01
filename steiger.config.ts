@@ -12,10 +12,10 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/entities/**'],
+    files: ['src/entities/**', 'src/features/**'],
     rules: {
-      // Entity slices are created before their feature-layer consumers;
-      // they will be referenced once features/ and widgets/ are wired
+      // New slices created before their upper-layer consumers;
+      // will be referenced once widgets/ and pages/ wire them
       'fsd/insignificant-slice': 'off',
     },
   },
