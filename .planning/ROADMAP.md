@@ -36,7 +36,7 @@ Full history preserved in `.planning/milestones/`.
 **Milestone Goal:** Port the React prototype from Next.js to Vite + React Router for Tauri, reorganize by FSD, add Zustand state management, reconnect SQLite + Foundry VTT data pipeline, and wire the PF2e engine to replace all mock data with live entity data.
 
 - [ ] **Phase 5: Vite Scaffold + Next.js Teardown** — Running Tauri 2 + Vite 6 + React 19 SPA with createHashRouter, Tailwind v4 OKLCH tokens, and all Next.js artifacts purged
-- [ ] **Phase 6: FSD Structure + Zustand Stores** — Complete FSD directory skeleton with typed entity layers, all Zustand stores designed with correct ownership, and shared/api/ IPC boundary established
+- [x] **Phase 6: FSD Structure + Zustand Stores** — Complete FSD directory skeleton with typed entity layers, all Zustand stores designed with correct ownership, and shared/api/ IPC boundary established
 - [ ] **Phase 7: SQLite + Foundry VTT Data Pipeline** — SQLite + Drizzle ORM reconnected, Foundry VTT sync pipeline working, FTS5 search returning 28K+ entities, mock data deleted
 - [ ] **Phase 8: Combat Tracker + Engine Integration** — Full 3-panel combat workspace with initiative, HP/tempHP, condition badges wired to engine ConditionManager, auto-decrement, and creature-add from bestiary
 - [ ] **Phase 9: Bestiary Browser + Encounter Builder** — Bestiary with FTS5 + filters displaying real Foundry stat blocks, and encounter builder with live XP budget wired to engine calculateEncounterRating
@@ -106,7 +106,7 @@ Plans:
   3. All PF2e OKLCH color tokens (`bg-pf-gold`, `text-pf-threat-extreme`, `bg-sidebar`, etc.) render correctly in the app — the dark fantasy UI is visually intact
   4. All 60+ shadcn/ui Radix components are importable and render without errors in Vite (rsc: false, no SSR)
   5. `steiger` FSD linter and `eslint-plugin-boundaries` run on `npm run lint` and enforce layer import direction with zero false negatives
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 Plans:
 - [x] 05-01-PLAN.md — Scaffold Tauri 2 + Vite 6 project infrastructure, install deps, create PF2e OKLCH design system
 - [x] 05-02-PLAN.md — Initialize shadcn/ui, copy 64 components, create hash router with 8 pages, port navigation shell
@@ -122,7 +122,12 @@ Plans:
   2. Entity stores (`entities/creature/`, `entities/combatant/`, `entities/condition/`, `entities/encounter/`) hold only serializable SQLite-derived data; feature stores hold only session runtime state — no store mixes both
   3. Every `invoke()` call in the codebase is inside `shared/api/` — zero `invoke()` calls exist in features/, widgets/, or pages/
   4. `import('@engine/...')` resolves correctly in both `features/` and `entities/` layers via `vite-tsconfig-paths`; `eslint-plugin-boundaries` reports no violations
-**Plans**: TBD
+**Plans:** 4/4 plans executed
+Plans:
+- [x] 06-01-PLAN.md — Install zustand + immer; create shared/api/ IPC boundary with stubbed creature/combat/db wrappers
+- [x] 06-02-PLAN.md — Create 4 full entity slices (creature, combatant, condition, encounter) with Zustand stores; move PF2e components to entity ui/ segments
+- [x] 06-03-PLAN.md — Create 3 minimal entity skeletons (spell, item, hazard) with type stubs and barrel exports
+- [x] 06-04-PLAN.md — Create 3 feature slice stores (combat-tracker, bestiary-browser, encounter-builder); ARCH-04 human-verify checkpoint
 
 ### Phase 7: SQLite + Foundry VTT Data Pipeline
 **Goal**: The app reads real Foundry VTT entity data from SQLite — migrations run before React mounts, the sync pipeline imports 28K+ entities, FTS5 full-text search works across all entity types, and the mock data file is gone
@@ -183,8 +188,8 @@ Plans:
 | 2. Reference Analysis | v0.2.2 | 1/1 | Complete | 2026-03-31 |
 | 3. Conditions & Statuses | v0.2.2 | TBD | Complete | 2026-03-31 |
 | 4. Actions & Modifier Math | v0.2.2 | 4/4 | Complete | 2026-03-31 |
-| 5. Vite Scaffold + Next.js Teardown | v0.3.0 | 1/3 | In Progress|  |
-| 6. FSD Structure + Zustand Stores | v0.3.0 | 0/TBD | Not started | - |
+| 5. Vite Scaffold + Next.js Teardown | v0.3.0 | 3/3 | Complete | 2026-04-01 |
+| 6. FSD Structure + Zustand Stores | v0.3.0 | 4/4 | Complete | 2026-04-01 |
 | 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/TBD | Not started | - |
 | 8. Combat Tracker + Engine Integration | v0.3.0 | 0/TBD | Not started | - |
 | 9. Bestiary Browser + Encounter Builder | v0.3.0 | 0/TBD | Not started | - |
@@ -192,4 +197,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-03-31 — Phase 5 planned (3 plans in 3 waves)*
+*Last updated: 2026-04-01 — Phase 6 planned (4 plans in 3 waves)*

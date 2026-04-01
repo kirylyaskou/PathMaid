@@ -9,7 +9,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "title": "PathBuddy",
     "windows": [
       {
         "title": "PathBuddy",

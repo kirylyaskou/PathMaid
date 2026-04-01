@@ -1,10 +1,30 @@
-// Phase 7 will implement these with real SQL commands
-// Stub: plugin:sql|execute and plugin:sql|select IPC command strings verified in Phase 7
+import { getDb, runMigrations } from '@/shared/db'
 
 export async function initDatabase(): Promise<void> {
-  return
+  const db = await getDb()
+  await db.execute('PRAGMA journal_mode=WAL', [])
+  await db.execute('PRAGMA foreign_keys=ON', [])
+  await runMigrations(db)
 }
 
-export async function runMigrations(): Promise<void> {
-  return
+export async function getSyncMetadata(
+  key: string
+): Promise<string | null> {
+  const db = await getDb()
+  const rows = await db.select<{ value: string }[]>(
+    'SELECT value FROM sync_metadata WHERE key = ?',
+    [key]
+  )
+  return rows.length > 0 ? rows[0].value : null
+}
+
+export async function setSyncMetadata(
+  key: string,
+  value: string
+): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    'INSERT OR REPLACE INTO sync_metadata (key, value) VALUES (?, ?)',
+    [key, value]
+  )
 }

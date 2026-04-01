@@ -13,6 +13,7 @@ export type DisplayActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
 // Engine Creature has non-serializable ConditionManager and nested hp/saves —
 // Phase 7 maps Foundry VTT data → this interface.
 export interface Creature {
+  id: string
   name: string
   level: number
   hp: number

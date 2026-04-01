@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
-status: verifying
+status: executing
 stopped_at: "Checkpoint: 05-03 Task 2 human-verify pending"
-last_updated: "2026-03-31T18:21:20.248Z"
-last_activity: 2026-03-31
+last_updated: "2026-03-31T22:26:54.052Z"
+last_activity: 2026-03-31 -- Phase 06 execution started
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 21
+  total_plans: 25
   completed_plans: 21
   percent: 0
 ---
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-31)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 05 — vite-scaffold-nextjs-teardown
+**Current focus:** Phase 07 — sqlite-foundry-vtt-data-pipeline
 
 ## Current Position
 
-Phase: 05 (vite-scaffold-nextjs-teardown) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-03-31
+Phase: 07 (sqlite-foundry-vtt-data-pipeline) — NOT STARTED
+Plan: 0 of TBD
+Status: Phase 06 complete, Phase 07 next
+Last activity: 2026-04-01 -- Phase 06 complete (4/4 plans, ARCH-04 human-verified)
 
-Progress: [░░░░░░░░░░] 0% (0/6 phases complete)
+Progress: [████░░░░░░] 33% (2/6 phases complete)
 
 ## Performance Metrics
 
@@ -88,10 +88,13 @@ Key decisions carrying forward from prior milestones:
 - [Phase 05]: AppHeader simplified to theme toggle only for Phase 5 (no campaign selector, no sync status)
 - [Phase 05]: Sidebar Ctrl+K (not Cmd+K) since Tauri target is Windows desktop
 - [Phase 05]: Migrated boundaries/element-types (deprecated) to boundaries/dependencies with v6 object-based selectors
+- [Phase 06]: Entity Creature is own serializable type — engine Creature has non-serializable ConditionManager, can't be used in stores
+- [Phase 06]: DisplaySize/DisplayActionCost types bridge engine short codes to UI display values
+- [Phase 06]: generateEncounterBudgets takes only partySize (not partyLevel as originally assumed)
+- [Phase 06]: steiger insignificant-slice rule disabled for entities/ and features/ (no consumers until wired)
 
 ### Pending Todos
 
-- Run `npm install` in Phase 5; add `--legacy-peer-deps` if Radix peer dep conflicts with React 19 surface
 - Audit Foundry VTT sync migration SQL filenames for lexicographic sort order before Phase 7
 - Verify exact `plugin:sql|execute` / `plugin:sql|select` IPC command name strings against tauri-plugin-sql v2.3.2 Rust source at start of Phase 7
 
@@ -101,7 +104,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-31T18:21:20.245Z
-Stopped at: Checkpoint: 05-03 Task 2 human-verify pending
+Last session: 2026-04-01
+Stopped at: Phase 06 complete
 Resume file: None
-Next step: `/gsd:plan-phase 5`
+Next step: `/gsd:discuss-phase 7` or `/gsd:plan-phase 7`

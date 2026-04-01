@@ -25,7 +25,7 @@ export const useCreatureStore = create<CreatureState>()(
       }),
     upsertCreature: (creature) =>
       set((state) => {
-        const idx = state.creatures.findIndex((c) => c.name === creature.name)
+        const idx = state.creatures.findIndex((c) => c.id === creature.id)
         if (idx >= 0) state.creatures[idx] = creature
         else state.creatures.push(creature)
       }),
