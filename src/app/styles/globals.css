@@ -235,3 +235,19 @@
     border-left: 3px solid var(--pf-gold);
   }
 }
+
+@keyframes spin-d20 {
+  0%   { transform: rotateX(-20deg) rotateY(0deg); }
+  100% { transform: rotateX(-20deg) rotateY(360deg); }
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.30 0.04 55) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: oklch(0.30 0.04 55);
+  border-radius: 3px;
+}
