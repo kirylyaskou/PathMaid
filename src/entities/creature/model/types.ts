@@ -1,10 +1,8 @@
 import type { Rarity as EngineRarity } from '@engine'
+import type { DisplaySize } from '@/shared/lib/size-map'
 
 export type { Rarity, CreatureSize, ActionCost, WeakEliteTier } from '@engine'
-
-// Display-oriented size labels for UI components (TraitList, stat blocks).
-// Engine uses short codes (CreatureSize: 'tiny'|'sm'|'med'|...) — these are display names.
-export type DisplaySize = 'Tiny' | 'Small' | 'Medium' | 'Large' | 'Huge' | 'Gargantuan'
+export type { DisplaySize } from '@/shared/lib/size-map'
 
 // UI action cost — includes reaction/free/0 for display (engine ActionCost is 1|2|3|null)
 export type DisplayActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
