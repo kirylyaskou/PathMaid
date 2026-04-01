@@ -27,6 +27,7 @@ export async function runMigrations(db: Database): Promise<void> {
     )
     if (applied.length > 0) continue
 
+    console.log(`[migrate] Applying: ${name}`)
     const statements = sql
       .split(';')
       .map((s) => s.trim())
@@ -36,5 +37,6 @@ export async function runMigrations(db: Database): Promise<void> {
     }
 
     await db.execute('INSERT INTO _migrations (name) VALUES (?)', [name])
+    console.log(`[migrate] Applied: ${name}`)
   }
 }

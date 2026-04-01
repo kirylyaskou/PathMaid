@@ -33,9 +33,14 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       setFading(true)
       setTimeout(onReady, 150)
     } catch (err) {
+      console.error('[SplashScreen] Init failed:', err)
       setStatus('error')
       setError(
-        err instanceof Error ? err.message : 'Unknown error occurred'
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string'
+            ? err
+            : JSON.stringify(err)
       )
     }
   }, [onReady])

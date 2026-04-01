@@ -64,7 +64,7 @@ async function batchInsertEntities(
     ])
 
     await db.execute(
-      `INSERT INTO entities (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO entities (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json) VALUES ${placeholders}`,
       values
     )
 

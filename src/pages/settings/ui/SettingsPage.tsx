@@ -45,7 +45,8 @@ export function SettingsPage() {
       )
       await loadSyncStatus()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[Sync] Failed:', err)
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
       toast.error(`Sync failed — ${msg}. Try again.`)
     } finally {
       setSyncing(false)
@@ -71,7 +72,8 @@ export function SettingsPage() {
       )
       await loadSyncStatus()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
+      console.error('[Import] Failed:', err)
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
       toast.error(`Import failed — ${msg}. Try again.`)
     } finally {
       setSyncing(false)

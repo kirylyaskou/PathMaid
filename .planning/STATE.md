@@ -4,13 +4,13 @@ milestone: v0.3.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-04-01T13:03:25.328Z"
+last_updated: "2026-04-01T14:07:39.760Z"
 last_activity: 2026-04-01
 progress:
   total_phases: 12
-  completed_phases: 12
+  completed_phases: 11
   total_plans: 34
-  completed_plans: 34
+  completed_plans: 32
   percent: 33
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-31)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 08 — combat-tracker-engine-integration
+**Current focus:** Phase 09 — xp-budget-overlay
 
 ## Current Position
 
-Phase: 09
+Phase: 10
 Plan: Not started
-Status: Executing Phase 08
+Status: Executing Phase 09
 Last activity: 2026-04-01
 
 Progress: [████░░░░░░] 33% (2/6 phases complete)

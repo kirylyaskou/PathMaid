@@ -1,10 +1,14 @@
 import { getDb, runMigrations } from '@/shared/db'
 
 export async function initDatabase(): Promise<void> {
+  console.log('[initDB] Opening connection...')
   const db = await getDb()
+  console.log('[initDB] Setting PRAGMAs...')
   await db.execute('PRAGMA journal_mode=WAL', [])
   await db.execute('PRAGMA foreign_keys=ON', [])
+  console.log('[initDB] Running migrations...')
   await runMigrations(db)
+  console.log('[initDB] Done.')
 }
 
 export async function getSyncMetadata(

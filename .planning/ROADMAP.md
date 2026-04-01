@@ -173,7 +173,10 @@ Plans:
   2. Clicking a creature in the bestiary shows its full stat block: HP, AC, saves, IWR breakdown, strikes, and special abilities — all from real Foundry data, no hardcoded values
   3. Adding a creature to an encounter draft immediately updates the XP budget bar — the bar reflects engine `calculateEncounterRating` output, not a local mock calculation
   4. Changing party size or party level in the encounter config immediately recalculates XP budget and threat rating — the threat label (Trivial / Low / Moderate / Severe / Extreme) updates in real time from the engine
-**Plans**: TBD
+**Plans:** 2/2 plans executed
+Plans:
+- [x] 09-01-PLAN.md — Bestiary browser with FTS5 filters, stat block mapper, filter bar, 2-panel page
+- [x] 09-02-PLAN.md — Encounter builder with party config persistence, engine XP budget, creature draft
 **UI hint**: yes
 
 ### Phase 10: P2 Differentiators
@@ -203,7 +206,7 @@ Plans:
 | 6. FSD Structure + Zustand Stores | v0.3.0 | 4/4 | Complete | 2026-04-01 |
 | 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/5 | Planned | - |
 | 8. Combat Tracker + Engine Integration | v0.3.0 | 0/4 | Planned | - |
-| 9. Bestiary Browser + Encounter Builder | v0.3.0 | 0/TBD | Not started | - |
+| 9. Bestiary Browser + Encounter Builder | v0.3.0 | 2/2 | Executing | - |
 | 10. P2 Differentiators | v0.3.0 | 0/TBD | Not started | - |
 
 ---
