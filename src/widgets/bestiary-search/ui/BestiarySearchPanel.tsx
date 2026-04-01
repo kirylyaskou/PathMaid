@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
-import { CreatureCard, toCreature } from '@/entities/creature'
+import { CreatureCard, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
 import { searchCreatures, fetchCreatures } from '@/shared/api'
 import type { CreatureRow } from '@/shared/api'
@@ -54,6 +54,7 @@ export function BestiarySearchPanel() {
       const creature = toCreature(row)
       const hpDelta = getHpAdjustment(selectedTier, creature.level)
       const adjustedHp = Math.max(1, creature.hp + hpDelta)
+      const iwr = extractIwr(row)
       const combatant = createCombatantFromCreature(
         creature.id,
         creature.name,
@@ -62,6 +63,9 @@ export function BestiarySearchPanel() {
         combatants
       )
       combatant.maxHp = adjustedHp
+      combatant.iwrImmunities = iwr.immunities
+      combatant.iwrWeaknesses = iwr.weaknesses
+      combatant.iwrResistances = iwr.resistances
       addCombatant(combatant)
       setSelectedTier('normal')
     },

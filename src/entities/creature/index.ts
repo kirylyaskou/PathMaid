@@ -1,6 +1,6 @@
 export { useCreatureStore } from './model/store'
 export type { CreatureState } from './model/store'
 export type { Creature, CreatureStatBlockData, Rarity, CreatureSize, ActionCost, WeakEliteTier, DisplaySize, DisplayActionCost } from './model/types'
-export { toCreature, toCreatureStatBlockData } from './model/mappers'
+export { toCreature, toCreatureStatBlockData, extractIwr } from './model/mappers'
 export { CreatureCard } from './ui/CreatureCard'
 export { CreatureStatBlock } from './ui/CreatureStatBlock'

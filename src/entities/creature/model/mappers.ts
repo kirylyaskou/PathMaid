@@ -107,6 +107,26 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   }
 }
 
+export function extractIwr(row: CreatureRow): {
+  immunities: string[]
+  weaknesses: { type: string; value: number }[]
+  resistances: { type: string; value: number }[]
+} {
+  const raw = JSON.parse(row.raw_json)
+  const system = raw.system || {}
+  return {
+    immunities: (system.attributes?.immunities || []).map((i: any) => i.type || String(i)),
+    weaknesses: (system.attributes?.weaknesses || []).map((w: any) => ({
+      type: w.type || String(w),
+      value: w.value ?? 0,
+    })),
+    resistances: (system.attributes?.resistances || []).map((r: any) => ({
+      type: r.type || String(r),
+      value: r.value ?? 0,
+    })),
+  }
+}
+
 function formatDamage(damageRolls: any): string {
   if (!damageRolls) return ''
   const entries = Object.values(damageRolls) as any[]

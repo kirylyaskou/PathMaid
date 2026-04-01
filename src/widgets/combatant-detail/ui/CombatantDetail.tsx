@@ -45,7 +45,12 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
 
       <Separator />
 
-      <HpControls combatant={combatant} />
+      <HpControls
+        combatant={combatant}
+        iwrImmunities={combatant.iwrImmunities}
+        iwrWeaknesses={combatant.iwrWeaknesses}
+        iwrResistances={combatant.iwrResistances}
+      />
 
       <Separator />
 

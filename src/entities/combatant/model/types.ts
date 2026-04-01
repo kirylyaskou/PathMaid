@@ -9,4 +9,7 @@ export interface Combatant {
   maxHp: number
   tempHp: number
   isNPC: boolean
+  iwrImmunities?: string[]
+  iwrWeaknesses?: { type: string; value: number }[]
+  iwrResistances?: { type: string; value: number }[]
 }
