@@ -189,7 +189,7 @@ Plans:
   3. When adding a creature from the bestiary to combat, the DM can select Weak or Elite tier — HP adjusts immediately using engine `getHpAdjustment` before the creature enters the tracker
   4. Combatants with persistent damage show a prompt at turn end for a flat-check roll; passing removes the condition, failing deals the persistent damage
   5. The creature stat block displays MAP attack modifier sets (MAP 0 / MAP -5 / MAP -10) computed by engine `buildAttackModifierSets`; hazard entries in the encounter builder contribute XP via engine `getHazardXp`
-**Plans:** 4/4 plans created
+**Plans:** 0/4 plans executed
 Plans:
 - [ ] 10-01-PLAN.md — Weak/Elite tier toggle on creature add + MAP attack display in stat block (INT-03, INT-05)
 - [ ] 10-02-PLAN.md — IWR damage preview with type combobox and engine applyIWR breakdown (INT-01)
@@ -212,7 +212,7 @@ Plans:
 | 7. SQLite + Foundry VTT Data Pipeline | v0.3.0 | 0/5 | Planned | - |
 | 8. Combat Tracker + Engine Integration | v0.3.0 | 0/4 | Planned | - |
 | 9. Bestiary Browser + Encounter Builder | v0.3.0 | 2/2 | Executing | - |
-| 10. P2 Differentiators | v0.3.0 | 0/4 | Planned | - |
+| 10. P2 Differentiators | v0.3.0 | 0/4 | Planned    |  |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
