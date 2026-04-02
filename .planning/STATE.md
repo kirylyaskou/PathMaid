@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8.0
+milestone: v0.8.5
 milestone_name: milestone
 status: planned
-stopped_at: v0.8.0 milestone complete — phases 28-30 shipped
+stopped_at: v0.8.5 milestone complete — phases 31-32 shipped
 last_updated: "2026-04-02T17:00:00.000Z"
 last_activity: 2026-04-02
 progress:
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** v0.8.0 COMPLETE — all 30 phases shipped
+**Current focus:** v0.8.5 COMPLETE — all 32 phases shipped
 
 ## Current Position
 
 Phase: 999
 Plan: Not started
-Status: v0.8.0 complete
+Status: v0.8.5 complete
 Last activity: 2026-04-02
 
 Progress: [█████░░░░░] 25%
@@ -115,6 +115,7 @@ Key decisions carrying forward from prior milestones:
 - v0.6.0 started 2026-04-02, completed 2026-04-02: Items
 - v0.7.0 started 2026-04-02, completed 2026-04-02: Conditions
 - v0.8.0 started 2026-04-02, completed 2026-04-02: Hazards
+- v0.8.5 started 2026-04-02, completed 2026-04-02: Actions Reference
 
 ### Pending Todos
 
@@ -129,3 +130,10 @@ None.
 Last session: 2026-04-02T16:00:00.000Z
 Stopped at: v0.6.0 complete (phases 20-24)
 Next step: /gsd:plan-milestone v0.9.0
+
+### v0.8.5-specific context
+
+- [Phase 31]: FOLDER_TO_CATEGORY: 'dfRpdU8Efsenms12'→basic, '0Z6sKp3ActW2pM2e'→skill, 'NnWkuvbKXtwc0nEt'→exploration, 'zXSrhFwRbm6XXqAa'→downtime
+- [Phase 31]: actions table: id, name, action_type, action_cost, category, action_category, description, traits, source_book (~101 actions total)
+- [Phase 32]: ActionCard: cost display ◆/◆◆/◆◆◆/↩/◇/● in amber mono; category badge colors: basic=blue, skill=green, exploration=purple, downtime=zinc
+- [Phase 32]: [[/act slug]]{display} tokens resolved to display text in sanitize()

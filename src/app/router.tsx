@@ -4,6 +4,7 @@ import { DashboardPage } from '@/pages/dashboard'
 import { CombatPage } from '@/pages/combat'
 import { BestiaryPage } from '@/pages/bestiary'
 import { EncountersPage } from '@/pages/encounters'
+import { ActionsPage } from '@/pages/actions'
 import { ConditionsPage } from '@/pages/conditions'
 import { HazardsPage } from '@/pages/hazards'
 import { SpellsPage } from '@/pages/spells'
@@ -20,6 +21,7 @@ const router = createHashRouter([
       { path: 'combat', element: <CombatPage /> },
       { path: 'bestiary', element: <BestiaryPage /> },
       { path: 'encounters', element: <EncountersPage /> },
+      { path: 'actions', element: <ActionsPage /> },
       { path: 'conditions', element: <ConditionsPage /> },
       { path: 'hazards', element: <HazardsPage /> },
       { path: 'spells', element: <SpellsPage /> },
