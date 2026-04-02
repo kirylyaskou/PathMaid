@@ -344,6 +344,64 @@ export async function deleteSpellOverride(id: string): Promise<void> {
   await db.execute(`DELETE FROM encounter_combatant_spells WHERE id=?`, [id])
 }
 
+// ── Item overrides ────────────────────────────────────────────────────────────
+
+export interface EncounterItemRow {
+  id: string
+  encounterId: string
+  combatantId: string
+  itemName: string
+  itemFoundryId: string | null
+  itemType: string
+  quantity: number
+  damageFormula: string | null
+  acBonus: number | null
+  isRemoved: boolean
+}
+
+export async function loadItemOverrides(
+  encounterId: string,
+  combatantId: string
+): Promise<EncounterItemRow[]> {
+  const db = await getDb()
+  const rows = await db.select<{
+    id: string; encounter_id: string; combatant_id: string; item_name: string;
+    item_foundry_id: string | null; item_type: string; quantity: number;
+    damage_formula: string | null; ac_bonus: number | null; is_removed: number
+  }[]>(
+    `SELECT * FROM encounter_combatant_items WHERE encounter_id=? AND combatant_id=?`,
+    [encounterId, combatantId]
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    encounterId: r.encounter_id,
+    combatantId: r.combatant_id,
+    itemName: r.item_name,
+    itemFoundryId: r.item_foundry_id,
+    itemType: r.item_type,
+    quantity: r.quantity,
+    damageFormula: r.damage_formula,
+    acBonus: r.ac_bonus,
+    isRemoved: r.is_removed === 1,
+  }))
+}
+
+export async function upsertItemOverride(item: EncounterItemRow): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT OR REPLACE INTO encounter_combatant_items
+       (id, encounter_id, combatant_id, item_name, item_foundry_id, item_type, quantity, damage_formula, ac_bonus, is_removed)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    [item.id, item.encounterId, item.combatantId, item.itemName, item.itemFoundryId,
+     item.itemType, item.quantity, item.damageFormula, item.acBonus, item.isRemoved ? 1 : 0]
+  )
+}
+
+export async function deleteItemOverride(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute(`DELETE FROM encounter_combatant_items WHERE id=?`, [id])
+}
+
 /** Reset: restore hp=max_hp, clear conditions, reset round/turn state */
 export async function resetEncounterCombat(encounterId: string): Promise<void> {
   const db = await getDb()
@@ -363,6 +421,11 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
   // Reset spell slots — all slots restored on encounter reset
   await db.execute(
     `DELETE FROM encounter_spell_slots WHERE encounter_id=?`,
+    [encounterId]
+  )
+  // Reset item overrides — base inventory restored on encounter reset
+  await db.execute(
+    `DELETE FROM encounter_combatant_items WHERE encounter_id=?`,
     [encounterId]
   )
 }

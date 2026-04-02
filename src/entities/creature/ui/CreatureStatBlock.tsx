@@ -15,8 +15,8 @@ import { ActionIcon } from "@/shared/ui/action-icon"
 import type { CreatureStatBlockData } from '../model/types'
 import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
 import type { SpellRow } from '@/entities/spell'
-import { getSpellById, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride } from '@/shared/api'
-import type { SpellOverrideRow, CreatureItemRow } from '@/shared/api'
+import { getSpellById, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride, loadItemOverrides, upsertItemOverride, deleteItemOverride, searchItems } from '@/shared/api'
+import type { SpellOverrideRow, CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS } from '@/entities/item'
 
 export interface EncounterContext {
@@ -277,9 +277,12 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         )}
 
         {/* Equipment */}
-        {creature.equipment && creature.equipment.length > 0 && (
+        {(creature.equipment && creature.equipment.length > 0 || encounterContext) && (
           <>
-            <EquipmentBlock items={creature.equipment} />
+            <EquipmentBlock
+              items={creature.equipment ?? []}
+              {...(encounterContext ? { encounterContext } : {})}
+            />
             <Separator />
           </>
         )}
@@ -848,8 +851,122 @@ function StatItem({ label, value, modifier, highlight, colorClass, showDc }: Sta
 
 // ── EquipmentBlock ────────────────────────────────────────────────────────────
 
-function EquipmentBlock({ items }: { items: CreatureItemRow[] }) {
-  if (items.length === 0) return null
+function EquipmentBlock({
+  items,
+  encounterContext,
+}: {
+  items: CreatureItemRow[]
+  encounterContext?: EncounterContext
+}) {
+  const [overrides, setOverrides] = useState<EncounterItemRow[]>([])
+  const [addQuery, setAddQuery] = useState('')
+  const [addResults, setAddResults] = useState<ItemRow[]>([])
+
+  useEffect(() => {
+    if (!encounterContext) return
+    loadItemOverrides(encounterContext.encounterId, encounterContext.combatantId)
+      .then(setOverrides)
+      .catch(() => {})
+  }, [encounterContext?.encounterId, encounterContext?.combatantId])
+
+  useEffect(() => {
+    if (!encounterContext || !addQuery.trim()) { setAddResults([]); return }
+    const timer = setTimeout(() => {
+      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(() => {})
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [addQuery, encounterContext])
+
+  const handleRemove = useCallback(async (item: CreatureItemRow) => {
+    if (!encounterContext) return
+    const override: EncounterItemRow = {
+      id: `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`,
+      encounterId: encounterContext.encounterId,
+      combatantId: encounterContext.combatantId,
+      itemName: item.item_name,
+      itemFoundryId: item.foundry_item_id,
+      itemType: item.item_type,
+      quantity: item.quantity,
+      damageFormula: item.damage_formula,
+      acBonus: item.ac_bonus,
+      isRemoved: true,
+    }
+    setOverrides((prev) => [...prev.filter((o) => o.id !== override.id), override])
+    await upsertItemOverride(override).catch(() => {})
+  }, [encounterContext])
+
+  const handleRestoreBase = useCallback(async (item: CreatureItemRow) => {
+    if (!encounterContext) return
+    const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`
+    setOverrides((prev) => prev.filter((o) => o.id !== id))
+    await deleteItemOverride(id).catch(() => {})
+  }, [encounterContext])
+
+  const handleAddItem = useCallback(async (catalogItem: ItemRow) => {
+    if (!encounterContext) return
+    const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:added:${catalogItem.id}`
+    const override: EncounterItemRow = {
+      id,
+      encounterId: encounterContext.encounterId,
+      combatantId: encounterContext.combatantId,
+      itemName: catalogItem.name,
+      itemFoundryId: catalogItem.id,
+      itemType: catalogItem.item_type,
+      quantity: 1,
+      damageFormula: catalogItem.damage_formula,
+      acBonus: catalogItem.ac_bonus,
+      isRemoved: false,
+    }
+    setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
+    setAddQuery('')
+    setAddResults([])
+    await upsertItemOverride(override).catch(() => {})
+  }, [encounterContext])
+
+  const handleRemoveAdded = useCallback(async (override: EncounterItemRow) => {
+    setOverrides((prev) => prev.filter((o) => o.id !== override.id))
+    await deleteItemOverride(override.id).catch(() => {})
+  }, [])
+
+  const removedIds = new Set(overrides.filter((o) => o.isRemoved).map((o) => o.itemFoundryId ?? o.itemName))
+  const addedItems = overrides.filter((o) => !o.isRemoved)
+
+  const visibleBase = items.filter((item) => {
+    const key = item.foundry_item_id ?? item.item_name
+    return !removedIds.has(key)
+  })
+
+  const totalCount = visibleBase.length + addedItems.length
+  if (totalCount === 0 && !encounterContext) return null
+
+  function ItemRow_({ item, onRemove, onRestore, isRemoved }: {
+    item: { name: string; type: string; qty: number; damageFormula: string | null; acBonus: number | null; bulk?: string | null }
+    onRemove?: () => void
+    onRestore?: () => void
+    isRemoved?: boolean
+  }) {
+    const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+    const qty = item.qty > 1 ? ` ×${item.qty}` : ''
+    const stat = item.damageFormula ?? (item.acBonus !== null ? `AC +${item.acBonus}` : null)
+    return (
+      <div className={cn("group flex items-center gap-2 text-sm", isRemoved && "opacity-40 line-through")}>
+        <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
+          {item.type[0].toUpperCase()}
+        </span>
+        <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
+        {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
+        {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
+        {encounterContext && onRemove && !isRemoved && (
+          <button onClick={onRemove} className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-opacity shrink-0">
+            <X className="w-3 h-3" />
+          </button>
+        )}
+        {encounterContext && onRestore && isRemoved && (
+          <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <Collapsible defaultOpen={false}>
@@ -857,38 +974,68 @@ function EquipmentBlock({ items }: { items: CreatureItemRow[] }) {
         <div className="flex items-center gap-2">
           <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="font-semibold text-sm text-foreground">Equipment</span>
-          <span className="text-xs text-muted-foreground">({items.length})</span>
+          <span className="text-xs text-muted-foreground">({totalCount})</span>
         </div>
         <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="px-4 pb-3 pt-2 space-y-1">
-          {items.map((item) => {
-            const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
-            const qty = item.quantity > 1 ? ` ×${item.quantity}` : ''
-            const stat = item.damage_formula
-              ? item.damage_formula
-              : item.ac_bonus !== null
-                ? `AC +${item.ac_bonus}`
-                : null
-
+          {visibleBase.map((item) => (
+            <ItemRow_
+              key={item.id}
+              item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
+              onRemove={encounterContext ? () => handleRemove(item) : undefined}
+            />
+          ))}
+          {/* Removed items shown struck-through with undo */}
+          {overrides.filter((o) => o.isRemoved).map((o) => {
+            const base = items.find((i) => (i.foundry_item_id ?? i.item_name) === (o.itemFoundryId ?? o.itemName))
+            if (!base) return null
             return (
-              <div key={item.id} className="flex items-center gap-2 text-sm">
-                <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
-                  {item.item_type[0].toUpperCase()}
-                </span>
-                <span className="font-medium flex-1 min-w-0 truncate">
-                  {item.item_name}{qty}
-                </span>
-                {stat && (
-                  <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>
-                )}
-                {item.bulk && item.bulk !== '-' && (
-                  <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>
-                )}
-              </div>
+              <ItemRow_
+                key={o.id}
+                item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+                isRemoved
+                onRestore={() => handleRestoreBase(base)}
+              />
             )
           })}
+          {/* Added items */}
+          {addedItems.map((o) => (
+            <ItemRow_
+              key={o.id}
+              item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+              onRemove={() => handleRemoveAdded(o)}
+            />
+          ))}
+
+          {/* Add item row — encounter context only */}
+          {encounterContext && (
+            <div className="relative mt-2">
+              <input
+                type="text"
+                placeholder="Add item…"
+                value={addQuery}
+                onChange={(e) => setAddQuery(e.target.value)}
+                className="w-full text-xs px-2 py-1 rounded border border-border/50 bg-secondary/40 placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+              />
+              {addResults.length > 0 && (
+                <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">
+                  {addResults.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleAddItem(r)}
+                      className="w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-secondary/60 transition-colors"
+                    >
+                      <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
+                      <span className="flex-1 truncate">{r.name}</span>
+                      {r.damage_formula && <span className="font-mono text-muted-foreground shrink-0">{r.damage_formula}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
