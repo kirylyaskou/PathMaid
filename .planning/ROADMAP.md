@@ -11,6 +11,7 @@
 - ✅ **v0.4.0-pre-alpha — Stabilization + Polish** — Phases 11-14 (complete)
 - ✅ **v0.5.0-pre-alpha — Combat Redesign + Spells** — Phases 15-19 (complete 2026-04-02)
 - ✅ **v0.6.0-pre-alpha — Items** — Phases 20-24 (complete 2026-04-02)
+- 🚧 **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (planned 2026-04-02)
 
 ## Phases
 
@@ -470,6 +471,61 @@ Plans:
 | 22. Creature Inventory Display | v0.6.0 | 1/1 | Complete | 2026-04-02 |
 | 23. Encounter Inventory Editor | v0.6.0 | 1/1 | Complete | 2026-04-02 |
 | 24. @-Token Resolution | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+
+### 🚧 v0.7.0-pre-alpha — Conditions
+
+**Milestone Goal:** Full conditions reference system — extract all 49 Foundry VTT conditions into a dedicated SQLite table with structured mechanical data (modifier rules, overrides, valued flags), build a ConditionsPage reference catalog, and wire condition badges in the combat tracker to show description + modifier detail on click. Modifier data stored in `rules_json` for future engine integration.
+
+- [ ] **Phase 25: Conditions Data Pipeline** — DB migration `conditions` table + extraction from entities during sync + shared/api/conditions.ts (planned 2026-04-02)
+- [ ] **Phase 26: Conditions Reference Page** — Replace stub with full catalog: group tabs, search, ConditionCard with description + modifier summary + overrides (planned 2026-04-02)
+- [ ] **Phase 27: Condition Badge Integration** — ConditionBadge info button → inline detail panel with description excerpt + modifiers + overrides (planned 2026-04-02)
+
+### Phase 25: Conditions Data Pipeline
+**Goal**: All 49 Foundry VTT conditions are stored in a dedicated SQLite table with parsed mechanical data ready for reference display and future modifier engine integration
+**Depends on**: Phase 24
+**Requirements**: COND-01, COND-02
+**Success Criteria** (what must be TRUE):
+  1. After sync, the `conditions` table contains all conditions with is_valued, group_name, overrides, modifier_summary, and rules_json populated
+  2. `getConditionBySlug('frightened')` returns a row with modifier_summary "Status −value to all checks" and rules_json containing the FlatModifier rule
+  3. `getAllConditions()` returns all conditions sorted by name
+**Plans**: 2 plans
+Plans:
+- [ ] 25-01-PLAN.md — DB migration: conditions table; extractAndInsertConditions + parseModifierSummary in sync.ts
+- [ ] 25-02-PLAN.md — shared/api/conditions.ts: getAllConditions, searchConditions, getConditionBySlug, getConditionsByGroup
+
+### Phase 26: Conditions Reference Page
+**Goal**: The DM can browse all PF2e conditions with their mechanical effects, descriptions, and override relationships from the Conditions page
+**Depends on**: Phase 25
+**Requirements**: CONDP-01, CONDP-02, CONDP-03
+**Success Criteria** (what must be TRUE):
+  1. The Conditions page shows all conditions grouped by category with a search filter
+  2. Clicking a condition expands it showing: full description, modifier summary (e.g. "Status −value to all checks"), and overrides list
+  3. Valued conditions show a badge indicating they take a numeric value
+**Plans**: 1 plan
+Plans:
+- [ ] 26-01-PLAN.md — Full ConditionsPage: group tabs, search, ConditionCard with valued badge, modifier summary, overrides, description
+**UI hint**: yes
+
+### Phase 27: Condition Badge Integration
+**Goal**: Condition badges in the combat tracker show an info button that opens a detail panel with the condition's description and modifier summary — DM never needs to leave combat to look up a condition
+**Depends on**: Phase 26
+**Requirements**: CONDB-01, CONDB-02
+**Success Criteria** (what must be TRUE):
+  1. Each condition badge in the combat tracker has an ⓘ icon; clicking it shows a detail panel with name, modifier summary, overrides, and 300-char description excerpt
+  2. The panel stays open until × is clicked or another badge's ⓘ is clicked
+  3. Persistent damage conditions (e.g., persistent-fire) show "No reference data" gracefully when not in conditions table
+**Plans**: 1 plan
+Plans:
+- [ ] 27-01-PLAN.md — ConditionBadge info button; ConditionDetailPopover in ConditionSection.tsx; getConditionBySlug fetch
+**UI hint**: yes
+
+## Progress (v0.7.0)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 25. Conditions Data Pipeline | v0.7.0 | 0/2 | Planned | — |
+| 26. Conditions Reference Page | v0.7.0 | 0/1 | Planned | — |
+| 27. Condition Badge Integration | v0.7.0 | 0/1 | Planned | — |
 
 ## Backlog
 
