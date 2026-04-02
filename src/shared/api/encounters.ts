@@ -402,6 +402,55 @@ export async function deleteItemOverride(id: string): Promise<void> {
   await db.execute(`DELETE FROM encounter_combatant_items WHERE id=?`, [id])
 }
 
+// ── Slot overrides (add/remove spell slots per encounter) ─────────────────────
+
+export interface SlotOverrideRow {
+  encounterId: string
+  combatantId: string
+  entryId: string
+  rank: number
+  slotDelta: number
+}
+
+export async function saveSlotOverride(
+  encounterId: string,
+  combatantId: string,
+  entryId: string,
+  rank: number,
+  delta: number
+): Promise<void> {
+  const db = await getDb()
+  if (delta === 0) {
+    await db.execute(
+      `DELETE FROM encounter_slot_overrides WHERE encounter_id=? AND combatant_id=? AND entry_id=? AND rank=?`,
+      [encounterId, combatantId, entryId, rank]
+    )
+  } else {
+    await db.execute(
+      `INSERT OR REPLACE INTO encounter_slot_overrides (encounter_id, combatant_id, entry_id, rank, slot_delta) VALUES (?,?,?,?,?)`,
+      [encounterId, combatantId, entryId, rank, delta]
+    )
+  }
+}
+
+export async function loadSlotOverrides(
+  encounterId: string,
+  combatantId: string
+): Promise<SlotOverrideRow[]> {
+  const db = await getDb()
+  const rows = await db.select<{ encounter_id: string; combatant_id: string; entry_id: string; rank: number; slot_delta: number }[]>(
+    `SELECT * FROM encounter_slot_overrides WHERE encounter_id=? AND combatant_id=?`,
+    [encounterId, combatantId]
+  )
+  return rows.map((r) => ({
+    encounterId: r.encounter_id,
+    combatantId: r.combatant_id,
+    entryId: r.entry_id,
+    rank: r.rank,
+    slotDelta: r.slot_delta,
+  }))
+}
+
 /** Reset: restore hp=max_hp, clear conditions, reset round/turn state */
 export async function resetEncounterCombat(encounterId: string): Promise<void> {
   const db = await getDb()
@@ -421,6 +470,11 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
   // Reset spell slots — all slots restored on encounter reset
   await db.execute(
     `DELETE FROM encounter_spell_slots WHERE encounter_id=?`,
+    [encounterId]
+  )
+  // Reset slot overrides — base slot counts restored on encounter reset
+  await db.execute(
+    `DELETE FROM encounter_slot_overrides WHERE encounter_id=?`,
     [encounterId]
   )
   // Reset item overrides — base inventory restored on encounter reset

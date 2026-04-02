@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -8,16 +8,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/collapsible"
-import { ChevronDown, ChevronRight, X, Backpack } from "lucide-react"
+import { ChevronDown, ChevronRight, X, Backpack, Plus, Minus, HelpCircle, Search } from "lucide-react"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
 import type { CreatureStatBlockData } from '../model/types'
-import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
+import type { SpellcastingSection } from '@/entities/spell'
 import type { SpellRow } from '@/entities/spell'
-import { getSpellById, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride, loadItemOverrides, upsertItemOverride, deleteItemOverride, searchItems } from '@/shared/api'
+import { getSpellById, getSpellByName, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride, loadItemOverrides, upsertItemOverride, deleteItemOverride, searchItems, saveSlotOverride, loadSlotOverrides } from '@/shared/api'
 import type { SpellOverrideRow, CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
+import { detectCasterProgression, getMaxRecommendedRank } from '@engine'
 import { ITEM_TYPE_COLORS } from '@/entities/item'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 
 export interface EncounterContext {
   encounterId: string
@@ -269,6 +272,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
               <SpellcastingBlock
                 key={section.entryId}
                 section={section}
+                creatureLevel={creature.level}
                 {...(encounterContext ? { encounterContext } : {})}
               />
             ))}
@@ -466,10 +470,16 @@ function SpellCard({ foundryId, name }: { foundryId: string | null; name: string
   const [loading, setLoading] = useState(false)
 
   async function handleToggle() {
-    if (!open && !spell && foundryId) {
+    if (!open && !spell) {
       setLoading(true)
       try {
-        const data = await getSpellById(foundryId)
+        let data: SpellRow | null = null
+        if (foundryId) {
+          data = await getSpellById(foundryId)
+        }
+        if (!data) {
+          data = await getSpellByName(name)
+        }
         setSpell(data)
       } finally {
         setLoading(false)
@@ -493,9 +503,6 @@ function SpellCard({ foundryId, name }: { foundryId: string | null; name: string
         }
         <span className="font-medium">{name}</span>
         {loading && <span className="text-xs text-muted-foreground ml-auto">…</span>}
-        {!spell && !loading && !foundryId && (
-          <span className="text-xs text-muted-foreground ml-auto italic">no data</span>
-        )}
       </button>
 
       {open && spell && (
@@ -553,80 +560,210 @@ function SpellCard({ foundryId, name }: { foundryId: string | null; name: string
 
 // ── Slot pips ─────────────────────────────────────────────────────────────────
 
-function SlotPips({ total, used, onToggle }: { total: number; used: number; onToggle: (idx: number) => void }) {
+function SlotPips({ total, used, baseSlots, onToggle }: {
+  total: number; used: number; baseSlots: number; onToggle: (idx: number) => void
+}) {
   if (total <= 0) return null
   return (
     <div className="flex gap-0.5 items-center">
-      {Array.from({ length: total }).map((_, i) => (
-        <button
-          key={i}
-          onClick={(e) => { e.stopPropagation(); onToggle(i) }}
-          title={i < used ? 'Mark slot available' : 'Mark slot used'}
-          className={cn(
-            "w-3.5 h-3.5 rounded-full border transition-colors text-[8px] flex items-center justify-center",
-            i < used
-              ? "bg-primary/70 border-primary text-primary-foreground"
-              : "bg-transparent border-border/60 hover:border-primary/60"
-          )}
-        />
-      ))}
+      {Array.from({ length: total }).map((_, i) => {
+        const isCustom = i >= baseSlots
+        return (
+          <button
+            key={i}
+            onClick={(e) => { e.stopPropagation(); onToggle(i) }}
+            title={i < used ? 'Mark slot available' : 'Mark slot used'}
+            className={cn(
+              "w-3.5 h-3.5 rounded-full transition-colors text-[8px] flex items-center justify-center",
+              isCustom ? "border border-dashed" : "border",
+              i < used
+                ? isCustom
+                  ? "bg-amber-500/70 border-amber-400 text-primary-foreground"
+                  : "bg-primary/70 border-primary text-primary-foreground"
+                : "bg-transparent border-border/60 hover:border-primary/60"
+            )}
+          />
+        )
+      })}
     </div>
   )
 }
 
-// ── Spell override row ────────────────────────────────────────────────────────
+// ── Spell search dialog ──────────────────────────────────────────────────────
 
-function AddSpellRow({ rank, onAdd }: {
-  rank: number
-  onAdd: (name: string) => void
+const DIALOG_TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
+const DIALOG_TRADITION_COLORS: Record<string, string> = {
+  arcane:  'bg-blue-500/20 text-blue-300 border-blue-500/40',
+  divine:  'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
+  occult:  'bg-purple-500/20 text-purple-300 border-purple-500/40',
+  primal:  'bg-green-500/20 text-green-300 border-green-500/40',
+}
+
+function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTradition, onAdd }: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  defaultRank: number
+  defaultTradition?: string
+  onAdd: (name: string, rank: number) => void
 }) {
   const [query, setQuery] = useState('')
+  const [tradition, setTradition] = useState<string | null>(defaultTradition ?? null)
+  const [rank, setRank] = useState<number | null>(defaultRank)
   const [results, setResults] = useState<SpellRow[]>([])
-  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
+  // Reset filters when dialog opens
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
+    if (open) {
+      setQuery('')
+      setTradition(defaultTradition ?? null)
+      setRank(defaultRank)
+      setResults([])
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }, [open, defaultRank, defaultTradition])
+
+  // Debounced search
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
     const t = setTimeout(async () => {
-      const r = await searchSpells(query, rank)
-      setResults(r.slice(0, 8))
+      const r = await searchSpells(query, rank ?? undefined, tradition ?? undefined)
+      setResults(r)
+      setLoading(false)
     }, 200)
     return () => clearTimeout(t)
-  }, [query, rank])
+  }, [query, rank, tradition, open])
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-1">
-        <input
-          className="flex-1 text-xs bg-transparent border border-border/40 rounded px-2 py-0.5 focus:outline-none focus:border-primary/60"
-          placeholder="Add spell…"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-        />
-      </div>
-      {open && results.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-card border border-border rounded shadow-lg max-h-40 overflow-y-auto">
-          {results.map((s) => (
-            <button
-              key={s.id}
-              className="w-full text-left px-2 py-1 text-xs hover:bg-secondary/70 flex items-center justify-between"
-              onMouseDown={() => { onAdd(s.name); setQuery(''); setOpen(false) }}
-            >
-              <span>{s.name}</span>
-              <span className="text-muted-foreground">{rankLabel(s.rank)}</span>
-            </button>
-          ))}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-4 pb-0">
+          <DialogTitle className="text-sm">Add Spell</DialogTitle>
+        </DialogHeader>
+
+        {/* Search + filters */}
+        <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border/30">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              ref={inputRef}
+              placeholder="Search spells…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full pl-8 h-8 text-sm rounded-md border border-border bg-secondary/30 px-3 focus:outline-none focus:border-primary/50"
+            />
+          </div>
+          {/* Tradition filter */}
+          <div className="flex flex-wrap gap-1.5">
+            {DIALOG_TRADITIONS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTradition((p) => (p === t ? null : t))}
+                className={cn(
+                  "px-2 py-0.5 text-[11px] rounded border uppercase tracking-wider font-semibold transition-opacity",
+                  DIALOG_TRADITION_COLORS[t],
+                  tradition && tradition !== t && "opacity-30"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          {/* Rank filter */}
+          <div className="flex flex-wrap gap-1">
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRank((p) => (p === r ? null : r))}
+                className={cn(
+                  "w-7 h-6 text-xs rounded border transition-colors font-mono",
+                  rank === r
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-secondary/50 text-muted-foreground border-border/40 hover:border-border"
+                )}
+              >
+                {r === 0 ? 'C' : r}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {loading ? 'Searching…' : `${results.length} spell${results.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
-      )}
-    </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 min-h-0">
+          {results.map((s) => {
+            const traditions: string[] = s.traditions ? JSON.parse(s.traditions) : []
+            return (
+              <div
+                key={s.id}
+                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">{s.name}</span>
+                    {s.action_cost && (
+                      <span className="font-mono text-primary text-xs shrink-0">
+                        {s.action_cost === 'free' ? '◇' : s.action_cost === 'reaction' ? '↺' : '◆'.repeat(Math.min(3, Number(s.action_cost) || 1))}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] text-muted-foreground">{rankLabel(s.rank)}</span>
+                    {traditions.map((t) => (
+                      <span key={t} className={cn("px-1 py-0 text-[9px] rounded border uppercase font-semibold", DIALOG_TRADITION_COLORS[t] ?? '')}>
+                        {t.slice(0, 3)}
+                      </span>
+                    ))}
+                    {s.save_stat && <span className="text-[10px] text-muted-foreground capitalize">{s.save_stat}</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onAdd(s.name, rank ?? s.rank)}
+                  className="shrink-0 px-2 py-1 text-xs rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
+}
+
+// ── Meme warnings ────────────────────────────────────────────────────────────
+
+const MEME_WARNINGS = {
+  rankExceedsMax:
+    "YOU DIED. Pharasma opens a new file. Working as intended.",
+
+  rankHighOnLowLevel: (rank: number, level: number): string => {
+    if (rank === 1) return `Rank 1 at level ${level}? Try jumping.`;
+    if (rank === 2) return `Rank 2 at level ${level}? Swooping is bad.`;
+    if (rank === 3) return `Rank 3 at level ${level}? Morrigan disapproves.`;
+    if (rank === 4) return `Rank 4 at level ${level}? Fane raises an eyebrow. He has no eyebrows. The gesture is still felt.`;
+    if (rank === 5) return `Rank 5 at level ${level}? Optimism is a moral imperative. But I think you've moved beyond optimism.`;
+    if (rank === 6) return `Rank 6 at level ${level}? Daeran finds this mildly amusing. That's worse than him not caring.`;
+    if (rank === 7) return `Rank 7 at level ${level}? Ignorant slaves, how quickly you forget!`;
+    if (rank === 8) return `Rank 8 at level ${level}? Alduin weeps. The Greybeards shout "FUS RO NO".`;
+    if (rank === 9) return `Rank 9 at level ${level}? Areelu Vorlesh takes notes. This is now a thesis on hubris.`;
+    return `Rank 10 at level ${level}? Fear not the dark, my friend. And let the feast begin.`;
+  },
+
+  lastSlotRemoved:
+    "Slot removed. Morrigan disapproves. The dog is still smarter than you.",
 }
 
 // ── SpellcastingBlock (with encounter-aware slots + overrides) ────────────────
 
-function SpellcastingBlock({ section, encounterContext }: {
+function SpellcastingBlock({ section, creatureLevel, encounterContext }: {
   section: SpellcastingSection
+  creatureLevel: number
   encounterContext?: EncounterContext
 }) {
   const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
@@ -635,8 +772,31 @@ function SpellcastingBlock({ section, encounterContext }: {
   const [usedSlots, setUsedSlots] = useState<Record<number, number>>({})
   // Override state
   const [overrides, setOverrides] = useState<SpellOverrideRow[]>([])
+  // Slot overrides — keyed by rank
+  const [slotDeltas, setSlotDeltas] = useState<Record<number, number>>({})
+  // Spell search dialog state
+  const [spellDialogOpen, setSpellDialogOpen] = useState(false)
+  const [spellDialogRank, setSpellDialogRank] = useState(0)
 
   const { encounterId, combatantId } = encounterContext ?? {}
+
+  // Caster progression detection
+  const maxSlotRank = useMemo(() => {
+    let max = 0
+    for (const byRank of section.spellsByRank) {
+      if (byRank.rank > 0 && byRank.slots > 0 && byRank.rank > max) max = byRank.rank
+    }
+    return max
+  }, [section.spellsByRank])
+
+  const progression = useMemo(
+    () => detectCasterProgression(creatureLevel, maxSlotRank),
+    [creatureLevel, maxSlotRank]
+  )
+  const recommendedMaxRank = useMemo(
+    () => getMaxRecommendedRank(creatureLevel, progression),
+    [creatureLevel, progression]
+  )
 
   const loadSlotState = useCallback(async () => {
     if (!encounterId || !combatantId) return
@@ -654,18 +814,48 @@ function SpellcastingBlock({ section, encounterContext }: {
     setOverrides(rows.filter((r) => r.entryId === section.entryId))
   }, [encounterId, combatantId, section.entryId])
 
+  const loadSlotOverrideState = useCallback(async () => {
+    if (!encounterId || !combatantId) return
+    const rows = await loadSlotOverrides(encounterId, combatantId)
+    const byRank: Record<number, number> = {}
+    for (const r of rows) {
+      if (r.entryId === section.entryId) byRank[r.rank] = r.slotDelta
+    }
+    setSlotDeltas(byRank)
+  }, [encounterId, combatantId, section.entryId])
+
   useEffect(() => {
     loadSlotState()
     loadOverrideState()
-  }, [loadSlotState, loadOverrideState])
+    loadSlotOverrideState()
+  }, [loadSlotState, loadOverrideState, loadSlotOverrideState])
 
   async function handleTogglePip(rank: number, idx: number, total: number) {
     if (!encounterId || !combatantId) return
     const current = usedSlots[rank] ?? 0
-    // Click on used pip → reduce; click on unused pip → use up to that index
     const newUsed = idx < current ? idx : Math.min(idx + 1, total)
     setUsedSlots((prev) => ({ ...prev, [rank]: newUsed }))
     await saveSpellSlotUsage(encounterId, combatantId, section.entryId, rank, newUsed)
+  }
+
+  async function handleSlotDelta(rank: number, change: 1 | -1) {
+    if (!encounterId || !combatantId) return
+    const currentDelta = slotDeltas[rank] ?? 0
+    const newDelta = currentDelta + change
+    setSlotDeltas((prev) => ({ ...prev, [rank]: newDelta }))
+    await saveSlotOverride(encounterId, combatantId, section.entryId, rank, newDelta)
+
+    // For prepared casters: adding a slot opens spell search
+    if (change === 1 && section.castType === 'prepared') {
+      setSpellDialogRank(rank)
+      setSpellDialogOpen(true)
+    }
+  }
+
+  async function handleAddRank(newRank: number) {
+    if (!encounterId || !combatantId) return
+    setSlotDeltas((prev) => ({ ...prev, [newRank]: 1 }))
+    await saveSlotOverride(encounterId, combatantId, section.entryId, newRank, 1)
   }
 
   async function handleAddSpell(name: string, rank: number) {
@@ -682,7 +872,6 @@ function SpellcastingBlock({ section, encounterContext }: {
   async function handleRemoveSpell(spellName: string, rank: number, isDefault: boolean) {
     if (!encounterId || !combatantId) return
     if (isDefault) {
-      // Mark default spell as removed for this encounter
       const id = `${combatantId}:${section.entryId}:rm:${spellName}:${rank}`
       const override: SpellOverrideRow = {
         id, encounterId, combatantId, entryId: section.entryId,
@@ -691,7 +880,6 @@ function SpellcastingBlock({ section, encounterContext }: {
       await upsertSpellOverride(override)
       setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
     } else {
-      // Remove an added spell
       const id = `${combatantId}:${section.entryId}:add:${spellName}:${rank}`
       await deleteSpellOverride(id)
       setOverrides((prev) => prev.filter((o) => o.id !== id))
@@ -707,17 +895,60 @@ function SpellcastingBlock({ section, encounterContext }: {
       return acc
     }, {})
 
+  // Build effective ranks list: base + custom-added ranks from overrides
+  const effectiveRanks = useMemo(() => {
+    const baseRanks = section.spellsByRank.map((br) => br.rank)
+    const customRanks = Object.entries(slotDeltas)
+      .filter(([r, d]) => !baseRanks.includes(Number(r)) && d > 0)
+      .map(([r]) => Number(r))
+    const allRanks = [...baseRanks, ...customRanks].sort((a, b) => a - b)
+    return allRanks
+  }, [section.spellsByRank, slotDeltas])
+
+  // Next available rank for "Add rank" button
+  const nextRank = useMemo(() => {
+    if (effectiveRanks.length === 0) return 1
+    const max = Math.max(...effectiveRanks.filter((r) => r > 0))
+    return max + 1
+  }, [effectiveRanks])
+
+  // Tradition filter for AddSpellRow (innate = no filter)
+  const traditionFilter = section.castType === 'innate' ? undefined : section.tradition
+
+  // Meme warning for a given rank
+  function rankWarning(rank: number): string | null {
+    if (rank <= 0) return null
+    if (rank >= 9 && creatureLevel <= 5) return MEME_WARNINGS.rankHighOnLowLevel(rank, creatureLevel)
+    if (rank > recommendedMaxRank) return MEME_WARNINGS.rankExceedsMax
+    return null
+  }
+
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40">
+        <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <span className="font-semibold text-sm text-foreground">Spellcasting</span>
           <span className={cn("px-1.5 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold", traditionColor(section.tradition))}>
             {section.tradition} {section.castType}
           </span>
-        </div>
-        <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-      </CollapsibleTrigger>
+          <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        {encounterId && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button className="p-0.5" type="button">
+                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {progression === 'unknown'
+                ? `Custom progression — max rank ${recommendedMaxRank} at level ${creatureLevel}`
+                : `${progression === 'full' ? 'Full' : 'Bounded'} caster (${section.tradition} ${section.castType}) — max rank ${recommendedMaxRank} at level ${creatureLevel}`
+              }
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
       <CollapsibleContent>
         <div className="px-4 pb-3 pt-2 space-y-3">
           {/* DC + Attack */}
@@ -730,26 +961,74 @@ function SpellcastingBlock({ section, encounterContext }: {
             )}
           </div>
           {/* Spells by rank */}
-          {section.spellsByRank.map((byRank: SpellsByRank) => {
-            const used = usedSlots[byRank.rank] ?? 0
-            const visibleSpells = byRank.spells.filter(
-              (s) => !removedSpells.has(`${byRank.rank}:${s.name}`)
-            )
-            const added = addedByRank[byRank.rank] ?? []
+          {effectiveRanks.map((rank) => {
+            const byRank = section.spellsByRank.find((br) => br.rank === rank)
+            const baseSlots = byRank?.slots ?? 0
+            const delta = slotDeltas[rank] ?? 0
+            const totalSlots = Math.max(0, baseSlots + delta)
+            const used = usedSlots[rank] ?? 0
+            const visibleSpells = byRank
+              ? byRank.spells.filter((s) => !removedSpells.has(`${rank}:${s.name}`))
+              : []
+            const added = addedByRank[rank] ?? []
+            const warn = encounterId ? rankWarning(rank) : null
             return (
-              <div key={byRank.rank}>
+              <div key={rank}>
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {rankLabel(byRank.rank)}
-                  </span>
-                  {encounterId && byRank.slots > 0 ? (
-                    <SlotPips
-                      total={byRank.slots}
-                      used={used}
-                      onToggle={(idx) => handleTogglePip(byRank.rank, idx, byRank.slots)}
-                    />
-                  ) : byRank.slots > 0 ? (
-                    <span className="text-xs text-muted-foreground">({byRank.slots} slots)</span>
+                  {warn ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider cursor-help">
+                          {rankLabel(rank)} ⚠
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-amber-300 bg-amber-950 border-amber-500/40">
+                        {warn}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {rankLabel(rank)}
+                    </span>
+                  )}
+                  {rank === 0 ? null
+                  : encounterId && totalSlots > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleSlotDelta(rank, -1)}
+                        disabled={totalSlots <= 0}
+                        className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
+                        title="Remove slot"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <SlotPips
+                        total={totalSlots}
+                        used={used}
+                        baseSlots={baseSlots}
+                        onToggle={(idx) => handleTogglePip(rank, idx, totalSlots)}
+                      />
+                      <button
+                        onClick={() => handleSlotDelta(rank, 1)}
+                        className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-primary transition-colors"
+                        title="Add slot"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : encounterId && totalSlots === 0 ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">(0 slots)</span>
+                      <button
+                        onClick={() => handleSlotDelta(rank, 1)}
+                        className="w-4 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-primary transition-colors"
+                        title="Add slot"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : !encounterId && baseSlots > 0 ? (
+                    <span className="text-xs text-muted-foreground">({baseSlots} slots)</span>
                   ) : null}
                 </div>
                 <div className="space-y-1">
@@ -760,7 +1039,7 @@ function SpellcastingBlock({ section, encounterContext }: {
                       </div>
                       {encounterId && (
                         <button
-                          onClick={() => handleRemoveSpell(spell.name, byRank.rank, true)}
+                          onClick={() => handleRemoveSpell(spell.name, rank, true)}
                           className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                           title="Remove for this encounter"
                         >
@@ -769,7 +1048,6 @@ function SpellcastingBlock({ section, encounterContext }: {
                       )}
                     </div>
                   ))}
-                  {/* Added spells for this encounter */}
                   {added.map((name, i) => (
                     <div key={`added-${i}`} className="flex items-center gap-1 group/spell">
                       <div className="flex-1">
@@ -777,7 +1055,7 @@ function SpellcastingBlock({ section, encounterContext }: {
                       </div>
                       {encounterId && (
                         <button
-                          onClick={() => handleRemoveSpell(name, byRank.rank, false)}
+                          onClick={() => handleRemoveSpell(name, rank, false)}
                           className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                           title="Remove added spell"
                         >
@@ -786,19 +1064,42 @@ function SpellcastingBlock({ section, encounterContext }: {
                       )}
                     </div>
                   ))}
-                  {/* Add spell row — only in encounter context */}
                   {encounterId && (
-                    <AddSpellRow
-                      rank={byRank.rank}
-                      onAdd={(name) => handleAddSpell(name, byRank.rank)}
-                    />
+                    <button
+                      onClick={() => { setSpellDialogRank(rank); setSpellDialogOpen(true) }}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mt-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add spell…</span>
+                    </button>
                   )}
                 </div>
               </div>
             )
           })}
+          {/* Add new rank button */}
+          {encounterId && nextRank <= 10 && (
+            <button
+              onClick={() => handleAddRank(nextRank)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Add rank {nextRank}</span>
+            </button>
+          )}
         </div>
       </CollapsibleContent>
+
+      {/* Spell search dialog */}
+      {encounterId && (
+        <SpellSearchDialog
+          open={spellDialogOpen}
+          onOpenChange={setSpellDialogOpen}
+          defaultRank={spellDialogRank}
+          defaultTradition={traditionFilter}
+          onAdd={(name, rank) => handleAddSpell(name, rank)}
+        />
+      )}
     </Collapsible>
   )
 }

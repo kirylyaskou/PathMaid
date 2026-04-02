@@ -669,10 +669,11 @@ async function extractCreatureSpellcasting(entities: RawEntity[]): Promise<void>
           const stats = (it._stats as Record<string, unknown>) ?? {}
           const spellTraits = ((sys.traits as Record<string, unknown>)?.value as string[]) ?? []
           const isCantrip = spellTraits.includes('cantrip')
+          const locationRaw = (sys.location as Record<string, unknown>)?.value as string ?? ''
           spellItems.push({
             id: `${entity.id}:${it._id as string}`,
             creature_id: entity.id,
-            entry_id: (sys.location as Record<string, unknown>)?.value as string ?? '',
+            entry_id: locationRaw ? `${entity.id}:${locationRaw}` : '',
             spell_foundry_id: parseCompendiumId(stats.compendiumSource as string | undefined),
             spell_name: it.name as string,
             rank_prepared: isCantrip ? 0 : ((sys.level as Record<string, unknown>)?.value as number ?? 0),

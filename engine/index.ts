@@ -149,6 +149,10 @@ export type {
 
 export { getHpAdjustment, getStatAdjustment } from './encounter/weak-elite'
 
+// ── Spellcasting ────────────────────────────────────────────────────────────
+export { detectCasterProgression, getMaxRecommendedRank } from './spellcasting/caster-progression'
+export type { CasterProgression } from './spellcasting/caster-progression'
+
 // ── Statistics ───────────────────────────────────────────────────────────────
 export { Statistic } from './statistics/statistic'
 export { resolveSelector } from './statistics/selector-resolver'

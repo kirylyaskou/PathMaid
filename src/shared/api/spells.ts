@@ -88,6 +88,15 @@ export async function getSpellById(id: string): Promise<SpellRow | null> {
   return rows[0] ?? null
 }
 
+export async function getSpellByName(name: string): Promise<SpellRow | null> {
+  const db = await getDb()
+  const rows = await db.select<SpellRow[]>(
+    'SELECT * FROM spells WHERE name = ? COLLATE NOCASE LIMIT 1',
+    [name]
+  )
+  return rows[0] ?? null
+}
+
 export async function getCreatureSpellcasting(creatureId: string): Promise<{
   entries: SpellcastingEntry[]
   spells: CreatureSpellItem[]
