@@ -20,6 +20,7 @@ pub struct RawEntity {
     pub size: Option<String>,
     pub source_pack: Option<String>,
     pub raw_json: String,
+    pub source_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -83,6 +84,12 @@ fn extract_entity(value: &serde_json::Value, source_pack: &str) -> Option<RawEnt
 
     let raw_json = serde_json::to_string(value).ok()?;
 
+    let source_name = value
+        .pointer("/system/details/publication/title")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
+
     Some(RawEntity {
         id,
         name,
@@ -99,6 +106,7 @@ fn extract_entity(value: &serde_json::Value, source_pack: &str) -> Option<RawEnt
         size,
         source_pack: Some(source_pack.to_string()),
         raw_json,
+        source_name,
     })
 }
 
