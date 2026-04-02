@@ -13,6 +13,7 @@
 - ✅ **v0.6.0-pre-alpha — Items** — Phases 20-24 (complete 2026-04-02)
 - ✅ **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (complete 2026-04-02)
 - ✅ **v0.8.0-pre-alpha — Hazards** — Phases 28-30 (complete 2026-04-02)
+- ✅ **v0.8.5-pre-alpha — Actions Reference** — Phases 31-32 (complete 2026-04-02)
 
 ## Phases
 
@@ -563,6 +564,33 @@ Plans:
 | 28. Hazard Import Pipeline | v0.8.0 | 1/1 | Complete | 2026-04-02 |
 | 29. Hazards Catalog Page | v0.8.0 | 1/1 | Complete | 2026-04-02 |
 | 30. Encounter Builder Hazard Search | v0.8.0 | 1/1 | Complete | 2026-04-02 |
+
+### 🚧 v0.8.5-pre-alpha — Actions Reference
+
+**Milestone Goal:** DM reference for all PF2e actions — import basic, skill, exploration, and downtime actions from Foundry VTT into SQLite, add an Actions catalog page with category tabs and expandable description cards.
+
+- [x] **Phase 31: Actions Import Pipeline** — DB migration `actions` table + extractAndInsertActions keyed by Foundry folder ID + shared/api/actions.ts (completed 2026-04-02)
+- [x] **Phase 32: Actions Reference Page** — `/actions` page with search, Basic/Skill/Exploration/Downtime tabs, ActionCard with cost badge and full description (completed 2026-04-02)
+
+### Phase 31: Actions Import Pipeline
+**Goal**: All DM-relevant PF2e actions stored in SQLite with category context
+**Plans**: 1 plan
+Plans:
+- [x] 31-01-PLAN.md — DB migration + extractAndInsertActions (FOLDER_TO_CATEGORY map) + shared/api/actions.ts
+
+### Phase 32: Actions Reference Page
+**Goal**: DM can browse and search all PF2e actions by category
+**Plans**: 1 plan
+Plans:
+- [x] 32-01-PLAN.md — ActionsPage with search + tabs; ActionCard with ◆/↩/◇ cost badge, traits, description; router + nav
+**UI hint**: yes
+
+## Progress (v0.8.5)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 31. Actions Import Pipeline | v0.8.5 | 1/1 | Complete | 2026-04-02 |
+| 32. Actions Reference Page | v0.8.5 | 1/1 | Complete | 2026-04-02 |
 
 ## Backlog
 
