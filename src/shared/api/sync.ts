@@ -19,6 +19,7 @@ interface RawEntity {
   size: string | null
   source_pack: string | null
   raw_json: string
+  source_name: string | null
 }
 
 interface SyncProgress {
@@ -30,6 +31,16 @@ interface SyncProgress {
 export type SyncProgressCallback = (stage: string, current: number, total: number) => void
 
 const BATCH_SIZE = 500
+
+function getLocalizeValue(obj: Record<string, unknown>, dotPath: string): string | undefined {
+  const parts = dotPath.split('.')
+  let current: unknown = obj
+  for (const part of parts) {
+    if (typeof current !== 'object' || current === null) return undefined
+    current = (current as Record<string, unknown>)[part]
+  }
+  return typeof current === 'string' ? current : undefined
+}
 
 async function batchInsertEntities(
   entities: RawEntity[],
@@ -43,7 +54,7 @@ async function batchInsertEntities(
   for (let i = 0; i < total; i += BATCH_SIZE) {
     const batch = entities.slice(i, i + BATCH_SIZE)
     const placeholders = batch
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const values = batch.flatMap((e) => [
       e.id,
@@ -61,10 +72,11 @@ async function batchInsertEntities(
       e.size,
       e.source_pack,
       e.raw_json,
+      e.source_name,
     ])
 
     await db.execute(
-      `INSERT OR REPLACE INTO entities (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO entities (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json, source_name) VALUES ${placeholders}`,
       values
     )
 
@@ -97,6 +109,31 @@ export async function syncFoundryData(
     const entities = await invoke<RawEntity[]>('sync_foundry_data', {
       url: null,
     })
+
+    // Download en.json for @Localize token resolution
+    let enJson: Record<string, unknown> = {}
+    try {
+      onProgress?.('Downloading localization data...', 0, 0)
+      const enResponse = await fetch(
+        'https://raw.githubusercontent.com/foundryvtt/pf2e/v13-dev/static/lang/en.json'
+      )
+      if (enResponse.ok) {
+        enJson = await enResponse.json() as Record<string, unknown>
+      }
+    } catch {
+      // en.json download failure is non-fatal — @Localize tokens remain in raw_json
+      // and will be stripped by resolveFoundryTokens() fallback at display time
+    }
+
+    // Resolve @Localize tokens in raw_json before inserting into SQLite
+    if (Object.keys(enJson).length > 0) {
+      for (const entity of entities) {
+        entity.raw_json = entity.raw_json.replace(
+          /@Localize\[([^\]]+)\]/g,
+          (_, key: string) => getLocalizeValue(enJson, key) ?? ''
+        )
+      }
+    }
 
     onProgress?.('Importing entities...', 0, entities.length)
     await batchInsertEntities(entities, onProgress)
