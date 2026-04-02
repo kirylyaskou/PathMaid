@@ -1,11 +1,9 @@
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, AlertTriangle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { useEncounterBuilderStore } from '../model/store'
-import { calculateCreatureXP, getHazardXp, type HazardType } from '@engine'
+import { calculateCreatureXP, getHazardXp } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 
 export function EncounterCreatureList() {
@@ -14,7 +12,6 @@ export function EncounterCreatureList() {
     draftHazards,
     partyLevel,
     removeCreatureFromDraft,
-    addHazardToDraft,
     removeHazardFromDraft,
     clearDraft,
   } = useEncounterBuilderStore(
@@ -23,36 +20,17 @@ export function EncounterCreatureList() {
       draftHazards: s.draftHazards,
       partyLevel: s.partyLevel,
       removeCreatureFromDraft: s.removeCreatureFromDraft,
-      addHazardToDraft: s.addHazardToDraft,
       removeHazardFromDraft: s.removeHazardFromDraft,
       clearDraft: s.clearDraft,
     }))
   )
 
-  const [hazardName, setHazardName] = useState('')
-  const [hazardLevel, setHazardLevel] = useState(1)
-  const [hazardType, setHazardType] = useState<HazardType>('simple')
-
   const isEmpty = draftCreatures.length === 0 && draftHazards.length === 0
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-center flex-1 text-muted-foreground">
-          <p className="text-sm">Add creatures or hazards to build an encounter</p>
-        </div>
-        <HazardForm
-          name={hazardName}
-          level={hazardLevel}
-          type={hazardType}
-          onNameChange={setHazardName}
-          onLevelChange={setHazardLevel}
-          onTypeChange={setHazardType}
-          onAdd={() => {
-            addHazardToDraft({ name: hazardName, level: hazardLevel, type: hazardType })
-            setHazardName('')
-          }}
-        />
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <p className="text-sm">Add creatures or hazards to build an encounter</p>
       </div>
     )
   }
@@ -107,16 +85,23 @@ export function EncounterCreatureList() {
             return (
               <div
                 key={h.instanceId}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/50 group"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md border-l-2 border-amber-600/60 bg-amber-950/30 hover:bg-amber-950/50 group"
               >
-                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400 font-medium">
-                  {h.type === 'complex' ? 'Complex' : 'Simple'}
-                </span>
-                <span className="flex-1 text-sm font-medium truncate">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <LevelBadge level={h.level} size="sm" />
+                <span className="flex-1 text-sm font-medium truncate text-amber-100/90">
                   {h.name || `Hazard Lv${h.level}`}
                 </span>
-                <span className="text-xs text-muted-foreground font-mono">Lv{h.level}</span>
-                <span className="text-xs text-muted-foreground font-mono w-12 text-right">
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${
+                    h.type === 'complex'
+                      ? 'bg-orange-900/50 text-orange-300 border border-orange-700/40'
+                      : 'bg-amber-900/40 text-amber-400 border border-amber-700/30'
+                  }`}
+                >
+                  {h.type === 'complex' ? 'complex' : 'simple'}
+                </span>
+                <span className="text-xs text-amber-500/70 font-mono w-12 text-right shrink-0">
                   {xpResult.outOfRange ? '\u2014' : `${xpResult.xp} XP`}
                 </span>
                 <Button
@@ -132,69 +117,6 @@ export function EncounterCreatureList() {
           })}
         </div>
       </ScrollArea>
-      <HazardForm
-        name={hazardName}
-        level={hazardLevel}
-        type={hazardType}
-        onNameChange={setHazardName}
-        onLevelChange={setHazardLevel}
-        onTypeChange={setHazardType}
-        onAdd={() => {
-          addHazardToDraft({ name: hazardName, level: hazardLevel, type: hazardType })
-          setHazardName('')
-        }}
-      />
-    </div>
-  )
-}
-
-function HazardForm({
-  name,
-  level,
-  type,
-  onNameChange,
-  onLevelChange,
-  onTypeChange,
-  onAdd,
-}: {
-  name: string
-  level: number
-  type: HazardType
-  onNameChange: (v: string) => void
-  onLevelChange: (v: number) => void
-  onTypeChange: (v: HazardType) => void
-  onAdd: () => void
-}) {
-  return (
-    <div className="p-2 border-t border-border/50 space-y-1.5">
-      <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">Add Hazard</p>
-      <div className="flex items-center gap-1.5">
-        <Input
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Hazard name"
-          className="h-7 text-xs flex-1"
-        />
-        <Input
-          type="number"
-          value={level}
-          onChange={(e) => onLevelChange(parseInt(e.target.value) || 1)}
-          className="h-7 text-xs w-14"
-          min={-1}
-          max={25}
-        />
-        <select
-          value={type}
-          onChange={(e) => onTypeChange(e.target.value as HazardType)}
-          className="h-7 text-xs rounded bg-secondary border border-border px-1"
-        >
-          <option value="simple">Simple</option>
-          <option value="complex">Complex</option>
-        </select>
-        <Button size="sm" className="h-7 text-xs" onClick={onAdd}>
-          Add
-        </Button>
-      </div>
     </div>
   )
 }

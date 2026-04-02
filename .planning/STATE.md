@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.7.0
+milestone: v0.8.0
 milestone_name: milestone
 status: planned
-stopped_at: v0.7.0 milestone complete — phases 25-27 shipped
-last_updated: "2026-04-02T16:00:00.000Z"
+stopped_at: v0.8.0 milestone complete — phases 28-30 shipped
+last_updated: "2026-04-02T17:00:00.000Z"
 last_activity: 2026-04-02
 progress:
-  total_phases: 25
-  completed_phases: 25
-  total_plans: 55
-  completed_plans: 49
-  percent: 25
+  total_phases: 30
+  completed_phases: 30
+  total_plans: 58
+  completed_plans: 52
+  percent: 30
 ---
 
 # STATE.md - Pathfinder 2e DM Assistant
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** v0.6.0 COMPLETE — all 25 phases shipped
+**Current focus:** v0.8.0 COMPLETE — all 30 phases shipped
 
 ## Current Position
 
 Phase: 999
 Plan: Not started
-Status: v0.6.0 complete
+Status: v0.8.0 complete
 Last activity: 2026-04-02
 
 Progress: [█████░░░░░] 25%
@@ -101,10 +101,20 @@ Key decisions carrying forward from prior milestones:
 - [Phase 24]: resolveUUIDTokensInDescriptions() post-processing: builds id→name map from items+spells+entities, updates items.description and spells.description in-place; regex excludes already-aliased @UUID[...]{...}
 - [Phase 24]: resolveFoundryTokensForDisplay replaces resolveFoundryTokensForSpell (backward alias kept); adds @Condition[slug] support; drops raw 16-char Foundry IDs gracefully
 
+### v0.8.0-specific context
+
+- [Phase 28]: hazards table: id, name, level, is_complex, hazard_type, stealth_dc, stealth_details, ac, hardness, hp, has_health, description, disable_details, reset_details, traits, source_book, source_pack, actions_json
+- [Phase 28]: hazard_type derived at extraction time: 'complex' if is_complex=1, else 'simple' — matches engine HazardType
+- [Phase 28]: actions_json: JSON array of {name, actionType, description} from items[] where type='action'
+- [Phase 29]: HazardCard: collapsed row (LevelBadge + name + complex/simple badge + stealth DC); expanded: AC/Hardness/HP stats, stealth details, description, disable, reset, actions, traits
+- [Phase 30]: CreatureSearchSidebar gains Creatures/Hazards tab toggle; HazardForm removed from EncounterCreatureList; hazard rows clickable with addHazardToDraft(name, level, is_complex?'complex':'simple')
+
 ### Roadmap Evolution
 
 - v0.5.0 started 2026-04-02, completed 2026-04-02: Combat Redesign + Spells
 - v0.6.0 started 2026-04-02, completed 2026-04-02: Items
+- v0.7.0 started 2026-04-02, completed 2026-04-02: Conditions
+- v0.8.0 started 2026-04-02, completed 2026-04-02: Hazards
 
 ### Pending Todos
 
@@ -118,4 +128,4 @@ None.
 
 Last session: 2026-04-02T16:00:00.000Z
 Stopped at: v0.6.0 complete (phases 20-24)
-Next step: /gsd:plan-milestone v0.8.0
+Next step: /gsd:plan-milestone v0.9.0

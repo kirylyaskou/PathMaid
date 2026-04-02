@@ -7,6 +7,7 @@ import {
   Sparkles,
   Package,
   Activity,
+  AlertTriangle,
   Map,
   Settings,
   ChevronLeft,
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/spells', icon: Sparkles, label: 'Spells', section: 'reference' },
   { href: '/items', icon: Package, label: 'Items', section: 'reference' },
   { href: '/conditions', icon: Activity, label: 'Conditions', section: 'reference' },
+  { href: '/hazards', icon: AlertTriangle, label: 'Hazards', section: 'reference' },
   { href: '/settings', icon: Settings, label: 'Settings', section: 'settings' },
 ]
 
