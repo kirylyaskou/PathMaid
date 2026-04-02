@@ -46,12 +46,28 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
         <div className="p-4 bg-card">
           <div className="grid grid-cols-6 gap-4">
             <StatItem label="HP" value={creature.hp} highlight />
-            <StatItem label="AC" value={creature.ac} />
-            <StatItem label="Fort" value={creature.fort} modifier />
-            <StatItem label="Ref" value={creature.ref} modifier />
-            <StatItem label="Will" value={creature.will} modifier />
-            <StatItem label="Perception" value={creature.perception} modifier />
+            <StatItem label="AC" value={creature.ac} colorClass="text-pf-gold" />
+            <StatItem label="Fort" value={creature.fort} modifier colorClass="text-pf-threat-low" showDc />
+            <StatItem label="Ref" value={creature.ref} modifier colorClass="text-pf-threat-low" showDc />
+            <StatItem label="Will" value={creature.will} modifier colorClass="text-pf-threat-low" showDc />
+            <StatItem label="Perception" value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc />
           </div>
+          {(creature.spellDC != null || creature.classDC != null) && (
+            <div className="flex gap-6 mt-3 pt-3 border-t border-border/40">
+              {creature.spellDC != null && (
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Spell DC</p>
+                  <p className="font-mono font-bold text-lg text-primary">{creature.spellDC}</p>
+                </div>
+              )}
+              {creature.classDC != null && (
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Class DC</p>
+                  <p className="font-mono font-bold text-lg text-primary">{creature.classDC}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -104,8 +120,8 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
 
         {/* Strikes */}
         <Collapsible defaultOpen>
-          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors">
-            <span className="font-semibold">Strikes</span>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+            <span className="font-semibold text-sm text-foreground">Strikes</span>
             <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -124,10 +140,45 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
                         +{strike.modifier}
                       </span>
                     </div>
-                    <div className="mt-1 text-sm">
-                      <span className="font-semibold">Damage </span>
-                      <span className="font-mono">{strike.damage}</span>
-                    </div>
+                    {/* Main damage */}
+                    {strike.damage.length > 0 && (
+                      <div className="mt-1 text-sm">
+                        <span className="font-semibold">Damage </span>
+                        {strike.damage.map((d, di) => (
+                          <span key={di}>
+                            {di > 0 && <span className="text-muted-foreground"> plus </span>}
+                            <span className="font-mono">{d.formula}</span>
+                            {d.type && (
+                              <span className="text-pf-blood font-mono"> {d.type}</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Additional damage */}
+                    {strike.additionalDamage && strike.additionalDamage.length > 0 && (
+                      <div className="mt-1 text-sm space-y-0.5">
+                        {strike.additionalDamage.map((ad, adi) => (
+                          <div key={adi}>
+                            {ad.label && (
+                              <span className="text-muted-foreground text-xs">{ad.label}: </span>
+                            )}
+                            <span className="font-mono">{ad.formula}</span>
+                            {ad.type && (
+                              <span className="text-pf-blood font-mono"> {ad.type}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Weapon group badge */}
+                    {strike.group && (
+                      <div className="mt-1">
+                        <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                          Group: {strike.group}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
                       <span className="font-mono">
                         MAP: <span className="text-primary">{fmt(strike.modifier)}</span>
@@ -162,8 +213,8 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
         {creature.abilities.length > 0 && (
           <>
             <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/50 transition-colors">
-                <span className="font-semibold">Abilities</span>
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+                <span className="font-semibold text-sm text-foreground">Abilities</span>
                 <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CollapsibleTrigger>
               <CollapsibleContent>
@@ -176,13 +227,13 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
                         )}
                         <span className="font-semibold text-sm">{ability.name}</span>
                       </div>
-                      <p className="mt-1 text-sm text-foreground/70">{ability.description}</p>
+                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{ability.description}</p>
                       {ability.traits && ability.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {ability.traits.map((trait) => (
                             <span
                               key={trait}
-                              className="px-1.5 py-0.5 text-[10px] rounded bg-secondary/80 text-secondary-foreground uppercase tracking-wider"
+                              className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
                             >
                               {trait}
                             </span>
@@ -198,20 +249,27 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
           </>
         )}
 
-        {/* Skills — always rendered, all 17 standard skills */}
-        <div className="p-4">
-          <h4 className="font-semibold mb-2">Skills</h4>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            {creature.skills.map((skill) => (
-              <span key={skill.name} className={skill.calculated ? "opacity-40" : ""}>
-                <span className="text-muted-foreground">{skill.name}</span>{" "}
-                <span className="font-mono text-primary">
-                  {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
+        {/* Skills — all 17 standard skills in Collapsible */}
+        <Collapsible defaultOpen>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+            <span className="font-semibold text-sm text-foreground">Skills</span>
+            <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {creature.skills.map((skill) => (
+                  <span key={skill.name} className={skill.calculated ? "opacity-40" : ""}>
+                    <span className="text-muted-foreground">{skill.name}</span>{" "}
+                    <span className="font-mono text-primary">
+                      {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         <Separator />
 
         {/* Languages & Senses */}
@@ -258,20 +316,24 @@ interface StatItemProps {
   value: number
   modifier?: boolean
   highlight?: boolean
+  colorClass?: string
+  showDc?: boolean
 }
 
-function StatItem({ label, value, modifier, highlight }: StatItemProps) {
+function StatItem({ label, value, modifier, highlight, colorClass, showDc }: StatItemProps) {
+  const displayValue = modifier && value > 0 ? `+${value}` : `${value}`
+  const dc = showDc ? ` (DC ${10 + value})` : ''
   return (
     <div className="text-center">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <p
         className={cn(
           "font-mono font-bold text-lg",
-          highlight && "text-pf-threat-extreme"
+          highlight && "text-pf-threat-extreme",
+          colorClass
         )}
       >
-        {modifier && value > 0 ? "+" : ""}
-        {value}
+        {displayValue}{dc}
       </p>
     </div>
   )
