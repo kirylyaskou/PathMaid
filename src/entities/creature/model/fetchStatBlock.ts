@@ -1,4 +1,4 @@
-import { fetchCreatureById, getCreatureSpellcasting } from '@/shared/api'
+import { fetchCreatureById, getCreatureSpellcasting, getCreatureItems } from '@/shared/api'
 import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
 import { toCreatureStatBlockData } from './mappers'
 import type { CreatureStatBlockData } from './types'
@@ -57,5 +57,7 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
     }
   })
 
-  return { ...base, spellcasting }
+  const equipment = await getCreatureItems(id)
+
+  return { ...base, spellcasting, ...(equipment.length > 0 ? { equipment } : {}) }
 }

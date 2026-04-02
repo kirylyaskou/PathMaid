@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/collapsible"
-import { ChevronDown, ChevronRight, X } from "lucide-react"
+import { ChevronDown, ChevronRight, X, Backpack } from "lucide-react"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
@@ -16,7 +16,8 @@ import type { CreatureStatBlockData } from '../model/types'
 import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
 import type { SpellRow } from '@/entities/spell'
 import { getSpellById, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride } from '@/shared/api'
-import type { SpellOverrideRow } from '@/shared/api'
+import type { SpellOverrideRow, CreatureItemRow } from '@/shared/api'
+import { ITEM_TYPE_COLORS } from '@/entities/item'
 
 export interface EncounterContext {
   encounterId: string
@@ -271,6 +272,14 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                 {...(encounterContext ? { encounterContext } : {})}
               />
             ))}
+            <Separator />
+          </>
+        )}
+
+        {/* Equipment */}
+        {creature.equipment && creature.equipment.length > 0 && (
+          <>
+            <EquipmentBlock items={creature.equipment} />
             <Separator />
           </>
         )}
@@ -834,5 +843,54 @@ function StatItem({ label, value, modifier, highlight, colorClass, showDc }: Sta
         {displayValue}{dc}
       </p>
     </div>
+  )
+}
+
+// ── EquipmentBlock ────────────────────────────────────────────────────────────
+
+function EquipmentBlock({ items }: { items: CreatureItemRow[] }) {
+  if (items.length === 0) return null
+
+  return (
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+        <div className="flex items-center gap-2">
+          <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-semibold text-sm text-foreground">Equipment</span>
+          <span className="text-xs text-muted-foreground">({items.length})</span>
+        </div>
+        <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-3 pt-2 space-y-1">
+          {items.map((item) => {
+            const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+            const qty = item.quantity > 1 ? ` ×${item.quantity}` : ''
+            const stat = item.damage_formula
+              ? item.damage_formula
+              : item.ac_bonus !== null
+                ? `AC +${item.ac_bonus}`
+                : null
+
+            return (
+              <div key={item.id} className="flex items-center gap-2 text-sm">
+                <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
+                  {item.item_type[0].toUpperCase()}
+                </span>
+                <span className="font-medium flex-1 min-w-0 truncate">
+                  {item.item_name}{qty}
+                </span>
+                {stat && (
+                  <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>
+                )}
+                {item.bulk && item.bulk !== '-' && (
+                  <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
