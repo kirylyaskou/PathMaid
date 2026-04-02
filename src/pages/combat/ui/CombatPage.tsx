@@ -11,9 +11,8 @@ import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
 import { setupAutoSave, teardownAutoSave, loadActiveCombat } from '@/features/combat-tracker/lib/combat-persistence'
 import { setupEncounterAutoSave, teardownEncounterAutoSave } from '@/features/combat-tracker/lib/encounter-persistence'
 import { useCombatantStore } from '@/entities/combatant'
-import { CreatureStatBlock, toCreatureStatBlockData } from '@/entities/creature'
+import { CreatureStatBlock, fetchCreatureStatBlockData } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
-import { fetchCreatureById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 
 export function CombatPage() {
@@ -24,6 +23,9 @@ export function CombatPage() {
 
   const pendingPersistentDamage = useCombatTrackerStore((s) => s.pendingPersistentDamage)
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
+  const { combatId, isEncounterBacked } = useCombatTrackerStore(
+    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked }))
+  )
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
 
@@ -62,9 +64,8 @@ export function CombatPage() {
     // Cache miss — fetch from SQLite
     setStatBlockLoading(true)
     try {
-      const row = await fetchCreatureById(combatant.creatureRef)
-      if (row) {
-        const data = toCreatureStatBlockData(row)
+      const data = await fetchCreatureStatBlockData(combatant.creatureRef)
+      if (data) {
         // Keep cache bounded to last 10 entries
         if (statBlockCache.current.size >= 10) {
           const firstKey = statBlockCache.current.keys().next().value
@@ -138,7 +139,15 @@ export function CombatPage() {
         <ResizablePanel defaultSize={40} minSize={28}>
           <div className="h-full overflow-y-auto">
             {lastNpcStatBlock ? (
-              <CreatureStatBlock creature={lastNpcStatBlock} className="rounded-none border-x-0 border-t-0" />
+              <CreatureStatBlock
+                creature={lastNpcStatBlock}
+                className="rounded-none border-x-0 border-t-0"
+                encounterContext={
+                  isEncounterBacked && combatId && selectedId
+                    ? { encounterId: combatId, combatantId: selectedId }
+                    : undefined
+                }
+              />
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
                 {statBlockLoading ? (

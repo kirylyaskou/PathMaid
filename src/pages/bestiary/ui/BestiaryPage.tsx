@@ -7,10 +7,10 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/shared/ui/resizable'
-import { CreatureCard, CreatureStatBlock, toCreature, toCreatureStatBlockData } from '@/entities/creature'
+import { CreatureCard, CreatureStatBlock, fetchCreatureStatBlockData, toCreature } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
 import { BestiaryFilterBar, useBestiaryStore } from '@/features/bestiary-browser'
-import { searchCreaturesFiltered, fetchCreatureById } from '@/shared/api'
+import { searchCreaturesFiltered } from '@/shared/api'
 import type { CreatureRow } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -68,21 +68,20 @@ export function BestiaryPage() {
       return
     }
     let cancelled = false
-    fetchCreatureById(selectedCreatureId).then((row) => {
+    fetchCreatureStatBlockData(selectedCreatureId).then((data) => {
       if (cancelled) return
-      if (!row) {
+      if (!data) {
         setStatBlockError('Creature not found in database')
         setStatBlock(null)
         return
       }
-      try {
-        setStatBlock(toCreatureStatBlockData(row))
-        setStatBlockError(null)
-      } catch (err) {
-        console.error('Failed to parse creature stat block:', row.name, err)
-        setStatBlockError(`Failed to parse stat block for "${row.name}": ${err instanceof Error ? err.message : String(err)}`)
-        setStatBlock(null)
-      }
+      setStatBlock(data)
+      setStatBlockError(null)
+    }).catch((err) => {
+      if (cancelled) return
+      console.error('Failed to load creature stat block:', err)
+      setStatBlockError(`Failed to load stat block: ${err instanceof Error ? err.message : String(err)}`)
+      setStatBlock(null)
     })
     return () => {
       cancelled = true

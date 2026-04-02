@@ -9,7 +9,9 @@
 - ✅ **v0.2.2-pre-alpha — PF2e Engine** — Phases 1-4 (complete)
 - ✅ **v0.3.0-pre-alpha — Frontend Rebuild + Engine Integration** — Phases 5-10 (complete)
 - ✅ **v0.4.0-pre-alpha — Stabilization + Polish** — Phases 11-14 (complete)
-- 🚧 **v0.5.0-pre-alpha — Combat Redesign + Spells** — Phases 15-19 (in progress)
+- ✅ **v0.5.0-pre-alpha — Combat Redesign + Spells** — Phases 15-19 (complete 2026-04-02)
+- ✅ **v0.6.0-pre-alpha — Items** — Phases 20-24 (complete 2026-04-02)
+- ✅ **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (complete 2026-04-02)
 
 ## Phases
 
@@ -291,9 +293,14 @@ Plans:
 | 14. Stat Block Polish 2 | v0.4.0 | 2/2 | Complete    | 2026-04-02 |
 | 15. Combat Tracker Layout Redesign | v0.5.0 | 1/1 | Complete | 2026-04-02 |
 | 16. Encounter Persistence | v0.5.0 | 3/3 | Complete    | 2026-04-02 |
-| 17. Spell Import Pipeline | v0.5.0 | TBD | Planned | — |
-| 18. Spell Display + Catalog | v0.5.0 | TBD | Planned | — |
-| 19. Spell Slot Tracking + Custom Override | v0.5.0 | TBD | Planned | — |
+| 17. Spell Import Pipeline | v0.5.0 | 2/2 | Complete | 2026-04-02 |
+| 18. Spell Display + Catalog | v0.5.0 | 2/2 | Complete | 2026-04-02 |
+| 19. Spell Slot Tracking + Custom Override | v0.5.0 | 2/2 | Complete | 2026-04-02 |
+| 20. Equipment Import Pipeline | v0.6.0 | 2/2 | Complete | 2026-04-02 |
+| 21. Items Catalog Page | v0.6.0 | 2/2 | Complete | 2026-04-02 |
+| 22. Creature Inventory Display | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+| 23. Encounter Inventory Editor | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+| 24. @-Token Resolution | v0.6.0 | 1/1 | Complete | 2026-04-02 |
 
 ### 🚧 v0.5.0-pre-alpha — Combat Redesign + Spells
 
@@ -301,9 +308,9 @@ Plans:
 
 - [ ] **Phase 15: Combat Tracker Layout Redesign** — New 3-panel layout with merged initiative+detail center, bestiary left, creature stat card right
 - [x] **Phase 16: Encounter Persistence** — Encounters store creature lists; "Load into Combat" populates tracker; HP/conditions/slots save back to encounter SQLite (completed 2026-04-02)
-- [ ] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists
-- [ ] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters
-- [ ] **Phase 19: Spell Slot Tracking + Custom Override** — Per-encounter slot pip UI (click to toggle); slot state in encounter SQLite; custom spell add/remove per encounter (non-destructive)
+- [x] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists (completed 2026-04-02)
+- [x] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters (completed 2026-04-02)
+- [x] **Phase 19: Spell Slot Tracking + Custom Override** — Per-encounter slot pip UI (click to toggle); slot state in encounter SQLite; custom spell add/remove per encounter (non-destructive) (completed 2026-04-02)
 
 ### Phase 15: Combat Tracker Layout Redesign
 **Goal**: The combat tracker renders as 3 panels — Bestiary search (left), merged initiative list + creature detail (center), creature stat card (right) — and selecting a combatant in the initiative list updates both the center detail view and the right stat card simultaneously
@@ -343,7 +350,10 @@ Plans:
   1. After running sync, the `spells` table contains 1,700+ rows with foundry_id, name, rank, traditions, traits, description, damage, area, range, duration, action_cost, save_stat, and source_book populated
   2. Spellcaster NPC creatures (e.g. Death Tower Necromancer) have their spellcasting entries stored — tradition "arcane", cast_type "prepared", DC 29, attack +21, slots for ranks 0–5
   3. The prepared spell list for the Death Tower Necromancer can be queried from SQLite and returns the correct spells for each rank as shown in the Foundry JSON
-**Plans**: TBD
+**Plans**: 2/2 plans executed
+Plans:
+- [x] 17-01-PLAN.md — DB migration: spells + creature_spellcasting_entries + creature_spell_lists tables with FTS5 (SPLI-01..03 foundation)
+- [x] 17-02-PLAN.md — Spell extraction from entity raw_json + creature spellcasting parse + shared/api/spells.ts query functions (SPLI-01, SPLI-02, SPLI-03)
 
 ### Phase 18: Spell Display + Catalog
 **Goal**: Spellcaster creatures show their spellcasting section in the stat block with expandable spell cards, and a new Spells page lets the DM browse and search all 1,797 imported spells
@@ -354,7 +364,10 @@ Plans:
   2. Clicking a spell name in the stat block expands it inline showing area, range, duration, damage formula, save type, traits, and heightening rules
   3. The Spells page loads with all imported spells listed; typing a spell name in the search box filters results via FTS5 in under 200ms
   4. Filtering by tradition "arcane" and rank "5" shows only arcane rank-5 spells
-**Plans**: TBD
+**Plans**: 2/2 plans executed
+Plans:
+- [x] 18-01-PLAN.md — SpellcastingSection type + fetchCreatureStatBlockData async loader (SPLD-01..03 foundation)
+- [x] 18-02-PLAN.md — SpellcastingBlock + SpellCard in CreatureStatBlock; full SpellsPage with FTS5 search + tradition/rank filters (SPLD-01, SPLD-02, SPLD-03, SPLC-01, SPLC-02, SPLC-03)
 **UI hint**: yes
 
 ### Phase 19: Spell Slot Tracking + Custom Override
@@ -366,20 +379,162 @@ Plans:
   2. After marking slots used and switching away from the combat tab, returning shows the same slot state — stored in encounter SQLite, not lost on navigation
   3. From the Encounters page, the DM can open a creature's spell override editor, search for a spell by name, and add it to a rank — the encounter's combat load reflects the addition without modifying the base creature
   4. Removing a spell from a prepared list in the override editor removes it from that encounter's display only — the creature's base spells in the `creatures` table are unchanged
-**Plans**: TBD
+**Plans**: 2/2 plans executed
+Plans:
+- [x] 19-01-PLAN.md — DB migration: encounter_spell_slots + encounter_combatant_spells; API functions in encounters.ts (SLOT-01..03, CUST-01..03 foundation)
+- [x] 19-02-PLAN.md — SlotPips + AddSpellRow + SpellcastingBlock extended with encounterContext; CombatPage wired (SLOT-01, SLOT-02, SLOT-03, CUST-01, CUST-02, CUST-03)
 **UI hint**: yes
+
+### 🚧 v0.6.0-pre-alpha — Items
+
+**Milestone Goal:** Full equipment system — import all Foundry VTT equipment (weapons, armor, consumables, gear) into SQLite, build an Items catalog page with FTS5 search and filters, display creature inventory in stat blocks, add per-encounter inventory editing with non-destructive overrides, and audit/fix @-token resolution for item and creature descriptions.
+
+- [x] **Phase 20: Equipment Import Pipeline** — Parse all equipment entity types into dedicated `items` table + FTS5; `creature_items` for NPC inventory; shared/api/items.ts (completed 2026-04-02)
+- [x] **Phase 21: Items Catalog Page** — Replace placeholder ItemsPage with FTS5 search, type/level/rarity filters, expandable ItemCard rows (completed 2026-04-02)
+- [x] **Phase 22: Creature Inventory Display** — Parse NPC carried items from raw_json; show Equipment section in stat block grouped by type (completed 2026-04-02)
+- [x] **Phase 23: Encounter Inventory Editor** — Per-encounter item overrides (add/remove items non-destructively); same pattern as spell overrides (completed 2026-04-02)
+- [x] **Phase 24: @-Token Resolution** — Audit all @UUID token types in item/creature descriptions; resolve unaliased item/spell/condition links from DB; import-time pre-resolution (completed 2026-04-02)
+
+### Phase 20: Equipment Import Pipeline
+**Goal**: All Foundry VTT equipment items are stored in a dedicated SQLite table with FTS5 search, and NPC creature inventories are parsed and linked to creature records
+**Depends on**: Phase 19
+**Requirements**: EQUIP-01, EQUIP-02, EQUIP-03
+**Success Criteria** (what must be TRUE):
+  1. After running sync, the `items` table contains entries for all equipment packs with item_type, level, rarity, bulk, price_gp, traits, and type-specific fields (damage_formula, ac_bonus, etc.) populated
+  2. FTS5 search on items returns results within 200ms for a name query against the full dataset
+  3. A spellcaster NPC (e.g. Death Tower Necromancer) has its carried equipment (armor, weapons, consumables) queryable from `creature_items` by creature_id
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — DB migration: items + items_fts + creature_items tables; extractAndInsertItems + extractCreatureItems in sync.ts
+- [ ] 20-02-PLAN.md — shared/api/items.ts: searchItems, getItemById, getItemsByType, getItemCount, getCreatureItems; barrel export
+
+### Phase 21: Items Catalog Page
+**Goal**: The DM can browse and search all imported equipment from the Items page with type, level range, and rarity filters
+**Depends on**: Phase 20
+**Requirements**: ITMCAT-01, ITMCAT-02, ITMCAT-03, ITMCAT-04
+**Success Criteria** (what must be TRUE):
+  1. The Items page shows a searchable list of items; typing a name filters via FTS5 within 200ms
+  2. Selecting "Weapon" type filter shows only weapons; combining with level range and rarity further narrows results
+  3. Clicking an item expands it inline showing description, type-specific stats (damage formula for weapons, AC bonus for armor, uses for consumables), and traits
+  4. Item type badges are color-coded and immediately scannable; price and bulk are visible in the collapsed row
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — ItemCard component (collapsed row + expanded detail, type badge colors, type-specific stats)
+- [ ] 21-02-PLAN.md — Full ItemsPage: search input, type/rarity/level filter pills, scrollable ItemCard list, result count
+**UI hint**: yes
+
+### Phase 22: Creature Inventory Display
+**Goal**: Creature stat blocks show a collapsible Equipment section listing all carried non-combat items from the Foundry VTT data
+**Depends on**: Phase 20
+**Requirements**: CRINV-01, CRINV-02
+**Success Criteria** (what must be TRUE):
+  1. Opening a creature stat block that carries equipment shows an "Equipment" section with items grouped by type (weapons → armor → consumables → misc)
+  2. Each item shows name, quantity (if >1), bulk, and key stat (damage formula for weapons, AC bonus for armor)
+  3. Creatures with no equipment do not show the Equipment section
+**Plans**: 1 plan
+Plans:
+- [ ] 22-01-PLAN.md — fetchStatBlock extended with getCreatureItems; EquipmentBlock component in CreatureStatBlock
+**UI hint**: yes
+
+### Phase 23: Encounter Inventory Editor
+**Goal**: The DM can add or remove items from a creature's inventory for a specific encounter without modifying the base creature data
+**Depends on**: Phase 22
+**Requirements**: ENCINV-01, ENCINV-02, ENCINV-03
+**Success Criteria** (what must be TRUE):
+  1. In encounter context, each item in the Equipment section has a hover-revealed × button; clicking it hides the item for that encounter only (base creature unchanged)
+  2. An "Add Item" search row at the bottom of Equipment (encounter context only) lets the DM search and add any item from the catalog; it appears in the combat stat card immediately
+  3. After resetting the encounter, all item overrides are cleared and the creature's base inventory is restored
+**Plans**: 1 plan
+Plans:
+- [ ] 23-01-PLAN.md — DB migration: encounter_combatant_items; API in encounters.ts; EquipmentBlock extended with encounterContext
+**UI hint**: yes
+
+### Phase 24: @-Token Resolution
+**Goal**: All @UUID token types in item and creature descriptions resolve to human-readable text — no raw Foundry IDs or unparsed tokens visible to the DM
+**Depends on**: Phase 21
+**Requirements**: ATRES-01, ATRES-02, ATRES-03
+**Success Criteria** (what must be TRUE):
+  1. @UUID[Compendium.pf2e.equipment.Item.X] without alias renders as the item's name, not the raw ID
+  2. @UUID[Compendium.pf2e.spells-srd.Item.X] and @UUID[Compendium.pf2e.conditions.Item.X] similarly resolve to names
+  3. A DB audit query (`SELECT description FROM items WHERE description LIKE '%@UUID%' AND description NOT LIKE '%]{%'`) returns 0 rows after a fresh sync
+**Plans**: 1 plan
+Plans:
+- [ ] 24-01-PLAN.md — resolveFoundryTokensAsync in mappers.ts; post-processing pass in sync.ts to resolve unaliased @UUID links; audit queries
+**UI hint**: no
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 20. Equipment Import Pipeline | v0.6.0 | 2/2 | Complete | 2026-04-02 |
+| 21. Items Catalog Page | v0.6.0 | 2/2 | Complete | 2026-04-02 |
+| 22. Creature Inventory Display | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+| 23. Encounter Inventory Editor | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+| 24. @-Token Resolution | v0.6.0 | 1/1 | Complete | 2026-04-02 |
+
+### 🚧 v0.7.0-pre-alpha — Conditions
+
+**Milestone Goal:** Full conditions reference system — extract all 49 Foundry VTT conditions into a dedicated SQLite table with structured mechanical data (modifier rules, overrides, valued flags), build a ConditionsPage reference catalog, and wire condition badges in the combat tracker to show description + modifier detail on click. Modifier data stored in `rules_json` for future engine integration.
+
+- [x] **Phase 25: Conditions Data Pipeline** — DB migration `conditions` table + extraction from entities during sync + shared/api/conditions.ts (completed 2026-04-02)
+- [x] **Phase 26: Conditions Reference Page** — Replace stub with full catalog: group tabs, search, ConditionCard with description + modifier summary + overrides (completed 2026-04-02)
+- [x] **Phase 27: Condition Badge Integration** — ConditionBadge info button → inline detail panel with description excerpt + modifiers + overrides (completed 2026-04-02)
+
+### Phase 25: Conditions Data Pipeline
+**Goal**: All 49 Foundry VTT conditions are stored in a dedicated SQLite table with parsed mechanical data ready for reference display and future modifier engine integration
+**Depends on**: Phase 24
+**Requirements**: COND-01, COND-02
+**Success Criteria** (what must be TRUE):
+  1. After sync, the `conditions` table contains all conditions with is_valued, group_name, overrides, modifier_summary, and rules_json populated
+  2. `getConditionBySlug('frightened')` returns a row with modifier_summary "Status −value to all checks" and rules_json containing the FlatModifier rule
+  3. `getAllConditions()` returns all conditions sorted by name
+**Plans**: 2 plans
+Plans:
+- [ ] 25-01-PLAN.md — DB migration: conditions table; extractAndInsertConditions + parseModifierSummary in sync.ts
+- [ ] 25-02-PLAN.md — shared/api/conditions.ts: getAllConditions, searchConditions, getConditionBySlug, getConditionsByGroup
+
+### Phase 26: Conditions Reference Page
+**Goal**: The DM can browse all PF2e conditions with their mechanical effects, descriptions, and override relationships from the Conditions page
+**Depends on**: Phase 25
+**Requirements**: CONDP-01, CONDP-02, CONDP-03
+**Success Criteria** (what must be TRUE):
+  1. The Conditions page shows all conditions grouped by category with a search filter
+  2. Clicking a condition expands it showing: full description, modifier summary (e.g. "Status −value to all checks"), and overrides list
+  3. Valued conditions show a badge indicating they take a numeric value
+**Plans**: 1 plan
+Plans:
+- [ ] 26-01-PLAN.md — Full ConditionsPage: group tabs, search, ConditionCard with valued badge, modifier summary, overrides, description
+**UI hint**: yes
+
+### Phase 27: Condition Badge Integration
+**Goal**: Condition badges in the combat tracker show an info button that opens a detail panel with the condition's description and modifier summary — DM never needs to leave combat to look up a condition
+**Depends on**: Phase 26
+**Requirements**: CONDB-01, CONDB-02
+**Success Criteria** (what must be TRUE):
+  1. Each condition badge in the combat tracker has an ⓘ icon; clicking it shows a detail panel with name, modifier summary, overrides, and 300-char description excerpt
+  2. The panel stays open until × is clicked or another badge's ⓘ is clicked
+  3. Persistent damage conditions (e.g., persistent-fire) show "No reference data" gracefully when not in conditions table
+**Plans**: 1 plan
+Plans:
+- [ ] 27-01-PLAN.md — ConditionBadge info button; ConditionDetailPopover in ConditionSection.tsx; getConditionBySlug fetch
+**UI hint**: yes
+
+## Progress (v0.7.0)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 25. Conditions Data Pipeline | v0.7.0 | 2/2 | Complete | 2026-04-02 |
+| 26. Conditions Reference Page | v0.7.0 | 1/1 | Complete | 2026-04-02 |
+| 27. Condition Badge Integration | v0.7.0 | 1/1 | Complete | 2026-04-02 |
 
 ## Backlog
 
-### Phase 999.1: Stat block card in combat tracker (BACKLOG)
+### Phase 999.1: Stat block card in combat tracker (FULFILLED)
 
 **Goal:** Integrate the bestiary stat block card into the combat tracker — clicking a combatant in the tracker opens the same full stat block (with MAP, IWR, abilities, etc.) that's shown in the bestiary browser
-**Requirements:** TBD
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] TBD (promote with /gsd:review-backlog when ready)
+**Status:** Fulfilled in Phase 15 (3-panel layout with stat card right panel)
+**Plans:** Delivered as part of Phase 15-01-PLAN.md
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-02 — v0.5.0 roadmap added (5 phases, 23 requirements)*
+*Last updated: 2026-04-02 — v0.6.0 milestone planned (phases 20-24)*

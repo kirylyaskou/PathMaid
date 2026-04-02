@@ -242,6 +242,166 @@ export async function loadEncounterState(encounterId: string): Promise<Encounter
   }
 }
 
+// ── Spell slot tracking ───────────────────────────────────────────────────────
+
+export interface SpellSlotRow {
+  encounterId: string
+  combatantId: string
+  entryId: string
+  rank: number
+  usedCount: number
+}
+
+export async function saveSpellSlotUsage(
+  encounterId: string,
+  combatantId: string,
+  entryId: string,
+  rank: number,
+  usedCount: number
+): Promise<void> {
+  const db = await getDb()
+  if (usedCount === 0) {
+    await db.execute(
+      `DELETE FROM encounter_spell_slots WHERE encounter_id=? AND combatant_id=? AND entry_id=? AND rank=?`,
+      [encounterId, combatantId, entryId, rank]
+    )
+  } else {
+    await db.execute(
+      `INSERT OR REPLACE INTO encounter_spell_slots (encounter_id, combatant_id, entry_id, rank, used_count) VALUES (?,?,?,?,?)`,
+      [encounterId, combatantId, entryId, rank, usedCount]
+    )
+  }
+}
+
+export async function loadSpellSlots(
+  encounterId: string,
+  combatantId: string
+): Promise<SpellSlotRow[]> {
+  const db = await getDb()
+  const rows = await db.select<{ encounter_id: string; combatant_id: string; entry_id: string; rank: number; used_count: number }[]>(
+    `SELECT * FROM encounter_spell_slots WHERE encounter_id=? AND combatant_id=?`,
+    [encounterId, combatantId]
+  )
+  return rows.map((r) => ({
+    encounterId: r.encounter_id,
+    combatantId: r.combatant_id,
+    entryId: r.entry_id,
+    rank: r.rank,
+    usedCount: r.used_count,
+  }))
+}
+
+// ── Spell overrides ───────────────────────────────────────────────────────────
+
+export interface SpellOverrideRow {
+  id: string
+  encounterId: string
+  combatantId: string
+  entryId: string
+  spellName: string
+  rank: number
+  isRemoved: boolean
+  sortOrder: number
+}
+
+export async function loadSpellOverrides(
+  encounterId: string,
+  combatantId: string
+): Promise<SpellOverrideRow[]> {
+  const db = await getDb()
+  const rows = await db.select<{
+    id: string; encounter_id: string; combatant_id: string; entry_id: string;
+    spell_name: string; rank: number; is_removed: number; sort_order: number
+  }[]>(
+    `SELECT * FROM encounter_combatant_spells WHERE encounter_id=? AND combatant_id=?`,
+    [encounterId, combatantId]
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    encounterId: r.encounter_id,
+    combatantId: r.combatant_id,
+    entryId: r.entry_id,
+    spellName: r.spell_name,
+    rank: r.rank,
+    isRemoved: r.is_removed === 1,
+    sortOrder: r.sort_order,
+  }))
+}
+
+export async function upsertSpellOverride(override: SpellOverrideRow): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT OR REPLACE INTO encounter_combatant_spells
+       (id, encounter_id, combatant_id, entry_id, spell_name, rank, is_removed, sort_order)
+     VALUES (?,?,?,?,?,?,?,?)`,
+    [override.id, override.encounterId, override.combatantId, override.entryId,
+     override.spellName, override.rank, override.isRemoved ? 1 : 0, override.sortOrder]
+  )
+}
+
+export async function deleteSpellOverride(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute(`DELETE FROM encounter_combatant_spells WHERE id=?`, [id])
+}
+
+// ── Item overrides ────────────────────────────────────────────────────────────
+
+export interface EncounterItemRow {
+  id: string
+  encounterId: string
+  combatantId: string
+  itemName: string
+  itemFoundryId: string | null
+  itemType: string
+  quantity: number
+  damageFormula: string | null
+  acBonus: number | null
+  isRemoved: boolean
+}
+
+export async function loadItemOverrides(
+  encounterId: string,
+  combatantId: string
+): Promise<EncounterItemRow[]> {
+  const db = await getDb()
+  const rows = await db.select<{
+    id: string; encounter_id: string; combatant_id: string; item_name: string;
+    item_foundry_id: string | null; item_type: string; quantity: number;
+    damage_formula: string | null; ac_bonus: number | null; is_removed: number
+  }[]>(
+    `SELECT * FROM encounter_combatant_items WHERE encounter_id=? AND combatant_id=?`,
+    [encounterId, combatantId]
+  )
+  return rows.map((r) => ({
+    id: r.id,
+    encounterId: r.encounter_id,
+    combatantId: r.combatant_id,
+    itemName: r.item_name,
+    itemFoundryId: r.item_foundry_id,
+    itemType: r.item_type,
+    quantity: r.quantity,
+    damageFormula: r.damage_formula,
+    acBonus: r.ac_bonus,
+    isRemoved: r.is_removed === 1,
+  }))
+}
+
+export async function upsertItemOverride(item: EncounterItemRow): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT OR REPLACE INTO encounter_combatant_items
+       (id, encounter_id, combatant_id, item_name, item_foundry_id, item_type, quantity, damage_formula, ac_bonus, is_removed)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    [item.id, item.encounterId, item.combatantId, item.itemName, item.itemFoundryId,
+     item.itemType, item.quantity, item.damageFormula, item.acBonus, item.isRemoved ? 1 : 0]
+  )
+}
+
+export async function deleteItemOverride(id: string): Promise<void> {
+  const db = await getDb()
+  await db.execute(`DELETE FROM encounter_combatant_items WHERE id=?`, [id])
+}
+
 /** Reset: restore hp=max_hp, clear conditions, reset round/turn state */
 export async function resetEncounterCombat(encounterId: string): Promise<void> {
   const db = await getDb()
@@ -256,6 +416,16 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
   await db.execute(
     `DELETE FROM encounter_conditions
      WHERE combatant_id IN (SELECT id FROM encounter_combatants WHERE encounter_id=?)`,
+    [encounterId]
+  )
+  // Reset spell slots — all slots restored on encounter reset
+  await db.execute(
+    `DELETE FROM encounter_spell_slots WHERE encounter_id=?`,
+    [encounterId]
+  )
+  // Reset item overrides — base inventory restored on encounter reset
+  await db.execute(
+    `DELETE FROM encounter_combatant_items WHERE encounter_id=?`,
     [encounterId]
   )
 }

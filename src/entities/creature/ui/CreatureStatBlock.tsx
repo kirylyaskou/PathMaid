@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -7,18 +8,29 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/collapsible"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ChevronRight, X, Backpack } from "lucide-react"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
 import type { CreatureStatBlockData } from '../model/types'
+import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
+import type { SpellRow } from '@/entities/spell'
+import { getSpellById, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride, loadItemOverrides, upsertItemOverride, deleteItemOverride, searchItems } from '@/shared/api'
+import type { SpellOverrideRow, CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
+import { ITEM_TYPE_COLORS } from '@/entities/item'
+
+export interface EncounterContext {
+  encounterId: string
+  combatantId: string
+}
 
 interface CreatureStatBlockProps {
   creature: CreatureStatBlockData
   className?: string
+  encounterContext?: EncounterContext
 }
 
-export function CreatureStatBlock({ creature, className }: CreatureStatBlockProps) {
+export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
       {/* Header - Grimdark */}
@@ -250,6 +262,31 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
           </>
         )}
 
+        {/* Spellcasting */}
+        {creature.spellcasting && creature.spellcasting.length > 0 && (
+          <>
+            {creature.spellcasting.map((section) => (
+              <SpellcastingBlock
+                key={section.entryId}
+                section={section}
+                {...(encounterContext ? { encounterContext } : {})}
+              />
+            ))}
+            <Separator />
+          </>
+        )}
+
+        {/* Equipment */}
+        {(creature.equipment && creature.equipment.length > 0 || encounterContext) && (
+          <>
+            <EquipmentBlock
+              items={creature.equipment ?? []}
+              {...(encounterContext ? { encounterContext } : {})}
+            />
+            <Separator />
+          </>
+        )}
+
         {/* Skills — all 17 standard skills in Collapsible */}
         <Collapsible defaultOpen>
           <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
@@ -393,6 +430,430 @@ function highlightGameText(raw: string): ReactNode {
   return <>{parts}</>
 }
 
+// ── Spellcasting ──────────────────────────────────────────────────────────────
+
+function traditionColor(tradition: string): string {
+  const map: Record<string, string> = {
+    arcane:  'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    divine:  'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    occult:  'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    primal:  'bg-green-500/20 text-green-300 border-green-500/30',
+  }
+  return map[tradition.toLowerCase()] ?? 'bg-secondary text-secondary-foreground border-border'
+}
+
+function rankLabel(rank: number): string {
+  return rank === 0 ? 'Cantrips' : `Rank ${rank}`
+}
+
+function actionCostLabel(cost: string): string {
+  if (cost === 'free') return '◇'
+  if (cost === 'reaction') return '↺'
+  const n = parseInt(cost)
+  if (n === 1) return '◆'
+  if (n === 2) return '◆◆'
+  if (n === 3) return '◆◆◆'
+  return cost
+}
+
+function stripHtmlInline(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()
+}
+
+function SpellCard({ foundryId, name }: { foundryId: string | null; name: string }) {
+  const [open, setOpen] = useState(false)
+  const [spell, setSpell] = useState<SpellRow | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function handleToggle() {
+    if (!open && !spell && foundryId) {
+      setLoading(true)
+      try {
+        const data = await getSpellById(foundryId)
+        setSpell(data)
+      } finally {
+        setLoading(false)
+      }
+    }
+    setOpen((v) => !v)
+  }
+
+  const traditions: string[] = spell?.traditions ? JSON.parse(spell.traditions) : []
+  const traits: string[] = spell?.traits ? JSON.parse(spell.traits) : []
+
+  return (
+    <div className="rounded border border-border/30 bg-secondary/30 overflow-hidden">
+      <button
+        onClick={handleToggle}
+        className="w-full flex items-center gap-1.5 px-2 py-1 text-sm text-left hover:bg-secondary/60 transition-colors"
+      >
+        {open
+          ? <ChevronDown className="w-3 h-3 shrink-0 text-muted-foreground" />
+          : <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground" />
+        }
+        <span className="font-medium">{name}</span>
+        {loading && <span className="text-xs text-muted-foreground ml-auto">…</span>}
+        {!spell && !loading && !foundryId && (
+          <span className="text-xs text-muted-foreground ml-auto italic">no data</span>
+        )}
+      </button>
+
+      {open && spell && (
+        <div className="px-3 pb-2 pt-1 space-y-1.5 border-t border-border/30">
+          {/* Meta row */}
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            {spell.action_cost && (
+              <span className="font-mono text-primary">{actionCostLabel(spell.action_cost)}</span>
+            )}
+            {spell.range_text && (
+              <span className="text-muted-foreground">Range: <span className="text-foreground">{spell.range_text}</span></span>
+            )}
+            {spell.area && (() => {
+              const a = JSON.parse(spell.area) as { type?: string; value?: number }
+              return a.value
+                ? <span className="text-muted-foreground">Area: <span className="text-foreground">{a.value}-foot {a.type}</span></span>
+                : null
+            })()}
+            {spell.duration_text && (
+              <span className="text-muted-foreground">Duration: <span className="text-foreground">{spell.duration_text}</span></span>
+            )}
+            {spell.save_stat && (
+              <span className="text-muted-foreground">Save: <span className="text-foreground capitalize">{spell.save_stat}</span></span>
+            )}
+          </div>
+          {/* Damage */}
+          {spell.damage && (() => {
+            const dmg = JSON.parse(spell.damage) as Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>
+            const parts = Object.values(dmg)
+              .map((d) => `${d.formula ?? d.damage ?? '?'} ${d.damageType ?? d.type ?? ''}`.trim())
+              .filter(Boolean)
+            return parts.length > 0
+              ? <p className="text-xs"><span className="text-muted-foreground">Damage: </span><span className="font-mono text-pf-blood">{parts.join(' + ')}</span></p>
+              : null
+          })()}
+          {/* Traits */}
+          {(traits.length > 0 || traditions.length > 0) && (
+            <div className="flex flex-wrap gap-1">
+              {[...traditions, ...traits].map((t) => (
+                <span key={t} className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{t}</span>
+              ))}
+            </div>
+          )}
+          {/* Description */}
+          {spell.description && (
+            <p className="text-xs text-foreground/75 leading-relaxed line-clamp-4">
+              {stripHtmlInline(resolveFoundryTokensForSpell(spell.description))}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Slot pips ─────────────────────────────────────────────────────────────────
+
+function SlotPips({ total, used, onToggle }: { total: number; used: number; onToggle: (idx: number) => void }) {
+  if (total <= 0) return null
+  return (
+    <div className="flex gap-0.5 items-center">
+      {Array.from({ length: total }).map((_, i) => (
+        <button
+          key={i}
+          onClick={(e) => { e.stopPropagation(); onToggle(i) }}
+          title={i < used ? 'Mark slot available' : 'Mark slot used'}
+          className={cn(
+            "w-3.5 h-3.5 rounded-full border transition-colors text-[8px] flex items-center justify-center",
+            i < used
+              ? "bg-primary/70 border-primary text-primary-foreground"
+              : "bg-transparent border-border/60 hover:border-primary/60"
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ── Spell override row ────────────────────────────────────────────────────────
+
+function AddSpellRow({ rank, onAdd }: {
+  rank: number
+  onAdd: (name: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SpellRow[]>([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return }
+    const t = setTimeout(async () => {
+      const r = await searchSpells(query, rank)
+      setResults(r.slice(0, 8))
+    }, 200)
+    return () => clearTimeout(t)
+  }, [query, rank])
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-1">
+        <input
+          className="flex-1 text-xs bg-transparent border border-border/40 rounded px-2 py-0.5 focus:outline-none focus:border-primary/60"
+          placeholder="Add spell…"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        />
+      </div>
+      {open && results.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-0.5 bg-card border border-border rounded shadow-lg max-h-40 overflow-y-auto">
+          {results.map((s) => (
+            <button
+              key={s.id}
+              className="w-full text-left px-2 py-1 text-xs hover:bg-secondary/70 flex items-center justify-between"
+              onMouseDown={() => { onAdd(s.name); setQuery(''); setOpen(false) }}
+            >
+              <span>{s.name}</span>
+              <span className="text-muted-foreground">{rankLabel(s.rank)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SpellcastingBlock (with encounter-aware slots + overrides) ────────────────
+
+function SpellcastingBlock({ section, encounterContext }: {
+  section: SpellcastingSection
+  encounterContext?: EncounterContext
+}) {
+  const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+
+  // Slot state — keyed by rank
+  const [usedSlots, setUsedSlots] = useState<Record<number, number>>({})
+  // Override state
+  const [overrides, setOverrides] = useState<SpellOverrideRow[]>([])
+
+  const { encounterId, combatantId } = encounterContext ?? {}
+
+  const loadSlotState = useCallback(async () => {
+    if (!encounterId || !combatantId) return
+    const rows = await loadSpellSlots(encounterId, combatantId)
+    const byRank: Record<number, number> = {}
+    for (const r of rows) {
+      if (r.entryId === section.entryId) byRank[r.rank] = r.usedCount
+    }
+    setUsedSlots(byRank)
+  }, [encounterId, combatantId, section.entryId])
+
+  const loadOverrideState = useCallback(async () => {
+    if (!encounterId || !combatantId) return
+    const rows = await loadSpellOverrides(encounterId, combatantId)
+    setOverrides(rows.filter((r) => r.entryId === section.entryId))
+  }, [encounterId, combatantId, section.entryId])
+
+  useEffect(() => {
+    loadSlotState()
+    loadOverrideState()
+  }, [loadSlotState, loadOverrideState])
+
+  async function handleTogglePip(rank: number, idx: number, total: number) {
+    if (!encounterId || !combatantId) return
+    const current = usedSlots[rank] ?? 0
+    // Click on used pip → reduce; click on unused pip → use up to that index
+    const newUsed = idx < current ? idx : Math.min(idx + 1, total)
+    setUsedSlots((prev) => ({ ...prev, [rank]: newUsed }))
+    await saveSpellSlotUsage(encounterId, combatantId, section.entryId, rank, newUsed)
+  }
+
+  async function handleAddSpell(name: string, rank: number) {
+    if (!encounterId || !combatantId) return
+    const id = `${combatantId}:${section.entryId}:add:${name}:${rank}`
+    const override: SpellOverrideRow = {
+      id, encounterId, combatantId, entryId: section.entryId,
+      spellName: name, rank, isRemoved: false, sortOrder: Date.now(),
+    }
+    await upsertSpellOverride(override)
+    setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
+  }
+
+  async function handleRemoveSpell(spellName: string, rank: number, isDefault: boolean) {
+    if (!encounterId || !combatantId) return
+    if (isDefault) {
+      // Mark default spell as removed for this encounter
+      const id = `${combatantId}:${section.entryId}:rm:${spellName}:${rank}`
+      const override: SpellOverrideRow = {
+        id, encounterId, combatantId, entryId: section.entryId,
+        spellName, rank, isRemoved: true, sortOrder: 0,
+      }
+      await upsertSpellOverride(override)
+      setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
+    } else {
+      // Remove an added spell
+      const id = `${combatantId}:${section.entryId}:add:${spellName}:${rank}`
+      await deleteSpellOverride(id)
+      setOverrides((prev) => prev.filter((o) => o.id !== id))
+    }
+  }
+
+  const removedSpells = new Set(overrides.filter((o) => o.isRemoved).map((o) => `${o.rank}:${o.spellName}`))
+  const addedByRank = overrides
+    .filter((o) => !o.isRemoved)
+    .reduce<Record<number, string[]>>((acc, o) => {
+      if (!acc[o.rank]) acc[o.rank] = []
+      acc[o.rank].push(o.spellName)
+      return acc
+    }, {})
+
+  return (
+    <Collapsible defaultOpen>
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-foreground">Spellcasting</span>
+          <span className={cn("px-1.5 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold", traditionColor(section.tradition))}>
+            {section.tradition} {section.castType}
+          </span>
+        </div>
+        <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-3 pt-2 space-y-3">
+          {/* DC + Attack */}
+          <div className="flex gap-4 text-sm">
+            {section.spellDc > 0 && (
+              <span className="text-muted-foreground">DC <span className="font-mono text-primary font-bold">{section.spellDc}</span></span>
+            )}
+            {section.spellAttack !== 0 && (
+              <span className="text-muted-foreground">Attack <span className="font-mono text-primary font-bold">{fmt(section.spellAttack)}</span></span>
+            )}
+          </div>
+          {/* Spells by rank */}
+          {section.spellsByRank.map((byRank: SpellsByRank) => {
+            const used = usedSlots[byRank.rank] ?? 0
+            const visibleSpells = byRank.spells.filter(
+              (s) => !removedSpells.has(`${byRank.rank}:${s.name}`)
+            )
+            const added = addedByRank[byRank.rank] ?? []
+            return (
+              <div key={byRank.rank}>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {rankLabel(byRank.rank)}
+                  </span>
+                  {encounterId && byRank.slots > 0 ? (
+                    <SlotPips
+                      total={byRank.slots}
+                      used={used}
+                      onToggle={(idx) => handleTogglePip(byRank.rank, idx, byRank.slots)}
+                    />
+                  ) : byRank.slots > 0 ? (
+                    <span className="text-xs text-muted-foreground">({byRank.slots} slots)</span>
+                  ) : null}
+                </div>
+                <div className="space-y-1">
+                  {visibleSpells.map((spell, i) => (
+                    <div key={i} className="flex items-center gap-1 group/spell">
+                      <div className="flex-1">
+                        <SpellCard name={spell.name} foundryId={spell.foundryId} />
+                      </div>
+                      {encounterId && (
+                        <button
+                          onClick={() => handleRemoveSpell(spell.name, byRank.rank, true)}
+                          className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                          title="Remove for this encounter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {/* Added spells for this encounter */}
+                  {added.map((name, i) => (
+                    <div key={`added-${i}`} className="flex items-center gap-1 group/spell">
+                      <div className="flex-1">
+                        <SpellCard name={name} foundryId={null} />
+                      </div>
+                      {encounterId && (
+                        <button
+                          onClick={() => handleRemoveSpell(name, byRank.rank, false)}
+                          className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                          title="Remove added spell"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {/* Add spell row — only in encounter context */}
+                  {encounterId && (
+                    <AddSpellRow
+                      rank={byRank.rank}
+                      onAdd={(name) => handleAddSpell(name, byRank.rank)}
+                    />
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+// Runtime token resolver — handles remaining tokens after import-time resolution
+function resolveFoundryTokensForDisplay(text: string): string {
+  // @UUID with alias → alias text
+  text = text.replace(/@UUID\[[^\]]*\]\{([^}]+)\}/g, '$1')
+  // @UUID without alias → capitalize last path segment (IDs should be pre-resolved by sync)
+  text = text.replace(/@UUID\[([^\]]+)\]/g, (_, path: string) => {
+    const seg = path.split('.').pop() ?? ''
+    // If it looks like a Foundry ID (alphanumeric ~16 chars), just drop it gracefully
+    return /^[A-Za-z0-9]{16,}$/.test(seg) ? '' : seg.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+  })
+  // @Condition[slug]{alias} or @Condition[slug] → alias or slug capitalized
+  text = text.replace(/@Condition\[[^\]]*\]\{([^}]+)\}/g, '$1')
+  text = text.replace(/@Condition\[([^\]]+)\]/g, (_, slug: string) =>
+    slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+  )
+  // @Damage: @Damage[2d6[fire], 1d4[bleed]] → "2d6 fire plus 1d4 bleed"
+  text = text.replace(/@Damage\[([^\]]*)\]/g, (_, inner: string) => {
+    return inner.split(/,\s*/).map((p: string) => {
+      const m = p.trim().match(/^(.+?)\[(.+?)\]$/)
+      return m ? `${m[1]} ${m[2]}` : p.trim()
+    }).join(' plus ')
+  })
+  // @Check: @Check[type:perception|dc:20] → "DC 20 Perception check"
+  text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
+    const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
+    return `${params.dc ? `DC ${params.dc} ` : ''}${params.type ?? 'check'} check`
+  })
+  // @Template: @Template[type:cone|distance:15] → "15-foot cone"
+  text = text.replace(/@Template\[([^\]]+)\]/g, (_, inner: string) => {
+    const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
+    return `${params.distance ?? '?'}-foot ${params.type ?? 'area'}`
+  })
+  // [[/act slug]] → readable action name
+  text = text.replace(/\[\[\/act\s+([^#\s\]]*)[^\]]*\]\]/g, (_, slug: string) => {
+    if (!slug) return ''
+    return slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+  })
+  // [[/br expr #label]]{display} → display text
+  text = text.replace(/\[\[\/br\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
+  // [[/br expr]] → expr
+  text = text.replace(/\[\[\/br\s+([^#\s\]]+)[^\]]*\]\]/g, '$1')
+  // {Nfeet} → "N feet"
+  text = text.replace(/\{(\d+)feet?\}/gi, '$1 feet')
+  // Strip remaining unresolved @Localize and other @ tokens
+  text = text.replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, '')
+  return text
+}
+
+// Keep old name as alias for call sites that haven't been updated
+const resolveFoundryTokensForSpell = resolveFoundryTokensForDisplay
+
 interface StatItemProps {
   label: string
   value: number
@@ -418,5 +879,198 @@ function StatItem({ label, value, modifier, highlight, colorClass, showDc }: Sta
         {displayValue}{dc}
       </p>
     </div>
+  )
+}
+
+// ── EquipmentBlock ────────────────────────────────────────────────────────────
+
+function EquipmentBlock({
+  items,
+  encounterContext,
+}: {
+  items: CreatureItemRow[]
+  encounterContext?: EncounterContext
+}) {
+  const [overrides, setOverrides] = useState<EncounterItemRow[]>([])
+  const [addQuery, setAddQuery] = useState('')
+  const [addResults, setAddResults] = useState<ItemRow[]>([])
+
+  useEffect(() => {
+    if (!encounterContext) return
+    loadItemOverrides(encounterContext.encounterId, encounterContext.combatantId)
+      .then(setOverrides)
+      .catch(() => {})
+  }, [encounterContext?.encounterId, encounterContext?.combatantId])
+
+  useEffect(() => {
+    if (!encounterContext || !addQuery.trim()) { setAddResults([]); return }
+    const timer = setTimeout(() => {
+      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(() => {})
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [addQuery, encounterContext])
+
+  const handleRemove = useCallback(async (item: CreatureItemRow) => {
+    if (!encounterContext) return
+    const override: EncounterItemRow = {
+      id: `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`,
+      encounterId: encounterContext.encounterId,
+      combatantId: encounterContext.combatantId,
+      itemName: item.item_name,
+      itemFoundryId: item.foundry_item_id,
+      itemType: item.item_type,
+      quantity: item.quantity,
+      damageFormula: item.damage_formula,
+      acBonus: item.ac_bonus,
+      isRemoved: true,
+    }
+    setOverrides((prev) => [...prev.filter((o) => o.id !== override.id), override])
+    await upsertItemOverride(override).catch(() => {})
+  }, [encounterContext])
+
+  const handleRestoreBase = useCallback(async (item: CreatureItemRow) => {
+    if (!encounterContext) return
+    const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`
+    setOverrides((prev) => prev.filter((o) => o.id !== id))
+    await deleteItemOverride(id).catch(() => {})
+  }, [encounterContext])
+
+  const handleAddItem = useCallback(async (catalogItem: ItemRow) => {
+    if (!encounterContext) return
+    const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:added:${catalogItem.id}`
+    const override: EncounterItemRow = {
+      id,
+      encounterId: encounterContext.encounterId,
+      combatantId: encounterContext.combatantId,
+      itemName: catalogItem.name,
+      itemFoundryId: catalogItem.id,
+      itemType: catalogItem.item_type,
+      quantity: 1,
+      damageFormula: catalogItem.damage_formula,
+      acBonus: catalogItem.ac_bonus,
+      isRemoved: false,
+    }
+    setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
+    setAddQuery('')
+    setAddResults([])
+    await upsertItemOverride(override).catch(() => {})
+  }, [encounterContext])
+
+  const handleRemoveAdded = useCallback(async (override: EncounterItemRow) => {
+    setOverrides((prev) => prev.filter((o) => o.id !== override.id))
+    await deleteItemOverride(override.id).catch(() => {})
+  }, [])
+
+  const removedIds = new Set(overrides.filter((o) => o.isRemoved).map((o) => o.itemFoundryId ?? o.itemName))
+  const addedItems = overrides.filter((o) => !o.isRemoved)
+
+  const visibleBase = items.filter((item) => {
+    const key = item.foundry_item_id ?? item.item_name
+    return !removedIds.has(key)
+  })
+
+  const totalCount = visibleBase.length + addedItems.length
+  if (totalCount === 0 && !encounterContext) return null
+
+  function ItemRow_({ item, onRemove, onRestore, isRemoved }: {
+    item: { name: string; type: string; qty: number; damageFormula: string | null; acBonus: number | null; bulk?: string | null }
+    onRemove?: () => void
+    onRestore?: () => void
+    isRemoved?: boolean
+  }) {
+    const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+    const qty = item.qty > 1 ? ` ×${item.qty}` : ''
+    const stat = item.damageFormula ?? (item.acBonus !== null ? `AC +${item.acBonus}` : null)
+    return (
+      <div className={cn("group flex items-center gap-2 text-sm", isRemoved && "opacity-40 line-through")}>
+        <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
+          {item.type[0].toUpperCase()}
+        </span>
+        <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
+        {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
+        {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
+        {encounterContext && onRemove && !isRemoved && (
+          <button onClick={onRemove} className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-opacity shrink-0">
+            <X className="w-3 h-3" />
+          </button>
+        )}
+        {encounterContext && onRestore && isRemoved && (
+          <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+        <div className="flex items-center gap-2">
+          <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="font-semibold text-sm text-foreground">Equipment</span>
+          <span className="text-xs text-muted-foreground">({totalCount})</span>
+        </div>
+        <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-3 pt-2 space-y-1">
+          {visibleBase.map((item) => (
+            <ItemRow_
+              key={item.id}
+              item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
+              onRemove={encounterContext ? () => handleRemove(item) : undefined}
+            />
+          ))}
+          {/* Removed items shown struck-through with undo */}
+          {overrides.filter((o) => o.isRemoved).map((o) => {
+            const base = items.find((i) => (i.foundry_item_id ?? i.item_name) === (o.itemFoundryId ?? o.itemName))
+            if (!base) return null
+            return (
+              <ItemRow_
+                key={o.id}
+                item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+                isRemoved
+                onRestore={() => handleRestoreBase(base)}
+              />
+            )
+          })}
+          {/* Added items */}
+          {addedItems.map((o) => (
+            <ItemRow_
+              key={o.id}
+              item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+              onRemove={() => handleRemoveAdded(o)}
+            />
+          ))}
+
+          {/* Add item row — encounter context only */}
+          {encounterContext && (
+            <div className="relative mt-2">
+              <input
+                type="text"
+                placeholder="Add item…"
+                value={addQuery}
+                onChange={(e) => setAddQuery(e.target.value)}
+                className="w-full text-xs px-2 py-1 rounded border border-border/50 bg-secondary/40 placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+              />
+              {addResults.length > 0 && (
+                <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">
+                  {addResults.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleAddItem(r)}
+                      className="w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-secondary/60 transition-colors"
+                    >
+                      <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
+                      <span className="flex-1 truncate">{r.name}</span>
+                      {r.damage_formula && <span className="font-mono text-muted-foreground shrink-0">{r.damage_formula}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

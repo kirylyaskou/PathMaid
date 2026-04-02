@@ -4,3 +4,5 @@ export type { Creature, CreatureStatBlockData, Rarity, CreatureSize, ActionCost,
 export { toCreature, toCreatureStatBlockData, extractIwr } from './model/mappers'
 export { CreatureCard } from './ui/CreatureCard'
 export { CreatureStatBlock } from './ui/CreatureStatBlock'
+export type { EncounterContext } from './ui/CreatureStatBlock'
+export { fetchCreatureStatBlockData } from './model/fetchStatBlock'

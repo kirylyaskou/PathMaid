@@ -1,1 +1,1 @@
-export type { Spell } from './model/types'
+export type { SpellRow, SpellcastingSection, SpellsByRank, SpellListEntry } from './model/types'

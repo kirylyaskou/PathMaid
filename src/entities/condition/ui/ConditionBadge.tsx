@@ -1,4 +1,4 @@
-import { Lock, Unlock, Link } from 'lucide-react'
+import { Lock, Unlock, Link, Info } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import type { ActiveCondition } from '../model/types'
 import { CONDITION_GROUPS } from '@engine'
@@ -22,6 +22,7 @@ interface ConditionBadgeProps {
   condition: ActiveCondition
   onRemove?: () => void
   onToggleLock?: () => void
+  onInfo?: () => void
   className?: string
 }
 
@@ -29,6 +30,7 @@ export function ConditionBadge({
   condition,
   onRemove,
   onToggleLock,
+  onInfo,
   className,
 }: ConditionBadgeProps) {
   const colorClass = getCategoryColor(condition.slug)
@@ -49,6 +51,15 @@ export function ConditionBadge({
       <span className="capitalize">{condition.slug.replace('-', ' ')}</span>
       {condition.value !== undefined && condition.value > 0 && (
         <span className="font-mono font-semibold">{condition.value}</span>
+      )}
+      {onInfo && (
+        <button
+          className="ml-0.5 hover:text-foreground opacity-50 hover:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); onInfo() }}
+          title="View condition details"
+        >
+          <Info className="w-2.5 h-2.5" />
+        </button>
       )}
       {onToggleLock && (
         <button
