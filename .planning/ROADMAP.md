@@ -51,7 +51,7 @@ Full history preserved in `.planning/milestones/`.
 **Milestone Goal:** Make everything work without errors — fix crashes, clean up UX, and bring every existing feature to a working end-to-end state. No new architecture, only focused fixes and polish.
 
 - [x] **Phase 11: App Shell Fixes** — Animated splash screen replaces white screen; encounters page loads without crashing (completed 2026-04-01)
-- [ ] **Phase 12: Stat Block + Bestiary Data Quality** — @-syntax renders as human-readable text; full 17-skill list displayed; sources filter shows book names
+- [x] **Phase 12: Stat Block + Bestiary Data Quality** — @-syntax renders as human-readable text; full 17-skill list displayed; sources filter shows book names (completed 2026-04-02)
 - [ ] **Phase 13: Combat UX Sweep** — Kill button in Dying modal; Detection/Attitude conditions removed from picker; wider condition picker layout; single-input HP controls; persistent damage modal fully functional
 
 ## Phase Details
@@ -266,7 +266,7 @@ Plans:
 | 9. Bestiary Browser + Encounter Builder | v0.3.0 | 2/2 | Complete | 2026-04-01 |
 | 10. P2 Differentiators | v0.3.0 | 4/4 | Complete | 2026-04-01 |
 | 11. App Shell Fixes | v0.4.0 | 2/2 | Complete | 2026-04-02 |
-| 12. Stat Block + Bestiary Data Quality | v0.4.0 | 0/TBD | Not started | - |
+| 12. Stat Block + Bestiary Data Quality | v0.4.0 | 2/2 | Complete   | 2026-04-02 |
 | 13. Combat UX Sweep | v0.4.0 | 0/TBD | Not started | - |
 
 ## Backlog
@@ -275,7 +275,7 @@ Plans:
 
 **Goal:** Integrate the bestiary stat block card into the combat tracker — clicking a combatant in the tracker opens the same full stat block (with MAP, IWR, abilities, etc.) that's shown in the bestiary browser
 **Requirements:** TBD
-**Plans:** 0/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd:review-backlog when ready)

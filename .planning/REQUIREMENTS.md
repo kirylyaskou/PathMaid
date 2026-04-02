@@ -91,11 +91,11 @@ Requirements for Stabilization + Polish milestone.
 - [x] **FIX-01**: Encounters page loads without crashing (fix infinite re-render loop in Radix ScrollArea)
 
 ### Stat Block
-- [ ] **STAT-01**: Ability descriptions render @-syntax (@UUID, @Damage, @Check, @Template, @Localize) as human-readable formatted text instead of raw Foundry markup
-- [ ] **STAT-02**: Stat block shows all 17 PF2e skills with modifiers, calculating unlisted skills from creature level + proficiency rank
+- [x] **STAT-01**: Ability descriptions render @-syntax (@UUID, @Damage, @Check, @Template, @Localize) as human-readable formatted text instead of raw Foundry markup
+- [x] **STAT-02**: Stat block shows all 17 PF2e skills with modifiers, calculating unlisted skills from creature level + proficiency rank
 
 ### Bestiary
-- [ ] **BEST-04**: Sources filter displays book names (Player Core, Monster Core, etc.) instead of folder names (pf2e, sf2e)
+- [x] **BEST-04**: Sources filter displays book names (Player Core, Monster Core, etc.) instead of folder names (pf2e, sf2e)
 
 ### Combat UX
 - [ ] **CMB-06**: Dying modal includes a "Kill" button to immediately kill the creature without rolling recovery
@@ -141,9 +141,9 @@ Deferred to future milestones.
 |-------------|-------|--------|
 | SPLASH-01 | Phase 11 | Complete |
 | FIX-01 | Phase 11 | Complete |
-| STAT-01 | Phase 12 | Pending |
-| STAT-02 | Phase 12 | Pending |
-| BEST-04 | Phase 12 | Pending |
+| STAT-01 | Phase 12 | Complete |
+| STAT-02 | Phase 12 | Complete |
+| BEST-04 | Phase 12 | Complete |
 | CMB-06 | Phase 13 | Pending |
 | CMB-07 | Phase 13 | Pending |
 | CMB-08 | Phase 13 | Pending |

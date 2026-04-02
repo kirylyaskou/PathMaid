@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 12 plans ready
-last_updated: "2026-04-02T12:00:00.000Z"
-last_activity: 2026-04-02 — Phase 12 planned (2 plans, Wave 1)
+status: verifying
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-04-02T01:10:40.919Z"
+last_activity: 2026-04-02
 progress:
   total_phases: 15
-  completed_phases: 11
-  total_plans: 38
-  completed_plans: 32
+  completed_phases: 12
+  total_plans: 40
+  completed_plans: 34
   percent: 33
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-01)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** v0.4.0 Stabilization + Polish — Phase 11 complete, starting Phase 12
+**Current focus:** Phase 12 — stat-block-bestiary-data-quality
 
 ## Current Position
 
-Phase: 12 — Stat Block + Bestiary Data Quality (planned)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-04-02 — Phase 12 planned (2 plans, Wave 1)
+Phase: 12 (stat-block-bestiary-data-quality) — EXECUTING
+Plan: 2 of 2
+Status: Phase complete — ready for verification
+Last activity: 2026-04-02
 
 Progress: [███░░░░░░░] 33% (1/3 phases complete)
 
@@ -47,6 +47,8 @@ Progress: [███░░░░░░░] 33% (1/3 phases complete)
 | 11. App Shell Fixes | TBD | — | — |
 | 12. Stat Block + Bestiary Data Quality | TBD | — | — |
 | 13. Combat UX Sweep | TBD | — | — |
+| Phase 12 P01 | 2 | 3 tasks | 3 files |
+| Phase 12 P02 | 2 | 5 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +80,11 @@ Key decisions carrying forward from prior milestones:
 - Auto-roll + manual d20 dual mode established (DyingCascadeDialog, PersistentDamageDialog)
 - HpControls has damage type combobox + applyIWR inline preview
 - TurnControls hooks into turn-manager for condition auto-decrement and persistent damage detection
+- [Phase 12]: resolveFoundryTokens() called before stripHtml() at all text-sanitization call sites to avoid HTML tag interference with @-token regexes
+- [Phase 12]: STANDARD_SKILLS array has 16 entries (perception displayed separately in core stats, not duplicated in skills section)
+- [Phase 12]: source_name nullable column added via non-destructive ALTER TABLE; null preferred over empty string
+- [Phase 12]: en.json download failure is non-fatal — sync proceeds without @Localize resolution
+- [Phase 12]: fetchDistinctSources returns {pack, name}[] with null fallback to pack name for display
 
 ### v0.4.0-specific context
 
@@ -95,7 +102,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T00:39:08.817Z
-Stopped at: Phase 12 UI-SPEC approved
-Resume file: .planning/phases/12-stat-block-bestiary-data-quality/12-UI-SPEC.md
+Last session: 2026-04-02T01:10:40.915Z
+Stopped at: Completed 12-02-PLAN.md
+Resume file: None
 Next step: /gsd:execute-phase 12
