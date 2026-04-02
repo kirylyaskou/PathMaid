@@ -198,23 +198,21 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
           </>
         )}
 
-        {/* Skills */}
-        {creature.skills.length > 0 && (
-          <>
-            <div className="p-4">
-              <h4 className="font-semibold mb-2">Skills</h4>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {creature.skills.map((skill) => (
-                  <span key={skill.name}>
-                    <span className="text-muted-foreground">{skill.name}</span>{" "}
-                    <span className="font-mono text-primary">+{skill.modifier}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <Separator />
-          </>
-        )}
+        {/* Skills — always rendered, all 17 standard skills */}
+        <div className="p-4">
+          <h4 className="font-semibold mb-2">Skills</h4>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {creature.skills.map((skill) => (
+              <span key={skill.name} className={skill.calculated ? "opacity-40" : ""}>
+                <span className="text-muted-foreground">{skill.name}</span>{" "}
+                <span className="font-mono text-primary">
+                  {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+        <Separator />
 
         {/* Languages & Senses */}
         <div className="p-4 space-y-2">
