@@ -12,6 +12,7 @@
 - ✅ **v0.5.0-pre-alpha — Combat Redesign + Spells** — Phases 15-19 (complete 2026-04-02)
 - ✅ **v0.6.0-pre-alpha — Items** — Phases 20-24 (complete 2026-04-02)
 - ✅ **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (complete 2026-04-02)
+- ✅ **v0.8.0-pre-alpha — Hazards** — Phases 28-30 (complete 2026-04-02)
 
 ## Phases
 
@@ -526,6 +527,42 @@ Plans:
 | 25. Conditions Data Pipeline | v0.7.0 | 2/2 | Complete | 2026-04-02 |
 | 26. Conditions Reference Page | v0.7.0 | 1/1 | Complete | 2026-04-02 |
 | 27. Condition Badge Integration | v0.7.0 | 1/1 | Complete | 2026-04-02 |
+
+### 🚧 v0.8.0-pre-alpha — Hazards
+
+**Milestone Goal:** Full hazard system — import all Foundry VTT hazards into SQLite with stat block data (AC, HP, hardness, stealth, disable, reset, actions), add a Hazards reference catalog page, and wire encounter builder to search hazards from DB instead of manual form.
+
+- [x] **Phase 28: Hazard Import Pipeline** — DB migration `hazards` table + extractAndInsertHazards in sync.ts + shared/api/hazards.ts (completed 2026-04-02)
+- [x] **Phase 29: Hazards Catalog Page** — `/hazards` page with search, simple/complex filter, HazardCard with stat block details (completed 2026-04-02)
+- [x] **Phase 30: Encounter Builder Hazard Search** — Replace manual hazard form with DB-backed search tab in CreatureSearchSidebar (completed 2026-04-02)
+
+### Phase 28: Hazard Import Pipeline
+**Goal**: All Foundry VTT hazards are stored in a dedicated SQLite table with parsed stat block data
+**Plans**: 1 plan
+Plans:
+- [x] 28-01-PLAN.md — DB migration + extractAndInsertHazards + shared/api/hazards.ts
+
+### Phase 29: Hazards Catalog Page
+**Goal**: The DM can browse all PF2e hazards with full stat blocks from the Hazards page
+**Plans**: 1 plan
+Plans:
+- [x] 29-01-PLAN.md — HazardsPage with search, filter, HazardCard; router + nav
+**UI hint**: yes
+
+### Phase 30: Encounter Builder Hazard Search
+**Goal**: Encounter builder searches real imported hazards from DB instead of manual name/level/type form
+**Plans**: 1 plan
+Plans:
+- [x] 30-01-PLAN.md — CreatureSearchSidebar hazard tab; remove HazardForm from EncounterCreatureList
+**UI hint**: yes
+
+## Progress (v0.8.0)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 28. Hazard Import Pipeline | v0.8.0 | 1/1 | Complete | 2026-04-02 |
+| 29. Hazards Catalog Page | v0.8.0 | 1/1 | Complete | 2026-04-02 |
+| 30. Encounter Builder Hazard Search | v0.8.0 | 1/1 | Complete | 2026-04-02 |
 
 ## Backlog
 
