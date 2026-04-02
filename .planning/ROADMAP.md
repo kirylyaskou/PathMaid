@@ -11,7 +11,7 @@
 - ✅ **v0.4.0-pre-alpha — Stabilization + Polish** — Phases 11-14 (complete)
 - ✅ **v0.5.0-pre-alpha — Combat Redesign + Spells** — Phases 15-19 (complete 2026-04-02)
 - ✅ **v0.6.0-pre-alpha — Items** — Phases 20-24 (complete 2026-04-02)
-- 🚧 **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (planned 2026-04-02)
+- ✅ **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (complete 2026-04-02)
 
 ## Phases
 
@@ -476,9 +476,9 @@ Plans:
 
 **Milestone Goal:** Full conditions reference system — extract all 49 Foundry VTT conditions into a dedicated SQLite table with structured mechanical data (modifier rules, overrides, valued flags), build a ConditionsPage reference catalog, and wire condition badges in the combat tracker to show description + modifier detail on click. Modifier data stored in `rules_json` for future engine integration.
 
-- [ ] **Phase 25: Conditions Data Pipeline** — DB migration `conditions` table + extraction from entities during sync + shared/api/conditions.ts (planned 2026-04-02)
-- [ ] **Phase 26: Conditions Reference Page** — Replace stub with full catalog: group tabs, search, ConditionCard with description + modifier summary + overrides (planned 2026-04-02)
-- [ ] **Phase 27: Condition Badge Integration** — ConditionBadge info button → inline detail panel with description excerpt + modifiers + overrides (planned 2026-04-02)
+- [x] **Phase 25: Conditions Data Pipeline** — DB migration `conditions` table + extraction from entities during sync + shared/api/conditions.ts (completed 2026-04-02)
+- [x] **Phase 26: Conditions Reference Page** — Replace stub with full catalog: group tabs, search, ConditionCard with description + modifier summary + overrides (completed 2026-04-02)
+- [x] **Phase 27: Condition Badge Integration** — ConditionBadge info button → inline detail panel with description excerpt + modifiers + overrides (completed 2026-04-02)
 
 ### Phase 25: Conditions Data Pipeline
 **Goal**: All 49 Foundry VTT conditions are stored in a dedicated SQLite table with parsed mechanical data ready for reference display and future modifier engine integration
@@ -523,9 +523,9 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 25. Conditions Data Pipeline | v0.7.0 | 0/2 | Planned | — |
-| 26. Conditions Reference Page | v0.7.0 | 0/1 | Planned | — |
-| 27. Condition Badge Integration | v0.7.0 | 0/1 | Planned | — |
+| 25. Conditions Data Pipeline | v0.7.0 | 2/2 | Complete | 2026-04-02 |
+| 26. Conditions Reference Page | v0.7.0 | 1/1 | Complete | 2026-04-02 |
+| 27. Condition Badge Integration | v0.7.0 | 1/1 | Complete | 2026-04-02 |
 
 ## Backlog
 

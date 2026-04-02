@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.7.0
 milestone_name: milestone
 status: planned
-stopped_at: v0.7.0 milestone planned — phases 25-27 (Conditions)
+stopped_at: v0.7.0 milestone complete — phases 25-27 shipped
 last_updated: "2026-04-02T16:00:00.000Z"
 last_activity: 2026-04-02
 progress:
@@ -118,4 +118,4 @@ None.
 
 Last session: 2026-04-02T16:00:00.000Z
 Stopped at: v0.6.0 complete (phases 20-24)
-Next step: Execute Phase 25-01 (DB migration + conditions extraction)
+Next step: /gsd:plan-milestone v0.8.0
