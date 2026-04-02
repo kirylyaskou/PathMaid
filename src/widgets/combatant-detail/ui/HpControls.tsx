@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Plus, Minus, Shield, Heart, ChevronDown } from 'lucide-react'
+import { Swords, Plus, Shield, Heart, ChevronDown } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
@@ -42,17 +42,15 @@ const DAMAGE_TYPE_GROUPS: { label: string; types: DamageType[] }[] = [
 ]
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, abilities }: HpControlsProps) {
-  const [damageInput, setDamageInput] = useState('')
-  const [healInput, setHealInput] = useState('')
-  const [tempHpInput, setTempHpInput] = useState('')
+  const [hpInput, setHpInput] = useState('')
   const [damageType, setDamageType] = useState<DamageType | null>(null)
   const [typeOpen, setTypeOpen] = useState(false)
   const [dyingDialogOpen, setDyingDialogOpen] = useState(false)
   const { updateHp, updateTempHp } = useCombatantStore()
 
   const iwrPreview = useMemo(() => {
-    if (!damageType || !damageInput) return null
-    const amount = parseInt(damageInput, 10)
+    if (!damageType || !hpInput) return null
+    const amount = parseInt(hpInput, 10)
     if (isNaN(amount) || amount <= 0) return null
 
     const immunities = (iwrImmunities || [])
@@ -69,44 +67,37 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       return null
 
     return applyIWR({ type: damageType, amount }, immunities, weaknesses, resistances)
-  }, [damageType, damageInput, iwrImmunities, iwrWeaknesses, iwrResistances])
+  }, [damageType, hpInput, iwrImmunities, iwrWeaknesses, iwrResistances])
 
-  const handleDamage = useCallback(() => {
-    const amount = parseInt(damageInput, 10)
+  const handleAction = useCallback((action: 'damage' | 'heal' | 'tempHp') => {
+    const amount = parseInt(hpInput, 10)
     if (isNaN(amount) || amount <= 0) return
 
-    const effectiveDamage = iwrPreview ? iwrPreview.finalDamage : amount
-    let remaining = effectiveDamage
-    if (combatant.tempHp > 0) {
-      const absorbed = Math.min(combatant.tempHp, remaining)
-      updateTempHp(combatant.id, combatant.tempHp - absorbed)
-      remaining -= absorbed
+    if (action === 'damage') {
+      const effectiveDamage = iwrPreview ? iwrPreview.finalDamage : amount
+      let remaining = effectiveDamage
+      if (combatant.tempHp > 0) {
+        const absorbed = Math.min(combatant.tempHp, remaining)
+        updateTempHp(combatant.id, combatant.tempHp - absorbed)
+        remaining -= absorbed
+      }
+      const hpBefore = combatant.hp
+      if (remaining > 0) {
+        updateHp(combatant.id, -remaining)
+      }
+      const newHp = Math.max(0, hpBefore - remaining)
+      if (newHp === 0 && hpBefore > 0) {
+        setDyingDialogOpen(true)
+      }
+      setDamageType(null)
+    } else if (action === 'heal') {
+      updateHp(combatant.id, amount)
+    } else if (action === 'tempHp') {
+      updateTempHp(combatant.id, Math.max(combatant.tempHp, amount))
     }
-    const hpBefore = combatant.hp
-    if (remaining > 0) {
-      updateHp(combatant.id, -remaining)
-    }
-    const newHp = Math.max(0, hpBefore - remaining)
-    if (newHp === 0 && hpBefore > 0) {
-      setDyingDialogOpen(true)
-    }
-    setDamageInput('')
-    setDamageType(null)
-  }, [damageInput, iwrPreview, combatant, updateHp, updateTempHp])
 
-  const handleHeal = useCallback(() => {
-    const amount = parseInt(healInput, 10)
-    if (isNaN(amount) || amount <= 0) return
-    updateHp(combatant.id, amount)
-    setHealInput('')
-  }, [healInput, combatant.id, updateHp])
-
-  const handleSetTempHp = useCallback(() => {
-    const amount = parseInt(tempHpInput, 10)
-    if (isNaN(amount) || amount < 0) return
-    updateTempHp(combatant.id, Math.max(combatant.tempHp, amount))
-    setTempHpInput('')
-  }, [tempHpInput, combatant, updateTempHp])
+    setHpInput('')
+  }, [hpInput, iwrPreview, combatant, updateHp, updateTempHp])
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
 
@@ -137,114 +128,88 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Damage</label>
-          <div className="flex gap-1">
-            <Input
-              type="number"
-              value={damageInput}
-              onChange={(e) => setDamageInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleDamage()}
-              placeholder="0"
-              className="h-7 text-xs"
-              min={0}
-            />
+      <div className="flex gap-2 items-stretch">
+        <Input
+          type="number"
+          value={hpInput}
+          onChange={(e) => setHpInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAction('damage')}
+          placeholder="0"
+          className="h-full w-20 text-center text-sm font-mono"
+          min={0}
+        />
+
+        <div className="flex flex-col gap-1 flex-1">
+          <div className="flex">
             <Button
-              size="icon"
               variant="destructive"
-              className="h-7 w-7 shrink-0"
-              onClick={handleDamage}
-              disabled={!damageInput}
+              className="flex-1 h-7 text-xs justify-start gap-1.5 rounded-r-none"
+              onClick={() => handleAction('damage')}
+              disabled={!hpInput}
             >
-              <Minus className="w-3 h-3" />
+              <Swords className="w-3 h-3" />
+              {damageType ? `Damage (${damageType})` : 'Damage'}
             </Button>
-          </div>
-          <Popover open={typeOpen} onOpenChange={setTypeOpen}>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border border-border/50 bg-secondary/30 text-muted-foreground hover:bg-secondary/50 w-full">
-                <span className="truncate flex-1 text-left">
-                  {damageType ? damageType : 'Untyped'}
-                </span>
-                <ChevronDown className="w-2.5 h-2.5 shrink-0" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Damage type..." className="h-8 text-xs" />
-                <CommandList>
-                  <CommandEmpty>No type found</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value="untyped-clear"
-                      onSelect={() => { setDamageType(null); setTypeOpen(false) }}
-                    >
-                      Untyped
-                    </CommandItem>
-                  </CommandGroup>
-                  {DAMAGE_TYPE_GROUPS.map((g) => (
-                    <CommandGroup key={g.label} heading={g.label}>
-                      {g.types.map((t) => (
-                        <CommandItem
-                          key={t}
-                          value={t}
-                          onSelect={() => { setDamageType(t); setTypeOpen(false) }}
-                        >
-                          {t}
-                        </CommandItem>
-                      ))}
+            <Popover open={typeOpen} onOpenChange={setTypeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="h-7 w-7 px-0 rounded-l-none border-l border-destructive-foreground/20"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-0" align="end">
+                <Command>
+                  <CommandInput placeholder="Damage type..." className="h-8 text-xs" />
+                  <CommandList>
+                    <CommandEmpty>No type found</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="untyped-clear"
+                        onSelect={() => { setDamageType(null); setTypeOpen(false) }}
+                      >
+                        Untyped
+                      </CommandItem>
                     </CommandGroup>
-                  ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Heal</label>
-          <div className="flex gap-1">
-            <Input
-              type="number"
-              value={healInput}
-              onChange={(e) => setHealInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleHeal()}
-              placeholder="0"
-              className="h-7 text-xs"
-              min={0}
-            />
-            <Button
-              size="icon"
-              variant="secondary"
-              className="h-7 w-7 shrink-0 bg-emerald-900/50 hover:bg-emerald-900/70 text-emerald-300"
-              onClick={handleHeal}
-              disabled={!healInput}
-            >
-              <Plus className="w-3 h-3" />
-            </Button>
+                    {DAMAGE_TYPE_GROUPS.map((g) => (
+                      <CommandGroup key={g.label} heading={g.label}>
+                        {g.types.map((t) => (
+                          <CommandItem
+                            key={t}
+                            value={t}
+                            onSelect={() => { setDamageType(t); setTypeOpen(false) }}
+                          >
+                            {t}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Temp HP</label>
-          <div className="flex gap-1">
-            <Input
-              type="number"
-              value={tempHpInput}
-              onChange={(e) => setTempHpInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSetTempHp()}
-              placeholder="0"
-              className="h-7 text-xs"
-              min={0}
-            />
-            <Button
-              size="icon"
-              variant="secondary"
-              className="h-7 w-7 shrink-0 bg-blue-900/50 hover:bg-blue-900/70 text-blue-300"
-              onClick={handleSetTempHp}
-              disabled={!tempHpInput}
-            >
-              <Shield className="w-3 h-3" />
-            </Button>
-          </div>
+
+          <Button
+            variant="secondary"
+            className="h-7 text-xs justify-start gap-1.5 w-full bg-emerald-900/50 hover:bg-emerald-900/70 text-emerald-300"
+            onClick={() => handleAction('heal')}
+            disabled={!hpInput}
+          >
+            <Plus className="w-3 h-3" />
+            Heal
+          </Button>
+
+          <Button
+            variant="secondary"
+            className="h-7 text-xs justify-start gap-1.5 w-full bg-blue-900/50 hover:bg-blue-900/70 text-blue-300"
+            onClick={() => handleAction('tempHp')}
+            disabled={!hpInput}
+          >
+            <Shield className="w-3 h-3" />
+            Temp HP
+          </Button>
         </div>
       </div>
 
@@ -260,7 +225,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         <div className="text-xs space-y-0.5 px-2 py-1.5 rounded bg-secondary/30 border border-border/30">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Raw</span>
-            <span className="font-mono">{damageInput}</span>
+            <span className="font-mono">{hpInput}</span>
           </div>
           {iwrPreview.appliedImmunities.length > 0 && (
             <div className="flex justify-between text-blue-400">
