@@ -291,7 +291,7 @@ Plans:
 | 14. Stat Block Polish 2 | v0.4.0 | 2/2 | Complete    | 2026-04-02 |
 | 15. Combat Tracker Layout Redesign | v0.5.0 | 1/1 | Complete | 2026-04-02 |
 | 16. Encounter Persistence | v0.5.0 | 3/3 | Complete    | 2026-04-02 |
-| 17. Spell Import Pipeline | v0.5.0 | TBD | Planned | — |
+| 17. Spell Import Pipeline | v0.5.0 | 2/2 | Complete | 2026-04-02 |
 | 18. Spell Display + Catalog | v0.5.0 | TBD | Planned | — |
 | 19. Spell Slot Tracking + Custom Override | v0.5.0 | TBD | Planned | — |
 
@@ -301,7 +301,7 @@ Plans:
 
 - [ ] **Phase 15: Combat Tracker Layout Redesign** — New 3-panel layout with merged initiative+detail center, bestiary left, creature stat card right
 - [x] **Phase 16: Encounter Persistence** — Encounters store creature lists; "Load into Combat" populates tracker; HP/conditions/slots save back to encounter SQLite (completed 2026-04-02)
-- [ ] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists
+- [x] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists (completed 2026-04-02)
 - [ ] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters
 - [ ] **Phase 19: Spell Slot Tracking + Custom Override** — Per-encounter slot pip UI (click to toggle); slot state in encounter SQLite; custom spell add/remove per encounter (non-destructive)
 
@@ -343,7 +343,10 @@ Plans:
   1. After running sync, the `spells` table contains 1,700+ rows with foundry_id, name, rank, traditions, traits, description, damage, area, range, duration, action_cost, save_stat, and source_book populated
   2. Spellcaster NPC creatures (e.g. Death Tower Necromancer) have their spellcasting entries stored — tradition "arcane", cast_type "prepared", DC 29, attack +21, slots for ranks 0–5
   3. The prepared spell list for the Death Tower Necromancer can be queried from SQLite and returns the correct spells for each rank as shown in the Foundry JSON
-**Plans**: TBD
+**Plans**: 2/2 plans executed
+Plans:
+- [x] 17-01-PLAN.md — DB migration: spells + creature_spellcasting_entries + creature_spell_lists tables with FTS5 (SPLI-01..03 foundation)
+- [x] 17-02-PLAN.md — Spell extraction from entity raw_json + creature spellcasting parse + shared/api/spells.ts query functions (SPLI-01, SPLI-02, SPLI-03)
 
 ### Phase 18: Spell Display + Catalog
 **Goal**: Spellcaster creatures show their spellcasting section in the stat block with expandable spell cards, and a new Spells page lets the DM browse and search all 1,797 imported spells
