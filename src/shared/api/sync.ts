@@ -126,11 +126,15 @@ export async function syncFoundryData(
     }
 
     // Resolve @Localize tokens in raw_json before inserting into SQLite
+    // Values must be JSON-escaped since they're spliced into a JSON string
     if (Object.keys(enJson).length > 0) {
       for (const entity of entities) {
         entity.raw_json = entity.raw_json.replace(
           /@Localize\[([^\]]+)\]/g,
-          (_, key: string) => getLocalizeValue(enJson, key) ?? ''
+          (_, key: string) => {
+            const val = getLocalizeValue(enJson, key) ?? ''
+            return JSON.stringify(val).slice(1, -1)
+          }
         )
       }
     }

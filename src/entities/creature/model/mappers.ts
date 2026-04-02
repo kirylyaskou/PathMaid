@@ -21,20 +21,25 @@ export function toCreature(row: CreatureRow): Creature {
   }
 }
 
+// Safely coerce unknown JSON value to array (guards against objects/strings/nulls)
+function asArray(val: unknown): any[] {
+  return Array.isArray(val) ? val : []
+}
+
 export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData {
   const base = toCreature(row)
   const raw = JSON.parse(row.raw_json)
   const system = raw.system || {}
   const details = system.details || {}
 
-  const immunities: string[] = (system.attributes?.immunities || []).map(
+  const immunities: string[] = asArray(system.attributes?.immunities).map(
     (i: any) => i.type || String(i)
   )
-  const weaknesses = (system.attributes?.weaknesses || []).map((w: any) => ({
+  const weaknesses = asArray(system.attributes?.weaknesses).map((w: any) => ({
     type: w.type || String(w),
     value: w.value ?? 0,
   }))
-  const resistances = (system.attributes?.resistances || []).map((r: any) => ({
+  const resistances = asArray(system.attributes?.resistances).map((r: any) => ({
     type: r.type || String(r),
     value: r.value ?? 0,
   }))
@@ -53,7 +58,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     }
   }
 
-  const items = raw.items || []
+  const items = asArray(raw.items)
   // Build weapon lookup for resolving group from linked weapon items
   const weaponsById = new Map<string, any>(
     items.filter((item: any) => item.type === 'weapon').map((item: any) => [item._id, item])
@@ -68,7 +73,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
         name: item.name || 'Strike',
         modifier: item.system?.bonus?.value ?? 0,
         damage: formatDamage(item.system?.damageRolls),
-        traits: (item.system?.traits?.value || []) as string[],
+        traits: asArray(item.system?.traits?.value) as string[],
         group,
       }
     })
@@ -79,7 +84,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
       name: item.name || 'Ability',
       actionCost: parseActionCost(item.system?.actionType?.value, item.system?.actions?.value),
       description: stripHtml(resolveFoundryTokens(item.system?.description?.value || '')),
-      traits: (item.system?.traits?.value || []) as string[],
+      traits: asArray(item.system?.traits?.value) as string[],
     }))
 
   const STANDARD_SKILLS = [
@@ -114,7 +119,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
 
   const skills = [...standardSkills, ...loreSkills]
 
-  const languages: string[] = details.languages?.value || system.traits?.languages?.value || []
+  const languages: string[] = asArray(details.languages?.value ?? system.traits?.languages?.value)
   const senseData = system.perception?.senses || system.traits?.senses || []
   const senses: string[] = Array.isArray(senseData)
     ? senseData.map((s: any) => (typeof s === 'string' ? s : s.type || String(s)))

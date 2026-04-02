@@ -98,11 +98,11 @@ Requirements for Stabilization + Polish milestone.
 - [x] **BEST-04**: Sources filter displays book names (Player Core, Monster Core, etc.) instead of folder names (pf2e, sf2e)
 
 ### Combat UX
-- [ ] **CMB-06**: Dying modal includes a "Kill" button to immediately kill the creature without rolling recovery
-- [ ] **CMB-07**: Condition picker excludes Detection conditions (Observed, Hidden, Undetected, Unnoticed) and Attitude conditions (Hostile, Unfriendly, Friendly, Helpful, Indifferent)
-- [ ] **CMB-08**: Condition picker has improved UX — wider layout, easier to browse and select
-- [ ] **CMB-09**: HP controls use a single numeric input with 3 action buttons (Damage / Heal / TempHP) instead of 3 separate inputs
-- [ ] **CMB-10**: Persistent damage modal displays correctly and functions end-to-end (flat-check, damage application, condition removal)
+- [x] **CMB-06**: Dying modal includes a "Kill" button to immediately kill the creature without rolling recovery
+- [x] **CMB-07**: Condition picker excludes Detection conditions (Observed, Hidden, Undetected, Unnoticed) and Attitude conditions (Hostile, Unfriendly, Friendly, Helpful, Indifferent)
+- [x] **CMB-08**: Condition picker has improved UX — wider layout, easier to browse and select
+- [x] **CMB-09**: HP controls use a single numeric input with 3 action buttons (Damage / Heal / TempHP) instead of 3 separate inputs
+- [x] **CMB-10**: Persistent damage modal displays correctly and functions end-to-end (flat-check, damage application, condition removal)
 
 ## Future Requirements
 
@@ -144,11 +144,11 @@ Deferred to future milestones.
 | STAT-01 | Phase 12 | Complete |
 | STAT-02 | Phase 12 | Complete |
 | BEST-04 | Phase 12 | Complete |
-| CMB-06 | Phase 13 | Pending |
-| CMB-07 | Phase 13 | Pending |
-| CMB-08 | Phase 13 | Pending |
-| CMB-09 | Phase 13 | Pending |
-| CMB-10 | Phase 13 | Pending |
+| CMB-06 | Phase 13 | Complete |
+| CMB-07 | Phase 13 | Complete |
+| CMB-08 | Phase 13 | Complete |
+| CMB-09 | Phase 13 | Complete |
+| CMB-10 | Phase 13 | Complete |
 
 **Coverage:**
 - v0.4.0 requirements: 10 total

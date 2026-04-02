@@ -29,6 +29,7 @@ export function BestiaryPage() {
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
   const [statBlock, setStatBlock] = useState<CreatureStatBlockData | null>(null)
+  const [statBlockError, setStatBlockError] = useState<string | null>(null)
 
   // Search with debounce
   useEffect(() => {
@@ -63,11 +64,25 @@ export function BestiaryPage() {
   useEffect(() => {
     if (!selectedCreatureId) {
       setStatBlock(null)
+      setStatBlockError(null)
       return
     }
     let cancelled = false
     fetchCreatureById(selectedCreatureId).then((row) => {
-      if (!cancelled && row) setStatBlock(toCreatureStatBlockData(row))
+      if (cancelled) return
+      if (!row) {
+        setStatBlockError('Creature not found in database')
+        setStatBlock(null)
+        return
+      }
+      try {
+        setStatBlock(toCreatureStatBlockData(row))
+        setStatBlockError(null)
+      } catch (err) {
+        console.error('Failed to parse creature stat block:', row.name, err)
+        setStatBlockError(`Failed to parse stat block for "${row.name}": ${err instanceof Error ? err.message : String(err)}`)
+        setStatBlock(null)
+      }
     })
     return () => {
       cancelled = true
@@ -141,6 +156,10 @@ export function BestiaryPage() {
               <CreatureStatBlock creature={statBlock} />
             </div>
           </ScrollArea>
+        ) : statBlockError ? (
+          <div className="flex items-center justify-center h-full text-destructive">
+            <p className="text-sm max-w-md text-center">{statBlockError}</p>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <p className="text-sm">Select a creature to view its stat block</p>

@@ -50,9 +50,9 @@ Full history preserved in `.planning/milestones/`.
 
 **Milestone Goal:** Make everything work without errors — fix crashes, clean up UX, and bring every existing feature to a working end-to-end state. No new architecture, only focused fixes and polish.
 
-- [x] **Phase 11: App Shell Fixes** — Animated splash screen replaces white screen; encounters page loads without crashing (completed 2026-04-01)
-- [x] **Phase 12: Stat Block + Bestiary Data Quality** — @-syntax renders as human-readable text; full 17-skill list displayed; sources filter shows book names (completed 2026-04-02)
-- [ ] **Phase 13: Combat UX Sweep** — Kill button in Dying modal; Detection/Attitude conditions removed from picker; wider condition picker layout; single-input HP controls; persistent damage modal fully functional
+- [x] **Phase 11: App Shell Fixes** — Animated splash screen replaces white screen; encounters page loads without crashing (completed 2026-04-01)
+- [x] **Phase 12: Stat Block + Bestiary Data Quality** — @-syntax renders as human-readable text; full 17-skill list displayed; sources filter shows book names (completed 2026-04-02)
+- [x] **Phase 13: Combat UX Sweep** — Kill button in Dying modal; Detection/Attitude conditions removed from picker; wider condition picker layout; single-input HP controls; persistent damage modal fully functional (completed 2026-04-02)
 
 ## Phase Details
 
@@ -246,7 +246,11 @@ Plans:
   3. The condition picker is wide enough to show conditions in a multi-column grid — the DM can scan and select a condition without scrolling a narrow list
   4. HP controls show one numeric input field and three clearly labeled buttons (Damage / Heal / TempHP) — no separate input fields for each action
   5. The persistent damage modal opens correctly, displays the condition and damage amount, prompts for a flat-check, applies damage on failure, and removes the condition on success
-**Plans**: TBD
+**Plans:** 3/3 plans complete
+Plans:
+- [x] 13-01-PLAN.md — Condition picker: remove Detection/Attitudes, tabs + grid layout (CMB-07, CMB-08)
+- [x] 13-02-PLAN.md — HP controls: single input + 3 action buttons with split-button damage (CMB-09)
+- [x] 13-03-PLAN.md — Verify Kill button + Persistent Damage modal end-to-end (CMB-06, CMB-10)
 **UI hint**: yes
 
 ### Phase 14: Stat Block Polish 2
@@ -282,8 +286,8 @@ Plans:
 | 10. P2 Differentiators | v0.3.0 | 4/4 | Complete | 2026-04-01 |
 | 11. App Shell Fixes | v0.4.0 | 2/2 | Complete | 2026-04-02 |
 | 12. Stat Block + Bestiary Data Quality | v0.4.0 | 2/2 | Complete | 2026-04-02 |
-| 13. Combat UX Sweep | v0.4.0 | 0/TBD | Not started | - |
-| 14. Stat Block Polish 2 | v0.4.0 | 0/TBD | Not started | - |
+| 13. Combat UX Sweep | v0.4.0 | 3/3 | Complete    | 2026-04-02 |
+| 14. Stat Block Polish 2 | v0.4.0 | 0/TBD | Complete    | 2026-04-02 |
 
 ## Backlog
 
@@ -291,11 +295,11 @@ Plans:
 
 **Goal:** Integrate the bestiary stat block card into the combat tracker — clicking a combatant in the tracker opens the same full stat block (with MAP, IWR, abilities, etc.) that's shown in the bestiary browser
 **Requirements:** TBD
-**Plans:** 2/2 plans complete
+**Plans:** 0/2 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd:review-backlog when ready)
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-01 — v0.4.0-pre-alpha roadmap appended (Phases 11-13)*
+*Last updated: 2026-04-02 — Phase 13 planned (3 plans, 1 wave)*

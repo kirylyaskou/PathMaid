@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -125,7 +126,7 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
             <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="px-4 pb-4 space-y-3">
+            <div className="px-4 py-3 space-y-3">
               {creature.strikes.map((strike, i) => {
                 const isAgile = strike.traits.includes('agile')
                 const map1 = strike.modifier - (isAgile ? 4 : 5)
@@ -218,7 +219,7 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
                 <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="px-4 pb-4 space-y-3">
+                <div className="px-4 py-3 space-y-3">
                   {creature.abilities.map((ability, i) => (
                     <div key={i} className="p-3 rounded bg-pf-parchment border-l-2 border-primary/30">
                       <div className="flex items-center gap-2">
@@ -227,7 +228,7 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
                         )}
                         <span className="font-semibold text-sm">{ability.name}</span>
                       </div>
-                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{ability.description}</p>
+                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description)}</p>
                       {ability.traits && ability.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {ability.traits.map((trait) => (
@@ -309,6 +310,37 @@ export function CreatureStatBlock({ creature, className }: CreatureStatBlockProp
       </CardContent>
     </Card>
   )
+}
+
+// Inline highlighting for DC values and damage dice in ability text
+const GAME_TEXT_RE = /(DC\s+\d+)|(\d+d\d+(?:\s*[+\-]\s*\d+)?(?:\[\w+\])?)/gi
+
+function highlightGameText(text: string): ReactNode {
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+  let key = 0
+
+  for (const match of text.matchAll(GAME_TEXT_RE)) {
+    const idx = match.index!
+    if (idx > lastIndex) parts.push(text.slice(lastIndex, idx))
+
+    if (match[1]) {
+      // DC value
+      parts.push(
+        <span key={key++} className="text-pf-gold font-semibold font-mono">{match[1]}</span>
+      )
+    } else if (match[2]) {
+      // Dice/damage formula
+      parts.push(
+        <span key={key++} className="text-pf-blood font-mono">{match[2]}</span>
+      )
+    }
+    lastIndex = idx + match[0].length
+  }
+
+  if (lastIndex === 0) return text
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+  return <>{parts}</>
 }
 
 interface StatItemProps {

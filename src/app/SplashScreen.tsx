@@ -99,7 +99,11 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     const interval = setInterval(() => {
       setMsgVisible(false)
       setTimeout(() => {
-        setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length)
+        setMsgIndex((i) => {
+          let next = Math.floor(Math.random() * (LOADING_MESSAGES.length - 1))
+          if (next >= i) next++
+          return next
+        })
         setMsgVisible(true)
       }, 400)
     }, 3000)
