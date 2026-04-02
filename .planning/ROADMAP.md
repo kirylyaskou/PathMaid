@@ -292,7 +292,7 @@ Plans:
 | 15. Combat Tracker Layout Redesign | v0.5.0 | 1/1 | Complete | 2026-04-02 |
 | 16. Encounter Persistence | v0.5.0 | 3/3 | Complete    | 2026-04-02 |
 | 17. Spell Import Pipeline | v0.5.0 | 2/2 | Complete | 2026-04-02 |
-| 18. Spell Display + Catalog | v0.5.0 | TBD | Planned | — |
+| 18. Spell Display + Catalog | v0.5.0 | 2/2 | Complete | 2026-04-02 |
 | 19. Spell Slot Tracking + Custom Override | v0.5.0 | TBD | Planned | — |
 
 ### 🚧 v0.5.0-pre-alpha — Combat Redesign + Spells
@@ -302,7 +302,7 @@ Plans:
 - [ ] **Phase 15: Combat Tracker Layout Redesign** — New 3-panel layout with merged initiative+detail center, bestiary left, creature stat card right
 - [x] **Phase 16: Encounter Persistence** — Encounters store creature lists; "Load into Combat" populates tracker; HP/conditions/slots save back to encounter SQLite (completed 2026-04-02)
 - [x] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists (completed 2026-04-02)
-- [ ] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters
+- [x] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters (completed 2026-04-02)
 - [ ] **Phase 19: Spell Slot Tracking + Custom Override** — Per-encounter slot pip UI (click to toggle); slot state in encounter SQLite; custom spell add/remove per encounter (non-destructive)
 
 ### Phase 15: Combat Tracker Layout Redesign
@@ -357,7 +357,10 @@ Plans:
   2. Clicking a spell name in the stat block expands it inline showing area, range, duration, damage formula, save type, traits, and heightening rules
   3. The Spells page loads with all imported spells listed; typing a spell name in the search box filters results via FTS5 in under 200ms
   4. Filtering by tradition "arcane" and rank "5" shows only arcane rank-5 spells
-**Plans**: TBD
+**Plans**: 2/2 plans executed
+Plans:
+- [x] 18-01-PLAN.md — SpellcastingSection type + fetchCreatureStatBlockData async loader (SPLD-01..03 foundation)
+- [x] 18-02-PLAN.md — SpellcastingBlock + SpellCard in CreatureStatBlock; full SpellsPage with FTS5 search + tradition/rank filters (SPLD-01, SPLD-02, SPLD-03, SPLC-01, SPLC-02, SPLC-03)
 **UI hint**: yes
 
 ### Phase 19: Spell Slot Tracking + Custom Override
