@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
-import { Swords, Plus, Shield, Heart, ChevronDown } from 'lucide-react'
+import { useState, useCallback, useMemo, useRef } from 'react'
+import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
 import {
   Command,
@@ -42,16 +41,15 @@ const DAMAGE_TYPE_GROUPS: { label: string; types: DamageType[] }[] = [
 ]
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, abilities }: HpControlsProps) {
-  const [hpInput, setHpInput] = useState('')
+  const [hpInput, setHpInput] = useState(0)
   const [damageType, setDamageType] = useState<DamageType | null>(null)
   const [typeOpen, setTypeOpen] = useState(false)
   const [dyingDialogOpen, setDyingDialogOpen] = useState(false)
   const { updateHp, updateTempHp } = useCombatantStore()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const iwrPreview = useMemo(() => {
-    if (!damageType || !hpInput) return null
-    const amount = parseInt(hpInput, 10)
-    if (isNaN(amount) || amount <= 0) return null
+    if (!damageType || hpInput <= 0) return null
 
     const immunities = (iwrImmunities || [])
       .filter((t) => (DAMAGE_TYPES as readonly string[]).includes(t))
@@ -66,15 +64,14 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     if (immunities.length === 0 && weaknesses.length === 0 && resistances.length === 0)
       return null
 
-    return applyIWR({ type: damageType, amount }, immunities, weaknesses, resistances)
+    return applyIWR({ type: damageType, amount: hpInput }, immunities, weaknesses, resistances)
   }, [damageType, hpInput, iwrImmunities, iwrWeaknesses, iwrResistances])
 
   const handleAction = useCallback((action: 'damage' | 'heal' | 'tempHp') => {
-    const amount = parseInt(hpInput, 10)
-    if (isNaN(amount) || amount <= 0) return
+    if (hpInput <= 0) return
 
     if (action === 'damage') {
-      const effectiveDamage = iwrPreview ? iwrPreview.finalDamage : amount
+      const effectiveDamage = iwrPreview ? iwrPreview.finalDamage : hpInput
       let remaining = effectiveDamage
       if (combatant.tempHp > 0) {
         const absorbed = Math.min(combatant.tempHp, remaining)
@@ -91,13 +88,22 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       }
       setDamageType(null)
     } else if (action === 'heal') {
-      updateHp(combatant.id, amount)
+      updateHp(combatant.id, hpInput)
     } else if (action === 'tempHp') {
-      updateTempHp(combatant.id, Math.max(combatant.tempHp, amount))
+      updateTempHp(combatant.id, Math.max(combatant.tempHp, hpInput))
     }
 
-    setHpInput('')
+    setHpInput(0)
   }, [hpInput, iwrPreview, combatant, updateHp, updateTempHp])
+
+  const stepValue = (delta: number) => {
+    setHpInput((prev) => Math.max(0, prev + delta))
+  }
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault()
+    setHpInput((prev) => Math.max(0, prev + (e.deltaY < 0 ? 1 : -1)))
+  }, [])
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
 
@@ -128,35 +134,57 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         </div>
       </div>
 
-      <div className="flex gap-2 items-stretch">
-        <Input
-          type="number"
-          value={hpInput}
-          onChange={(e) => setHpInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAction('damage')}
-          placeholder="0"
-          className="h-full w-20 text-center text-sm font-mono"
-          min={0}
-        />
+      <div className="flex gap-2">
+        {/* Stepper input */}
+        <div className="flex flex-col items-center">
+          <button
+            className="h-5 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-t transition-colors"
+            onClick={() => stepValue(1)}
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <input
+            ref={inputRef}
+            type="number"
+            value={hpInput || ''}
+            onChange={(e) => setHpInput(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            onKeyDown={(e) => e.key === 'Enter' && handleAction('damage')}
+            onWheel={handleWheel}
+            placeholder="0"
+            className="w-10 h-10 text-center text-lg font-mono font-bold bg-secondary/30 border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            min={0}
+          />
+          <button
+            className="h-5 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-b transition-colors"
+            onClick={() => stepValue(-1)}
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
 
+        {/* Action buttons */}
         <div className="flex flex-col gap-1 flex-1">
-          <div className="flex">
+          {/* Damage row: button + type selector */}
+          <div className="flex gap-1">
             <Button
               variant="destructive"
-              className="flex-1 h-7 text-xs justify-start gap-1.5 rounded-r-none"
+              className="h-9 text-xs justify-start gap-1.5 flex-1"
               onClick={() => handleAction('damage')}
-              disabled={!hpInput}
+              disabled={hpInput <= 0}
             >
-              <Swords className="w-3 h-3" />
-              {damageType ? `Damage (${damageType})` : 'Damage'}
+              <Swords className="w-3.5 h-3.5" />
+              Damage
             </Button>
             <Popover open={typeOpen} onOpenChange={setTypeOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="destructive"
-                  className="h-7 w-7 px-0 rounded-l-none border-l border-destructive-foreground/20"
+                  variant="outline"
+                  className="h-9 text-xs gap-1 flex-1 justify-between font-normal"
                 >
-                  <ChevronDown className="w-3 h-3" />
+                  <span className="truncate capitalize">
+                    {damageType ?? 'Untyped'}
+                  </span>
+                  <ChevronDown className="w-3 h-3 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-48 p-0" align="end">
@@ -191,25 +219,27 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             </Popover>
           </div>
 
-          <Button
-            variant="secondary"
-            className="h-7 text-xs justify-start gap-1.5 w-full bg-emerald-900/50 hover:bg-emerald-900/70 text-emerald-300"
-            onClick={() => handleAction('heal')}
-            disabled={!hpInput}
-          >
-            <Plus className="w-3 h-3" />
-            Heal
-          </Button>
-
-          <Button
-            variant="secondary"
-            className="h-7 text-xs justify-start gap-1.5 w-full bg-blue-900/50 hover:bg-blue-900/70 text-blue-300"
-            onClick={() => handleAction('tempHp')}
-            disabled={!hpInput}
-          >
-            <Shield className="w-3 h-3" />
-            Temp HP
-          </Button>
+          {/* Heal + TempHP row */}
+          <div className="flex gap-1">
+            <Button
+              variant="secondary"
+              className="h-7 text-xs justify-start gap-1.5 flex-1 bg-emerald-900/50 hover:bg-emerald-900/70 text-emerald-300"
+              onClick={() => handleAction('heal')}
+              disabled={hpInput <= 0}
+            >
+              <Plus className="w-3 h-3" />
+              Heal
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-7 text-xs justify-start gap-1.5 flex-1 bg-blue-900/50 hover:bg-blue-900/70 text-blue-300"
+              onClick={() => handleAction('tempHp')}
+              disabled={hpInput <= 0}
+            >
+              <Shield className="w-3 h-3" />
+              Temp HP
+            </Button>
+          </div>
         </div>
       </div>
 
