@@ -54,14 +54,24 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   }
 
   const items = raw.items || []
+  // Build weapon lookup for resolving group from linked weapon items
+  const weaponsById = new Map<string, any>(
+    items.filter((item: any) => item.type === 'weapon').map((item: any) => [item._id, item])
+  )
   const strikes = items
     .filter((item: any) => item.type === 'melee' || item.type === 'ranged')
-    .map((item: any) => ({
-      name: item.name || 'Strike',
-      modifier: item.system?.bonus?.value ?? 0,
-      damage: formatDamage(item.system?.damageRolls),
-      traits: (item.system?.traits?.value || []) as string[],
-    }))
+    .map((item: any) => {
+      const linkedWeaponId = item.flags?.pf2e?.linkedWeapon
+      const linkedWeapon = linkedWeaponId ? weaponsById.get(linkedWeaponId) : undefined
+      const group = (linkedWeapon?.system?.group as string) || undefined
+      return {
+        name: item.name || 'Strike',
+        modifier: item.system?.bonus?.value ?? 0,
+        damage: formatDamage(item.system?.damageRolls),
+        traits: (item.system?.traits?.value || []) as string[],
+        group,
+      }
+    })
 
   const abilities = items
     .filter((item: any) => item.type === 'action')
@@ -114,6 +124,16 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const source =
     details.publication?.title || system.details?.source?.value || row.source_pack || 'Unknown'
 
+  // Spell DC and Class DC — present on spellcasting creatures
+  const spellDCRaw = system.attributes?.spellDC?.value ?? system.spellcasting?.dc?.value
+  const spellDC: number | undefined = spellDCRaw != null ? Number(spellDCRaw) : undefined
+  const classDCFromAttr = system.attributes?.classOrSpellDC?.value
+  const classDCFromMod = system.proficiencies?.classDC?.totalModifier
+  const classDC: number | undefined =
+    classDCFromAttr != null ? Number(classDCFromAttr) :
+    classDCFromMod != null ? 10 + Number(classDCFromMod) :
+    undefined
+
   return {
     ...base,
     immunities,
@@ -127,6 +147,8 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     senses,
     description: description || undefined,
     source,
+    spellDC,
+    classDC,
   }
 }
 
@@ -150,12 +172,13 @@ export function extractIwr(row: CreatureRow): {
   }
 }
 
-function formatDamage(damageRolls: any): string {
-  if (!damageRolls) return ''
+function formatDamage(damageRolls: any): { formula: string; type: string }[] {
+  if (!damageRolls) return []
   const entries = Object.values(damageRolls) as any[]
-  return entries
-    .map((d: any) => `${d.damage || d.formula || '?'} ${d.damageType || d.type || ''}`.trim())
-    .join(' plus ')
+  return entries.map((d: any) => ({
+    formula: (d.damage || d.formula || '?').trim(),
+    type: (d.damageType || d.type || '').trim(),
+  }))
 }
 
 function parseActionCost(actionType?: string, actions?: number): DisplayActionCost | undefined {
@@ -201,6 +224,23 @@ function resolveFoundryTokens(text: string): string {
     const type = params.type ?? 'area'
     return `${distance}-foot ${type}`
   })
+  // [[/act slug]] or [[/act slug #id]] → capitalize slug, hyphens to spaces
+  text = text.replace(/\[\[\/act\s+([^#\s\]]*)[^\]]*\]\]/g, (_, slug: string) => {
+    if (!slug) return ''
+    return slug
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c: string) => c.toUpperCase())
+  })
+
+  // [[/br expr #label]]{display} → use display text only
+  text = text.replace(/\[\[\/br\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
+
+  // [[/br expr]] with NO {display} → use expr as-is
+  text = text.replace(/\[\[\/br\s+([^#\s\]]+)[^\]]*\]\]/g, '$1')
+
+  // {Nfeet} or {Nfoot} where N is digits → "N feet"
+  text = text.replace(/\{(\d+)feet?\}/gi, '$1 feet')
+
   // @Localize fallback — strip token (sync pipeline resolves these at import time)
   text = text.replace(/@Localize\[[^\]]+\]/g, '')
   return text
