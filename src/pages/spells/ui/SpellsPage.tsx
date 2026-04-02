@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, BookOpen } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
-import { Badge } from '@/shared/ui/badge'
-import { Separator } from '@/shared/ui/separator'
 import { searchSpells } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'

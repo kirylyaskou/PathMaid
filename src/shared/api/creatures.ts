@@ -132,3 +132,11 @@ export async function fetchDistinctTraits(): Promise<string[]> {
   )
   return rows.map(r => r.trait)
 }
+
+export async function getCreatureCount(): Promise<number> {
+  const db = await getDb()
+  const rows = await db.select<{ count: number }[]>(
+    `SELECT COUNT(*) as count FROM entities WHERE type = 'npc'`
+  )
+  return rows[0]?.count ?? 0
+}
