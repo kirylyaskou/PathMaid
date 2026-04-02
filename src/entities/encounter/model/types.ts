@@ -1,10 +1,31 @@
-// Encounter is a saved encounter entity (SQLite-derived).
-// Not to be confused with feature/encounter-builder runtime state.
+// EncounterCombatant — a creature stored in a saved encounter (SQLite-derived).
+// creatureLevel is the base Foundry level; weakEliteTier adjusts displayed level by ±1.
+export interface EncounterCombatant {
+  id: string
+  encounterId: string
+  creatureRef: string
+  displayName: string
+  initiative: number
+  hp: number
+  maxHp: number
+  tempHp: number
+  isNPC: boolean
+  weakEliteTier: 'normal' | 'weak' | 'elite'
+  creatureLevel: number
+  sortOrder: number
+}
+
+// Encounter — a saved encounter entity (SQLite-derived).
+// Includes combat state fields that are written back during active encounter-backed combat.
 export interface Encounter {
   id: string
   name: string
   partyLevel: number
   partySize: number
-  creatureIds: string[]  // references to Creature names / future DB ids
-  createdAt: string      // ISO string — serializable
+  round: number
+  turn: number
+  activeCombatantId: string | null
+  isRunning: boolean
+  createdAt: string
+  combatants: EncounterCombatant[]
 }
