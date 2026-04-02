@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3.0
+milestone: v0.6.0
 milestone_name: milestone
-status: executing
-stopped_at: v0.5.0 milestone complete — all phases 15-19 shipped + backlog 999.1 fulfilled
-last_updated: "2026-04-02T14:29:25.632Z"
+status: planned
+stopped_at: v0.6.0 milestone planned — phases 20-24 (Items)
+last_updated: "2026-04-02T15:00:00.000Z"
 last_activity: 2026-04-02
 progress:
-  total_phases: 20
+  total_phases: 25
   completed_phases: 20
-  total_plans: 48
+  total_plans: 55
   completed_plans: 42
   percent: 20
 ---
@@ -21,22 +21,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** v0.5.0 COMPLETE — all 20 phases shipped
+**Current focus:** v0.6.0 — Items milestone
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Executing Phase 16
+Phase: 20
+Plan: 20-01 (not started)
+Status: Planned, ready to execute
 Last activity: 2026-04-02
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 42
 - Average duration: —
 - Total execution time: —
 
@@ -95,12 +95,24 @@ Key decisions carrying forward from prior milestones:
 - Combat tracker is a dynamic view of the active encounter — survives tab navigation via Zustand, not stored forever
 - Custom spell override stored as: encounter_id + combatant_id → custom_spells[] (non-destructive)
 - Spell slot tracking per combatant: DM marks slots used; editable from both Encounters page and combat creature card
-- Death Tower Necromancer JSON needs research: does it encode class type (wizard/bard/etc.) in Foundry data?
-- If class type determinable → use PF2e spell slot progression tables for slot count per level
+- [Phase 17]: extractAndInsertSpells() + extractCreatureSpellcasting() called at end of syncFoundryData + importLocalPacks
+- [Phase 18]: SpellcastingBlock uses Collapsible; SpellCard lazy-fetches detail on click via getSpellById
+- [Phase 19]: EncounterContext interface exported from entities/creature; conditional spread pattern for TS2322 avoidance
+
+### v0.6.0-specific context
+
+- Foundry equipment packs: `equipment` (weapons/armor/consumables/gear) + `equipment-effects` (effect items)
+- Foundry item types: weapon, armor, consumable, equipment, kit, treasure, backpack, shield, book, effect
+- `bulk` stored as TEXT ("L", "1", "2", "-") — not converted to float
+- `price_gp` converted from price.value object (gp + sp/10 + cp/100 + pp*10) to float
+- damage_formula = "{dice}d{die} {damageType}" string
+- Non-destructive override pattern (encounter_combatant_items) mirrors encounter_combatant_spells from Phase 19
+- @UUID resolution: import-time preferred; runtime fallback via resolveFoundryTokens; unaliased @UUID → DB name lookup
 
 ### Roadmap Evolution
 
-- v0.5.0 started 2026-04-02: Combat Redesign + Spells
+- v0.5.0 started 2026-04-02, completed 2026-04-02: Combat Redesign + Spells
+- v0.6.0 started 2026-04-02: Items
 
 ### Pending Todos
 
@@ -112,6 +124,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T14:29:25.632Z
-Stopped at: Phase 17 complete
-Next step: /gsd:plan-milestone v0.6.0
+Last session: 2026-04-02T15:00:00.000Z
+Stopped at: v0.6.0 milestone planned
+Next step: Execute Phase 20-01 (DB migration + equipment extraction)

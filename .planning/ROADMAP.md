@@ -294,6 +294,11 @@ Plans:
 | 17. Spell Import Pipeline | v0.5.0 | 2/2 | Complete | 2026-04-02 |
 | 18. Spell Display + Catalog | v0.5.0 | 2/2 | Complete | 2026-04-02 |
 | 19. Spell Slot Tracking + Custom Override | v0.5.0 | 2/2 | Complete | 2026-04-02 |
+| 20. Equipment Import Pipeline | v0.6.0 | 0/2 | Planned | — |
+| 21. Items Catalog Page | v0.6.0 | 0/2 | Planned | — |
+| 22. Creature Inventory Display | v0.6.0 | 0/1 | Planned | — |
+| 23. Encounter Inventory Editor | v0.6.0 | 0/1 | Planned | — |
+| 24. @-Token Resolution | v0.6.0 | 0/1 | Planned | — |
 
 ### 🚧 v0.5.0-pre-alpha — Combat Redesign + Spells
 
@@ -378,6 +383,93 @@ Plans:
 - [x] 19-02-PLAN.md — SlotPips + AddSpellRow + SpellcastingBlock extended with encounterContext; CombatPage wired (SLOT-01, SLOT-02, SLOT-03, CUST-01, CUST-02, CUST-03)
 **UI hint**: yes
 
+### 🚧 v0.6.0-pre-alpha — Items
+
+**Milestone Goal:** Full equipment system — import all Foundry VTT equipment (weapons, armor, consumables, gear) into SQLite, build an Items catalog page with FTS5 search and filters, display creature inventory in stat blocks, add per-encounter inventory editing with non-destructive overrides, and audit/fix @-token resolution for item and creature descriptions.
+
+- [ ] **Phase 20: Equipment Import Pipeline** — Parse all equipment entity types into dedicated `items` table + FTS5; `creature_items` for NPC inventory; shared/api/items.ts (planned 2026-04-02)
+- [ ] **Phase 21: Items Catalog Page** — Replace placeholder ItemsPage with FTS5 search, type/level/rarity filters, expandable ItemCard rows (planned 2026-04-02)
+- [ ] **Phase 22: Creature Inventory Display** — Parse NPC carried items from raw_json; show Equipment section in stat block grouped by type (planned 2026-04-02)
+- [ ] **Phase 23: Encounter Inventory Editor** — Per-encounter item overrides (add/remove items non-destructively); same pattern as spell overrides (planned 2026-04-02)
+- [ ] **Phase 24: @-Token Resolution** — Audit all @UUID token types in item/creature descriptions; resolve unaliased item/spell/condition links from DB; import-time pre-resolution (planned 2026-04-02)
+
+### Phase 20: Equipment Import Pipeline
+**Goal**: All Foundry VTT equipment items are stored in a dedicated SQLite table with FTS5 search, and NPC creature inventories are parsed and linked to creature records
+**Depends on**: Phase 19
+**Requirements**: EQUIP-01, EQUIP-02, EQUIP-03
+**Success Criteria** (what must be TRUE):
+  1. After running sync, the `items` table contains entries for all equipment packs with item_type, level, rarity, bulk, price_gp, traits, and type-specific fields (damage_formula, ac_bonus, etc.) populated
+  2. FTS5 search on items returns results within 200ms for a name query against the full dataset
+  3. A spellcaster NPC (e.g. Death Tower Necromancer) has its carried equipment (armor, weapons, consumables) queryable from `creature_items` by creature_id
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — DB migration: items + items_fts + creature_items tables; extractAndInsertItems + extractCreatureItems in sync.ts
+- [ ] 20-02-PLAN.md — shared/api/items.ts: searchItems, getItemById, getItemsByType, getItemCount, getCreatureItems; barrel export
+
+### Phase 21: Items Catalog Page
+**Goal**: The DM can browse and search all imported equipment from the Items page with type, level range, and rarity filters
+**Depends on**: Phase 20
+**Requirements**: ITMCAT-01, ITMCAT-02, ITMCAT-03, ITMCAT-04
+**Success Criteria** (what must be TRUE):
+  1. The Items page shows a searchable list of items; typing a name filters via FTS5 within 200ms
+  2. Selecting "Weapon" type filter shows only weapons; combining with level range and rarity further narrows results
+  3. Clicking an item expands it inline showing description, type-specific stats (damage formula for weapons, AC bonus for armor, uses for consumables), and traits
+  4. Item type badges are color-coded and immediately scannable; price and bulk are visible in the collapsed row
+**Plans**: 2 plans
+Plans:
+- [ ] 21-01-PLAN.md — ItemCard component (collapsed row + expanded detail, type badge colors, type-specific stats)
+- [ ] 21-02-PLAN.md — Full ItemsPage: search input, type/rarity/level filter pills, scrollable ItemCard list, result count
+**UI hint**: yes
+
+### Phase 22: Creature Inventory Display
+**Goal**: Creature stat blocks show a collapsible Equipment section listing all carried non-combat items from the Foundry VTT data
+**Depends on**: Phase 20
+**Requirements**: CRINV-01, CRINV-02
+**Success Criteria** (what must be TRUE):
+  1. Opening a creature stat block that carries equipment shows an "Equipment" section with items grouped by type (weapons → armor → consumables → misc)
+  2. Each item shows name, quantity (if >1), bulk, and key stat (damage formula for weapons, AC bonus for armor)
+  3. Creatures with no equipment do not show the Equipment section
+**Plans**: 1 plan
+Plans:
+- [ ] 22-01-PLAN.md — fetchStatBlock extended with getCreatureItems; EquipmentBlock component in CreatureStatBlock
+**UI hint**: yes
+
+### Phase 23: Encounter Inventory Editor
+**Goal**: The DM can add or remove items from a creature's inventory for a specific encounter without modifying the base creature data
+**Depends on**: Phase 22
+**Requirements**: ENCINV-01, ENCINV-02, ENCINV-03
+**Success Criteria** (what must be TRUE):
+  1. In encounter context, each item in the Equipment section has a hover-revealed × button; clicking it hides the item for that encounter only (base creature unchanged)
+  2. An "Add Item" search row at the bottom of Equipment (encounter context only) lets the DM search and add any item from the catalog; it appears in the combat stat card immediately
+  3. After resetting the encounter, all item overrides are cleared and the creature's base inventory is restored
+**Plans**: 1 plan
+Plans:
+- [ ] 23-01-PLAN.md — DB migration: encounter_combatant_items; API in encounters.ts; EquipmentBlock extended with encounterContext
+**UI hint**: yes
+
+### Phase 24: @-Token Resolution
+**Goal**: All @UUID token types in item and creature descriptions resolve to human-readable text — no raw Foundry IDs or unparsed tokens visible to the DM
+**Depends on**: Phase 21
+**Requirements**: ATRES-01, ATRES-02, ATRES-03
+**Success Criteria** (what must be TRUE):
+  1. @UUID[Compendium.pf2e.equipment.Item.X] without alias renders as the item's name, not the raw ID
+  2. @UUID[Compendium.pf2e.spells-srd.Item.X] and @UUID[Compendium.pf2e.conditions.Item.X] similarly resolve to names
+  3. A DB audit query (`SELECT description FROM items WHERE description LIKE '%@UUID%' AND description NOT LIKE '%]{%'`) returns 0 rows after a fresh sync
+**Plans**: 1 plan
+Plans:
+- [ ] 24-01-PLAN.md — resolveFoundryTokensAsync in mappers.ts; post-processing pass in sync.ts to resolve unaliased @UUID links; audit queries
+**UI hint**: no
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 20. Equipment Import Pipeline | v0.6.0 | 0/2 | Planned | — |
+| 21. Items Catalog Page | v0.6.0 | 0/2 | Planned | — |
+| 22. Creature Inventory Display | v0.6.0 | 0/1 | Planned | — |
+| 23. Encounter Inventory Editor | v0.6.0 | 0/1 | Planned | — |
+| 24. @-Token Resolution | v0.6.0 | 0/1 | Planned | — |
+
 ## Backlog
 
 ### Phase 999.1: Stat block card in combat tracker (FULFILLED)
@@ -388,4 +480,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-02 — v0.5.0 complete (phases 15-19 + backlog 999.1 fulfilled)*
+*Last updated: 2026-04-02 — v0.6.0 milestone planned (phases 20-24)*
