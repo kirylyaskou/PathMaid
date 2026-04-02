@@ -13,9 +13,16 @@ export interface CombatTrackerState {
   round: number
   turn: number
   isRunning: boolean
+  isEncounterBacked: boolean
   pendingPersistentDamage: PendingPersistentDamage | null
   startCombat: (combatId: string) => void
   endCombat: () => void
+  startEncounterCombat: (
+    encounterId: string,
+    round: number,
+    turn: number,
+    activeCombatantId: string | null
+  ) => void
   nextTurn: () => void
   previousTurn: () => void
   setActiveCombatant: (id: string | null) => void
@@ -32,6 +39,7 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
     round: 0,
     turn: 0,
     isRunning: false,
+    isEncounterBacked: false,
     pendingPersistentDamage: null,
     startCombat: (combatId) =>
       set((state) => {
@@ -47,6 +55,16 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
         state.round = 0
         state.turn = 0
         state.isRunning = false
+        state.isEncounterBacked = false
+      }),
+    startEncounterCombat: (encounterId, round, turn, activeCombatantId) =>
+      set((state) => {
+        state.combatId = encounterId
+        state.round = round > 0 ? round : 1
+        state.turn = turn
+        state.activeCombatantId = activeCombatantId
+        state.isRunning = true
+        state.isEncounterBacked = true
       }),
     nextTurn: () =>
       set((state) => {

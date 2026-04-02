@@ -1,11 +1,26 @@
 import { useState } from 'react'
 import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/ui/button'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog'
 import { useEncounterStore } from '@/entities/encounter'
-import { saveEncounterCombatants } from '@/shared/api'
+import { saveEncounterCombatants, resetEncounterCombat } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
+import { loadEncounterIntoCombat, teardownEncounterAutoSave } from '@/features/combat-tracker/lib/encounter-persistence'
+import { teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
+import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
+import { PATHS } from '@/shared/routes'
 import { EncounterCreatureSearchPanel } from './EncounterCreatureSearchPanel'
 import { calculateCreatureXP } from '@engine'
 
@@ -17,9 +32,58 @@ interface Props {
 export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const encounter = useEncounterStore((s) => s.encounters.find((e) => e.id === encounterId))
   const setEncounterCombatants = useEncounterStore((s) => s.setEncounterCombatants)
+  const upsertEncounter = useEncounterStore((s) => s.upsertEncounter)
+  const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [showLoadConfirm, setShowLoadConfirm] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   if (!encounter) return null
+
+  async function doLoadIntoCombat() {
+    setLoading(true)
+    try {
+      teardownAutoSave()
+      teardownEncounterAutoSave()
+      await loadEncounterIntoCombat(encounterId)
+      navigate(PATHS.COMBAT)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleLoadClick() {
+    const isRunning = useCombatTrackerStore.getState().isRunning
+    if (isRunning) {
+      setShowLoadConfirm(true)
+    } else {
+      doLoadIntoCombat()
+    }
+  }
+
+  async function handleReset() {
+    await resetEncounterCombat(encounterId)
+    const rows = await (await import('@/shared/api')).loadEncounterCombatants(encounterId)
+    const updated = rows.map((r) => ({
+      id: r.id,
+      encounterId: r.encounterId,
+      creatureRef: r.creatureRef,
+      displayName: r.displayName,
+      initiative: r.initiative,
+      hp: r.hp,
+      maxHp: r.maxHp,
+      tempHp: r.tempHp,
+      isNPC: r.isNPC,
+      weakEliteTier: r.weakEliteTier as 'normal' | 'weak' | 'elite',
+      creatureLevel: r.creatureLevel,
+      sortOrder: r.sortOrder,
+    }))
+    setEncounterCombatants(encounterId, updated)
+    if (encounter) {
+      upsertEncounter({ ...encounter, round: 0, turn: 0, activeCombatantId: null, isRunning: false, combatants: updated })
+    }
+  }
 
   const combatants = encounter.combatants
 
@@ -48,6 +112,27 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50 shrink-0">
         <p className="text-base font-semibold truncate">{encounter.name}</p>
+      </div>
+
+      {/* Action buttons */}
+      <div className="px-4 py-2 border-b border-border/50 flex items-center gap-2 shrink-0">
+        <Button
+          variant="default"
+          size="sm"
+          className="h-8 text-sm"
+          onClick={handleLoadClick}
+          disabled={loading}
+        >
+          Load into Combat
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-sm text-destructive hover:text-destructive"
+          onClick={() => setShowResetConfirm(true)}
+        >
+          Reset
+        </Button>
       </div>
 
       {/* Creature list */}
@@ -124,6 +209,47 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
           />
         )}
       </div>
+      {/* Load into Combat — confirm when combat is active */}
+      <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Current Combat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              An active combat is in progress. Loading this encounter will end it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Current</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { setShowLoadConfirm(false); doLoadIntoCombat() }}
+            >
+              Discard & Load
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Encounter — confirm */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Encounter?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All creatures return to full HP. Conditions and round state are cleared.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { setShowResetConfirm(false); handleReset() }}
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
