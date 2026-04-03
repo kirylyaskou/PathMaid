@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS item_favorites (
+  item_id TEXT PRIMARY KEY
+);
+
+ALTER TABLE items ADD COLUMN usage TEXT;
