@@ -28,6 +28,14 @@ export interface CombatTrackerState {
   setTurn: (turn: number) => void
   setCombatId: (id: string | null) => void
   setPendingPersistentDamage: (p: PendingPersistentDamage | null) => void
+  restoreState: (s: {
+    combatId: string | null
+    activeCombatantId: string | null
+    round: number
+    turn: number
+    isRunning: boolean
+    isEncounterBacked: boolean
+  }) => void
 }
 
 export const useCombatTrackerStore = create<CombatTrackerState>()(
@@ -83,6 +91,16 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
     setPendingPersistentDamage: (p) =>
       set((state) => {
         state.pendingPersistentDamage = p
+      }),
+    restoreState: (s) =>
+      set((state) => {
+        state.combatId = s.combatId
+        state.activeCombatantId = s.activeCombatantId
+        state.round = s.round
+        state.turn = s.turn
+        state.isRunning = s.isRunning
+        state.isEncounterBacked = s.isEncounterBacked
+        state.pendingPersistentDamage = null
       }),
   }))
 )
