@@ -57,7 +57,8 @@ Full history preserved in `.planning/milestones/`.
 
 - [x] **Phase 11: App Shell Fixes** — Animated splash screen replaces white screen; encounters page loads without crashing (completed 2026-04-01)
 - [x] **Phase 12: Stat Block + Bestiary Data Quality** — @-syntax renders as human-readable text; full 17-skill list displayed; sources filter shows book names (completed 2026-04-02)
-- [x] **Phase 13: Combat UX Sweep** — Kill button in Dying modal; Detection/Attitude conditions removed from picker; wider condition picker layout; single-input HP controls; persistent damage modal fully functional (completed 2026-04-02)
+- [x] **Phase 13: Combat UX Sweep** — Kill button in Dying modal; Detection/Attitude conditions removed from picker; wider condition picker layout; single-input HP controls; persistent damage modal fully functional
+ (completed 2026-04-02)
 
 ## Phase Details
 
@@ -309,7 +310,8 @@ Plans:
 **Milestone Goal:** Redesign combat tracker into a 3-panel layout (Bestiary | Initiative+Detail | Stat Card), make Encounters the persistent source of truth for combat state, and add a complete spell system — import 1,797 spells from Foundry VTT, display spellcasting in stat blocks, add a spell catalog page, and track spell slot usage per encounter with non-destructive custom spell overrides.
 
 - [ ] **Phase 15: Combat Tracker Layout Redesign** — New 3-panel layout with merged initiative+detail center, bestiary left, creature stat card right
-- [x] **Phase 16: Encounter Persistence** — Encounters store creature lists; "Load into Combat" populates tracker; HP/conditions/slots save back to encounter SQLite (completed 2026-04-02)
+- [x] **Phase 16: Encounter Persistence** — Encounters store creature lists; "Load into Combat" populates tracker; HP/conditions/slots save back to encounter SQLite
+ (completed 2026-04-02)
 - [x] **Phase 17: Spell Import Pipeline** — Parse 1,797 Foundry VTT spell files into SQLite; parse creature spellcasting entries and prepared spell lists (completed 2026-04-02)
 - [x] **Phase 18: Spell Display + Catalog** — Spellcasting section in stat block (tradition, DC, attack, spells by rank); standalone Spells catalog page with FTS5 + filters (completed 2026-04-02)
 - [x] **Phase 19: Spell Slot Tracking + Custom Override** — Per-encounter slot pip UI (click to toggle); slot state in encounter SQLite; custom spell add/remove per encounter (non-destructive) (completed 2026-04-02)
@@ -591,6 +593,36 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 31. Actions Import Pipeline | v0.8.5 | 1/1 | Complete | 2026-04-02 |
 | 32. Actions Reference Page | v0.8.5 | 1/1 | Complete | 2026-04-02 |
+
+### 🚧 v0.9.0-pre-alpha — Items Catalog Overhaul
+
+**Milestone Goal:** Overhaul the Items page with a production-quality catalog — fix FTS5 search/filter bugs, add Favorites system, ItemReferenceDrawer, multi-filter panel with traits/source/subcategory, column sorting, and wire EquipmentBlock item names to the drawer.
+
+- [ ] **Phase 34: Items Catalog Overhaul** — Fix search/filter bugs, add Favorites tab, ItemReferenceDrawer, full filter panel (type/level/rarity/traits/source/subcategory), column sorting, EquipmentBlock item links
+
+### Phase 34: Items Catalog Overhaul
+**Goal**: Items page is a production-quality reference catalog — FTS5 search and filter bugs fixed, Favorites system with SQLite persistence, ItemReferenceDrawer showing full item details, multi-filter panel (type/level/rarity/traits/source/subcategory), column sorting by level and price, and EquipmentBlock item names clickable to open the drawer
+**Depends on**: Phase 32
+**Requirements**: null
+**Success Criteria** (what must be TRUE):
+  1. FTS5 search returns correct results with no count flicker — stale results cleared before new results shown
+  2. All active filters (type, level, rarity, traits, source, subcategory) apply in a single DB round-trip
+  3. Favorites tab shows favorited items grouped by category in collapsible sections; star toggle persists to `item_favorites` SQLite table
+  4. Clicking any item name opens ItemReferenceDrawer with full stats, description, and favorites star
+  5. Level and Price columns are sortable (↑↓ toggle, ArrowUp/ArrowDown icons); sort applied client-side
+  6. EquipmentBlock in creature stat block has clickable item names that open ItemReferenceDrawer
+**Plans:** 3 plans
+Plans:
+- [ ] 34-01-PLAN.md — DB migration (item_favorites + usage column), extend searchItems API, add filter/favorites queries, sync usage extraction, install @tanstack/react-virtual
+- [ ] 34-02-PLAN.md — Zustand store + ItemFilterPanel + ItemsTable (virtualized) + ItemTableRow + ItemReferenceDrawer + rewrite ItemsPage with All Items tab
+- [ ] 34-03-PLAN.md — FavoritesStar + FavoritesCategoryGroup + Favorites tab + EquipmentBlock clickable item names
+**UI hint**: yes
+
+## Progress (v0.9.0)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 34. Items Catalog Overhaul | v0.9.0 | 0/3 | Planned | — |
 
 ## Backlog
 

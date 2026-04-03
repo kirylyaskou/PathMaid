@@ -1,355 +1,204 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Package } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
-import { searchItems } from '@/shared/api'
+import { Package, Star } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
+import { searchItems, getFavoriteIds, toggleFavoriteDb, getItemById } from '@/shared/api'
 import type { ItemRow } from '@/shared/api'
-import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '@/entities/item'
-import { cn } from '@/shared/lib/utils'
+import { useItemsCatalogStore, ItemFilterPanel, ItemsTable, FavoritesStar, FavoritesCategoryGroup } from '@/features/items-catalog'
+import { ItemReferenceDrawer, ITEM_TYPE_LABELS } from '@/entities/item'
+import { useShallow } from 'zustand/react/shallow'
 
-const ITEM_TYPES = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'treasure', 'backpack', 'kit', 'book', 'effect'] as const
-const RARITIES = ['common', 'uncommon', 'rare', 'unique'] as const
+const CATEGORY_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'treasure', 'backpack', 'kit', 'book', 'effect']
 
-function formatPrice(gp: number | null): string {
-  if (gp === null) return '—'
-  if (gp >= 1) return `${gp} gp`
-  if (gp >= 0.1) return `${Math.round(gp * 10)} sp`
-  return `${Math.round(gp * 100)} cp`
+interface FavoritesContentProps {
+  favoriteIds: Set<string>
+  onItemClick: (id: string) => void
+  onToggleFavorite: (id: string) => void
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, '')
-    .trim()
-}
+function FavoritesContent({ favoriteIds, onItemClick, onToggleFavorite }: FavoritesContentProps) {
+  const [favoriteItems, setFavoriteItems] = useState<ItemRow[]>([])
 
-function ItemCard({ item, expanded, onToggle }: {
-  item: ItemRow
-  expanded: boolean
-  onToggle: () => void
-}) {
-  const traits: string[] = item.traits ? JSON.parse(item.traits) : []
-  const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
-  const typeLabel = ITEM_TYPE_LABELS[item.item_type] ?? item.item_type
-  const rarityColor = RARITY_COLORS[item.rarity ?? 'common'] ?? ''
+  useEffect(() => {
+    const ids = Array.from(favoriteIds)
+    Promise.all(ids.map((id) => getItemById(id)))
+      .then((results) => setFavoriteItems(results.filter((r): r is ItemRow => r !== null)))
+      .catch(() => {})
+  }, [favoriteIds])
+
+  const grouped = CATEGORY_ORDER.reduce<Record<string, ItemRow[]>>((acc, cat) => {
+    const items = favoriteItems.filter((i) => i.item_type === cat)
+    if (items.length > 0) acc[cat] = items
+    return acc
+  }, {})
 
   return (
-    <div
-      className={cn(
-        "rounded-md border transition-colors cursor-pointer",
-        expanded
-          ? "border-primary/40 bg-card"
-          : "border-border/40 bg-secondary/30 hover:border-border/70 hover:bg-secondary/50"
-      )}
-      onClick={onToggle}
-    >
-      {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <span className="font-semibold text-sm flex-1 min-w-0 truncate">{item.name}</span>
-
-        {/* Rarity dot */}
-        {item.rarity && item.rarity !== 'common' && (
-          <span className={cn("text-xs shrink-0 font-medium capitalize", rarityColor)}>
-            {item.rarity}
-          </span>
-        )}
-
-        {/* Bulk */}
-        {item.bulk && item.bulk !== '-' && (
-          <span className="text-xs text-muted-foreground shrink-0">
-            Bulk {item.bulk}
-          </span>
-        )}
-
-        {/* Price */}
-        <span className="text-xs text-muted-foreground shrink-0">
-          {formatPrice(item.price_gp)}
-        </span>
-
-        {/* Level */}
-        <span className="text-xs text-muted-foreground shrink-0">
-          Lv {item.level}
-        </span>
-
-        {/* Type badge */}
-        <span className={cn("px-1.5 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
-          {typeLabel}
-        </span>
-      </div>
-
-      {/* Traits — always visible if present */}
-      {traits.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-3 pb-1.5">
-          {traits.slice(0, 5).map((t) => (
-            <span
-              key={t}
-              className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
-            >
-              {t}
-            </span>
-          ))}
-          {traits.length > 5 && (
-            <span className="px-1 py-0.5 text-[10px] text-muted-foreground">+{traits.length - 5} more</span>
-          )}
-        </div>
-      )}
-
-      {/* Expanded detail */}
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
-          {/* Type-specific stats */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-
-            {/* Weapon stats */}
-            {item.damage_formula && (
-              <span className="text-muted-foreground">
-                Damage: <span className="font-mono text-pf-blood">{item.damage_formula}</span>
-              </span>
-            )}
-            {item.weapon_category && (
-              <span className="text-muted-foreground">
-                Category: <span className="text-foreground capitalize">{item.weapon_category}</span>
-              </span>
-            )}
-            {item.weapon_group && (
-              <span className="text-muted-foreground">
-                Group: <span className="text-foreground capitalize">{item.weapon_group}</span>
-              </span>
-            )}
-
-            {/* Armor stats */}
-            {item.ac_bonus !== null && (
-              <span className="text-muted-foreground">
-                AC: <span className="text-foreground font-semibold">+{item.ac_bonus}</span>
-              </span>
-            )}
-            {item.dex_cap !== null && (
-              <span className="text-muted-foreground">
-                Dex cap: <span className="text-foreground">+{item.dex_cap}</span>
-              </span>
-            )}
-            {item.check_penalty !== null && item.check_penalty !== 0 && (
-              <span className="text-muted-foreground">
-                Check: <span className="text-foreground">{item.check_penalty}</span>
-              </span>
-            )}
-            {item.speed_penalty !== null && item.speed_penalty !== 0 && (
-              <span className="text-muted-foreground">
-                Speed: <span className="text-foreground">{item.speed_penalty} ft</span>
-              </span>
-            )}
-            {item.strength_req !== null && (
-              <span className="text-muted-foreground">
-                Str req: <span className="text-foreground">{item.strength_req}</span>
-              </span>
-            )}
-
-            {/* Consumable stats */}
-            {item.uses_max !== null && item.uses_max > 1 && (
-              <span className="text-muted-foreground">
-                Uses: <span className="text-foreground">{item.uses_max}</span>
-              </span>
-            )}
-            {item.consumable_category && (
-              <span className="text-muted-foreground">
-                Type: <span className="text-foreground capitalize">{item.consumable_category}</span>
-              </span>
-            )}
-
-            {/* Source */}
-            {item.source_book && (
-              <span className="text-muted-foreground">
-                Source: <span className="text-foreground">{item.source_book}</span>
-              </span>
-            )}
-          </div>
-
-          {/* All traits expanded */}
-          {traits.length > 5 && (
-            <div className="flex flex-wrap gap-1">
-              {traits.map((t) => (
-                <span key={t} className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{t}</span>
-              ))}
-            </div>
-          )}
-
-          {/* Description */}
-          {item.description && (
-            <p className="text-xs text-foreground/75 leading-relaxed line-clamp-6">
-              {stripHtml(item.description)}
-            </p>
-          )}
-        </div>
-      )}
+    <div className="flex-1 overflow-y-auto">
+      {Object.entries(grouped).map(([category, items]) => (
+        <FavoritesCategoryGroup
+          key={category}
+          category={category}
+          label={ITEM_TYPE_LABELS[category] ?? category}
+          count={items.length}
+          items={items}
+          onItemClick={onItemClick}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={onToggleFavorite}
+        />
+      ))}
     </div>
   )
 }
 
 export function ItemsPage() {
-  const [query, setQuery] = useState('')
-  const [selectedType, setSelectedType] = useState<string | null>(null)
-  const [minLevel, setMinLevel] = useState<string>('')
-  const [maxLevel, setMaxLevel] = useState<string>('')
-  const [selectedRarity, setSelectedRarity] = useState<string | null>(null)
+  const {
+    query, selectedType, minLevel, maxLevel, selectedRarity,
+    selectedTraits, selectedSource, selectedSubcategory,
+    sortField, sortDir, toggleSort, hasActiveFilters, clearFilters,
+  } = useItemsCatalogStore(useShallow((s) => ({
+    query: s.query,
+    selectedType: s.selectedType,
+    minLevel: s.minLevel,
+    maxLevel: s.maxLevel,
+    selectedRarity: s.selectedRarity,
+    selectedTraits: s.selectedTraits,
+    selectedSource: s.selectedSource,
+    selectedSubcategory: s.selectedSubcategory,
+    sortField: s.sortField,
+    sortDir: s.sortDir,
+    toggleSort: s.toggleSort,
+    hasActiveFilters: s.hasActiveFilters,
+    clearFilters: s.clearFilters,
+  })))
+
   const [items, setItems] = useState<ItemRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [drawerItemId, setDrawerItemId] = useState<string | null>(null)
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
 
-  const load = useCallback(async (
-    q: string,
-    type: string | null,
-    minLv: string,
-    maxLv: string,
-    rarity: string | null
-  ) => {
-    setLoading(true)
-    try {
-      const results = await searchItems(
-        q,
-        type ?? undefined,
-        minLv ? parseInt(minLv) : undefined,
-        maxLv ? parseInt(maxLv) : undefined,
-        rarity ?? undefined
-      )
-      setItems(results)
-    } finally {
-      setLoading(false)
-    }
+  // Load favorites on mount
+  useEffect(() => {
+    getFavoriteIds().then((ids) => setFavoriteIds(new Set(ids))).catch(() => {})
   }, [])
 
+  // Optimistic toggle
+  const handleToggleFavorite = useCallback(async (itemId: string) => {
+    const wasFavorited = favoriteIds.has(itemId)
+    setFavoriteIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+    await toggleFavoriteDb(itemId, !wasFavorited).catch(() => {})
+  }, [favoriteIds])
+
   useEffect(() => {
-    const timer = setTimeout(
-      () => load(query, selectedType, minLevel, maxLevel, selectedRarity),
-      200
-    )
+    setItems([])
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchItems(
+          query,
+          selectedType ?? undefined,
+          minLevel ? parseInt(minLevel) : undefined,
+          maxLevel ? parseInt(maxLevel) : undefined,
+          selectedRarity ?? undefined,
+          selectedTraits.length > 0 ? selectedTraits : undefined,
+          selectedSource ?? undefined,
+          selectedSubcategory ?? undefined,
+        )
+        setItems(results)
+      } finally {
+        setLoading(false)
+      }
+    }, 200)
     return () => clearTimeout(timer)
-  }, [query, selectedType, minLevel, maxLevel, selectedRarity, load])
-
-  const hasFilters = selectedType || minLevel || maxLevel || selectedRarity
-
-  function clearFilters() {
-    setSelectedType(null)
-    setMinLevel('')
-    setMaxLevel('')
-    setSelectedRarity(null)
-  }
+  }, [query, selectedType, minLevel, maxLevel, selectedRarity, selectedTraits, selectedSource, selectedSubcategory])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Toolbar */}
-      <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search items…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+      <Tabs defaultValue="all" className="flex flex-col h-full overflow-hidden">
+        <TabsList className="shrink-0 mx-3 mt-2">
+          <TabsTrigger value="all">All Items</TabsTrigger>
+          <TabsTrigger value="favorites">Favorites</TabsTrigger>
+        </TabsList>
 
-        {/* Type filter */}
-        <div className="flex flex-wrap gap-1">
-          {ITEM_TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setSelectedType((prev) => (prev === t ? null : t))}
-              className={cn(
-                "px-2 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold transition-opacity",
-                ITEM_TYPE_COLORS[t],
-                selectedType && selectedType !== t && "opacity-30"
+        <TabsContent value="all" className="flex flex-col flex-1 overflow-hidden mt-0 min-h-0">
+          <ItemFilterPanel />
+
+          {/* Count row */}
+          <div className="px-3 py-1.5 shrink-0 border-b border-border/30">
+            <p className="text-xs text-muted-foreground">
+              {loading ? 'Searching\u2026' : `${items.length} item${items.length !== 1 ? 's' : ''}`}
+              {hasActiveFilters() && (
+                <button onClick={clearFilters} className="ml-2 text-primary hover:underline">
+                  clear filters
+                </button>
               )}
-            >
-              {ITEM_TYPE_LABELS[t]}
-            </button>
-          ))}
-        </div>
-
-        {/* Level range + Rarity */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span>Lv</span>
-            <Input
-              type="number"
-              placeholder="min"
-              value={minLevel}
-              onChange={(e) => setMinLevel(e.target.value)}
-              className="w-14 h-6 text-xs px-1.5"
-              min={0}
-              max={25}
-            />
-            <span>–</span>
-            <Input
-              type="number"
-              placeholder="max"
-              value={maxLevel}
-              onChange={(e) => setMaxLevel(e.target.value)}
-              className="w-14 h-6 text-xs px-1.5"
-              min={0}
-              max={25}
-            />
-          </div>
-
-          <div className="flex gap-1">
-            {RARITIES.map((r) => (
-              <button
-                key={r}
-                onClick={() => setSelectedRarity((prev) => (prev === r ? null : r))}
-                className={cn(
-                  "px-2 py-0.5 text-[10px] rounded border capitalize font-medium transition-colors",
-                  selectedRarity === r
-                    ? cn(RARITY_COLORS[r], "bg-secondary border-current")
-                    : "text-muted-foreground border-border/40 hover:border-border"
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Count row */}
-      <div className="px-3 py-1.5 shrink-0 border-b border-border/30">
-        <p className="text-xs text-muted-foreground">
-          {loading ? 'Searching…' : `${items.length} item${items.length !== 1 ? 's' : ''}`}
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="ml-2 text-primary hover:underline"
-            >
-              clear filters
-            </button>
-          )}
-        </p>
-      </div>
-
-      {/* Item list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-        {items.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-            <Package className="w-8 h-8 mb-2 opacity-40" />
-            <p className="text-sm">
-              {query || hasFilters
-                ? 'No items match the filters'
-                : 'Run sync to import items'}
             </p>
           </div>
-        )}
-        {items.map((item) => (
-          <ItemCard
-            key={item.id}
-            item={item}
-            expanded={expandedId === item.id}
-            onToggle={() => setExpandedId((prev) => (prev === item.id ? null : item.id))}
+
+          {/* Table or empty state */}
+          {items.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+              <Package className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm">
+                {query || hasActiveFilters()
+                  ? 'No items match the current filters.'
+                  : 'Run sync to import equipment from Foundry VTT.'}
+              </p>
+              {hasActiveFilters() && (
+                <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <ItemsTable
+              items={items}
+              sortField={sortField}
+              sortDir={sortDir}
+              onToggleSort={toggleSort}
+              onItemClick={setDrawerItemId}
+              renderStar={(item) => (
+                <FavoritesStar
+                  itemId={item.id}
+                  isFavorited={favoriteIds.has(item.id)}
+                  onToggle={handleToggleFavorite}
+                />
+              )}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="favorites" className="flex flex-col flex-1 overflow-hidden mt-0">
+          {favoriteIds.size === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+              <Star className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm">No favorites yet</p>
+              <p className="text-xs mt-1">Star an item from the All Items tab to save it here.</p>
+            </div>
+          ) : (
+            <FavoritesContent
+              favoriteIds={favoriteIds}
+              onItemClick={setDrawerItemId}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <ItemReferenceDrawer
+        itemId={drawerItemId}
+        onClose={() => setDrawerItemId(null)}
+        extraActions={drawerItemId ? (
+          <FavoritesStar
+            itemId={drawerItemId}
+            isFavorited={favoriteIds.has(drawerItemId)}
+            onToggle={handleToggleFavorite}
           />
-        ))}
-      </div>
+        ) : undefined}
+      />
     </div>
   )
 }

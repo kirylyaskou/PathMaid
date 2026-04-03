@@ -18,7 +18,7 @@ import type { SpellRow } from '@/entities/spell'
 import { getSpellById, getSpellByName, searchSpells, saveSpellSlotUsage, loadSpellSlots, loadSpellOverrides, upsertSpellOverride, deleteSpellOverride, loadItemOverrides, upsertItemOverride, deleteItemOverride, searchItems, saveSlotOverride, loadSlotOverrides } from '@/shared/api'
 import type { SpellOverrideRow, CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
 import { detectCasterProgression, getMaxRecommendedRank } from '@engine'
-import { ITEM_TYPE_COLORS } from '@/entities/item'
+import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 
@@ -1227,6 +1227,7 @@ function EquipmentBlock({
   const [overrides, setOverrides] = useState<EncounterItemRow[]>([])
   const [addQuery, setAddQuery] = useState('')
   const [addResults, setAddResults] = useState<ItemRow[]>([])
+  const [drawerItemId, setDrawerItemId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!encounterContext) return
@@ -1305,11 +1306,13 @@ function EquipmentBlock({
   const totalCount = visibleBase.length + addedItems.length
   if (totalCount === 0 && !encounterContext) return null
 
-  function ItemRow_({ item, onRemove, onRestore, isRemoved }: {
+  function ItemRow_({ item, onRemove, onRestore, isRemoved, foundryItemId, onItemClick }: {
     item: { name: string; type: string; qty: number; damageFormula: string | null; acBonus: number | null; bulk?: string | null }
     onRemove?: () => void
     onRestore?: () => void
     isRemoved?: boolean
+    foundryItemId?: string | null
+    onItemClick?: (id: string) => void
   }) {
     const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
     const qty = item.qty > 1 ? ` ×${item.qty}` : ''
@@ -1319,7 +1322,16 @@ function EquipmentBlock({
         <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", typeColor)}>
           {item.type[0].toUpperCase()}
         </span>
-        <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
+        {foundryItemId && onItemClick ? (
+          <button
+            className="font-medium flex-1 min-w-0 truncate text-left hover:text-primary hover:underline cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onItemClick(foundryItemId) }}
+          >
+            {item.name}{qty}
+          </button>
+        ) : (
+          <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
+        )}
         {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
         {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
         {encounterContext && onRemove && !isRemoved && (
@@ -1335,6 +1347,7 @@ function EquipmentBlock({
   }
 
   return (
+    <>
     <Collapsible defaultOpen={false}>
       <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
         <div className="flex items-center gap-2">
@@ -1351,6 +1364,8 @@ function EquipmentBlock({
               key={item.id}
               item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
               onRemove={encounterContext ? () => handleRemove(item) : undefined}
+              foundryItemId={item.foundry_item_id}
+              onItemClick={(id) => setDrawerItemId(id)}
             />
           ))}
           {/* Removed items shown struck-through with undo */}
@@ -1363,6 +1378,8 @@ function EquipmentBlock({
                 item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
                 isRemoved
                 onRestore={() => handleRestoreBase(base)}
+                foundryItemId={o.itemFoundryId}
+                onItemClick={(id) => setDrawerItemId(id)}
               />
             )
           })}
@@ -1372,6 +1389,8 @@ function EquipmentBlock({
               key={o.id}
               item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
               onRemove={() => handleRemoveAdded(o)}
+              foundryItemId={o.itemFoundryId}
+              onItemClick={(id) => setDrawerItemId(id)}
             />
           ))}
 
@@ -1405,5 +1424,7 @@ function EquipmentBlock({
         </div>
       </CollapsibleContent>
     </Collapsible>
+    <ItemReferenceDrawer itemId={drawerItemId} onClose={() => setDrawerItemId(null)} />
+    </>
   )
 }

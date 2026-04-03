@@ -23,6 +23,7 @@ export interface ItemRow {
   strength_req: number | null
   consumable_category: string | null
   uses_max: number | null
+  usage: string | null
 }
 
 export interface CreatureItemRow {
@@ -44,7 +45,10 @@ export async function searchItems(
   itemType?: string,
   minLevel?: number,
   maxLevel?: number,
-  rarity?: string
+  rarity?: string,
+  traits?: string[],
+  source?: string,
+  subcategory?: string,
 ): Promise<ItemRow[]> {
   const db = await getDb()
 
@@ -52,12 +56,29 @@ export async function searchItems(
   const minLvlFilter = minLevel !== undefined ? 'AND i.level >= ?' : ''
   const maxLvlFilter = maxLevel !== undefined ? 'AND i.level <= ?' : ''
   const rarityFilter = rarity ? 'AND i.rarity = ?' : ''
+  const sourceFilter = source ? 'AND i.source_book = ?' : ''
+
+  let subcategoryFilter = ''
+  if (subcategory) {
+    if (itemType === 'weapon') subcategoryFilter = 'AND i.weapon_group = ?'
+    else if (itemType === 'consumable') subcategoryFilter = 'AND i.consumable_category = ?'
+  }
+
+  let traitsFilter = ''
+  const traitsParams: string[] = []
+  if (traits && traits.length > 0) {
+    traitsFilter = traits.map(() => 'AND EXISTS (SELECT 1 FROM json_each(i.traits) WHERE value = ?)').join(' ')
+    traitsParams.push(...traits)
+  }
 
   const extraParams = [
     ...(itemType ? [itemType] : []),
     ...(minLevel !== undefined ? [minLevel] : []),
     ...(maxLevel !== undefined ? [maxLevel] : []),
     ...(rarity ? [rarity] : []),
+    ...traitsParams,
+    ...(source ? [source] : []),
+    ...(subcategory && subcategoryFilter ? [subcategory] : []),
   ]
 
   if (query.trim()) {
@@ -67,18 +88,19 @@ export async function searchItems(
        JOIN items_fts f ON i.rowid = f.rowid
        WHERE items_fts MATCH ?
          ${typeFilter} ${minLvlFilter} ${maxLvlFilter} ${rarityFilter}
-       ORDER BY rank(matchinfo(items_fts)) DESC
-       LIMIT 100`,
+         ${traitsFilter} ${sourceFilter} ${subcategoryFilter}
+       ORDER BY f.rank
+       LIMIT 500`,
       [ftsQuery, ...extraParams]
     )
   }
 
   return await db.select<ItemRow[]>(
-    `SELECT * FROM items
+    `SELECT * FROM items i
      WHERE 1=1
        ${typeFilter} ${minLvlFilter} ${maxLvlFilter} ${rarityFilter}
-     ORDER BY level ASC, name ASC
-     LIMIT 100`,
+       ${traitsFilter} ${sourceFilter} ${subcategoryFilter}
+     ORDER BY level ASC, name ASC`,
     extraParams
   )
 }
@@ -125,4 +147,57 @@ export async function getCreatureItems(creatureId: string): Promise<CreatureItem
        sort_order ASC`,
     [creatureId]
   )
+}
+
+export async function fetchDistinctItemTraits(): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.select<{ value: string }[]>(
+    `SELECT DISTINCT value FROM items, json_each(items.traits)
+     WHERE traits IS NOT NULL
+     ORDER BY value`,
+    []
+  )
+  return rows.map((r) => r.value)
+}
+
+export async function fetchDistinctItemSources(): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.select<{ value: string }[]>(
+    `SELECT DISTINCT source_book as value FROM items
+     WHERE source_book IS NOT NULL
+     ORDER BY source_book`,
+    []
+  )
+  return rows.map((r) => r.value)
+}
+
+export async function fetchDistinctSubcategories(itemType: string | null): Promise<string[]> {
+  if (!itemType || (itemType !== 'weapon' && itemType !== 'consumable')) return []
+  const db = await getDb()
+  const col = itemType === 'weapon' ? 'weapon_group' : 'consumable_category'
+  const rows = await db.select<{ value: string }[]>(
+    `SELECT DISTINCT ${col} as value FROM items
+     WHERE item_type = ? AND ${col} IS NOT NULL
+     ORDER BY ${col}`,
+    [itemType]
+  )
+  return rows.map((r) => r.value)
+}
+
+export async function getFavoriteIds(): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.select<{ item_id: string }[]>(
+    'SELECT item_id FROM item_favorites',
+    []
+  )
+  return rows.map((r) => r.item_id)
+}
+
+export async function toggleFavoriteDb(itemId: string, isFavorited: boolean): Promise<void> {
+  const db = await getDb()
+  if (isFavorited) {
+    await db.execute('INSERT OR IGNORE INTO item_favorites (item_id) VALUES (?)', [itemId])
+  } else {
+    await db.execute('DELETE FROM item_favorites WHERE item_id = ?', [itemId])
+  }
 }

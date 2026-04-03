@@ -95,6 +95,7 @@ interface RawItem {
   strength_req: number | null
   consumable_category: string | null
   uses_max: number | null
+  usage: string | null
 }
 
 interface RawCreatureItem {
@@ -478,6 +479,7 @@ async function extractAndInsertItems(entities: RawEntity[]): Promise<void> {
         strength_req: sys.strength ?? null,
         consumable_category: entity.entity_type === 'consumable' ? (sys.category ?? null) : null,
         uses_max: sys.uses?.max ?? null,
+        usage: sys.usage?.value ?? null,
       })
     } catch {
       // skip malformed item JSON
@@ -487,17 +489,17 @@ async function extractAndInsertItems(entities: RawEntity[]): Promise<void> {
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const batch = items.slice(i, i + BATCH_SIZE)
     const placeholders = batch
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const values = batch.flatMap((it) => [
       it.id, it.name, it.item_type, it.level, it.rarity, it.bulk, it.price_gp,
       it.traits, it.description, it.source_book, it.source_pack,
       it.damage_formula, it.damage_type, it.weapon_category, it.weapon_group,
       it.ac_bonus, it.dex_cap, it.check_penalty, it.speed_penalty, it.strength_req,
-      it.consumable_category, it.uses_max,
+      it.consumable_category, it.uses_max, it.usage,
     ])
     await db.execute(
-      `INSERT OR REPLACE INTO items (id, name, item_type, level, rarity, bulk, price_gp, traits, description, source_book, source_pack, damage_formula, damage_type, weapon_category, weapon_group, ac_bonus, dex_cap, check_penalty, speed_penalty, strength_req, consumable_category, uses_max) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO items (id, name, item_type, level, rarity, bulk, price_gp, traits, description, source_book, source_pack, damage_formula, damage_type, weapon_category, weapon_group, ac_bonus, dex_cap, check_penalty, speed_penalty, strength_req, consumable_category, uses_max, usage) VALUES ${placeholders}`,
       values
     )
   }
