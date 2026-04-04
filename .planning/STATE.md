@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed Phase 40 all plans inline
-last_updated: "2026-04-04T20:20:54.818Z"
+status: executing
+stopped_at: Completed 41-01-PLAN.md
+last_updated: "2026-04-04T22:11:45.165Z"
 last_activity: 2026-04-04
 progress:
-  total_phases: 40
+  total_phases: 41
   completed_phases: 19
-  total_plans: 67
-  completed_plans: 48
+  total_plans: 70
+  completed_plans: 50
   percent: 80
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 40 — dice-rolls-extended
+**Current focus:** Phase 41 — encounters-redesign
 
 ## Current Position
 
-Phase: 40 (dice-rolls-extended) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 41 (encounters-redesign) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [████████░░] 80%
@@ -46,6 +46,8 @@ Progress: [████████░░] 80%
 |-------|-------|-------|----------|
 
 ## Accumulated Context
+
+| Phase 41-encounters-redesign P01 | 15 | 2 tasks | 6 files |
 
 ### Decisions
 
@@ -80,6 +82,8 @@ Key decisions carrying forward from prior milestones:
 - [Phase 12]: source_name nullable column added via non-destructive ALTER TABLE; null preferred over empty string
 - [Phase 12]: en.json download failure is non-fatal — sync proceeds without @Localize resolution
 - [Phase 12]: fetchDistinctSources returns {pack, name}[] with null fallback to pack name for display
+- [Phase 41]: Active CombatColumn uses global store-backed widgets; inactive renders read-only from tab snapshot — avoids rewriting InitiativeList/CombatantDetail to accept props
+- [Phase 41-encounters-redesign]: isHazard added as required on EncounterCombatantRow (optional on EncounterCombatant); handleAddCreature/handleAddHazard owned by EncounterEditor; EncounterCreatureSearchPanel file kept for Plan 02 cleanup
 
 ### v0.5.0-specific context
 
@@ -138,6 +142,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T20:20:54.813Z
-Stopped at: Completed Phase 40 all plans inline
+Last session: 2026-04-04T22:11:45.161Z
+Stopped at: Completed 41-01-PLAN.md
 Next step: /gsd:plan-milestone v0.9.0

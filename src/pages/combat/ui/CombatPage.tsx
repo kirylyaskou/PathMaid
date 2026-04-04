@@ -12,7 +12,10 @@ import { PersistentDamageDialog } from '@/widgets/combatant-detail/ui/Persistent
 import { CombatControls, AddPCDialog } from '@/features/combat-tracker'
 import { TurnControls } from '@/features/combat-tracker/ui/TurnControls'
 import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
-import { useEncounterTabsStore, snapshotFromGlobalStores } from '@/features/combat-tracker'
+import {
+  useEncounterTabsStore,
+  snapshotFromGlobalStores,
+} from '@/features/combat-tracker'
 import type { EncounterTab } from '@/features/combat-tracker'
 import { setupAutoSave, teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
 import { setupEncounterAutoSave, teardownEncounterAutoSave } from '@/features/combat-tracker/lib/encounter-persistence'
@@ -26,9 +29,56 @@ import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
 
 // ---------------------------------------------------------------------------
 // CombatColumn — renders one encounter's initiative list + detail + controls
-// Used in split mode only. Active column renders full interactive widgets
-// (backed by global stores). Inactive column renders a read-only snapshot view.
+// Used in split mode only.
+//
+// ARCHITECTURE: In split mode both columns must be independently interactive.
+// The global Zustand stores (useCombatTrackerStore, useCombatantStore) can only
+// hold one encounter's state at a time. To keep both columns live:
+//
+//  - The ACTIVE column renders its widgets against the live global stores.
+//    A SnapshotSyncEffect inside the active column continuously writes back to
+//    the tab snapshot on every store change so the snapshot stays current.
+//
+//  - The INACTIVE column renders a prop-driven read-only view from its tab
+//    snapshot. Because the active column continuously updates its snapshot,
+//    when focus switches the formerly-inactive column's snapshot is up-to-date
+//    and the global stores are restored from that snapshot.
+//
+//  - Clicking anywhere in the inactive column calls onActivate(), which:
+//      1. Saves the current active tab's snapshot via updateActiveSnapshot()
+//      2. Sets the new activeTabId (restores the clicked tab's snapshot into
+//         global stores via restoreSnapshotToGlobalStores)
+//    After this, the clicked column becomes active (live global store view)
+//    and the other column becomes inactive (read-only snapshot view, which
+//    was kept current by SnapshotSyncEffect so it shows the latest state).
 // ---------------------------------------------------------------------------
+
+// SnapshotSyncEffect — subscribes to global store mutations and continuously
+// writes them back to the active tab's snapshot so the snapshot never goes stale.
+function SnapshotSyncEffect({ tabId }: { tabId: string }) {
+  useEffect(() => {
+    // Sync on every combatant store change
+    const unsubCombatants = useCombatantStore.subscribe(() => {
+      const { activeTabId } = useEncounterTabsStore.getState()
+      if (activeTabId === tabId) {
+        useEncounterTabsStore.getState().updateActiveSnapshot()
+      }
+    })
+    // Sync on every tracker store change
+    const unsubTracker = useCombatTrackerStore.subscribe(() => {
+      const { activeTabId } = useEncounterTabsStore.getState()
+      if (activeTabId === tabId) {
+        useEncounterTabsStore.getState().updateActiveSnapshot()
+      }
+    })
+    return () => {
+      unsubCombatants()
+      unsubTracker()
+    }
+  }, [tabId])
+
+  return null
+}
 
 interface CombatColumnProps {
   tab: EncounterTab
@@ -41,22 +91,38 @@ interface CombatColumnProps {
 function CombatColumn({ tab, isActive, onActivate, onSelect, className }: CombatColumnProps) {
   const [columnSelectedId, setColumnSelectedId] = useState<string | null>(null)
 
+  // When this column becomes active, restore its snapshot to global stores
+  // (setActiveTab already does this, but we need selectedId to remain valid)
+  const prevIsActive = useRef(isActive)
+  useEffect(() => {
+    if (isActive && !prevIsActive.current) {
+      // Column just became active — global stores were already restored by setActiveTab.
+      // If the previously-selected combatant no longer exists in the restored snapshot,
+      // clear the selection to avoid showing stale detail panel.
+      const combatantIds = tab.snapshot.combatants.map((c) => c.id)
+      if (columnSelectedId && !combatantIds.includes(columnSelectedId)) {
+        setColumnSelectedId(null)
+      }
+    }
+    prevIsActive.current = isActive
+  }, [isActive, tab.snapshot.combatants, columnSelectedId])
+
   const handleColumnSelect = useCallback(
     (id: string) => {
-      onActivate()
       setColumnSelectedId(id)
       onSelect(id)
     },
-    [onActivate, onSelect]
+    [onSelect]
   )
 
   if (isActive) {
-    // Active column — full interactive widgets backed by global stores
+    // Active column — full interactive widgets backed by global stores.
+    // SnapshotSyncEffect keeps the tab snapshot in sync with live mutations.
     return (
       <div
         className={cn('flex flex-col h-full border-t-2 border-t-primary', className)}
-        onClick={onActivate}
       >
+        <SnapshotSyncEffect tabId={tab.id} />
         <div className="flex items-stretch shrink-0">
           <div className="flex-1">
             <CombatControls />
@@ -89,7 +155,9 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
     )
   }
 
-  // Inactive column — read-only view from tab snapshot
+  // Inactive column — read-only view from tab snapshot.
+  // The snapshot is kept current by SnapshotSyncEffect on the active column,
+  // so when the user clicks here and focus switches, the data is up-to-date.
   const combatants = tab.snapshot.combatants
   return (
     <div
@@ -99,6 +167,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
       {/* Minimal header showing round/state */}
       <div className="px-3 py-1.5 border-b border-border/50 text-xs text-muted-foreground shrink-0">
         {tab.snapshot.isRunning ? `Round ${tab.snapshot.round}` : 'Not started'}
+        <span className="ml-2 text-muted-foreground/60">(click to focus)</span>
       </div>
       {/* Read-only initiative list from snapshot */}
       <ScrollArea className="flex-1">
@@ -113,8 +182,8 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
               )}
               onClick={(e) => {
                 e.stopPropagation()
-                onActivate()
                 setColumnSelectedId(c.id)
+                onActivate()
                 onSelect(c.id)
               }}
             >
@@ -185,7 +254,10 @@ export function CombatPage() {
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
 
-    const combatant = combatants.find((c) => c.id === id)
+    // Read combatants directly from the store (not the closed-over snapshot) so
+    // that in split mode — where setActiveTab may have just swapped global store
+    // contents — we look up the combatant in the freshly-restored encounter data.
+    const combatant = useCombatantStore.getState().combatants.find((c) => c.id === id)
     if (!combatant?.isNPC || !combatant.creatureRef) return
 
     // Cache hit
@@ -211,7 +283,7 @@ export function CombatPage() {
     } finally {
       setStatBlockLoading(false)
     }
-  }, [combatants])
+  }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
