@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 37 context gathered
+stopped_at: Phase 39 context gathered
 last_updated: "2026-04-04T12:34:41.747Z"
 last_activity: 2026-04-04
 progress:
@@ -21,7 +21,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 37 — dice-ui-history
+**Current focus:** Phase 39 — condition-math
 
 ## Current Position
 
@@ -126,6 +126,7 @@ Key decisions carrying forward from prior milestones:
 - v0.8.0 started 2026-04-02, completed 2026-04-02: Hazards
 - v0.8.5 started 2026-04-02, completed 2026-04-02: Actions Reference
 - Phase 35 added 2026-04-04: UX Polish + Starfinder Purge + Encounter Tabs
+- Phase 40 added 2026-04-04: Dice Rolls Extended (skills/DC/spells/items clickable + history context + drawer right)
 
 ### Pending Todos
 

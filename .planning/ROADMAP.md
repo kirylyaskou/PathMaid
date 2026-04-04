@@ -724,6 +724,16 @@ Plans:
 **Status:** Fulfilled in Phase 15 (3-panel layout with stat card right panel)
 **Plans:** Delivered as part of Phase 15-01-PLAN.md
 
+### Phase 40: Dice Rolls Extended
+
+**Goal:** Clickable rolls for skills, DC saves, spell attacks/damage, and item damage in the stat block; roll history enriched with source context (who/what/which combat); roll result drawer repositioned to right side
+**Requirements**: null
+**Depends on:** Phase 37
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 40 to break down)
+
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
 *Last updated: 2026-04-04 — Phase 36 planned (1 plan, 1 wave)

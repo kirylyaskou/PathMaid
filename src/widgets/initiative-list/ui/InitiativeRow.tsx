@@ -32,6 +32,7 @@ export function InitiativeRow({
   }
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
+  const stunnedCondition = conditions.find((c) => c.slug === 'stunned' && (c.value ?? 0) > 0) ?? null
 
   return (
     <div
@@ -65,6 +66,11 @@ export function InitiativeRow({
             <Skull className="w-3 h-3 text-destructive/60 shrink-0" />
           ) : (
             <User className="w-3 h-3 text-primary/60 shrink-0" />
+          )}
+          {stunnedCondition && (
+            <span className="px-1 py-0.5 text-[10px] rounded font-mono font-semibold bg-amber-900/60 text-amber-200 border border-amber-600/50 shrink-0">
+              ⚡{stunnedCondition.value}
+            </span>
           )}
           <span className="text-sm font-medium truncate">{combatant.displayName}</span>
         </div>
