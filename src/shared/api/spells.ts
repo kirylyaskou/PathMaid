@@ -42,11 +42,18 @@ export async function searchSpells(
   query: string,
   rank?: number,
   tradition?: string,
-  trait?: string
+  trait?: string,
+  isFocus?: boolean
 ): Promise<SpellRow[]> {
   const db = await getDb()
   const traitFilter = trait ? `AND s.traits LIKE ?` : ''
   const traitParam = trait ? [`%"${trait}"%`] : []
+  const focusFilter =
+    isFocus === true
+      ? `AND s.traditions IS NULL AND s.traits LIKE '%"focus"%'`
+      : isFocus === false
+        ? `AND (s.traditions IS NOT NULL OR s.traits NOT LIKE '%"focus"%')`
+        : ''
 
   if (query.trim()) {
     const ftsQuery = query.trim().replace(/['"*]/g, '') + '*'
@@ -57,8 +64,9 @@ export async function searchSpells(
          ${rank !== undefined ? 'AND s.rank = ?' : ''}
          ${tradition ? "AND s.traditions LIKE ?" : ''}
          ${traitFilter}
+         ${focusFilter}
        ORDER BY rank(matchinfo(spells_fts)) DESC
-       LIMIT 100`,
+       LIMIT 500`,
       [
         ftsQuery,
         ...(rank !== undefined ? [rank] : []),
@@ -75,8 +83,9 @@ export async function searchSpells(
        ${rank !== undefined ? 'AND s.rank = ?' : ''}
        ${tradition ? "AND s.traditions LIKE ?" : ''}
        ${traitFilter}
+       ${focusFilter}
      ORDER BY s.rank ASC, s.name ASC
-     LIMIT 100`,
+     LIMIT 500`,
     [
       ...(rank !== undefined ? [rank] : []),
       ...(tradition ? [`%"${tradition}"%`] : []),
@@ -130,4 +139,15 @@ export async function getSpellCount(): Promise<number> {
     []
   )
   return rows[0]?.count ?? 0
+}
+
+export async function fetchDistinctSpellTraits(): Promise<string[]> {
+  const db = await getDb()
+  const rows = await db.select<{ value: string }[]>(
+    `SELECT DISTINCT value FROM spells, json_each(spells.traits)
+     WHERE traits IS NOT NULL
+     ORDER BY value`,
+    []
+  )
+  return rows.map((r) => r.value)
 }

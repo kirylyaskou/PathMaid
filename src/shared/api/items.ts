@@ -24,6 +24,7 @@ export interface ItemRow {
   consumable_category: string | null
   uses_max: number | null
   usage: string | null
+  linked_spell_id: string | null
 }
 
 export interface CreatureItemRow {
