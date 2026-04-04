@@ -1,5 +1,8 @@
 import type { ReactNode } from "react"
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { rollDice } from '@engine'
+import { useRollStore } from '@/shared/model/roll-store'
+import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -36,10 +39,15 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
+  const addRoll = useRollStore((state) => state.addRoll)
+  function handleRoll(formula: string, label?: string) {
+    addRoll(rollDice(formula, label))
+  }
+
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
       {/* Header - Grimdark */}
-      <CardHeader className="-mt-6 pb-3 stat-block-header border-b border-primary/20">
+      <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
         <div className="flex items-start gap-4">
           <LevelBadge level={creature.level} size="lg" />
           <div className="flex-1">
@@ -61,8 +69,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
       <CardContent className="p-0">
         {/* Core Stats */}
-        <div className="p-4 bg-card">
-          <div className="grid grid-cols-6 gap-4">
+        <div className="pb-4 bg-card [@container-type:inline-size]">
+          <div className="flex flex-nowrap overflow-hidden">
             <StatItem label="HP" value={creature.hp} highlight />
             <StatItem label="AC" value={creature.ac} colorClass="text-pf-gold" />
             <StatItem label="Fort" value={creature.fort} modifier colorClass="text-pf-threat-low" showDc />
@@ -154,9 +162,13 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     <div className="flex items-center gap-2">
                       <ActionIcon cost={1} className="text-lg" />
                       <span className="font-semibold">{strike.name}</span>
-                      <span className="font-mono text-primary">
+                      <button
+                        onClick={() => handleRoll(`1d20+${strike.modifier}`, `${strike.name} attack`)}
+                        title={`Roll 1d20+${strike.modifier}`}
+                        className="font-mono text-primary font-bold cursor-pointer underline decoration-dotted underline-offset-2 decoration-primary/50 hover:text-pf-gold transition-colors duration-100"
+                      >
                         +{strike.modifier}
-                      </span>
+                      </button>
                     </div>
                     {/* Main damage */}
                     {strike.damage.length > 0 && (
@@ -165,7 +177,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         {strike.damage.map((d, di) => (
                           <span key={di}>
                             {di > 0 && <span className="text-muted-foreground"> plus </span>}
-                            <span className="font-mono">{d.formula}</span>
+                            <ClickableFormula formula={d.formula} label={`${strike.name} damage`} />
                             {d.type && (
                               <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
                             )}
@@ -181,7 +193,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                             {ad.label && (
                               <span className="text-muted-foreground text-xs">{ad.label}: </span>
                             )}
-                            <span className="font-mono">{ad.formula}</span>
+                            <ClickableFormula formula={ad.formula} label={ad.label ?? `${strike.name} damage`} />
                             {ad.type && (
                               <span className={cn("font-mono", damageTypeColor(ad.type))}> {ad.type}</span>
                             )}
@@ -245,7 +257,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         )}
                         <span className="font-semibold text-sm">{ability.name}</span>
                       </div>
-                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description)}</p>
+                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description, handleRoll)}</p>
                       {ability.traits && ability.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {ability.traits.map((trait) => (
@@ -401,7 +413,7 @@ function stripFoundryTags(text: string): string {
 // Group 2 = dice formula, Group 3 = damage type (stripped of brackets)
 const GAME_TEXT_RE = /(DC\s+\d+)|(\d+d\d+(?:\s*[+\-]\s*\d+)?)(?:\[(\w+)\])?/gi
 
-function highlightGameText(raw: string): ReactNode {
+function highlightGameText(raw: string, onRoll?: (formula: string) => void): ReactNode {
   const text = stripFoundryTags(raw)
   const parts: ReactNode[] = []
   let lastIndex = 0
@@ -417,10 +429,24 @@ function highlightGameText(raw: string): ReactNode {
         <span key={key++} className="text-pf-gold font-semibold font-mono">{match[1]}</span>
       )
     } else if (match[2]) {
-      // Dice formula
-      parts.push(
-        <span key={key++} className="text-pf-blood font-mono">{match[2]}</span>
-      )
+      // Dice formula — clickable if onRoll provided
+      const formula = match[2]
+      if (onRoll) {
+        parts.push(
+          <button
+            key={key++}
+            onClick={(e) => { e.stopPropagation(); onRoll(formula) }}
+            title={`Roll ${formula}`}
+            className="text-pf-blood font-bold font-mono cursor-pointer underline decoration-dotted underline-offset-2 decoration-pf-blood/50 hover:text-pf-gold transition-colors duration-100"
+          >
+            {formula}
+          </button>
+        )
+      } else {
+        parts.push(
+          <span key={key++} className="text-pf-blood font-mono">{formula}</span>
+        )
+      }
       // Damage type (if present, stripped of brackets)
       if (match[3]) {
         parts.push(
@@ -1150,13 +1176,13 @@ interface StatItemProps {
 
 function StatItem({ label, value, modifier, highlight, colorClass, showDc }: StatItemProps) {
   const displayValue = modifier && value > 0 ? `+${value}` : `${value}`
-  const dc = showDc ? ` (DC ${10 + value})` : ''
+  const dc = showDc ? ` (${10 + value})` : ''
   return (
-    <div className="text-center">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <div className="px-4">
+      <p className="text-[clamp(0.55rem,1.8cqw,0.75rem)] text-muted-foreground mb-1">{label}</p>
       <p
         className={cn(
-          "font-mono font-bold text-lg",
+          "font-mono font-bold text-[clamp(0.7rem,2.8cqw,1.125rem)]",
           highlight && "text-pf-threat-extreme",
           colorClass
         )}
