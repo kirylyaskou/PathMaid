@@ -2,7 +2,6 @@ import { History, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
-import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
 import { RollDie20Button } from '@/shared/ui/roll-die20-button'
 import { RollHistoryPanel } from '@/widgets/roll-history'
 
@@ -11,7 +10,6 @@ export function AppHeader() {
 
   return (
     <header className="flex items-center justify-between h-14 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <RollResultDrawer />
       <div />
       <div className="flex items-center gap-2">
         <RollDie20Button />

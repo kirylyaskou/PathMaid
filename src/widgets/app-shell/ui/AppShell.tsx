@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { CommandPalette } from './CommandPalette'
+import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
 
 export function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
@@ -17,6 +18,7 @@ export function AppShell() {
         </main>
       </div>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <RollResultDrawer />
     </div>
   )
 }
