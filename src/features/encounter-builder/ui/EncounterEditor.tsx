@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -14,15 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
+import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
 import { saveEncounterCombatants, resetEncounterCombat } from '@/shared/api'
-import type { EncounterCombatantRow, CreatureRow, HazardRow } from '@/shared/api'
+import type { EncounterCombatantRow } from '@/shared/api'
 import { loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave } from '@/features/combat-tracker/lib/encounter-persistence'
 import { teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
 import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
 import { PATHS } from '@/shared/routes'
-import { calculateCreatureXP, getHpAdjustment } from '@engine'
-import type { WeakEliteTier } from '@/entities/creature'
+import { calculateCreatureXP } from '@engine'
 
 interface Props {
   encounterId: string
@@ -37,6 +38,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const [showLoadConfirm, setShowLoadConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
 
   if (!encounter) return null
 
@@ -117,131 +120,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     setEncounterCombatants(encounterId, remaining.map((c, i) => ({ ...c, sortOrder: i })))
   }
 
-  async function handleAddCreature(row: CreatureRow, tier: WeakEliteTier) {
-    const baseLevel = row.level ?? 0
-    const baseHp = row.hp ?? 0
-    const hpDelta = getHpAdjustment(tier, baseLevel)
-    const adjustedHp = Math.max(1, baseHp + hpDelta)
-
-    const newCombatant: EncounterCombatantRow = {
-      id: crypto.randomUUID(),
-      encounterId,
-      creatureRef: row.id,
-      displayName: row.name,
-      initiative: 0,
-      hp: adjustedHp,
-      maxHp: adjustedHp,
-      tempHp: 0,
-      isNPC: true,
-      weakEliteTier: tier,
-      creatureLevel: baseLevel,
-      sortOrder: combatants.length,
-      isHazard: false,
-      hazardRef: null,
-    }
-
-    const updatedRows: EncounterCombatantRow[] = [
-      ...combatants.map((c) => ({
-        id: c.id,
-        encounterId: c.encounterId,
-        creatureRef: c.creatureRef,
-        displayName: c.displayName,
-        initiative: c.initiative,
-        hp: c.hp,
-        maxHp: c.maxHp,
-        tempHp: c.tempHp,
-        isNPC: c.isNPC,
-        weakEliteTier: c.weakEliteTier,
-        creatureLevel: c.creatureLevel,
-        sortOrder: c.sortOrder,
-        isHazard: c.isHazard ?? false,
-        hazardRef: c.hazardRef ?? null,
-      })),
-      newCombatant,
-    ]
-
-    await saveEncounterCombatants(encounterId, updatedRows)
-    setEncounterCombatants(encounterId, updatedRows.map((r) => ({
-      id: r.id,
-      encounterId: r.encounterId,
-      creatureRef: r.creatureRef,
-      displayName: r.displayName,
-      initiative: r.initiative,
-      hp: r.hp,
-      maxHp: r.maxHp,
-      tempHp: r.tempHp,
-      isNPC: r.isNPC,
-      weakEliteTier: r.weakEliteTier,
-      creatureLevel: r.creatureLevel,
-      sortOrder: r.sortOrder,
-      isHazard: r.isHazard,
-      hazardRef: r.hazardRef,
-    })))
-  }
-
-  async function handleAddHazard(hazard: HazardRow) {
-    const newCombatant: EncounterCombatantRow = {
-      id: crypto.randomUUID(),
-      encounterId,
-      creatureRef: '',
-      displayName: hazard.name,
-      initiative: 0,
-      hp: hazard.hp ?? 0,
-      maxHp: hazard.hp ?? 0,
-      tempHp: 0,
-      isNPC: true,
-      weakEliteTier: 'normal',
-      creatureLevel: hazard.level,
-      sortOrder: combatants.length,
-      isHazard: true,
-      hazardRef: hazard.id,
-    }
-
-    const updatedRows: EncounterCombatantRow[] = [
-      ...combatants.map((c) => ({
-        id: c.id,
-        encounterId: c.encounterId,
-        creatureRef: c.creatureRef,
-        displayName: c.displayName,
-        initiative: c.initiative,
-        hp: c.hp,
-        maxHp: c.maxHp,
-        tempHp: c.tempHp,
-        isNPC: c.isNPC,
-        weakEliteTier: c.weakEliteTier,
-        creatureLevel: c.creatureLevel,
-        sortOrder: c.sortOrder,
-        isHazard: c.isHazard ?? false,
-        hazardRef: c.hazardRef ?? null,
-      })),
-      newCombatant,
-    ]
-
-    await saveEncounterCombatants(encounterId, updatedRows)
-    setEncounterCombatants(encounterId, updatedRows.map((r) => ({
-      id: r.id,
-      encounterId: r.encounterId,
-      creatureRef: r.creatureRef,
-      displayName: r.displayName,
-      initiative: r.initiative,
-      hp: r.hp,
-      maxHp: r.maxHp,
-      tempHp: r.tempHp,
-      isNPC: r.isNPC,
-      weakEliteTier: r.weakEliteTier,
-      creatureLevel: r.creatureLevel,
-      sortOrder: r.sortOrder,
-      isHazard: r.isHazard,
-      hazardRef: r.hazardRef,
-    })))
-  }
-
-  // Expose add handlers so Plan 02 can lift them to EncountersPage
-  void handleAddCreature
-  void handleAddHazard
-
   return (
-    <div className="flex flex-col h-full">
+    <div ref={dropRef} className={cn('flex flex-col h-full', isOver && 'border-dashed border border-primary/40 bg-primary/5')}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50 shrink-0">
         <p className="text-base font-semibold truncate">{encounter.name}</p>
