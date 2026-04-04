@@ -57,6 +57,8 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       weakEliteTier: tier,
       creatureLevel: baseLevel,
       sortOrder: currentCombatants.length,
+      isHazard: false,
+      hazardRef: null,
     }
 
     const updatedRows: EncounterCombatantRow[] = [
@@ -73,6 +75,8 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
         weakEliteTier: c.weakEliteTier,
         creatureLevel: c.creatureLevel,
         sortOrder: c.sortOrder,
+        isHazard: c.isHazard ?? false,
+        hazardRef: c.hazardRef ?? null,
       })),
       newCombatant,
     ]
@@ -92,6 +96,8 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       weakEliteTier: r.weakEliteTier as Tier,
       creatureLevel: r.creatureLevel,
       sortOrder: r.sortOrder,
+      isHazard: r.isHazard,
+      hazardRef: r.hazardRef,
     }))
     setEncounterCombatants(encounterId, updated)
   }

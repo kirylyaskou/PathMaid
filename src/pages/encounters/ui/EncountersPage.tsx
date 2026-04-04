@@ -52,6 +52,8 @@ export function EncountersPage() {
         weakEliteTier: r.weakEliteTier,
         creatureLevel: r.creatureLevel,
         sortOrder: r.sortOrder,
+        isHazard: r.isHazard,
+        hazardRef: r.hazardRef,
       })))
     })
   }, [selectedId, encounters, setEncounterCombatants])

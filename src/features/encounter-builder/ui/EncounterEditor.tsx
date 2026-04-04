@@ -85,6 +85,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       weakEliteTier: r.weakEliteTier as 'normal' | 'weak' | 'elite',
       creatureLevel: r.creatureLevel,
       sortOrder: r.sortOrder,
+      isHazard: r.isHazard,
+      hazardRef: r.hazardRef,
     }))
     setEncounterCombatants(encounterId, updated)
     if (encounter) {
@@ -109,6 +111,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       weakEliteTier: c.weakEliteTier,
       creatureLevel: c.creatureLevel,
       sortOrder: i,
+      isHazard: c.isHazard ?? false,
+      hazardRef: c.hazardRef ?? null,
     }))
     await saveEncounterCombatants(encounterId, rows)
     setEncounterCombatants(encounterId, remaining.map((c, i) => ({ ...c, sortOrder: i })))
