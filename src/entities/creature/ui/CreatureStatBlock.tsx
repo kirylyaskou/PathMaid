@@ -1,5 +1,8 @@
 import type { ReactNode } from "react"
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { rollDice } from '@engine'
+import { useRollStore } from '@/shared/model/roll-store'
+import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -23,6 +26,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
 import { stripHtml } from '@/shared/lib/html'
+import { useModifiedStats, useSpellModifiers } from '@/shared/model/use-modified-stats'
+import type { StatModifierResult } from '@/shared/model/use-modified-stats'
 
 export interface EncounterContext {
   encounterId: string
@@ -36,10 +41,30 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
+  const addRoll = useRollStore((state) => state.addRoll)
+  function handleRoll(formula: string, label?: string) {
+    addRoll(rollDice(formula, label, {
+      source: creature.name,
+      ...(encounterContext ? { combatId: encounterContext.encounterId } : {}),
+    }))
+  }
+
+  // Phase 39: build stat slug list for condition modifier computation
+  const allStatSlugs = useMemo(
+    () => [
+      'ac', 'fortitude', 'reflex', 'will', 'perception',
+      'strike-attack',  // virtual: receives 'all'-selector conditions (frightened, sickened)
+      'spell-dc',       // virtual: receives 'all'-selector conditions for core DC display
+      ...creature.skills.map((s) => s.name.toLowerCase()),
+    ],
+    [creature.skills],
+  )
+  const modStats = useModifiedStats(encounterContext?.combatantId, allStatSlugs)
+
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
       {/* Header - Grimdark */}
-      <CardHeader className="-mt-6 pb-3 stat-block-header border-b border-primary/20">
+      <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
         <div className="flex items-start gap-4">
           <LevelBadge level={creature.level} size="lg" />
           <div className="flex-1">
@@ -61,29 +86,79 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
       <CardContent className="p-0">
         {/* Core Stats */}
-        <div className="p-4 bg-card">
-          <div className="grid grid-cols-6 gap-4">
+        <div className="pb-4 bg-card [@container-type:inline-size]">
+          <div className="flex flex-nowrap overflow-hidden">
             <StatItem label="HP" value={creature.hp} highlight />
-            <StatItem label="AC" value={creature.ac} colorClass="text-pf-gold" />
-            <StatItem label="Fort" value={creature.fort} modifier colorClass="text-pf-threat-low" showDc />
-            <StatItem label="Ref" value={creature.ref} modifier colorClass="text-pf-threat-low" showDc />
-            <StatItem label="Will" value={creature.will} modifier colorClass="text-pf-threat-low" showDc />
-            <StatItem label="Perception" value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc />
+            <StatItem label="AC" value={creature.ac} colorClass="text-pf-gold" modResult={modStats.get('ac')} />
+            <StatItem label="Fort" value={creature.fort} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('fortitude')} />
+            <StatItem label="Ref" value={creature.ref} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('reflex')} />
+            <StatItem label="Will" value={creature.will} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('will')} />
+            <StatItem label="Perception" value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc modResult={modStats.get('perception')} />
           </div>
           {(creature.spellDC != null || creature.classDC != null) && (
             <div className="flex gap-6 mt-3 pt-3 border-t border-border/40">
-              {creature.spellDC != null && (
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Spell DC</p>
-                  <p className="font-mono font-bold text-lg text-primary">{creature.spellDC}</p>
-                </div>
-              )}
-              {creature.classDC != null && (
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Class DC</p>
-                  <p className="font-mono font-bold text-lg text-primary">{creature.classDC}</p>
-                </div>
-              )}
+              {creature.spellDC != null && (() => {
+                const r = modStats.get('spell-dc')
+                const net = r?.netModifier ?? 0
+                const finalDc = creature.spellDC! + net
+                const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
+                const el = <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
+                return (
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Spell DC</p>
+                    {r && r.modifiers.length > 0 ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>{el}</TooltipTrigger>
+                        <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                          {r.modifiers.map((m) => (
+                            <div key={m.slug} className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">{m.label}</span>
+                              <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                {m.modifier > 0 ? '+' : ''}{m.modifier}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                            <span className="text-muted-foreground">Total</span>
+                            <span className={col}>{finalDc}</span>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : el}
+                  </div>
+                )
+              })()}
+              {creature.classDC != null && (() => {
+                const r = modStats.get('spell-dc')
+                const net = r?.netModifier ?? 0
+                const finalDc = creature.classDC! + net
+                const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
+                const el = <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
+                return (
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Class DC</p>
+                    {r && r.modifiers.length > 0 ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>{el}</TooltipTrigger>
+                        <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                          {r.modifiers.map((m) => (
+                            <div key={m.slug} className="flex justify-between gap-4">
+                              <span className="text-muted-foreground">{m.label}</span>
+                              <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                {m.modifier > 0 ? '+' : ''}{m.modifier}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                            <span className="text-muted-foreground">Total</span>
+                            <span className={col}>{finalDc}</span>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : el}
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>
@@ -146,17 +221,57 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
             <div className="px-4 py-3 space-y-3">
               {creature.strikes.map((strike, i) => {
                 const isAgile = strike.traits.includes('agile')
-                const map1 = strike.modifier - (isAgile ? 4 : 5)
-                const map2 = strike.modifier - (isAgile ? 8 : 10)
+                const strikeNet = modStats.get('strike-attack')?.netModifier ?? 0
+                const modifiedMod = strike.modifier + strikeNet
+                const map1 = modifiedMod - (isAgile ? 4 : 5)
+                const map2 = modifiedMod - (isAgile ? 8 : 10)
                 const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+                const strikeModResult = modStats.get('strike-attack')
+                const strikeBtnColor = strikeNet < 0
+                  ? 'text-pf-blood decoration-pf-blood/50'
+                  : strikeNet > 0
+                    ? 'text-pf-threat-low decoration-pf-threat-low/50'
+                    : 'text-primary decoration-primary/50'
                 return (
                   <div key={i} className="p-3 rounded-md bg-secondary/50">
                     <div className="flex items-center gap-2">
                       <ActionIcon cost={1} className="text-lg" />
                       <span className="font-semibold">{strike.name}</span>
-                      <span className="font-mono text-primary">
-                        +{strike.modifier}
-                      </span>
+                      {(() => {
+                        const strikeBtn = (
+                          <button
+                            onClick={() => handleRoll(`1d20+${modifiedMod}`, `${strike.name} attack`)}
+                            title={`Roll 1d20+${modifiedMod}`}
+                            className={cn(
+                              'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
+                              strikeBtnColor,
+                            )}
+                          >
+                            {fmt(modifiedMod)}
+                          </button>
+                        )
+                        return strikeModResult && strikeModResult.modifiers.length > 0 ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>{strikeBtn}</TooltipTrigger>
+                            <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                              {strikeModResult.modifiers.map((m) => (
+                                <div key={m.slug} className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">{m.label}</span>
+                                  <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                    {m.modifier > 0 ? '+' : ''}{m.modifier}
+                                  </span>
+                                </div>
+                              ))}
+                              <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                                <span className="text-muted-foreground">Total</span>
+                                <span className={strikeNet < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                  {fmt(modifiedMod)}
+                                </span>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : strikeBtn
+                      })()}
                     </div>
                     {/* Main damage */}
                     {strike.damage.length > 0 && (
@@ -165,7 +280,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         {strike.damage.map((d, di) => (
                           <span key={di}>
                             {di > 0 && <span className="text-muted-foreground"> plus </span>}
-                            <span className="font-mono">{d.formula}</span>
+                            <ClickableFormula formula={d.formula} label={`${strike.name} damage`} />
                             {d.type && (
                               <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
                             )}
@@ -181,7 +296,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                             {ad.label && (
                               <span className="text-muted-foreground text-xs">{ad.label}: </span>
                             )}
-                            <span className="font-mono">{ad.formula}</span>
+                            <ClickableFormula formula={ad.formula} label={ad.label ?? `${strike.name} damage`} />
                             {ad.type && (
                               <span className={cn("font-mono", damageTypeColor(ad.type))}> {ad.type}</span>
                             )}
@@ -199,7 +314,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     )}
                     <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
                       <span className="font-mono">
-                        MAP: <span className="text-primary">{fmt(strike.modifier)}</span>
+                        MAP: <span className={strikeNet !== 0 ? (strikeNet < 0 ? 'text-pf-blood' : 'text-pf-threat-low') : 'text-primary'}>{fmt(modifiedMod)}</span>
                         {' / '}
                         <span className="text-muted-foreground">{fmt(map1)}</span>
                         {' / '}
@@ -245,7 +360,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         )}
                         <span className="font-semibold text-sm">{ability.name}</span>
                       </div>
-                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description)}</p>
+                      <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description, handleRoll)}</p>
                       {ability.traits && ability.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {ability.traits.map((trait) => (
@@ -302,14 +417,54 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2">
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {creature.skills.map((skill) => (
-                  <span key={skill.name} className={skill.calculated ? "opacity-40" : ""}>
-                    <span className="text-muted-foreground">{skill.name}</span>{" "}
-                    <span className="font-mono text-primary">
-                      {skill.modifier >= 0 ? "+" : ""}{skill.modifier}
+                {creature.skills.map((skill) => {
+                  const skillMod = modStats.get(skill.name.toLowerCase())
+                  const net = skillMod?.netModifier ?? 0
+                  const finalMod = skill.modifier + net
+                  const btnColor = net < 0
+                    ? 'text-pf-blood decoration-pf-blood/50'
+                    : net > 0
+                      ? 'text-pf-threat-low decoration-pf-threat-low/50'
+                      : 'text-primary decoration-primary/50'
+                  const btn = (
+                    <button
+                      onClick={() => handleRoll(`1d20+${finalMod}`, `${skill.name} check`)}
+                      title={`Roll ${skill.name} check`}
+                      className={cn(
+                        'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
+                        btnColor,
+                      )}
+                    >
+                      {finalMod >= 0 ? '+' : ''}{finalMod}
+                    </button>
+                  )
+                  return (
+                    <span key={skill.name} className={skill.calculated ? 'opacity-40' : ''}>
+                      <span className="text-muted-foreground">{skill.name}</span>{' '}
+                      {skillMod && skillMod.modifiers.length > 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                          <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                            {skillMod.modifiers.map((m) => (
+                              <div key={m.slug} className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">{m.label}</span>
+                                <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                  {m.modifier > 0 ? '+' : ''}{m.modifier}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                              <span className="text-muted-foreground">Total</span>
+                              <span className={net < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                                {finalMod >= 0 ? '+' : ''}{finalMod}
+                              </span>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : btn}
                     </span>
-                  </span>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </CollapsibleContent>
@@ -401,7 +556,7 @@ function stripFoundryTags(text: string): string {
 // Group 2 = dice formula, Group 3 = damage type (stripped of brackets)
 const GAME_TEXT_RE = /(DC\s+\d+)|(\d+d\d+(?:\s*[+\-]\s*\d+)?)(?:\[(\w+)\])?/gi
 
-function highlightGameText(raw: string): ReactNode {
+function highlightGameText(raw: string, onRoll?: (formula: string) => void): ReactNode {
   const text = stripFoundryTags(raw)
   const parts: ReactNode[] = []
   let lastIndex = 0
@@ -417,10 +572,24 @@ function highlightGameText(raw: string): ReactNode {
         <span key={key++} className="text-pf-gold font-semibold font-mono">{match[1]}</span>
       )
     } else if (match[2]) {
-      // Dice formula
-      parts.push(
-        <span key={key++} className="text-pf-blood font-mono">{match[2]}</span>
-      )
+      // Dice formula — clickable if onRoll provided
+      const formula = match[2]
+      if (onRoll) {
+        parts.push(
+          <button
+            key={key++}
+            onClick={(e) => { e.stopPropagation(); onRoll(formula) }}
+            title={`Roll ${formula}`}
+            className="text-pf-blood font-bold font-mono cursor-pointer underline decoration-dotted underline-offset-2 decoration-pf-blood/50 hover:text-pf-gold transition-colors duration-100"
+          >
+            {formula}
+          </button>
+        )
+      } else {
+        parts.push(
+          <span key={key++} className="text-pf-blood font-mono">{formula}</span>
+        )
+      }
       // Damage type (if present, stripped of brackets)
       if (match[3]) {
         parts.push(
@@ -532,10 +701,25 @@ function SpellCard({ foundryId, name }: { foundryId: string | null; name: string
           {spell.damage && (() => {
             const dmg = JSON.parse(spell.damage) as Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>
             const parts = Object.values(dmg)
-              .map((d) => `${d.formula ?? d.damage ?? '?'} ${d.damageType ?? d.type ?? ''}`.trim())
-              .filter(Boolean)
+              .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
+              .filter((d) => d.formula)
             return parts.length > 0
-              ? <p className="text-xs"><span className="text-muted-foreground">Damage: </span><span className="font-mono text-pf-blood">{parts.join(' + ')}</span></p>
+              ? (
+                <p className="text-xs flex flex-wrap items-center gap-1">
+                  <span className="text-muted-foreground">Damage:</span>
+                  {parts.map((d, i) => (
+                    <span key={i} className="flex items-center gap-0.5">
+                      {i > 0 && <span className="text-muted-foreground">+</span>}
+                      <ClickableFormula
+                        formula={d.formula!}
+                        label={`${name} damage`}
+                        className="text-xs"
+                      />
+                      {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{d.type}</span>}
+                    </span>
+                  ))}
+                </p>
+              )
               : null
           })()}
           {/* Traits */}
@@ -799,6 +983,12 @@ function SpellcastingBlock({ section, creatureLevel, encounterContext }: {
   encounterContext?: EncounterContext
 }) {
   const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+  const addRoll = useRollStore((state) => state.addRoll)
+  function handleSpellRoll(formula: string, label?: string) {
+    addRoll(rollDice(formula, label, {
+      ...(encounterContext ? { combatId: encounterContext.encounterId } : {}),
+    }))
+  }
 
   // Slot state — keyed by rank
   const [usedSlots, setUsedSlots] = useState<Record<number, number>>({})
@@ -811,6 +1001,16 @@ function SpellcastingBlock({ section, creatureLevel, encounterContext }: {
   const [spellDialogRank, setSpellDialogRank] = useState(0)
 
   const { encounterId, combatantId } = encounterContext ?? {}
+
+  // Phase 39: tradition-based condition modifiers for spell attack/DC
+  const spellMod = useSpellModifiers(combatantId, section.tradition)
+  const modifiedSpellAttack = section.spellAttack + spellMod.netModifier
+  const modifiedSpellDc = section.spellDc + spellMod.netModifier
+  const spellModColor = spellMod.netModifier < 0
+    ? 'text-pf-blood decoration-pf-blood/50'
+    : spellMod.netModifier > 0
+      ? 'text-pf-threat-low decoration-pf-threat-low/50'
+      : ''
 
   // Caster progression detection
   const maxSlotRank = useMemo(() => {
@@ -983,12 +1183,72 @@ function SpellcastingBlock({ section, creatureLevel, encounterContext }: {
         <div className="px-4 pb-3 pt-2 space-y-3">
           {/* DC + Attack */}
           <div className="flex gap-4 text-sm">
-            {section.spellDc > 0 && (
-              <span className="text-muted-foreground">DC <span className="font-mono text-primary font-bold">{section.spellDc}</span></span>
-            )}
-            {section.spellAttack !== 0 && (
-              <span className="text-muted-foreground">Attack <span className="font-mono text-primary font-bold">{fmt(section.spellAttack)}</span></span>
-            )}
+            {section.spellDc > 0 && (() => {
+              const dcCol = spellMod.netModifier < 0 ? 'text-pf-blood' : spellMod.netModifier > 0 ? 'text-pf-threat-low' : 'text-primary'
+              const dcEl = <span className={cn('font-mono font-bold', dcCol)}>{modifiedSpellDc}</span>
+              return (
+                <span className="text-muted-foreground">DC{' '}
+                  {spellMod.modifiers.length > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{dcEl}</TooltipTrigger>
+                      <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                        {spellMod.modifiers.map((m) => (
+                          <div key={m.slug} className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">{m.label}</span>
+                            <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                              {m.modifier > 0 ? '+' : ''}{m.modifier}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                          <span className="text-muted-foreground">Total</span>
+                          <span className={dcCol}>{modifiedSpellDc}</span>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : dcEl}
+                </span>
+              )
+            })()}
+            {section.spellAttack !== 0 && (() => {
+              const attackBtn = (
+                <button
+                  onClick={() => handleSpellRoll(`1d20+${modifiedSpellAttack}`, `${section.tradition} spell attack`)}
+                  title={`Roll spell attack 1d20+${modifiedSpellAttack}`}
+                  className={cn(
+                    'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
+                    spellModColor || 'text-primary decoration-primary/50',
+                  )}
+                >
+                  {fmt(modifiedSpellAttack)}
+                </button>
+              )
+              return (
+                <span className="text-muted-foreground">Attack{' '}
+                  {spellMod.modifiers.length > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{attackBtn}</TooltipTrigger>
+                      <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+                        {spellMod.modifiers.map((m) => (
+                          <div key={m.slug} className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">{m.label}</span>
+                            <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                              {m.modifier > 0 ? '+' : ''}{m.modifier}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="border-t border-border mt-1 pt-1 flex justify-between">
+                          <span className="text-muted-foreground">Total</span>
+                          <span className={spellMod.netModifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                            {fmt(modifiedSpellAttack)}
+                          </span>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : attackBtn}
+                </span>
+              )
+            })()}
           </div>
           {/* Spells by rank */}
           {effectiveRanks.map((rank) => {
@@ -1146,23 +1406,55 @@ interface StatItemProps {
   highlight?: boolean
   colorClass?: string
   showDc?: boolean
+  modResult?: StatModifierResult
 }
 
-function StatItem({ label, value, modifier, highlight, colorClass, showDc }: StatItemProps) {
-  const displayValue = modifier && value > 0 ? `+${value}` : `${value}`
-  const dc = showDc ? ` (DC ${10 + value})` : ''
+function StatItem({ label, value, modifier, highlight, colorClass, showDc, modResult }: StatItemProps) {
+  const netMod = modResult?.netModifier ?? 0
+  const finalValue = value + netMod
+  const displayValue = modifier && finalValue > 0 ? `+${finalValue}` : `${finalValue}`
+  const dc = showDc ? ` (${10 + finalValue})` : ''
+
+  const valueEl = (
+    <p
+      className={cn(
+        'font-mono font-bold text-[clamp(0.7rem,2.8cqw,1.125rem)]',
+        highlight && 'text-pf-threat-extreme',
+        !highlight && netMod < 0 && 'text-pf-blood',
+        !highlight && netMod > 0 && 'text-pf-threat-low',
+        !highlight && netMod === 0 && colorClass,
+      )}
+    >
+      {displayValue}{dc}
+    </p>
+  )
+
   return (
-    <div className="text-center">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p
-        className={cn(
-          "font-mono font-bold text-lg",
-          highlight && "text-pf-threat-extreme",
-          colorClass
-        )}
-      >
-        {displayValue}{dc}
-      </p>
+    <div className="px-4">
+      <p className="text-[clamp(0.55rem,1.8cqw,0.75rem)] text-muted-foreground mb-1">{label}</p>
+      {modResult && modResult.modifiers.length > 0 ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{valueEl}</TooltipTrigger>
+          <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
+            {modResult.modifiers.map((m) => (
+              <div key={m.slug} className="flex justify-between gap-4">
+                <span className="text-muted-foreground">{m.label}</span>
+                <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                  {m.modifier > 0 ? '+' : ''}{m.modifier}
+                </span>
+              </div>
+            ))}
+            <div className="border-t border-border mt-1 pt-1 flex justify-between">
+              <span className="text-muted-foreground">Total</span>
+              <span className={netMod < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
+                {displayValue}{dc}
+              </span>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        valueEl
+      )}
     </div>
   )
 }

@@ -157,3 +157,9 @@ export type { CasterProgression } from './spellcasting/caster-progression'
 export { Statistic } from './statistics/statistic'
 export { resolveSelector } from './statistics/selector-resolver'
 export { CreatureStatistics, buildAttackModifierSets } from './statistics/creature-statistics'
+export { computeStatModifier } from './statistics/compute-stat-modifiers'
+export type { ConditionInput, StatModifierResult } from './statistics/compute-stat-modifiers'
+
+// -- Dice ────────────────────────────────────────────────────────────────────
+export { parseFormula, rollDice, heightenFormula } from './dice/dice'
+export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'

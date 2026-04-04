@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 34 plans created and verified
-last_updated: "2026-04-03T23:37:40.869Z"
-last_activity: 2026-04-03
+status: executing
+stopped_at: Phase 39 context gathered
+last_updated: "2026-04-04T12:34:41.747Z"
+last_activity: 2026-04-04
 progress:
-  total_phases: 35
-  completed_phases: 2
-  total_plans: 20
-  completed_plans: 9
+  total_phases: 39
+  completed_phases: 17
+  total_plans: 64
+  completed_plans: 45
   percent: 80
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 35 — ux-polish-starfinder-purge-encounter-tabs
+**Current focus:** Phase 39 — condition-math
 
 ## Current Position
 
 Phase: 999.1
 Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Status: Executing Phase 37
+Last activity: 2026-04-04
 
 Progress: [████████░░] 80%
 
@@ -126,6 +126,7 @@ Key decisions carrying forward from prior milestones:
 - v0.8.0 started 2026-04-02, completed 2026-04-02: Hazards
 - v0.8.5 started 2026-04-02, completed 2026-04-02: Actions Reference
 - Phase 35 added 2026-04-04: UX Polish + Starfinder Purge + Encounter Tabs
+- Phase 40 added 2026-04-04: Dice Rolls Extended (skills/DC/spells/items clickable + history context + drawer right)
 
 ### Pending Todos
 
@@ -137,6 +138,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-03T16:44:51.717Z
-Stopped at: Phase 34 plans created and verified
+Last session: 2026-04-04T12:14:06.415Z
+Stopped at: Phase 37 context gathered
 Next step: /gsd:plan-milestone v0.9.0

@@ -6,6 +6,7 @@ import type { ItemRow } from '@/shared/api'
 import { formatPrice, ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '@/entities/item'
 import { cn } from '@/shared/lib/utils'
 import { stripHtml } from '@/shared/lib/html'
+import { ClickableFormula } from '@/shared/ui/clickable-formula'
 
 
 interface ItemReferenceDrawerProps {
@@ -111,9 +112,13 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
               {(item.damage_formula || item.damage_type || item.weapon_category || item.weapon_group) && (
                 <div className="space-y-1">
                   {item.damage_formula && (
-                    <div className="flex gap-2 text-xs">
+                    <div className="flex gap-2 items-center text-xs">
                       <span className="text-muted-foreground">Damage:</span>
-                      <span className="font-mono text-pf-blood">{item.damage_formula}</span>
+                      <ClickableFormula
+                        formula={item.damage_formula}
+                        label={`${item.name} damage`}
+                        className="text-xs"
+                      />
                       {item.damage_type && <span className="text-muted-foreground">{item.damage_type}</span>}
                     </div>
                   )}

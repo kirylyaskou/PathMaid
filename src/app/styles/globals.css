@@ -181,6 +181,7 @@
 @layer utilities {
   .golden-glow {
     box-shadow: 0 0 25px -5px oklch(0.72 0.18 75 / 0.5);
+    text-shadow: 0 0 8px oklch(0.75 0.18 75 / 0.6);
   }
 
   .golden-border {
@@ -303,4 +304,54 @@
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: oklch(0.30 0.04 55);
   border-radius: 3px;
+}
+
+/* ─── Dice Cube Animation ──────────────────────────────────────────── */
+@keyframes cube-spin {
+  0% { transform: rotateX(0) rotateY(0); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+.dice-cube-container {
+  width: 40px;
+  height: 40px;
+  perspective: 200px;
+}
+
+.dice-cube {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: cube-spin 300ms ease-out forwards;
+}
+
+.dice-cube-face {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  backface-visibility: hidden;
+}
+
+.dice-cube-face--front  { transform: translateZ(20px); }
+.dice-cube-face--back   { transform: rotateY(180deg) translateZ(20px); }
+.dice-cube-face--right  { transform: rotateY(90deg) translateZ(20px); }
+.dice-cube-face--left   { transform: rotateY(-90deg) translateZ(20px); }
+.dice-cube-face--top    { transform: rotateX(90deg) translateZ(20px); }
+.dice-cube-face--bottom { transform: rotateX(-90deg) translateZ(20px); }
+
+.dice-cube-face--result {
+  color: var(--pf-gold);
+  font-size: 16px;
+  font-weight: 600;
 }

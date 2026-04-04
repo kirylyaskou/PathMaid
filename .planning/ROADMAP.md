@@ -14,6 +14,8 @@
 - ✅ **v0.7.0-pre-alpha — Conditions** — Phases 25-27 (complete 2026-04-02)
 - ✅ **v0.8.0-pre-alpha — Hazards** — Phases 28-30 (complete 2026-04-02)
 - ✅ **v0.8.5-pre-alpha — Actions Reference** — Phases 31-32 (complete 2026-04-02)
+- 🚧 **v0.9.0-pre-alpha — Items Catalog Overhaul** — Phases 34-35 (complete 2026-04-03)
+- 🚧 **v0.9.6-pre-alpha — МАТЕМАТИКА** — Phases 36-39 (in progress)
 
 ## Phases
 
@@ -644,6 +646,76 @@ Plans:
 | 34. Items Catalog Overhaul | v0.9.0 | 3/3 | Complete    | 2026-04-03 |
 | 35. UX Polish + Starfinder Purge + Encounter Tabs | v0.9.0 | 4/4 | Complete    | 2026-04-03 |
 
+### 🚧 v0.9.6-pre-alpha — МАТЕМАТИКА (Dice Rolling + Condition Math)
+
+**Milestone Goal:** Implement PF2e dice rolling system (d20 + modifier, damage formulas with crit/full/half) with a simple rotating cube animation and session-only roll history, then wire the engine's modifier/statistics math to auto-apply condition penalties (Frightened, Clumsy, etc.) to the combat tracker UI.
+
+- [x] **Phase 36: Roll Foundation** — RollStore (Zustand, session-only), dice formula parser (`2d6+4`), `rollDice()` utility, base Roll types. Pure TS, no UI. (completed 2026-04-04)
+- [x] **Phase 37: Dice UI + History** — Rotating cube animation (CSS/JS), RollResultToast, RollHistoryPanel (collapsible, clearable) (completed 2026-04-04)
+- [ ] **Phase 38: Clickable Rolls** — All attack modifiers + damage formulas clickable; crit/full/half display for save-based damage; MAP counter per combatant per round
+- [ ] **Phase 39: Condition Math** — Wire engine `modifiers/` + `statistics/` to combat tracker; auto-apply Frightened/Clumsy/etc. penalties; show modified values in UI
+
+### Phase 36: Roll Foundation
+**Goal**: Session-only RollStore (Zustand), dice formula parser (`"2d6+4"` → parsed parts), `rollDice(formula)` utility that resolves to individual die results + total, and typed Roll interfaces — all pure TypeScript with zero UI
+**Depends on**: Phase 35
+**Requirements**: null
+**Success Criteria** (what must be TRUE):
+  1. `rollDice("2d6+4")` returns individual die values, modifier, and total — deterministic when seeded, random in production
+  2. RollStore holds session-only roll history (array of Roll records), clearable, no persistence
+  3. Formula parser handles all PF2e damage patterns: `1d6`, `2d8+5`, `1d4+1d6`, negative modifiers, zero
+  4. Roll types are exported from the engine or a shared types file — no circular imports
+  5. No UI code in this phase — pure TS utilities and Zustand store only
+**Plans:** 1/1 plans complete
+Plans:
+- [x] 36-01-PLAN.md — engine/dice/dice.ts (parser + rollDice + heightenFormula + Roll types) + engine barrel export + src/shared/model/roll-store.ts (Zustand session store with MAP tracking)
+
+### Phase 37: Dice UI + History
+**Goal**: Rotating cube animation component, RollResultToast showing die breakdown + total, and RollHistoryPanel (collapsible, clearable) integrated into the app layout
+**Depends on**: Phase 36
+**Requirements**: null
+**Success Criteria** (what must be TRUE):
+  1. Cube animation plays when a roll is triggered — simple fast-spin CSS effect, not a full 3D sim
+  2. RollResultToast shows: formula, individual die values, modifier, total — dismissible
+  3. RollHistoryPanel shows all rolls for the session; clearable; collapsible
+  4. Panel integrated into combat page layout without breaking existing panels
+**Plans:** 2/2 plans complete
+Plans:
+- [x] 37-01-PLAN.md — DiceCubeAnimation + RollResultToast + RollToastListener + RollDie20Button (shared/ui components + CSS keyframes)
+- [x] 37-02-PLAN.md — RollHistoryPanel widget + AppHeader integration (global dice UI wiring)
+**UI hint**: yes
+
+### Phase 38: Clickable Rolls
+**Goal**: All attack modifiers in the combat tracker are clickable (d20 + hit_bonus), damage formulas clickable with crit/full/half variants for save-based damage, MAP counter tracks attacks per combatant per round
+**Depends on**: Phase 37
+**Requirements**: null
+**Success Criteria** (what must be TRUE):
+  1. Every attack bonus in the stat block / combat tracker is clickable → triggers d20 + modifier roll
+  2. Damage formulas clickable → triggers damage roll with breakdown
+  3. Save-based damage shows three variants: Critical Hit (2×), Full, Half — user picks which to apply
+  4. MAP counter visible per combatant; clicking attack auto-increments MAP; MAP penalty applied to next roll
+  5. Spell/effect damage formulas clickable with the same crit/full/half UI
+
+### Phase 39: Condition Math
+**Goal**: Engine `modifiers/` + `statistics/` wired to combat tracker — condition penalties (Frightened, Clumsy, Drained, Enfeebled, Stupefied, Stunned) auto-applied to displayed attack/skill/save modifiers in the UI
+**Depends on**: Phase 38
+**Requirements**: null
+**Success Criteria** (what must be TRUE):
+  1. Frightened N → -N status penalty applied to all checks and DCs
+  2. Clumsy N → -N status penalty to DEX-based rolls and AC
+  3. Enfeebled N → -N status penalty to STR-based rolls
+  4. Drained N → -N status penalty to CON-based rolls
+  5. Modified values shown in UI (with tooltip showing base + penalty breakdown)
+  6. Engine modifier stacking rules respected (status penalties don't stack)
+
+## Progress (v0.9.6)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 36. Roll Foundation | v0.9.6 | 1/1 | Complete    | 2026-04-04 |
+| 37. Dice UI + History | v0.9.6 | 2/2 | Complete    | 2026-04-04 |
+| 38. Clickable Rolls | v0.9.6 | 0/? | Planned | — |
+| 39. Condition Math | v0.9.6 | 0/? | Planned | — |
+
 ## Backlog
 
 ### Phase 999.1: Stat block card in combat tracker (FULFILLED)
@@ -652,6 +724,16 @@ Plans:
 **Status:** Fulfilled in Phase 15 (3-panel layout with stat card right panel)
 **Plans:** Delivered as part of Phase 15-01-PLAN.md
 
+### Phase 40: Dice Rolls Extended
+
+**Goal:** Clickable rolls for skills, DC saves, spell attacks/damage, and item damage in the stat block; roll history enriched with source context (who/what/which combat); roll result drawer repositioned to right side
+**Requirements**: null
+**Depends on:** Phase 37
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 40 to break down)
+
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-04 — Phase 35 planned (4 plans, 2 waves)*
+*Last updated: 2026-04-04 — Phase 36 planned (1 plan, 1 wave)
