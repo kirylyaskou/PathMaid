@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search } from 'lucide-react'
+import { useDraggable } from '@dnd-kit/core'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -18,7 +19,50 @@ const TIERS: { value: WeakEliteTier; label: string }[] = [
   { value: 'elite', label: 'Elite' },
 ]
 
-export function CreatureSearchSidebar() {
+interface CreatureSearchSidebarProps {
+  onAddCreature?: (row: CreatureRow, tier: WeakEliteTier) => void
+  onAddHazard?: (hazard: HazardRow) => void
+}
+
+function DraggableCreatureRow({
+  row,
+  tier,
+  children,
+}: {
+  row: CreatureRow
+  tier: WeakEliteTier
+  children: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `creature-${row.id}`,
+    data: { type: 'creature' as const, row, tier },
+  })
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={{ opacity: isDragging ? 0 : 1 }}>
+      {children}
+    </div>
+  )
+}
+
+function DraggableHazardRow({
+  hazard,
+  children,
+}: {
+  hazard: HazardRow
+  children: React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `hazard-${hazard.id}`,
+    data: { type: 'hazard' as const, hazard },
+  })
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={{ opacity: isDragging ? 0 : 1 }}>
+      {children}
+    </div>
+  )
+}
+
+export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSearchSidebarProps = {}) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('creatures')
   const [query, setQuery] = useState('')
 
@@ -79,27 +123,35 @@ export function CreatureSearchSidebar() {
 
   const handleAddCreature = useCallback(
     (row: CreatureRow) => {
-      const creature = toCreature(row)
-      addCreatureToDraft({
-        creatureId: creature.id,
-        name: creature.name,
-        level: creature.level,
-        tier: selectedTier,
-      })
+      if (onAddCreature) {
+        onAddCreature(row, selectedTier)
+      } else {
+        const creature = toCreature(row)
+        addCreatureToDraft({
+          creatureId: creature.id,
+          name: creature.name,
+          level: creature.level,
+          tier: selectedTier,
+        })
+      }
       setSelectedTier('normal')
     },
-    [addCreatureToDraft, selectedTier]
+    [onAddCreature, addCreatureToDraft, selectedTier]
   )
 
   const handleAddHazard = useCallback(
     (hazard: HazardRow) => {
-      addHazardToDraft({
-        name: hazard.name,
-        level: hazard.level,
-        type: hazard.is_complex ? 'complex' : 'simple',
-      })
+      if (onAddHazard) {
+        onAddHazard(hazard)
+      } else {
+        addHazardToDraft({
+          name: hazard.name,
+          level: hazard.level,
+          type: hazard.is_complex ? 'complex' : 'simple',
+        })
+      }
     },
-    [addHazardToDraft]
+    [onAddHazard, addHazardToDraft]
   )
 
   const handleTabChange = (tab: SidebarTab) => {
@@ -187,7 +239,7 @@ export function CreatureSearchSidebar() {
                 const hpDelta = getHpAdjustment(selectedTier, creature.level)
                 const statDelta = getStatAdjustment(selectedTier)
                 return (
-                  <div key={row.id}>
+                  <DraggableCreatureRow key={row.id} row={row} tier={selectedTier}>
                     <CreatureCard
                       creature={creature}
                       compact
@@ -205,7 +257,7 @@ export function CreatureSearchSidebar() {
                         </span>
                       </p>
                     )}
-                  </div>
+                  </DraggableCreatureRow>
                 )
               })}
             </>
@@ -223,26 +275,27 @@ export function CreatureSearchSidebar() {
                 </p>
               )}
               {hazardResults.map((hazard) => (
-                <div
-                  key={hazard.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/50 group cursor-pointer"
-                  onClick={() => handleAddHazard(hazard)}
-                >
-                  <LevelBadge level={hazard.level} size="sm" />
-                  <span className="flex-1 text-sm font-medium truncate">{hazard.name}</span>
-                  {hazard.is_complex ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-900/30 text-orange-400 shrink-0">
-                      complex
+                <DraggableHazardRow key={hazard.id} hazard={hazard}>
+                  <div
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/50 group cursor-pointer"
+                    onClick={() => handleAddHazard(hazard)}
+                  >
+                    <LevelBadge level={hazard.level} size="sm" />
+                    <span className="flex-1 text-sm font-medium truncate">{hazard.name}</span>
+                    {hazard.is_complex ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-900/30 text-orange-400 shrink-0">
+                        complex
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/50 text-zinc-400 shrink-0">
+                        simple
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0">
+                      + add
                     </span>
-                  ) : (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/50 text-zinc-400 shrink-0">
-                      simple
-                    </span>
-                  )}
-                  <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0">
-                    + add
-                  </span>
-                </div>
+                  </div>
+                </DraggableHazardRow>
               ))}
             </>
           )}
