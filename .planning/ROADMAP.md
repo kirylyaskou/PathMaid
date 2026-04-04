@@ -739,11 +739,11 @@ Plans:
 **Goal:** Redesign the Encounters page with full BestiarySearchPanel-style search (creatures + hazards), drag-and-drop from search to encounter, hazards in saved encounters; modify combat tracker to support 2 open encounters side-by-side instead of tab-switching
 **Requirements**: null
 **Depends on:** Phase 35, Phase 40
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 41-01-PLAN.md — Hazard persistence (SQLite migration + types + API + EncounterEditor refactor)
-- [ ] 41-02-PLAN.md — 3-panel encounters page + dnd-kit drag-and-drop
+- [x] 41-02-PLAN.md — 3-panel encounters page + dnd-kit drag-and-drop
 - [x] 41-03-PLAN.md — Split combat view (dual encounter columns)
 
 ---
