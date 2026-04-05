@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, RotateCcw } from 'lucide-react'
+import { X, RotateCcw, Columns2 } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useEncounterTabsStore } from '@/features/combat-tracker'
 import type { EncounterTab } from '@/features/combat-tracker'
@@ -58,6 +58,8 @@ export function EncounterTabBar() {
   const setActiveTab = useEncounterTabsStore((s) => s.setActiveTab)
   const closeTab = useEncounterTabsStore((s) => s.closeTab)
   const resetTab = useEncounterTabsStore((s) => s.resetTab)
+  const splitMode = useEncounterTabsStore((s) => s.splitMode)
+  const toggleSplitMode = useEncounterTabsStore((s) => s.toggleSplitMode)
 
   const [showSelector, setShowSelector] = useState(false)
 
@@ -90,6 +92,24 @@ export function EncounterTabBar() {
       </button>
 
       <BlueprintSelectorDialog open={showSelector} onOpenChange={setShowSelector} />
+
+      {/* Split view toggle — only visible when 2+ tabs are open */}
+      {openTabs.length >= 2 && (
+        <div className="ml-auto border-l border-border/30 flex items-center px-1">
+          <button
+            onClick={toggleSplitMode}
+            title={splitMode ? 'Exit split view' : 'Split view'}
+            className={cn(
+              'w-7 h-7 flex items-center justify-center rounded transition-colors',
+              splitMode
+                ? 'bg-primary/20 text-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            )}
+          >
+            <Columns2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

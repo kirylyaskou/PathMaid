@@ -13,6 +13,8 @@ export interface Roll {
   modifier: number            // sum of all flat +N/-N terms
   total: number               // sum of all dice values + modifier
   label?: string              // e.g. "Fireball damage", "Longsword attack"
+  source?: string             // who made the roll, e.g. creature/combatant name
+  combatId?: string           // which combat session (encounter tab id)
   timestamp: number           // Date.now()
 }
 
@@ -58,7 +60,11 @@ export function parseFormula(formula: string): ParsedFormula {
 /**
  * Roll a dice formula and return a structured Roll result.
  */
-export function rollDice(formula: string, label?: string): Roll {
+export function rollDice(
+  formula: string,
+  label?: string,
+  context?: { source?: string; combatId?: string },
+): Roll {
   const parsed = parseFormula(formula)
   const diceEntries: DiceEntry[] = []
 
@@ -80,6 +86,8 @@ export function rollDice(formula: string, label?: string): Roll {
     modifier: parsed.modifier,
     total,
     label,
+    source: context?.source,
+    combatId: context?.combatId,
     timestamp: Date.now(),
   }
 }

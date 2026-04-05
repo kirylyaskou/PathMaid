@@ -5,15 +5,17 @@ import { useRollStore } from '@/shared/model/roll-store'
 interface ClickableFormulaProps {
   formula: string
   label?: string
+  source?: string
+  combatId?: string
   className?: string
 }
 
-export function ClickableFormula({ formula, label, className }: ClickableFormulaProps) {
+export function ClickableFormula({ formula, label, source, combatId, className }: ClickableFormulaProps) {
   const addRoll = useRollStore((state) => state.addRoll)
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation()
-    addRoll(rollDice(formula, label))
+    addRoll(rollDice(formula, label, { source, combatId }))
   }
 
   return (

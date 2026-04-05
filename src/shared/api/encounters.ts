@@ -25,6 +25,8 @@ export interface EncounterCombatantRow {
   weakEliteTier: 'normal' | 'weak' | 'elite'
   creatureLevel: number
   sortOrder: number
+  isHazard: boolean        // true for hazard rows
+  hazardRef: string | null // hazard.id for hazard rows, null for creatures
 }
 
 export interface EncounterConditionRow {
@@ -102,10 +104,11 @@ export async function saveEncounterCombatants(
     await db.execute(
       `INSERT INTO encounter_combatants
          (id, encounter_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp,
-          is_npc, weak_elite_tier, creature_level, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [c.id, encounterId, c.creatureRef, c.displayName, c.initiative,
-       c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, c.weakEliteTier, c.creatureLevel, i]
+       c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, c.weakEliteTier, c.creatureLevel, i,
+       c.isHazard ? 1 : 0, c.hazardRef ?? null]
     )
   }
 }
@@ -115,7 +118,8 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
   const rows = await db.select<Array<{
     id: string; encounter_id: string; creature_ref: string | null; display_name: string;
     initiative: number; hp: number; max_hp: number; temp_hp: number; is_npc: number;
-    weak_elite_tier: string; creature_level: number; sort_order: number
+    weak_elite_tier: string; creature_level: number; sort_order: number;
+    is_hazard: number; hazard_ref: string | null
   }>>(
     `SELECT * FROM encounter_combatants WHERE encounter_id = ? ORDER BY sort_order`,
     [encounterId]
@@ -133,6 +137,8 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
     weakEliteTier: (r.weak_elite_tier as 'normal' | 'weak' | 'elite'),
     creatureLevel: r.creature_level,
     sortOrder: r.sort_order,
+    isHazard: r.is_hazard === 1,
+    hazardRef: r.hazard_ref ?? null,
   }))
 }
 

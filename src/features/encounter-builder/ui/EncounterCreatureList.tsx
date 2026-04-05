@@ -1,4 +1,4 @@
-import { X, AlertTriangle } from 'lucide-react'
+import { X, AlertTriangle, Skull } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -65,9 +65,10 @@ export function EncounterCreatureList() {
                   </span>
                 )}
                 <span className="flex-1 text-sm font-medium truncate">{dc.name}</span>
-                <span className="text-xs font-mono text-muted-foreground">
-                  {xpResult.xp != null ? `${xpResult.xp} XP` : 'OoR'}
-                </span>
+                {xpResult.xp != null
+                  ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
+                  : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
+                }
                 <Button
                   variant="ghost"
                   size="icon"

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { Drawer as DrawerPrimitive } from 'vaul'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -29,11 +28,14 @@ function RollBreakdown({ roll }: { roll: Roll }) {
 
       {/* Breakdown */}
       <div className="flex flex-col gap-1.5 min-w-0">
-        {/* Formula + label */}
+        {/* Formula + label + source */}
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="secondary" className="font-mono">{roll.formula}</Badge>
           {roll.label && (
             <span className="text-xs text-muted-foreground">{roll.label}</span>
+          )}
+          {roll.source && (
+            <span className="text-xs text-primary/70">— {roll.source}</span>
           )}
           {isNat20 && (
             <span className="text-xs font-bold" style={{ color: 'var(--pf-gold)' }}>Critical!</span>
@@ -66,16 +68,6 @@ function RollBreakdown({ roll }: { roll: Roll }) {
         </div>
       </div>
 
-      {/* Total */}
-      <div className="flex items-center gap-2 ml-auto shrink-0">
-        <Separator orientation="vertical" className="h-8" />
-        <span
-          className={cn('font-mono text-2xl font-bold', isNat20 && 'golden-glow')}
-          style={{ color: totalColor }}
-        >
-          {roll.total}
-        </span>
-      </div>
     </div>
   )
 }
@@ -97,36 +89,32 @@ export function RollResultDrawer() {
   if (!displayRoll) return null
 
   return (
-    <DrawerPrimitive.Root open={open} onOpenChange={setOpen} direction="bottom" modal={false}>
-      <DrawerPrimitive.Portal>
-        <DrawerPrimitive.Content
-          className={cn(
-            'fixed z-50 inset-x-0 bottom-0',
-            'rounded-t-lg border-t border-border bg-background shadow-2xl',
-            'focus:outline-none',
-          )}
-        >
-          {/* Drag handle */}
-          <div className="mx-auto mt-3 h-1.5 w-16 shrink-0 rounded-full bg-muted" />
-
-          {/* Content */}
-          <div className="px-6 py-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-1 min-w-0">
-                <RollBreakdown roll={displayRoll} />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-7 h-7 shrink-0 -mt-1"
-                onClick={() => setOpen(false)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+    <div
+      className={cn(
+        'fixed z-50 right-4 bottom-4',
+        'w-auto',
+        'rounded-lg border border-border bg-background shadow-2xl',
+        'transition-all duration-200',
+        open
+          ? 'opacity-100 translate-x-0'
+          : 'opacity-0 translate-x-4 pointer-events-none',
+      )}
+    >
+      <div className="px-4 py-3">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <RollBreakdown roll={displayRoll} />
           </div>
-        </DrawerPrimitive.Content>
-      </DrawerPrimitive.Portal>
-    </DrawerPrimitive.Root>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-7 h-7 shrink-0 -mt-1"
+            onClick={() => setOpen(false)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }

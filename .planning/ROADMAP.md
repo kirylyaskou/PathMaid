@@ -724,6 +724,28 @@ Plans:
 **Status:** Fulfilled in Phase 15 (3-panel layout with stat card right panel)
 **Plans:** Delivered as part of Phase 15-01-PLAN.md
 
+### Phase 40: Dice Rolls Extended
+
+**Goal:** Clickable rolls for skills, DC saves, spell attacks/damage, and item damage in the stat block; roll history enriched with source context (who/what/which combat); roll result drawer repositioned to right side
+**Requirements**: null
+**Depends on:** Phase 37
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] TBD (run /gsd:plan-phase 40 to break down) (completed 2026-04-04)
+
+### Phase 41: Encounters Page Redesign + Dual Combat View
+
+**Goal:** Redesign the Encounters page with full BestiarySearchPanel-style search (creatures + hazards), drag-and-drop from search to encounter, hazards in saved encounters; modify combat tracker to support 2 open encounters side-by-side instead of tab-switching
+**Requirements**: null
+**Depends on:** Phase 35, Phase 40
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 41-01-PLAN.md — Hazard persistence (SQLite migration + types + API + EncounterEditor refactor)
+- [x] 41-02-PLAN.md — 3-panel encounters page + dnd-kit drag-and-drop
+- [x] 41-03-PLAN.md — Split combat view (dual encounter columns)
+
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-04 — Phase 36 planned (1 plan, 1 wave)
+*Last updated: 2026-04-05 — Phase 41 planned (3 plans in 2 waves)

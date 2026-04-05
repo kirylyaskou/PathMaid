@@ -10,6 +10,19 @@ import { useCombatantStore } from '@/entities/combatant'
 import { createCombatantFromCreature } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
 import { getHpAdjustment, getStatAdjustment } from '@engine'
+import { useDraggable } from '@dnd-kit/core'
+
+function DraggableBestiaryRow({ row, tier, children }: { row: CreatureRow; tier: WeakEliteTier; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `bestiary-${row.id}`,
+    data: { type: 'bestiary-add' as const, row, tier },
+  })
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={{ opacity: isDragging ? 0.4 : 1, cursor: 'grab' }}>
+      {children}
+    </div>
+  )
+}
 
 const TIERS: { value: WeakEliteTier; label: string }[] = [
   { value: 'weak', label: 'Weak' },
@@ -120,7 +133,7 @@ export function BestiarySearchPanel() {
             const hpDelta = getHpAdjustment(selectedTier, creature.level)
             const statDelta = getStatAdjustment(selectedTier)
             return (
-              <div key={row.id}>
+              <DraggableBestiaryRow key={row.id} row={row} tier={selectedTier}>
                 <CreatureCard
                   creature={creature}
                   compact
@@ -138,7 +151,7 @@ export function BestiarySearchPanel() {
                     </span>
                   </p>
                 )}
-              </div>
+              </DraggableBestiaryRow>
             )
           })}
         </div>

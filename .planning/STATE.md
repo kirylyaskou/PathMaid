@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.3.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 37 context gathered
-last_updated: "2026-04-04T12:34:41.747Z"
+stopped_at: Completed 41-02-PLAN.md
+last_updated: "2026-04-04T22:47:04.649Z"
 last_activity: 2026-04-04
 progress:
-  total_phases: 39
-  completed_phases: 17
-  total_plans: 64
-  completed_plans: 45
+  total_phases: 41
+  completed_phases: 20
+  total_plans: 70
+  completed_plans: 51
   percent: 80
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-02)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 37 — dice-ui-history
+**Current focus:** Phase 41 — encounters-redesign
 
 ## Current Position
 
-Phase: 999.1
-Plan: Not started
-Status: Executing Phase 37
+Phase: 41 (encounters-redesign) — EXECUTING
+Plan: 3 of 3
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [████████░░] 80%
@@ -46,6 +46,9 @@ Progress: [████████░░] 80%
 |-------|-------|-------|----------|
 
 ## Accumulated Context
+
+| Phase 41-encounters-redesign P01 | 15 | 2 tasks | 6 files |
+| Phase 41 P02 | 268 | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -80,6 +83,10 @@ Key decisions carrying forward from prior milestones:
 - [Phase 12]: source_name nullable column added via non-destructive ALTER TABLE; null preferred over empty string
 - [Phase 12]: en.json download failure is non-fatal — sync proceeds without @Localize resolution
 - [Phase 12]: fetchDistinctSources returns {pack, name}[] with null fallback to pack name for display
+- [Phase 41]: Active CombatColumn uses global store-backed widgets; inactive renders read-only from tab snapshot — avoids rewriting InitiativeList/CombatantDetail to accept props
+- [Phase 41-encounters-redesign]: isHazard added as required on EncounterCombatantRow (optional on EncounterCombatant); handleAddCreature/handleAddHazard owned by EncounterEditor; EncounterCreatureSearchPanel file kept for Plan 02 cleanup
+- [Phase 41]: Add logic lifted from EncounterEditor to EncountersPage so DndContext onDragEnd can call it directly
+- [Phase 41]: CreatureSearchSidebar accepts optional onAddCreature/onAddHazard props; falls back to builder store when absent
 
 ### v0.5.0-specific context
 
@@ -126,10 +133,17 @@ Key decisions carrying forward from prior milestones:
 - v0.8.0 started 2026-04-02, completed 2026-04-02: Hazards
 - v0.8.5 started 2026-04-02, completed 2026-04-02: Actions Reference
 - Phase 35 added 2026-04-04: UX Polish + Starfinder Purge + Encounter Tabs
+- Phase 40 added 2026-04-04: Dice Rolls Extended (skills/DC/spells/items clickable + history context + drawer right)
 
 ### Pending Todos
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260405-52e | damage-type-multi-trait-chip-selector | 2026-04-05 | eb20c204 | [260405-52e](./quick/260405-52e-damage-type-multi-trait-chip-selector/) |
 
 ### Blockers/Concerns
 
@@ -137,6 +151,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T12:14:06.415Z
-Stopped at: Phase 37 context gathered
+Last session: 2026-04-04T22:47:04.645Z
+Stopped at: Completed 41-02-PLAN.md
 Next step: /gsd:plan-milestone v0.9.0

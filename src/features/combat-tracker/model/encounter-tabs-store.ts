@@ -24,6 +24,7 @@ export interface EncounterTab {
 export interface EncounterTabsState {
   openTabs: EncounterTab[]
   activeTabId: string | null
+  splitMode: boolean
 
   openTab: (tab: { encounterId: string | null; name: string; snapshot: TabSnapshot }) => string
   closeTab: (tabId: string) => void
@@ -32,6 +33,7 @@ export interface EncounterTabsState {
   resetTab: (tabId: string) => Promise<void>
   addCombatantToTab: (tabId: string, combatant: Combatant) => void
   getActiveTab: () => EncounterTab | undefined
+  toggleSplitMode: () => void
 }
 
 export function createEmptySnapshot(): TabSnapshot {
@@ -76,6 +78,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
   immer((set, get) => ({
     openTabs: [],
     activeTabId: null,
+    splitMode: false,
 
     openTab: (tabInput) => {
       const id = crypto.randomUUID()
@@ -104,6 +107,10 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           useCombatantStore.getState().setCombatants([])
           useCombatTrackerStore.getState().restoreState(createEmptySnapshot())
         }
+      }
+      // Auto-disable split mode when fewer than 2 tabs remain
+      if (get().openTabs.length < 2) {
+        set((state) => { state.splitMode = false })
       }
     },
 
@@ -193,6 +200,12 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
       if (get().activeTabId === tabId) {
         useCombatantStore.getState().addCombatant(clone)
       }
+    },
+
+    toggleSplitMode: () => {
+      set((state) => {
+        state.splitMode = !state.splitMode
+      })
     },
 
     getActiveTab: () => {

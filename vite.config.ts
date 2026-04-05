@@ -17,8 +17,26 @@ export default defineConfig({
   },
   envPrefix: ['VITE_', 'TAURI_ENV_'],
   build: {
+    chunkSizeWarningLimit: 600,
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          // specific packages BEFORE generic 'react' check (they all contain 'react' in path)
+          if (id.includes('@radix-ui')) return 'vendor-radix'
+          if (id.includes('lucide-react')) return 'vendor-icons'
+          if (id.includes('@tauri-apps')) return 'vendor-tauri'
+          if (id.includes('@dnd-kit')) return 'vendor-dnd'
+          if (id.includes('@tanstack')) return 'vendor-tanstack'
+          if (id.includes('zustand') || id.includes('immer')) return 'vendor-state'
+          // generic react last to avoid catching @radix-ui/react-* and lucide-react
+          if (id.includes('react-router') || id.includes('react-dom') || /[/\\]react[/\\]/.test(id)) return 'vendor-react'
+          return 'vendor-misc'
+        },
+      },
+    },
   },
 })

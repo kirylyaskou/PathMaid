@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { X, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, AlertTriangle, Skull } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -14,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
+import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
 import { saveEncounterCombatants, resetEncounterCombat } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
@@ -21,8 +23,7 @@ import { loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave 
 import { teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
 import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
 import { PATHS } from '@/shared/routes'
-import { EncounterCreatureSearchPanel } from './EncounterCreatureSearchPanel'
-import { calculateCreatureXP } from '@engine'
+import { calculateCreatureXP, getHazardXp } from '@engine'
 
 interface Props {
   encounterId: string
@@ -34,10 +35,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const setEncounterCombatants = useEncounterStore((s) => s.setEncounterCombatants)
   const upsertEncounter = useEncounterStore((s) => s.upsertEncounter)
   const navigate = useNavigate()
-  const [searchOpen, setSearchOpen] = useState(false)
   const [showLoadConfirm, setShowLoadConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
 
   if (!encounter) return null
 
@@ -85,6 +87,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       weakEliteTier: r.weakEliteTier as 'normal' | 'weak' | 'elite',
       creatureLevel: r.creatureLevel,
       sortOrder: r.sortOrder,
+      isHazard: r.isHazard,
+      hazardRef: r.hazardRef,
     }))
     setEncounterCombatants(encounterId, updated)
     if (encounter) {
@@ -109,13 +113,15 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       weakEliteTier: c.weakEliteTier,
       creatureLevel: c.creatureLevel,
       sortOrder: i,
+      isHazard: c.isHazard ?? false,
+      hazardRef: c.hazardRef ?? null,
     }))
     await saveEncounterCombatants(encounterId, rows)
     setEncounterCombatants(encounterId, remaining.map((c, i) => ({ ...c, sortOrder: i })))
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={dropRef} className={cn('flex flex-col h-full', isOver && 'border-dashed border border-primary/40 bg-primary/5')}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50 shrink-0">
         <p className="text-base font-semibold truncate">{encounter.name}</p>
@@ -151,26 +157,37 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
             </p>
           )}
 
-          {combatants.length === 0 && !searchOpen && (
+          {combatants.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
               No creatures added yet.
             </p>
           )}
 
           {combatants.map((c) => {
+            const effectivePartyLevel = partyLevel
             const adjustedLevel =
               c.weakEliteTier === 'elite' ? c.creatureLevel + 1
               : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
               : c.creatureLevel
-            const xpResult = calculateCreatureXP(adjustedLevel, partyLevel)
+            const isHazard = c.isHazard === true
+            const xpResult = isHazard
+              ? getHazardXp(c.creatureLevel, effectivePartyLevel, 'simple')
+              : calculateCreatureXP(adjustedLevel, effectivePartyLevel)
 
             return (
               <div
                 key={c.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/50 group"
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md group ${
+                  isHazard
+                    ? 'border-l-2 border-amber-600/60 bg-amber-950/30 hover:bg-amber-950/50'
+                    : 'bg-secondary/30 hover:bg-secondary/50'
+                }`}
               >
+                {isHazard && (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                )}
                 <LevelBadge level={adjustedLevel} size="sm" />
-                {c.weakEliteTier !== 'normal' && (
+                {!isHazard && c.weakEliteTier !== 'normal' && (
                   <span
                     className={`text-[10px] px-1 rounded ${
                       c.weakEliteTier === 'elite'
@@ -182,9 +199,10 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
                   </span>
                 )}
                 <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
-                <span className="text-xs font-mono text-muted-foreground">
-                  {xpResult.xp != null ? `${xpResult.xp} XP` : 'OoR'}
-                </span>
+                {xpResult.xp != null
+                  ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
+                  : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
+                }
                 <Button
                   variant="ghost"
                   size="icon"
@@ -199,23 +217,6 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         </div>
       </ScrollArea>
 
-      {/* Add Creature toggle */}
-      <div className="shrink-0 border-t border-border/50">
-        <button
-          onClick={() => setSearchOpen((v) => !v)}
-          className="flex items-center gap-1.5 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors"
-        >
-          {searchOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          + Add Creature
-        </button>
-
-        {searchOpen && (
-          <EncounterCreatureSearchPanel
-            encounterId={encounterId}
-            currentCombatants={combatants}
-          />
-        )}
-      </div>
       {/* Load into Combat — confirm when combat is active */}
       <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>
         <AlertDialogContent>

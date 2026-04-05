@@ -1,6 +1,6 @@
 {
   "productName": "PathBuddy",
-  "version": "0.3.0",
+  "version": "0.9.6",
   "identifier": "com.pathbuddy.app",
   "build": {
     "beforeDevCommand": "npm run dev:vite",
