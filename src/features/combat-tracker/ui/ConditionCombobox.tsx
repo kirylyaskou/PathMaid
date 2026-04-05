@@ -81,12 +81,13 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
         setSelectedSlug(slug)
         setValue(1)
       } else {
+        // Close dialog BEFORE store update to avoid useSyncExternalStore race with Radix effects
+        setOpen(false)
+        setSelectedSlug(null)
         const granted = applyCondition(combatantId, slug as ConditionSlug)
         if (granted.length > 0) {
           toast(`Applied ${slug} — also granted: ${granted.join(', ')}`)
         }
-        setOpen(false)
-        setSelectedSlug(null)
       }
     },
     [combatantId]
@@ -94,27 +95,33 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
 
   const handleApplyValued = useCallback(() => {
     if (!selectedSlug) return
-    const granted = applyCondition(combatantId, selectedSlug as ConditionSlug, value)
-    if (granted.length > 0) {
-      toast(`Applied ${selectedSlug} ${value} — also granted: ${granted.join(', ')}`)
-    }
+    const slug = selectedSlug
+    const v = value
+    // Close dialog BEFORE store update
     setOpen(false)
     setSelectedSlug(null)
     setValue(1)
+    const granted = applyCondition(combatantId, slug as ConditionSlug, v)
+    if (granted.length > 0) {
+      toast(`Applied ${slug} ${v} — also granted: ${granted.join(', ')}`)
+    }
   }, [combatantId, selectedSlug, value])
 
   const handleApplyPersistent = useCallback(() => {
     if (!selectedSlug || !formula.trim()) return
-    useConditionStore.getState().setCondition({
-      combatantId,
-      slug: selectedSlug,
-      value: 1,
-      formula: formula.trim(),
-    })
-    toast(`Applied ${selectedSlug.replace('persistent-', 'persistent ')} (${formula.trim()})`)
+    const slug = selectedSlug
+    const f = formula.trim()
+    // Close dialog BEFORE store update
     setOpen(false)
     setSelectedSlug(null)
     setFormula('')
+    useConditionStore.getState().setCondition({
+      combatantId,
+      slug,
+      value: 1,
+      formula: f,
+    })
+    toast(`Applied ${slug.replace('persistent-', 'persistent ')} (${f})`)
   }, [combatantId, selectedSlug, formula])
 
   const handleBack = useCallback(() => {
@@ -126,7 +133,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
+        <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
           <Plus className="w-3 h-3" />
           Condition
         </Button>

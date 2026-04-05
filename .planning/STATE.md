@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-02)
 Phase: 41 (encounters-redesign) — EXECUTING
 Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-04-04
+Last activity: 2026-04-05 - Completed quick task 260405-64b: condition picker modal — full names, no truncation
 
 Progress: [████████░░] 80%
 
@@ -144,6 +144,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260405-52e | damage-type-multi-trait-chip-selector | 2026-04-05 | eb20c204 | [260405-52e](./quick/260405-52e-damage-type-multi-trait-chip-selector/) |
+| 260405-64b | condition picker modal — full names, no truncation | 2026-04-05 | 96ed79ce | [260405-64b](./quick/260405-64b-redesign-the-condition-picker-in-combat-/) |
 
 ### Blockers/Concerns
 
