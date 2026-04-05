@@ -266,6 +266,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                 onChange={(e) =>
                   updateEntryAmount(entry.damageType, Math.max(0, parseInt(e.target.value, 10) || 0))
                 }
+                onMouseEnter={(e) => { e.currentTarget.focus(); e.currentTarget.select() }}
                 placeholder="0"
                 className="w-9 h-[22px] text-center text-[10px] font-mono font-bold bg-secondary/50 border-y border-border/50 focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min={0}
@@ -320,6 +321,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               onChange={(e) => setHpInput(Math.max(0, parseInt(e.target.value, 10) || 0))}
               onKeyDown={(e) => e.key === 'Enter' && handleAction('damage')}
               onWheel={handleWheel}
+              onMouseEnter={(e) => { e.currentTarget.focus(); e.currentTarget.select() }}
               placeholder="0"
               className="w-10 h-8 text-center text-sm font-mono font-bold bg-secondary/30 border border-border/50 rounded focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               min={0}
