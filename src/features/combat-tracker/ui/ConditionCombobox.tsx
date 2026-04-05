@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Plus, Minus, Check } from 'lucide-react'
-import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
@@ -39,7 +39,7 @@ const allSlugs = TABS.flatMap((t) => [...t.slugs])
 function ConditionPill({ slug, disabled, onClick }: { slug: string; disabled: boolean; onClick: () => void }) {
   return (
     <button
-      className={`px-2 py-1.5 rounded text-xs capitalize cursor-pointer text-left truncate
+      className={`px-2 py-1.5 rounded text-xs capitalize cursor-pointer text-left break-words
         ${disabled
           ? 'opacity-50 cursor-not-allowed bg-secondary/20'
           : 'bg-secondary/30 hover:bg-secondary/50 border border-border/30'
@@ -66,6 +66,11 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
   const isValued = selectedSlug && !isPersistent && (VALUED_CONDITIONS as readonly string[]).includes(selectedSlug)
 
   const matchesSearch = (slug: string) => normalize(slug).includes(normalize(search))
+
+  const handleOpenChange = useCallback((o: boolean) => {
+    setOpen(o)
+    if (!o) { setSelectedSlug(null); setValue(1); setFormula(''); setSearch('') }
+  }, [])
 
   const handleSelect = useCallback(
     (slug: string) => {
@@ -119,16 +124,22 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
   }, [])
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSelectedSlug(null); setValue(1); setFormula(''); setSearch('') } }}>
-      <PopoverTrigger asChild>
+    // modal={false} prevents react-remove-scroll from activating, which avoids a
+    // useSyncExternalStore conflict with Zustand in concurrent React that causes
+    // an infinite forceStoreRerender loop on every condition apply.
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
+      <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
           <Plus className="w-3 h-3" />
           Condition
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg p-0">
+        <DialogHeader className="px-4 pt-4 pb-0">
+          <DialogTitle className="text-sm">Add Condition</DialogTitle>
+        </DialogHeader>
         {selectedSlug && isPersistent ? (
-          <div className="p-3 space-y-3">
+          <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground">
                 &#8592; Back
@@ -153,7 +164,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
             </Button>
           </div>
         ) : selectedSlug && isValued ? (
-          <div className="p-3 space-y-3">
+          <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground">
                 &#8592; Back
@@ -196,7 +207,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
               className="h-8 text-xs border-0 border-b rounded-none px-3 focus-visible:ring-0"
             />
             {search ? (
-              <div className="p-2 grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+              <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
                 {allSlugs.filter(matchesSearch).length === 0 ? (
                   <p className="col-span-3 text-center text-xs text-muted-foreground py-4">No condition found.</p>
                 ) : (
@@ -221,7 +232,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
                 </TabsList>
                 {TABS.map((tab) => (
                   <TabsContent key={tab.id} value={tab.id} className="mt-0">
-                    <div className="p-2 grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+                    <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
                       {tab.slugs.map((slug) => (
                         <ConditionPill
                           key={slug}
@@ -237,7 +248,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: ConditionCombo
             )}
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   )
 }
