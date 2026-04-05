@@ -90,9 +90,9 @@ export function EncountersPage() {
     : c.creatureLevel
   ) ?? []
   const totalXp = selectedEncounter
-    ? calculateXP(adjustedLevels, [], selectedEncounter.partyLevel, selectedEncounter.partySize).totalXp
+    ? calculateXP(adjustedLevels, [], partyLevel, partySize).totalXp
     : 0
-  const xpPartySize = selectedEncounter?.partySize ?? partySize
+  const xpPartySize = partySize
 
   // Add creature to currently selected encounter
   async function handleAddCreature(row: CreatureRow, tier: WeakEliteTier) {

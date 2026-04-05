@@ -55,17 +55,18 @@ export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProp
             className={cn(
               "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest",
               threatColors[threatLevel],
-              "text-background"
+              "text-background",
+              threatLevel === 'extreme' && "animate-pulse"
             )}
           >
-            {threatLevel}
+            {threatLevel === 'extreme' ? 'TPK' : threatLevel}
           </span>
         </div>
       </div>
 
       {/* Progress Bar - Grimdark */}
       <div className="relative">
-        <div className="flex h-2 rounded overflow-hidden bg-secondary/50 border border-border/50">
+        <div className={cn("flex h-2 rounded overflow-hidden bg-secondary/50 border border-border/50", threatLevel === 'extreme' && "animate-fire-glow")}>
           <div
             className="bg-pf-threat-trivial/80"
             style={{ width: `${trivialWidth}%` }}

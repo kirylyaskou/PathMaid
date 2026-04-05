@@ -68,16 +68,6 @@ function RollBreakdown({ roll }: { roll: Roll }) {
         </div>
       </div>
 
-      {/* Total */}
-      <div className="flex items-center gap-2 ml-auto shrink-0">
-        <Separator orientation="vertical" className="h-8" />
-        <span
-          className={cn('font-mono text-2xl font-bold', isNat20 && 'golden-glow')}
-          style={{ color: totalColor }}
-        >
-          {roll.total}
-        </span>
-      </div>
     </div>
   )
 }
@@ -102,7 +92,7 @@ export function RollResultDrawer() {
     <div
       className={cn(
         'fixed z-50 right-4 bottom-4',
-        'w-[400px]',
+        'w-auto',
         'rounded-lg border border-border bg-background shadow-2xl',
         'transition-all duration-200',
         open

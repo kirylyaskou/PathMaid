@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, AlertTriangle } from 'lucide-react'
+import { X, AlertTriangle, Skull } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
@@ -164,7 +164,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
           )}
 
           {combatants.map((c) => {
-            const effectivePartyLevel = encounter.partyLevel ?? partyLevel
+            const effectivePartyLevel = partyLevel
             const adjustedLevel =
               c.weakEliteTier === 'elite' ? c.creatureLevel + 1
               : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
@@ -199,9 +199,10 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
                   </span>
                 )}
                 <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
-                <span className="text-xs font-mono text-muted-foreground">
-                  {xpResult.xp != null ? `${xpResult.xp} XP` : 'OoR'}
-                </span>
+                {xpResult.xp != null
+                  ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
+                  : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
+                }
                 <Button
                   variant="ghost"
                   size="icon"

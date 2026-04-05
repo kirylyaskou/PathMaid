@@ -1,20 +1,7 @@
 import { Minus, Plus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/shared/lib/utils'
-import {
-  useEncounterBuilderStore,
-  selectEncounterResult,
-} from '../model/store'
+import { useEncounterBuilderStore } from '../model/store'
 import { useShallow } from 'zustand/react/shallow'
-import type { ThreatRating } from '@engine'
-
-const threatColors: Record<ThreatRating, string> = {
-  trivial: 'bg-pf-threat-trivial text-background',
-  low: 'bg-pf-threat-low text-background',
-  moderate: 'bg-pf-threat-moderate text-background',
-  severe: 'bg-pf-threat-severe text-background',
-  extreme: 'bg-pf-threat-extreme text-background',
-}
 
 export function PartyConfigBar() {
   const { partyLevel, partySize, setPartyLevel, setPartySize } = useEncounterBuilderStore(
@@ -25,9 +12,6 @@ export function PartyConfigBar() {
       setPartySize: s.setPartySize,
     }))
   )
-
-  const totalXp = useEncounterBuilderStore((s) => selectEncounterResult(s).totalXp)
-  const threat = useEncounterBuilderStore((s) => selectEncounterResult(s).rating)
 
   return (
     <div className="flex items-center gap-4 p-3 border-b border-border/50 bg-card/50">
@@ -87,21 +71,6 @@ export function PartyConfigBar() {
         </div>
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* XP Badge */}
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-sm font-bold">{totalXp} XP</span>
-        <span
-          className={cn(
-            'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest',
-            threatColors[threat]
-          )}
-        >
-          {threat}
-        </span>
-      </div>
     </div>
   )
 }
