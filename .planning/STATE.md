@@ -139,6 +139,12 @@ Key decisions carrying forward from prior milestones:
 
 None.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260405-52e | damage-type-multi-trait-chip-selector | 2026-04-05 | eb20c204 | [260405-52e](./quick/260405-52e-damage-type-multi-trait-chip-selector/) |
+
 ### Blockers/Concerns
 
 None.

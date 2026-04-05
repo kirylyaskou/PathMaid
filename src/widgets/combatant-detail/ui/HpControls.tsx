@@ -9,7 +9,6 @@ import {
   createImmunity,
   createWeakness,
   createResistance,
-  DAMAGE_TYPES,
   MATERIAL_EFFECTS,
   IMMUNITY_TYPES,
   type DamageType,
@@ -28,10 +27,14 @@ interface HpControlsProps {
   abilities?: { name: string; description: string }[]
 }
 
-const DAMAGE_TYPE_SET = new Set(DAMAGE_TYPES as readonly string[])
+interface DamageEntry {
+  damageType: DamageType
+  amount: number
+}
+
 const MATERIAL_TYPE_SET = new Set(MATERIAL_EFFECTS as readonly string[])
 
-const TRAIT_GROUPS: { label: string; color: string; traits: string[] }[] = [
+const DAMAGE_GROUPS: { label: string; color: string; traits: DamageType[] }[] = [
   {
     label: 'Physical',
     color: 'bg-slate-700 text-slate-200 hover:bg-slate-600 data-[selected=true]:bg-slate-400 data-[selected=true]:text-slate-900',
@@ -52,15 +55,15 @@ const TRAIT_GROUPS: { label: string; color: string; traits: string[] }[] = [
     color: 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600 data-[selected=true]:bg-zinc-400 data-[selected=true]:text-zinc-900',
     traits: ['spirit', 'mental', 'poison', 'untyped'],
   },
-  {
-    label: 'Material',
-    color: 'bg-emerald-900/60 text-emerald-200 hover:bg-emerald-800/60 data-[selected=true]:bg-emerald-400 data-[selected=true]:text-emerald-900',
-    traits: ['cold-iron', 'silver', 'adamantine', 'mithral', 'magic'],
-  },
 ]
 
-// Chip color for display in the trigger (selected traits)
-const TRAIT_CHIP_COLOR: Record<string, string> = {
+const MATERIAL_GROUP = {
+  label: 'Material traits',
+  color: 'bg-emerald-900/60 text-emerald-200 hover:bg-emerald-800/60 data-[selected=true]:bg-emerald-400 data-[selected=true]:text-emerald-900',
+  traits: ['cold-iron', 'silver', 'adamantine', 'mithral', 'magic'],
+}
+
+const CHIP_COLOR: Record<string, string> = {
   bludgeoning: 'bg-slate-600 text-slate-100',
   piercing: 'bg-slate-600 text-slate-100',
   slashing: 'bg-slate-600 text-slate-100',
@@ -88,27 +91,57 @@ const TRAIT_CHIP_COLOR: Record<string, string> = {
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, abilities }: HpControlsProps) {
   const [hpInput, setHpInput] = useState(0)
-  const [selectedTraits, setSelectedTraits] = useState<string[]>([])
+  // Each damage type has its own amount
+  const [damageEntries, setDamageEntries] = useState<DamageEntry[]>([])
+  // Material traits shared across all damage instances
+  const [materials, setMaterials] = useState<string[]>([])
   const [traitSelectorOpen, setTraitSelectorOpen] = useState(false)
   const [dyingDialogOpen, setDyingDialogOpen] = useState(false)
   const updateHp = useCombatantStore((s) => s.updateHp)
   const updateTempHp = useCombatantStore((s) => s.updateTempHp)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const toggleTrait = useCallback((trait: string) => {
-    setSelectedTraits((prev) =>
+  const totalTypedDamage = damageEntries.reduce((s, e) => s + e.amount, 0)
+  const hasEntries = damageEntries.length > 0
+  const canDamage = hasEntries ? totalTypedDamage > 0 : hpInput > 0
+
+  const toggleDamageType = useCallback((trait: DamageType) => {
+    setDamageEntries((prev) => {
+      const exists = prev.find((e) => e.damageType === trait)
+      if (exists) return prev.filter((e) => e.damageType !== trait)
+      return [...prev, { damageType: trait, amount: 0 }]
+    })
+  }, [])
+
+  const toggleMaterial = useCallback((trait: string) => {
+    setMaterials((prev) =>
       prev.includes(trait) ? prev.filter((t) => t !== trait) : [...prev, trait]
     )
   }, [])
 
+  const updateEntryAmount = useCallback((damageType: DamageType, amount: number) => {
+    setDamageEntries((prev) =>
+      prev.map((e) => (e.damageType === damageType ? { ...e, amount } : e))
+    )
+  }, [])
+
+  const removeEntry = useCallback((damageType: DamageType) => {
+    setDamageEntries((prev) => prev.filter((e) => e.damageType !== damageType))
+  }, [])
+
+  const mats = useMemo(
+    () => materials.filter((t) => MATERIAL_TYPE_SET.has(t)) as MaterialEffect[],
+    [materials]
+  )
+
   const iwrPreviews = useMemo(() => {
-    if (hpInput <= 0 || selectedTraits.length === 0) return null
     if (!iwrImmunities?.length && !iwrWeaknesses?.length && !iwrResistances?.length) return null
 
-    const damageTypes = selectedTraits.filter((t) => DAMAGE_TYPE_SET.has(t)) as DamageType[]
-    const materials = selectedTraits.filter((t) => MATERIAL_TYPE_SET.has(t)) as MaterialEffect[]
-
-    if (damageTypes.length === 0) return null
+    const activeEntries = damageEntries.filter((e) => e.amount > 0)
+    if (activeEntries.length === 0) {
+      // Untyped — no IWR applies
+      return null
+    }
 
     const immunities = (iwrImmunities || [])
       .filter((t) => (IMMUNITY_TYPES as readonly string[]).includes(t))
@@ -120,50 +153,50 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       createResistance(r.type as ResistanceType, r.value)
     )
 
-    const baseAmount = Math.floor(hpInput / damageTypes.length)
-    const remainder = hpInput - baseAmount * damageTypes.length
-
-    return damageTypes.map((type, i) => {
-      const amount = baseAmount + (i === 0 ? remainder : 0)
-      const result = applyIWR({ type, amount, materials }, immunities, weaknesses, resistances)
-      return { type, amount, result }
+    return activeEntries.map(({ damageType, amount }) => {
+      const result = applyIWR(
+        { type: damageType, amount, materials: mats },
+        immunities,
+        weaknesses,
+        resistances,
+      )
+      return { type: damageType, amount, result }
     })
-  }, [selectedTraits, hpInput, iwrImmunities, iwrWeaknesses, iwrResistances])
+  }, [damageEntries, mats, iwrImmunities, iwrWeaknesses, iwrResistances])
 
-  const handleAction = useCallback((action: 'damage' | 'heal' | 'tempHp') => {
-    if (hpInput <= 0) return
-
-    if (action === 'damage') {
-      const effectiveDamage = iwrPreviews
-        ? iwrPreviews.reduce((sum, p) => sum + p.result.finalDamage, 0)
-        : hpInput
-      let remaining = effectiveDamage
-      if (combatant.tempHp > 0) {
-        const absorbed = Math.min(combatant.tempHp, remaining)
-        updateTempHp(combatant.id, combatant.tempHp - absorbed)
-        remaining -= absorbed
+  const handleAction = useCallback(
+    (action: 'damage' | 'heal' | 'tempHp') => {
+      if (action === 'damage') {
+        if (!canDamage) return
+        const effectiveDamage = iwrPreviews
+          ? iwrPreviews.reduce((sum, p) => sum + p.result.finalDamage, 0)
+          : hasEntries
+            ? totalTypedDamage
+            : hpInput
+        let remaining = effectiveDamage
+        if (combatant.tempHp > 0) {
+          const absorbed = Math.min(combatant.tempHp, remaining)
+          updateTempHp(combatant.id, combatant.tempHp - absorbed)
+          remaining -= absorbed
+        }
+        const hpBefore = combatant.hp
+        if (remaining > 0) updateHp(combatant.id, -remaining)
+        const newHp = Math.max(0, hpBefore - remaining)
+        if (newHp === 0 && hpBefore > 0) setDyingDialogOpen(true)
+        setDamageEntries([])
+        setMaterials([])
+        if (!hasEntries) setHpInput(0)
+      } else {
+        if (hpInput <= 0) return
+        if (action === 'heal') updateHp(combatant.id, hpInput)
+        else updateTempHp(combatant.id, Math.max(combatant.tempHp, hpInput))
+        setHpInput(0)
       }
-      const hpBefore = combatant.hp
-      if (remaining > 0) {
-        updateHp(combatant.id, -remaining)
-      }
-      const newHp = Math.max(0, hpBefore - remaining)
-      if (newHp === 0 && hpBefore > 0) {
-        setDyingDialogOpen(true)
-      }
-      setSelectedTraits([])
-    } else if (action === 'heal') {
-      updateHp(combatant.id, hpInput)
-    } else if (action === 'tempHp') {
-      updateTempHp(combatant.id, Math.max(combatant.tempHp, hpInput))
-    }
+    },
+    [hpInput, canDamage, hasEntries, totalTypedDamage, iwrPreviews, combatant, updateHp, updateTempHp],
+  )
 
-    setHpInput(0)
-  }, [hpInput, iwrPreviews, combatant, updateHp, updateTempHp])
-
-  const stepValue = (delta: number) => {
-    setHpInput((prev) => Math.max(0, prev + delta))
-  }
+  const stepValue = (delta: number) => setHpInput((prev) => Math.max(0, prev + delta))
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
@@ -174,6 +207,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
 
   return (
     <div className="space-y-3">
+      {/* HP bar */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <Heart className="w-4 h-4 text-destructive" />
@@ -183,16 +217,14 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           </span>
           {combatant.tempHp > 0 && (
             <span className="text-sm font-mono text-blue-400 flex items-center gap-0.5">
-              <Shield className="w-3 h-3" />
-              +{combatant.tempHp}
+              <Shield className="w-3 h-3" />+{combatant.tempHp}
             </span>
           )}
         </div>
         <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              hpPercent > 50 ? 'bg-emerald-500' :
-              hpPercent > 25 ? 'bg-amber-500' : 'bg-destructive'
+              hpPercent > 50 ? 'bg-emerald-500' : hpPercent > 25 ? 'bg-amber-500' : 'bg-destructive'
             }`}
             style={{ width: `${hpPercent}%` }}
           />
@@ -200,7 +232,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       </div>
 
       <div className="flex gap-2">
-        {/* Stepper input */}
+        {/* Stepper — used for Heal/TempHP and untyped damage */}
         <div className="flex flex-col items-center">
           <button
             className="h-5 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-t transition-colors"
@@ -227,39 +259,85 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           </button>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-col gap-1 flex-1">
-          {/* Damage row */}
+        {/* Action column */}
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          {/* Damage button */}
           <Button
             variant="destructive"
             className="h-9 text-xs justify-start gap-1.5 w-full"
             onClick={() => handleAction('damage')}
-            disabled={hpInput <= 0}
+            disabled={!canDamage}
           >
             <Swords className="w-3.5 h-3.5" />
             Damage
+            {hasEntries && totalTypedDamage > 0 && (
+              <span className="ml-auto font-mono opacity-80">{totalTypedDamage}</span>
+            )}
           </Button>
 
-          {/* Trait selector trigger */}
-          <button
-            onClick={() => setTraitSelectorOpen(true)}
-            className="min-h-7 w-full flex flex-wrap items-center gap-1 px-2 py-1 rounded border border-border/50 bg-secondary/20 hover:bg-secondary/40 text-left transition-colors"
-          >
-            {selectedTraits.length === 0 ? (
+          {/* Damage entries area */}
+          <div className="min-h-7 w-full flex flex-wrap items-center gap-1 px-2 py-1 rounded border border-border/50 bg-secondary/20">
+            {!hasEntries && materials.length === 0 && (
               <span className="text-xs text-muted-foreground">Untyped</span>
-            ) : (
-              selectedTraits.map((t) => (
-                <span
-                  key={t}
-                  className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${TRAIT_CHIP_COLOR[t] ?? 'bg-muted text-muted-foreground'}`}
-                >
-                  {t}
-                </span>
-              ))
             )}
-          </button>
 
-          {/* Heal + TempHP row */}
+            {/* Typed entries: [chip] [amount input] [×] */}
+            {damageEntries.map((entry) => (
+              <div
+                key={entry.damageType}
+                className="flex items-center gap-0.5"
+              >
+                <span
+                  className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${CHIP_COLOR[entry.damageType] ?? 'bg-muted text-muted-foreground'}`}
+                >
+                  {entry.damageType}
+                </span>
+                <input
+                  type="number"
+                  value={entry.amount || ''}
+                  onChange={(e) =>
+                    updateEntryAmount(entry.damageType, Math.max(0, parseInt(e.target.value, 10) || 0))
+                  }
+                  placeholder="0"
+                  className="w-9 h-[22px] text-center text-[10px] font-mono font-bold bg-secondary/50 border-y border-border/50 focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={0}
+                />
+                <button
+                  onClick={() => removeEntry(entry.damageType)}
+                  className="h-[22px] px-1 text-muted-foreground hover:text-foreground bg-secondary/30 border border-border/50 rounded-r hover:bg-secondary/60 transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            ))}
+
+            {/* Material trait chips (no amount) */}
+            {materials.map((m) => (
+              <div key={m} className="flex items-center gap-0.5">
+                <span
+                  className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${CHIP_COLOR[m] ?? 'bg-muted text-muted-foreground'}`}
+                >
+                  {m}
+                </span>
+                <button
+                  onClick={() => toggleMaterial(m)}
+                  className="h-[22px] px-1 text-muted-foreground hover:text-foreground bg-secondary/30 border border-border/50 rounded-r hover:bg-secondary/60 transition-colors"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            ))}
+
+            {/* Add traits button */}
+            <button
+              onClick={() => setTraitSelectorOpen(true)}
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded border border-dashed border-border/40 hover:border-border/70 transition-colors"
+            >
+              + traits
+            </button>
+          </div>
+
+          {/* Heal + TempHP */}
           <div className="flex gap-1">
             <Button
               variant="secondary"
@@ -288,10 +366,10 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold flex items-center justify-between">
-              <span>Damage Traits</span>
-              {selectedTraits.length > 0 && (
+              <span>Add Damage Traits</span>
+              {(damageEntries.length > 0 || materials.length > 0) && (
                 <button
-                  onClick={() => setSelectedTraits([])}
+                  onClick={() => { setDamageEntries([]); setMaterials([]) }}
                   className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 font-normal"
                 >
                   <X className="w-3 h-3" />
@@ -301,19 +379,19 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-1">
-            {TRAIT_GROUPS.map((group) => (
+            {DAMAGE_GROUPS.map((group) => (
               <div key={group.label}>
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                   {group.label}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {group.traits.map((trait) => {
-                    const active = selectedTraits.includes(trait)
+                    const active = damageEntries.some((e) => e.damageType === trait)
                     return (
                       <button
                         key={trait}
                         data-selected={active}
-                        onClick={() => toggleTrait(trait)}
+                        onClick={() => toggleDamageType(trait)}
                         className={`text-xs px-2.5 py-1 rounded-full capitalize transition-colors ${group.color}`}
                       >
                         {trait}
@@ -323,6 +401,28 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                 </div>
               </div>
             ))}
+
+            {/* Separator */}
+            <div className="border-t border-border/30 pt-2">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                {MATERIAL_GROUP.label}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {MATERIAL_GROUP.traits.map((trait) => {
+                  const active = materials.includes(trait)
+                  return (
+                    <button
+                      key={trait}
+                      data-selected={active}
+                      onClick={() => toggleMaterial(trait)}
+                      className={`text-xs px-2.5 py-1 rounded-full capitalize transition-colors ${MATERIAL_GROUP.color}`}
+                    >
+                      {trait}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -335,22 +435,15 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         abilities={abilities}
       />
 
+      {/* IWR preview */}
       {iwrPreviews && iwrPreviews.length > 0 && (
         <div className="text-xs space-y-0.5 px-2 py-1.5 rounded bg-secondary/30 border border-border/30">
           {iwrPreviews.map(({ type, amount, result }) => (
             <div key={type} className="space-y-0.5">
-              {iwrPreviews.length > 1 && (
-                <div className="flex justify-between text-muted-foreground/70 text-[10px]">
-                  <span className="capitalize">{type}</span>
-                  <span className="font-mono">{amount} raw</span>
-                </div>
-              )}
-              {iwrPreviews.length === 1 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Raw</span>
-                  <span className="font-mono">{amount}</span>
-                </div>
-              )}
+              <div className="flex justify-between text-muted-foreground/70 text-[10px]">
+                <span className="capitalize">{type}</span>
+                <span className="font-mono">{amount} raw</span>
+              </div>
               {result.appliedImmunities.length > 0 && (
                 <div className="flex justify-between text-blue-400">
                   <span>Immune ({result.appliedImmunities.map((i) => i.type).join(', ')})</span>
@@ -362,7 +455,9 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                   <span>
                     Weakness ({result.appliedWeaknesses.map((w) => `${w.type} ${w.value}`).join(', ')})
                   </span>
-                  <span className="font-mono">+{result.appliedWeaknesses.reduce((s, w) => s + w.value, 0)}</span>
+                  <span className="font-mono">
+                    +{result.appliedWeaknesses.reduce((s, w) => s + w.value, 0)}
+                  </span>
                 </div>
               )}
               {result.appliedResistances.length > 0 && (
@@ -370,23 +465,19 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                   <span>
                     Resist ({result.appliedResistances.map((r) => `${r.type} ${r.value}`).join(', ')})
                   </span>
-                  <span className="font-mono">-{result.appliedResistances.reduce((s, r) => s + r.value, 0)}</span>
+                  <span className="font-mono">
+                    -{result.appliedResistances.reduce((s, r) => s + r.value, 0)}
+                  </span>
                 </div>
               )}
             </div>
           ))}
-          {iwrPreviews.length > 1 && (
-            <div className="flex justify-between font-bold border-t border-border/30 pt-0.5">
-              <span>Total final</span>
-              <span className="font-mono">{iwrPreviews.reduce((s, p) => s + p.result.finalDamage, 0)}</span>
-            </div>
-          )}
-          {iwrPreviews.length === 1 && (
-            <div className="flex justify-between font-bold border-t border-border/30 pt-0.5">
-              <span>Final</span>
-              <span className="font-mono">{iwrPreviews[0].result.finalDamage}</span>
-            </div>
-          )}
+          <div className="flex justify-between font-bold border-t border-border/30 pt-0.5">
+            <span>{iwrPreviews.length > 1 ? 'Total final' : 'Final'}</span>
+            <span className="font-mono">
+              {iwrPreviews.reduce((s, p) => s + p.result.finalDamage, 0)}
+            </span>
+          </div>
         </div>
       )}
     </div>
