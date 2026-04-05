@@ -133,7 +133,9 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">No active conditions</p>
+        <div className="rounded border border-dashed border-border/40 py-3 text-center text-xs text-muted-foreground">
+          No active conditions
+        </div>
       )}
 
       {/* Condition detail panel */}
