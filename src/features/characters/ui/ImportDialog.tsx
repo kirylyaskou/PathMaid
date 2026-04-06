@@ -58,11 +58,23 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
     setError(null)
     setImporting(true)
     try {
-      // Strip leading text before JSON — handles Pathbuilder "Share" format:
-      // "[4/5/2026 10:34 PM] Character Name: {...}"
-      const firstBrace = rawInput.indexOf('{')
-      const json = firstBrace > 0 ? rawInput.slice(firstBrace) : rawInput
-      const parsed = JSON.parse(json.trim())
+      // Extract first complete JSON object — handles Pathbuilder "Share" format where
+      // chat prefix and/or multiple messages surround the JSON:
+      // "[4/5/2026 10:34 PM] Character Name: {...}\n[timestamp] Name: ..."
+      const start = rawInput.indexOf('{')
+      if (start === -1) throw new Error('No JSON object found in pasted text')
+      let depth = 0, end = -1, inStr = false, esc = false
+      for (let i = start; i < rawInput.length; i++) {
+        const ch = rawInput[i]
+        if (esc) { esc = false; continue }
+        if (ch === '\\' && inStr) { esc = true; continue }
+        if (ch === '"') { inStr = !inStr; continue }
+        if (inStr) continue
+        if (ch === '{') depth++
+        else if (ch === '}') { depth--; if (depth === 0) { end = i; break } }
+      }
+      const json = end !== -1 ? rawInput.slice(start, end + 1) : rawInput.slice(start)
+      const parsed = JSON.parse(json)
       const exp = validateExport(parsed)
       await upsertCharacter(exp.build)
       reset()
