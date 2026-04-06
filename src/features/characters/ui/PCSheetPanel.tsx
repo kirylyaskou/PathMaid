@@ -4,15 +4,237 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import type { CharacterRecord } from '@/shared/api/characters'
 import type { PathbuilderBuild, PathbuilderExport } from '@engine'
+import { calculatePCMaxHP } from '@engine'
+import type { PathbuilderAbilities } from '@engine'
 
 // ── Internal tab content stubs (filled in by Plans 02 and 03) ────────────
 
-function CoreSkillsContent({ build: _build }: { build: PathbuilderBuild }) {
-  return <div className="text-sm text-muted-foreground">Core & Skills — stub</div>
+function CoreSkillsContent({ build }: { build: PathbuilderBuild }) {
+  const maxHp = calculatePCMaxHP(build)
+  const ac = build.acTotal.acProfBonus + build.acTotal.acAbilityBonus + build.acTotal.acItemBonus
+  const speed = build.attributes.speed + build.attributes.speedBonus
+
+  const abilityMod = (score: number) => Math.floor((score - 10) / 2)
+  const signed = (n: number) => (n >= 0 ? `+${n}` : String(n))
+
+  const rankLabel = (prof: number): string =>
+    prof >= 8 ? 'L' : prof >= 6 ? 'M' : prof >= 4 ? 'E' : prof >= 2 ? 'T' : 'U'
+
+  const RANK_CLASS: Record<string, string> = {
+    U: 'bg-muted text-muted-foreground',
+    T: 'bg-pf-threat-low/15 text-pf-threat-low',
+    E: 'bg-pf-skill-expert/15 text-pf-skill-expert',
+    M: 'bg-pf-rarity-rare/15 text-pf-rarity-rare',
+    L: 'bg-pf-gold/15 text-pf-gold',
+  }
+
+  const modWithProf = (prof: number, score: number) => {
+    const mod = abilityMod(score)
+    return prof > 0 ? mod + build.level + prof : mod
+  }
+
+  const { abilities } = build
+
+  const ABILITY_DISPLAY: Array<[string, keyof PathbuilderAbilities]> = [
+    ['STR', 'str'], ['DEX', 'dex'], ['CON', 'con'],
+    ['INT', 'int'], ['WIS', 'wis'], ['CHA', 'cha'],
+  ]
+
+  const saves = [
+    { label: 'Fort', value: modWithProf(build.proficiencies.fortitude, abilities.con) },
+    { label: 'Ref', value: modWithProf(build.proficiencies.reflex, abilities.dex) },
+    { label: 'Will', value: modWithProf(build.proficiencies.will, abilities.wis) },
+    { label: 'Perception', value: modWithProf(build.proficiencies.perception, abilities.wis) },
+  ]
+
+  const SKILL_ABILITY: Record<string, keyof PathbuilderAbilities> = {
+    acrobatics: 'dex', arcana: 'int', athletics: 'str', crafting: 'int',
+    deception: 'cha', diplomacy: 'cha', intimidation: 'cha',
+    medicine: 'wis', nature: 'wis', occultism: 'int', performance: 'cha',
+    religion: 'wis', society: 'int', stealth: 'dex', survival: 'wis',
+    thievery: 'dex',
+  }
+
+  const sortedSkills = [...build.skills].sort((a, b) => a.name.localeCompare(b.name))
+
+  return (
+    <div className="space-y-6">
+
+      {/* HP / AC / Speed chips */}
+      <div>
+        <h3 className="text-base font-semibold mb-3">Core Stats</h3>
+        <div className="flex gap-2">
+          {([
+            ['HP', `${maxHp} / ${maxHp}`],
+            ['AC', String(ac)],
+            ['Speed', `${speed} ft`],
+          ] as [string, string][]).map(([label, value]) => (
+            <div key={label} className="flex-1 rounded-md border border-border bg-card px-3 py-2 flex flex-col items-center">
+              <span className="text-base font-semibold">{value}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ability scores 3×2 grid */}
+      <div>
+        <h3 className="text-base font-semibold mb-3">Ability Scores</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {ABILITY_DISPLAY.map(([label, key]) => {
+            const score = abilities[key]
+            const mod = abilityMod(score)
+            return (
+              <div key={key} className="rounded-md border border-border bg-card px-3 py-2 flex flex-col items-center">
+                <span className="text-base font-semibold">{score}</span>
+                <span className="text-xs text-muted-foreground">{signed(mod)}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Saves & Perception */}
+      <div>
+        <h3 className="text-base font-semibold mb-3">Saves & Perception</h3>
+        <div className="flex gap-2 flex-wrap">
+          {saves.map(({ label, value }) => (
+            <div key={label} className="flex-1 min-w-[60px] rounded-md border border-border bg-card px-3 py-2 flex flex-col items-center">
+              <span className="text-sm font-semibold">{signed(value)}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Skills list */}
+      <div>
+        <h3 className="text-base font-semibold mb-3">Skills</h3>
+        <div className="divide-y divide-border">
+          {sortedSkills.map((skill) => {
+            const abilityKey = SKILL_ABILITY[skill.name.toLowerCase()] ?? 'int'
+            const total = modWithProf(skill.proficiency, abilities[abilityKey])
+            const rank = rankLabel(skill.proficiency)
+            return (
+              <div key={skill.name} className="flex items-center gap-2 h-7">
+                <span className={`w-5 h-[18px] flex items-center justify-center rounded-sm text-xs font-semibold shrink-0 ${RANK_CLASS[rank]}`}>
+                  {rank}
+                </span>
+                <span className="flex-1 text-sm">{skill.name}</span>
+                <span className="text-sm">{signed(total)}</span>
+              </div>
+            )
+          })}
+          {(build.lores ?? []).map(([name, prof]) => {
+            const total = modWithProf(prof, abilities.int)
+            const rank = rankLabel(prof)
+            return (
+              <div key={name} className="flex items-center gap-2 h-7">
+                <span className={`w-5 h-[18px] flex items-center justify-center rounded-sm text-xs font-semibold shrink-0 ${RANK_CLASS[rank]}`}>
+                  {rank}
+                </span>
+                <span className="flex-1 text-sm italic">{name} Lore</span>
+                <span className="text-sm">{signed(total)}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+    </div>
+  )
 }
 
-function EquipmentContent({ build: _build }: { build: PathbuilderBuild }) {
-  return <div className="text-sm text-muted-foreground">Equipment — stub</div>
+function EquipmentContent({ build }: { build: PathbuilderBuild }) {
+  const armor = build.armor ?? []
+  const weapons = build.weapons ?? []
+  const equipment = build.equipment ?? []
+
+  if (armor.length === 0 && weapons.length === 0 && equipment.length === 0) {
+    return (
+      <div className="flex items-center justify-center text-sm text-muted-foreground py-8">
+        No equipment recorded
+      </div>
+    )
+  }
+
+  const inventoryByCategory = equipment.reduce<Record<string, Array<[string, string, number]>>>(
+    (acc, item) => {
+      const cat = item[1] || 'Other'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(item)
+      return acc
+    },
+    {}
+  )
+
+  return (
+    <div className="space-y-6">
+
+      {armor.length > 0 && (
+        <div>
+          <h3 className="text-base font-semibold border-b border-border pb-1 mb-2">Armor</h3>
+          <div className="space-y-1">
+            {armor.map((a, i) => (
+              <div key={i} className="text-sm flex items-baseline gap-1">
+                <span>{a.name}</span>
+                {(a.pot > 0 || a.res || a.runes.length > 0) && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {a.pot > 0 ? `+${a.pot}` : ''}
+                    {a.res ? ` [${a.res}]` : ''}
+                    {a.runes.length > 0 ? ` [${a.runes.join(', ')}]` : ''}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {weapons.length > 0 && (
+        <div>
+          <h3 className="text-base font-semibold border-b border-border pb-1 mb-2">Weapons</h3>
+          <div className="space-y-1">
+            {weapons.map((w, i) => (
+              <div key={i} className="text-sm flex items-baseline gap-1">
+                <span>{w.name}</span>
+                {(w.pot > 0 || w.str || w.runes.length > 0) && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {w.pot > 0 ? `+${w.pot}` : ''}
+                    {w.str ? ` [${w.str}]` : ''}
+                    {w.runes.length > 0 ? ` [${w.runes.join(', ')}]` : ''}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {equipment.length > 0 && (
+        <div>
+          <h3 className="text-base font-semibold border-b border-border pb-1 mb-2">Inventory</h3>
+          <div className="space-y-3">
+            {Object.entries(inventoryByCategory).map(([cat, items]) => (
+              <div key={cat}>
+                <p className="text-xs text-muted-foreground mb-1">{cat}</p>
+                <div className="space-y-0.5 pl-2">
+                  {items.map(([name, , qty], idx) => (
+                    <div key={idx} className="text-sm flex justify-between">
+                      <span>{name}</span>
+                      {qty > 1 && <span className="text-xs text-muted-foreground">×{qty}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
+  )
 }
 
 function SpellsContent({ build: _build }: { build: PathbuilderBuild }) {
