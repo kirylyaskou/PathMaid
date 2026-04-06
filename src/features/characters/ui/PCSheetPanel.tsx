@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Textarea } from '@/shared/ui/textarea'
 import type { CharacterRecord } from '@/shared/api/characters'
+import { updateCharacterNotes } from '@/shared/api/characters'
 import type { PathbuilderBuild, PathbuilderExport } from '@engine'
 import { calculatePCMaxHP } from '@engine'
 import type { PathbuilderAbilities } from '@engine'
@@ -237,16 +239,143 @@ function EquipmentContent({ build }: { build: PathbuilderBuild }) {
   )
 }
 
-function SpellsContent({ build: _build }: { build: PathbuilderBuild }) {
-  return <div className="text-sm text-muted-foreground">Spells — stub</div>
+function SpellsContent({ build }: { build: PathbuilderBuild }) {
+  const casters = build.spellCasters ?? []
+
+  if (casters.length === 0) {
+    return (
+      <div className="flex items-center justify-center text-sm text-muted-foreground py-8">
+        No spellcasting
+      </div>
+    )
+  }
+
+  const spellLevelLabel = (lvl: number): string => {
+    if (lvl === 0) return 'Cantrips'
+    if (lvl === 1) return '1st Level'
+    if (lvl === 2) return '2nd Level'
+    if (lvl === 3) return '3rd Level'
+    return `${lvl}th Level`
+  }
+
+  return (
+    <div className="space-y-6">
+      {casters.map((caster, i) => {
+        const isFocus = caster.spellcastingType === 'focus'
+        const tradition =
+          caster.magicTradition.charAt(0).toUpperCase() + caster.magicTradition.slice(1)
+        const type = isFocus
+          ? 'Focus'
+          : caster.spellcastingType.charAt(0).toUpperCase() + caster.spellcastingType.slice(1)
+
+        return (
+          <div key={i}>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-base font-semibold">
+                {tradition} · {type}
+              </h3>
+              {isFocus && (
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-pf-rarity-rare/15 text-pf-rarity-rare">
+                  Focus
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {(caster.spells ?? []).map((group) => (
+                <div key={group.spellLevel}>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {spellLevelLabel(group.spellLevel)}
+                  </p>
+                  <div className="space-y-0.5 pl-2">
+                    {group.list.map((spellName) => (
+                      <div key={spellName} className="text-sm">
+                        {spellName}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
-function FeatsContent({ build: _build }: { build: PathbuilderBuild }) {
-  return <div className="text-sm text-muted-foreground">Feats — stub</div>
+function FeatsContent({ build }: { build: PathbuilderBuild }) {
+  const feats = build.feats ?? []
+  const specials = build.specials ?? []
+
+  if (feats.length === 0 && specials.length === 0) {
+    return (
+      <div className="flex items-center justify-center text-sm text-muted-foreground py-8">
+        No feats recorded
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {feats.length > 0 && (
+        <div>
+          <h3 className="text-base font-semibold mb-2">Feats</h3>
+          <div className="divide-y divide-border/50">
+            {feats.map(([name, , type, level, note], i) => (
+              <div key={i} className="py-1.5">
+                <p className="text-sm font-semibold">{name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {type} · {level}
+                </p>
+                {note && (
+                  <p className="text-xs text-muted-foreground italic pl-2 mt-0.5">{note}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {specials.length > 0 && (
+        <div>
+          <h3 className="text-base font-semibold mb-2">Class Features</h3>
+          <div className="divide-y divide-border/50">
+            {specials.map(([name, level, note], i) => (
+              <div key={i} className="py-1.5">
+                <p className="text-sm font-semibold">{name}</p>
+                <p className="text-xs text-muted-foreground">Level {level}</p>
+                {note && (
+                  <p className="text-xs text-muted-foreground italic pl-2 mt-0.5">{note}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
+  )
 }
 
-function NotesContent({ character: _character }: { character: CharacterRecord }) {
-  return <div className="text-sm text-muted-foreground">Notes — stub</div>
+function NotesContent({ character }: { character: CharacterRecord }) {
+  const [value, setValue] = useState(character.notes ?? '')
+
+  async function handleBlur() {
+    await updateCharacterNotes(character.id, value)
+  }
+
+  return (
+    <div>
+      <Textarea
+        className="w-full resize-none min-h-[200px] p-2 text-sm"
+        placeholder="DM notes for this character..."
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={handleBlur}
+      />
+    </div>
+  )
 }
 
 // ── Main PCSheetPanel ─────────────────────────────────────────────────────
