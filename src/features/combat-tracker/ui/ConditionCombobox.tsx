@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { Plus, Minus, Check } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { Plus, Minus, Check, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -98,7 +98,13 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
 
   const handleOpenChange = useCallback((o: boolean) => {
     setOpen(o)
-    if (!o) { setSelectedSlug(null); setValue(1); setFormula(''); setSearch('') }
+    if (!o) { setSelected(null); setValue(1); setFormula(''); setSearch('') }
+  }, [])
+
+  const handleBack = useCallback(() => {
+    setSelected(null)
+    setValue(1)
+    setFormula('')
   }, [])
 
   const handleSelect = useCallback(
@@ -112,37 +118,37 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
       } else {
         // Close dialog BEFORE store update to avoid useSyncExternalStore race with Radix effects
         setOpen(false)
-        setSelectedSlug(null)
+        setSelected(null)
         const granted = applyCondition(combatantId, slug as ConditionSlug)
         if (granted.length > 0) {
           toast(`Applied ${slug} — also granted: ${granted.join(', ')}`)
         }
       }
     },
-    [combatantId, close],
+    [combatantId],
   )
 
   const handleApplyValued = useCallback(() => {
-    if (!selectedSlug) return
-    const slug = selectedSlug
+    if (!selected) return
+    const slug = selected
     const v = value
     // Close dialog BEFORE store update
     setOpen(false)
-    setSelectedSlug(null)
+    setSelected(null)
     setValue(1)
     const granted = applyCondition(combatantId, slug as ConditionSlug, v)
     if (granted.length > 0) {
       toast(`Applied ${slug} ${v} — also granted: ${granted.join(', ')}`)
     }
-  }, [combatantId, selectedSlug, value])
+  }, [combatantId, selected, value])
 
   const handleApplyPersistent = useCallback(() => {
-    if (!selectedSlug || !formula.trim()) return
-    const slug = selectedSlug
+    if (!selected || !formula.trim()) return
+    const slug = selected
     const f = formula.trim()
     // Close dialog BEFORE store update
     setOpen(false)
-    setSelectedSlug(null)
+    setSelected(null)
     setFormula('')
     useConditionStore.getState().setCondition({
       combatantId,
@@ -151,11 +157,17 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
       formula: f,
     })
     toast(`Applied ${slug.replace('persistent-', 'persistent ')} (${f})`)
-  }, [combatantId, selectedSlug, formula])
+  }, [combatantId, selected, formula])
 
-  const filtered = search
-    ? allSlugs.filter((s) => norm(s).includes(norm(search)))
-    : null
+  const handleApply = useCallback(() => {
+    if (isPersistent) handleApplyPersistent()
+    else handleApplyValued()
+  }, [isPersistent, handleApplyPersistent, handleApplyValued])
+
+  const matchesSearch = useCallback(
+    (s: string) => norm(s).includes(norm(search)),
+    [search],
+  )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -169,14 +181,15 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
         <DialogHeader className="px-4 pt-4 pb-0">
           <DialogTitle className="text-sm">Add Condition</DialogTitle>
         </DialogHeader>
-        {selectedSlug && isPersistent ? (
+
+        {selected && isPersistent ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground">
                 &#8592; Back
               </button>
               <span className="text-sm font-medium capitalize">
-                {selectedSlug.replace('persistent-', 'persistent ')}
+                {selected.replace('persistent-', 'persistent ')}
               </span>
             </div>
             <div className="space-y-1">
@@ -191,17 +204,17 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
             </div>
             <Button className="w-full h-8 text-xs" onClick={handleApplyPersistent} disabled={!formula.trim()}>
               <Check className="w-3 h-3 mr-1" />
-              Apply {selectedSlug.replace('persistent-', 'persistent ')}
+              Apply {selected.replace('persistent-', 'persistent ')}
             </Button>
           </div>
-        ) : selectedSlug && isValued ? (
+        ) : selected && isValued ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground">
                 &#8592; Back
               </button>
               <span className="text-sm font-medium capitalize">
-                {selectedSlug.split('-').join(' ')}
+                {selected.split('-').join(' ')}
               </span>
             </div>
             <div className="flex items-center justify-center gap-3">
@@ -226,7 +239,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
             </div>
             <Button className="w-full h-8 text-xs" onClick={handleApplyValued}>
               <Check className="w-3 h-3 mr-1" />
-              Apply {selectedSlug.split('-').join(' ')} {value}
+              Apply {selected.split('-').join(' ')} {value}
             </Button>
           </div>
         ) : (
@@ -247,24 +260,21 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
                       key={slug}
                       slug={slug}
                       disabled={existingSlugs.includes(slug)}
+                      selected={selected === slug}
                       onClick={() => handleSelect(slug)}
                     />
                   ))
                 )}
               </div>
             ) : (
-              <Tabs defaultValue="persistent">
-                <TabsList className="w-full h-8 rounded-none border-b">
-                  {TABS.map((t) => (
-                    <TabsTrigger key={t.id} value={t.id} className="text-xs flex-1 h-7">
-                      {t.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {TABS.map((tab) => (
-                  <TabsContent key={tab.id} value={tab.id} className="mt-0">
-                    <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
-                      {tab.slugs.map((slug) => (
+              <div className="p-2 space-y-3 max-h-64 overflow-y-auto">
+                {SECTIONS.map((section) => (
+                  <div key={section.label}>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                      {section.label}
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {section.slugs.map((slug) => (
                         <ConditionPill
                           key={slug}
                           slug={slug}
@@ -274,114 +284,92 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
                         />
                       ))}
                     </div>
-                  )
-                ) : (
-                  <div className="space-y-3">
-                    {SECTIONS.map((section) => (
-                      <div key={section.label}>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                          {section.label}
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {section.slugs.map((slug) => (
-                            <ConditionPill
-                              key={slug}
-                              slug={slug}
-                              disabled={existingSlugs.includes(slug)}
-                              selected={selected === slug}
-                              onClick={() => handleSelect(slug)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    {otherSlugs.length > 0 && (
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                          Other
-                        </p>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {otherSlugs.map((slug) => (
-                            <ConditionPill
-                              key={slug}
-                              slug={slug}
-                              disabled={existingSlugs.includes(slug)}
-                              selected={selected === slug}
-                              onClick={() => handleSelect(slug)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  </div>
+                ))}
+                {otherSlugs.length > 0 && (
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Other
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {otherSlugs.map((slug) => (
+                        <ConditionPill
+                          key={slug}
+                          slug={slug}
+                          disabled={existingSlugs.includes(slug)}
+                          selected={selected === slug}
+                          onClick={() => handleSelect(slug)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Bottom config bar — valued or persistent */}
-              {selected && (isPersistent || isValued) && (
-                <div className="border-t border-border px-4 py-3 shrink-0 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium capitalize">{fmt(selected)}</span>
-                    <button
-                      onClick={() => setSelected(null)}
-                      className="opacity-70 hover:opacity-100 transition-opacity text-foreground"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {isPersistent ? (
-                    <div className="flex gap-2">
-                      <Input
-                        value={formula}
-                        onChange={(e) => setFormula(e.target.value)}
-                        placeholder="e.g. 2d6"
-                        className="h-8 text-xs flex-1"
-                        onKeyDown={(e) => e.key === 'Enter' && handleApply()}
-                        autoFocus
-                      />
-                      <Button
-                        className="h-8 text-xs px-3"
-                        onClick={handleApply}
-                        disabled={!formula.trim()}
-                      >
-                        <Check className="w-3 h-3 mr-1" />
-                        Apply
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="w-8 h-8 shrink-0"
-                        onClick={() => setValue((v) => Math.max(1, v - 1))}
-                        disabled={value <= 1}
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </Button>
-                      <span className="text-2xl font-mono font-bold w-8 text-center">
-                        {value}
-                      </span>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="w-8 h-8 shrink-0"
-                        onClick={() => setValue((v) => v + 1)}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button className="h-8 text-xs flex-1" onClick={handleApply}>
-                        <Check className="w-3 h-3 mr-1" />
-                        Apply {fmt(selected)} {value}
-                      </Button>
-                    </div>
-                  )}
+            {/* Bottom config bar — valued or persistent */}
+            {selected && (isPersistent || isValued) && (
+              <div className="border-t border-border px-4 py-3 shrink-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium capitalize">{fmt(selected)}</span>
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="opacity-70 hover:opacity-100 transition-opacity text-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>,
-          document.body,
+
+                {isPersistent ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={formula}
+                      onChange={(e) => setFormula(e.target.value)}
+                      placeholder="e.g. 2d6"
+                      className="h-8 text-xs flex-1"
+                      onKeyDown={(e) => e.key === 'Enter' && handleApply()}
+                      autoFocus
+                    />
+                    <Button
+                      className="h-8 text-xs px-3"
+                      onClick={handleApply}
+                      disabled={!formula.trim()}
+                    >
+                      <Check className="w-3 h-3 mr-1" />
+                      Apply
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-8 h-8 shrink-0"
+                      onClick={() => setValue((v) => Math.max(1, v - 1))}
+                      disabled={value <= 1}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </Button>
+                    <span className="text-2xl font-mono font-bold w-8 text-center">
+                      {value}
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-8 h-8 shrink-0"
+                      onClick={() => setValue((v) => v + 1)}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button className="h-8 text-xs flex-1" onClick={handleApply}>
+                      <Check className="w-3 h-3 mr-1" />
+                      Apply {fmt(selected)} {value}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </DialogContent>
     </Dialog>

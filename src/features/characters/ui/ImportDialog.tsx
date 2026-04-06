@@ -54,11 +54,15 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
     onOpenChange(nextOpen)
   }
 
-  async function importJson(json: string) {
+  async function importJson(rawInput: string) {
     setError(null)
     setImporting(true)
     try {
-      const parsed = JSON.parse(json)
+      // Strip leading text before JSON — handles Pathbuilder "Share" format:
+      // "[4/5/2026 10:34 PM] Character Name: {...}"
+      const firstBrace = rawInput.indexOf('{')
+      const json = firstBrace > 0 ? rawInput.slice(firstBrace) : rawInput
+      const parsed = JSON.parse(json.trim())
       const exp = validateExport(parsed)
       await upsertCharacter(exp.build)
       reset()
@@ -136,7 +140,7 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
           <TabsContent value="paste" className="mt-3">
             <Textarea
               placeholder="Paste Pathbuilder JSON here..."
-              className="min-h-[160px] font-mono text-xs resize-none"
+              className="h-48 max-h-72 font-mono text-xs resize-none overflow-y-auto"
               value={pasteValue}
               onChange={(e) => setPasteValue(e.target.value)}
             />
