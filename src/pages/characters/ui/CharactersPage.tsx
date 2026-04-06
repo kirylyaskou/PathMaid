@@ -7,7 +7,7 @@ import { getAllCharacters, deleteCharacter } from '@/shared/api/characters'
 import type { CharacterRecord } from '@/shared/api/characters'
 import { useCombatantStore } from '@/entities/combatant/model/store'
 import { calculatePCMaxHP } from '@engine'
-import type { PathbuilderExport } from '@engine'
+import type { PathbuilderBuild } from '@engine'
 import type { Combatant } from '@/entities/combatant/model/types'
 import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel } from '@/features/characters'
 
@@ -42,8 +42,9 @@ export function CharactersPage() {
 
   function handleAddToCombat(character: CharacterRecord) {
     try {
-      const exp = JSON.parse(character.rawJson) as PathbuilderExport
-      const maxHp = calculatePCMaxHP(exp.build)
+      const build = JSON.parse(character.rawJson) as PathbuilderBuild
+      const maxHp = calculatePCMaxHP(build)
+      const ac = build.acTotal.acProfBonus + build.acTotal.acAbilityBonus + build.acTotal.acItemBonus
       const combatant: Combatant = {
         id: crypto.randomUUID(),
         creatureRef: character.id,
@@ -53,6 +54,7 @@ export function CharactersPage() {
         maxHp,
         tempHp: 0,
         isNPC: false,
+        ac,
       }
       addCombatant(combatant)
       toast(`${character.name} added to combat`, {
