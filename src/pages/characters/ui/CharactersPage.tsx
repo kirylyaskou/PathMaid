@@ -9,7 +9,7 @@ import { useCombatantStore } from '@/entities/combatant/model/store'
 import { calculatePCMaxHP } from '@engine'
 import type { PathbuilderExport } from '@engine'
 import type { Combatant } from '@/entities/combatant/model/types'
-import { CharacterCard, ImportDialog, DeleteCharacterDialog } from '@/features/characters'
+import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel } from '@/features/characters'
 
 export function CharactersPage() {
   const navigate = useNavigate()
@@ -18,6 +18,7 @@ export function CharactersPage() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([])
   const [importOpen, setImportOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null)
+  const [selectedCharacter, setSelectedCharacter] = useState<CharacterRecord | null>(null)
 
   async function loadCharacters() {
     const data = await getAllCharacters()
@@ -90,6 +91,7 @@ export function CharactersPage() {
                 character={c}
                 onAddToCombat={handleAddToCombat}
                 onDelete={(ch) => setDeleteTarget(ch)}
+                onView={setSelectedCharacter}
               />
             ))}
           </div>
@@ -106,6 +108,11 @@ export function CharactersPage() {
         target={deleteTarget}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <PCSheetPanel
+        character={selectedCharacter}
+        onClose={() => setSelectedCharacter(null)}
       />
     </div>
   )

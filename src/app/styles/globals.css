@@ -55,6 +55,7 @@
   --pf-rarity-uncommon: oklch(0.55 0.14 65);
   --pf-rarity-rare: oklch(0.50 0.18 285);
   --pf-rarity-unique: oklch(0.52 0.18 320);
+  --pf-skill-expert: oklch(0.50 0.16 235);
 }
 
 .dark {
@@ -110,6 +111,7 @@
   --pf-rarity-uncommon: oklch(0.68 0.16 70);
   --pf-rarity-rare: oklch(0.58 0.20 285);
   --pf-rarity-unique: oklch(0.60 0.20 320);
+  --pf-skill-expert: oklch(0.60 0.18 235);
 }
 
 @theme inline {
@@ -166,6 +168,7 @@
   --color-pf-rarity-uncommon: var(--pf-rarity-uncommon);
   --color-pf-rarity-rare: var(--pf-rarity-rare);
   --color-pf-rarity-unique: var(--pf-rarity-unique);
+  --color-pf-skill-expert: var(--pf-skill-expert);
 }
 
 @layer base {

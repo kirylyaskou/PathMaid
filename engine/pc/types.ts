@@ -51,6 +51,26 @@ export interface PathbuilderSpellEntry {
   perDay: number[]
 }
 
+export interface PathbuilderWeapon {
+  name: string
+  qty: number
+  prof: string
+  die: string
+  damageType: string
+  pot: number
+  str: string
+  runes: string[]
+}
+
+export interface PathbuilderArmor {
+  name: string
+  qty: number
+  prof: string
+  pot: number
+  res: string
+  runes: string[]
+}
+
 export interface PathbuilderBuild {
   name: string
   class: string
@@ -76,6 +96,8 @@ export interface PathbuilderBuild {
   /** Array of [name, category, quantity] */
   equipment: Array<[string, string, number]>
   spellCasters: PathbuilderSpellEntry[]
+  weapons: PathbuilderWeapon[]
+  armor: PathbuilderArmor[]
   focusPoints: number
   focus: Record<string, unknown>
   mods: Record<string, unknown>

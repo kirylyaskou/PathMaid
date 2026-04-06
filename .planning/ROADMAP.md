@@ -752,7 +752,7 @@ Plans:
 **Milestone Goal:** Import player characters from Pathbuilder 2e JSON, display full PC sheet (stats, skills, equipment, spells, feats, DM notes), and add PCs to the combat tracker with full HP/condition tracking identical to NPCs.
 
 - [x] **Phase 42: PC Data Pipeline** — SQLite `characters` table, Pathbuilder JSON parser, HP calculation, `shared/api/characters.ts` (completed 2026-04-05)
-- [ ] **Phase 43: Characters Page** — `/characters` route, CharactersList, import dialog (file + paste), delete, Add to Combat
+- [x] **Phase 43: Characters Page** — `/characters` route, CharactersList, import dialog (file + paste), delete, Add to Combat (completed 2026-04-06)
 - [ ] **Phase 44: PC Sheet** — Core stats, skills, equipment, spellcasting, feats/specials, DM notes
 - [ ] **Phase 45: Combat Integration** — PC in combat tracker with HP badge, AC, conditions, PC marker — no overrides
 
@@ -776,7 +776,7 @@ Plans:
   2. Import dialog accepts file upload (.json) and paste — validates JSON structure before saving
   3. Deleting a PC removes it from the list (with confirmation prompt)
   4. "Add to Combat" button on a PC card adds it to the active encounter in combat tracker
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 **UI hint**: yes
 
 ### Phase 44: PC Sheet
@@ -809,7 +809,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 42. PC Data Pipeline | v1.0.0 | 2/2 | Complete    | 2026-04-05 |
-| 43. Characters Page | v1.0.0 | 0/? | Planned | — |
+| 43. Characters Page | v1.0.0 | 1/1 | Complete    | 2026-04-06 |
 | 44. PC Sheet | v1.0.0 | 0/? | Planned | — |
 | 45. Combat Integration | v1.0.0 | 0/? | Planned | — |
 
