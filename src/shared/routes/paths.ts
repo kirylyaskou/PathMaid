@@ -6,5 +6,6 @@ export const PATHS = {
   CONDITIONS: '/conditions',
   SPELLS: '/spells',
   ITEMS: '/items',
+  CHARACTERS: '/characters',
   SETTINGS: '/settings',
 } as const

@@ -12,6 +12,7 @@ const ConditionsPage = lazy(() => import('@/pages/conditions').then(m => ({ defa
 const HazardsPage    = lazy(() => import('@/pages/hazards').then(m => ({ default: m.HazardsPage })))
 const SpellsPage     = lazy(() => import('@/pages/spells').then(m => ({ default: m.SpellsPage })))
 const ItemsPage      = lazy(() => import('@/pages/items').then(m => ({ default: m.ItemsPage })))
+const CharactersPage = lazy(() => import('@/pages/characters').then(m => ({ default: m.CharactersPage })))
 const SettingsPage   = lazy(() => import('@/pages/settings').then(m => ({ default: m.SettingsPage })))
 
 function SuspenseOutlet() {
@@ -39,6 +40,7 @@ const router = createHashRouter([
           { path: 'hazards', element: <HazardsPage /> },
           { path: 'spells', element: <SpellsPage /> },
           { path: 'items', element: <ItemsPage /> },
+          { path: 'characters', element: <CharactersPage /> },
           { path: 'settings', element: <SettingsPage /> },
         ],
       },

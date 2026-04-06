@@ -15,7 +15,8 @@
 - ✅ **v0.8.0-pre-alpha — Hazards** — Phases 28-30 (complete 2026-04-02)
 - ✅ **v0.8.5-pre-alpha — Actions Reference** — Phases 31-32 (complete 2026-04-02)
 - 🚧 **v0.9.0-pre-alpha — Items Catalog Overhaul** — Phases 34-35 (complete 2026-04-03)
-- 🚧 **v0.9.6-pre-alpha — МАТЕМАТИКА** — Phases 36-39 (in progress)
+- 🚧 **v0.9.6-pre-alpha — МАТЕМАТИКА** — Phases 36-41 (complete 2026-04-05)
+- 🚧 **v1.0.0 — PC Import (Pathbuilder 2e)** — Phases 42-45 (in progress)
 
 ## Phases
 
@@ -746,6 +747,72 @@ Plans:
 - [x] 41-02-PLAN.md — 3-panel encounters page + dnd-kit drag-and-drop
 - [x] 41-03-PLAN.md — Split combat view (dual encounter columns)
 
+### 🚧 v1.0.0 — PC Import (Pathbuilder 2e)
+
+**Milestone Goal:** Import player characters from Pathbuilder 2e JSON, display full PC sheet (stats, skills, equipment, spells, feats, DM notes), and add PCs to the combat tracker with full HP/condition tracking identical to NPCs.
+
+- [x] **Phase 42: PC Data Pipeline** — SQLite `characters` table, Pathbuilder JSON parser, HP calculation, `shared/api/characters.ts` (completed 2026-04-05)
+- [ ] **Phase 43: Characters Page** — `/characters` route, CharactersList, import dialog (file + paste), delete, Add to Combat
+- [ ] **Phase 44: PC Sheet** — Core stats, skills, equipment, spellcasting, feats/specials, DM notes
+- [ ] **Phase 45: Combat Integration** — PC in combat tracker with HP badge, AC, conditions, PC marker — no overrides
+
+### Phase 42: PC Data Pipeline
+**Goal**: Pathbuilder 2e JSON is fully parsed and stored in SQLite — characters table with raw JSON + indexed fields, HP calculation utility, all CRUD operations via shared/api/characters.ts
+**Depends on**: Phase 41
+**Requirements**: PCImp-01, PCImp-02, PCImp-03, PCImp-04
+**Success Criteria** (what must be TRUE):
+  1. `characters` table exists after migration with columns: id, name, class, level, ancestry, raw_json (TEXT), notes (TEXT), created_at
+  2. Importing a valid Pathbuilder JSON (file or paste) stores the PC — re-import with same name updates the record
+  3. `calculatePCMaxHP(build)` returns correct value: ancestryhp + (classhp + bonushp + CON_mod) × level
+  4. `shared/api/characters.ts` exports: getAllCharacters, getCharacterById, upsertCharacter, deleteCharacter, updateCharacterNotes
+**Plans:** 2/2 plans complete
+
+### Phase 43: Characters Page
+**Goal**: DM can browse all imported PCs, import new ones, delete, and add to active combat from the Characters page
+**Depends on**: Phase 42
+**Requirements**: CHAR-01, CHAR-02, CHAR-03
+**Success Criteria** (what must be TRUE):
+  1. `/characters` route shows all PCs as cards with name, class, level, ancestry visible
+  2. Import dialog accepts file upload (.json) and paste — validates JSON structure before saving
+  3. Deleting a PC removes it from the list (with confirmation prompt)
+  4. "Add to Combat" button on a PC card adds it to the active encounter in combat tracker
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 44: PC Sheet
+**Goal**: Clicking a PC shows a full character sheet with all data from the Pathbuilder JSON — stats, skills, equipment, spells, feats, and editable DM notes
+**Depends on**: Phase 43
+**Requirements**: SHEET-01, SHEET-02, SHEET-03, SHEET-04, SHEET-05, SHEET-06
+**Success Criteria** (what must be TRUE):
+  1. Core stats panel shows: HP (calculated), AC, speed, all 6 ability scores with modifiers, fortitude/reflex/will saves, perception — all matching Pathbuilder values
+  2. Skills panel shows all 18 skills + lores with proficiency rank label (T/E/M/L) and computed total modifier
+  3. Equipment panel shows worn armor (with rune notation), weapons, inventory items grouped by container name
+  4. Spellcasting panel shows each caster entry with tradition/type, spells grouped by level, focus cantrips/spells
+  5. Feats & Features panel shows feats list (with type and level) and class specials
+  6. DM notes field is editable inline and saves on blur/enter — persists to SQLite
+**Plans:** TBD
+**UI hint**: yes
+
+### Phase 45: Combat Integration
+**Goal**: PCs can be added to the combat tracker and tracked identically to NPCs — initiative, HP/tempHP, conditions, turn advancement; no spell/item overrides
+**Depends on**: Phase 43
+**Requirements**: CMB-01, CMB-02
+**Success Criteria** (what must be TRUE):
+  1. PC added to combat tracker appears with calculated max HP, AC displayed, PC badge visually distinct from NPC rows
+  2. PC participates in turn order, HP/tempHP controls work identically to NPC, conditions can be added/removed
+  3. No encounter override UI appears for PCs — no spell slot tracking, no item override buttons
+**Plans:** TBD
+**UI hint**: yes
+
+## Progress (v1.0.0)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 42. PC Data Pipeline | v1.0.0 | 2/2 | Complete    | 2026-04-05 |
+| 43. Characters Page | v1.0.0 | 0/? | Planned | — |
+| 44. PC Sheet | v1.0.0 | 0/? | Planned | — |
+| 45. Combat Integration | v1.0.0 | 0/? | Planned | — |
+
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-05 — Phase 41 planned (3 plans in 2 waves)
+*Last updated: 2026-04-05 — v1.0.0 PC Import milestone added (phases 42-45)
