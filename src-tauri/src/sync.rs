@@ -21,6 +21,7 @@ pub struct RawEntity {
     pub source_pack: Option<String>,
     pub raw_json: String,
     pub source_name: Option<String>,
+    pub creature_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -90,6 +91,12 @@ fn extract_entity(value: &serde_json::Value, source_pack: &str) -> Option<RawEnt
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string());
 
+    let creature_type = system
+        .pointer("/details/type/value")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
+
     Some(RawEntity {
         id,
         name,
@@ -107,6 +114,7 @@ fn extract_entity(value: &serde_json::Value, source_pack: &str) -> Option<RawEnt
         source_pack: Some(source_pack.to_string()),
         raw_json,
         source_name,
+        creature_type,
     })
 }
 
