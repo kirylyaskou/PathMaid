@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, X, User, Skull } from 'lucide-react'
+import { GripVertical, X, User, Skull, AlertTriangle, Dices } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
+import { toast } from 'sonner'
+import { rollDice } from '@engine'
+import { useCombatantStore } from '@/entities/combatant'
 import type { Combatant } from '@/entities/combatant'
 import type { ActiveCondition } from '@/entities/condition'
 
@@ -23,16 +27,58 @@ export function InitiativeRow({
   onSelect,
   onRemove,
 }: InitiativeRowProps) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState('')
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: combatant.id, data: { combatant } })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
+  const style = { transform: CSS.Transform.toString(transform), transition }
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
   const stunnedCondition = conditions.find((c) => c.slug === 'stunned' && (c.value ?? 0) > 0) ?? null
+
+  function reorderAfterChange(id: string, newValue: number) {
+    const store = useCombatantStore.getState()
+    const sorted = store.combatants
+      .map((c) => (c.id === id ? { ...c, initiative: newValue } : c))
+      .sort((a, b) => b.initiative - a.initiative)
+      .map((c) => c.id)
+    store.reorderInitiative(sorted)
+  }
+
+  function startEdit(e: React.MouseEvent) {
+    e.stopPropagation()
+    setIsEditing(true)
+    setEditValue(String(combatant.initiative))
+  }
+
+  function saveEdit() {
+    const val = parseInt(editValue, 10)
+    const newVal = isNaN(val) ? combatant.initiative : val
+    useCombatantStore.getState().setInitiative(combatant.id, newVal)
+    reorderAfterChange(combatant.id, newVal)
+    setIsEditing(false)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') saveEdit()
+    else if (e.key === 'Escape') setIsEditing(false)
+  }
+
+  function handleHazardRoll(e: React.MouseEvent) {
+    e.stopPropagation()
+    const bonus = combatant.initiativeBonus ?? 0
+    const formula = bonus !== 0 ? `1d20${bonus > 0 ? '+' : ''}${bonus}` : '1d20'
+    const roll = rollDice(formula)
+    useCombatantStore.getState().setInitiative(combatant.id, roll.total)
+    reorderAfterChange(combatant.id, roll.total)
+    const face = roll.dice[0]?.value ?? roll.total
+    const msg = bonus !== 0
+      ? `${combatant.displayName}: rolled ${roll.total} (d20=${face} + ${bonus})`
+      : `${combatant.displayName}: rolled ${roll.total} (d20=${face})`
+    toast(msg)
+  }
 
   return (
     <div
@@ -56,13 +102,46 @@ export function InitiativeRow({
         <GripVertical className="w-3.5 h-3.5" />
       </button>
 
-      <span className="text-xs font-mono text-muted-foreground w-6 text-right shrink-0">
-        {combatant.initiative}
-      </span>
+      {combatant.isHazard && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-5 w-5 text-amber-500 hover:text-amber-400 shrink-0"
+          onClick={handleHazardRoll}
+          aria-label={`Roll initiative for ${combatant.displayName}`}
+        >
+          <Dices className="w-3 h-3" />
+        </Button>
+      )}
+
+      <div className="w-12 shrink-0 flex justify-end">
+        {isEditing ? (
+          <input
+            type="number"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={saveEdit}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+            aria-label="Edit initiative"
+            className="w-12 text-center text-sm font-mono bg-transparent border rounded px-1 ring-1 ring-ring outline-none"
+          />
+        ) : (
+          <span
+            className="text-xs font-mono text-muted-foreground text-right cursor-pointer hover:underline"
+            onClick={startEdit}
+          >
+            {combatant.initiative}
+          </span>
+        )}
+      </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          {combatant.isNPC ? (
+          {combatant.isHazard ? (
+            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+          ) : combatant.isNPC ? (
             <Skull className="w-3 h-3 text-destructive/60 shrink-0" />
           ) : (
             <User className="w-3 h-3 text-primary/60 shrink-0" />

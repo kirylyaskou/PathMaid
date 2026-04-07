@@ -719,6 +719,17 @@ Plans:
 
 ## Backlog
 
+### Phase 999.2: Визуальное улучшение PC Sheet — Feats & Class Features (BACKLOG)
+
+**Goal:** Привести внешний вид вкладки Feats/Class Features в PC Sheet к стилю NPC stat block. Переосмыслить компоновку: убрать дублирование UI, возможно переработать отдельные вкладки листа персонажа под общий визуальный язык приложения.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
+---
+
 ### Phase 999.1: Stat block card in combat tracker (FULFILLED)
 
 **Goal:** Integrate the bestiary stat block card into the combat tracker — clicking a combatant in the tracker opens the same full stat block (with MAP, IWR, abilities, etc.) that's shown in the bestiary browser
@@ -753,8 +764,8 @@ Plans:
 
 - [x] **Phase 42: PC Data Pipeline** — SQLite `characters` table, Pathbuilder JSON parser, HP calculation, `shared/api/characters.ts` (completed 2026-04-05)
 - [x] **Phase 43: Characters Page** — `/characters` route, CharactersList, import dialog (file + paste), delete, Add to Combat (completed 2026-04-06)
-- [ ] **Phase 44: PC Sheet** — Core stats, skills, equipment, spellcasting, feats/specials, DM notes
-- [ ] **Phase 45: Combat Integration** — PC in combat tracker with HP badge, AC, conditions, PC marker — no overrides
+- [x] **Phase 44: PC Sheet** — Core stats, skills, equipment, spellcasting, feats/specials, DM notes (completed 2026-04-06)
+- [x] **Phase 45: Combat Integration** — PC in combat tracker with HP badge, AC, conditions, PC marker — no overrides (completed 2026-04-06)
 
 ### Phase 42: PC Data Pipeline
 **Goal**: Pathbuilder 2e JSON is fully parsed and stored in SQLite — characters table with raw JSON + indexed fields, HP calculation utility, all CRUD operations via shared/api/characters.ts
@@ -790,7 +801,7 @@ Plans:
   4. Spellcasting panel shows each caster entry with tradition/type, spells grouped by level, focus cantrips/spells
   5. Feats & Features panel shows feats list (with type and level) and class specials
   6. DM notes field is editable inline and saves on blur/enter — persists to SQLite
-**Plans:** TBD
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 ### Phase 45: Combat Integration
@@ -801,7 +812,7 @@ Plans:
   1. PC added to combat tracker appears with calculated max HP, AC displayed, PC badge visually distinct from NPC rows
   2. PC participates in turn order, HP/tempHP controls work identically to NPC, conditions can be added/removed
   3. No encounter override UI appears for PCs — no spell slot tracking, no item override buttons
-**Plans:** TBD
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 ## Progress (v1.0.0)
@@ -810,8 +821,8 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 42. PC Data Pipeline | v1.0.0 | 2/2 | Complete    | 2026-04-05 |
 | 43. Characters Page | v1.0.0 | 1/1 | Complete    | 2026-04-06 |
-| 44. PC Sheet | v1.0.0 | 0/? | Planned | — |
-| 45. Combat Integration | v1.0.0 | 0/? | Planned | — |
+| 44. PC Sheet | v1.0.0 | 3/3 | Complete    | 2026-04-06 |
+| 45. Combat Integration | v1.0.0 | 3/3 | Complete    | 2026-04-06 |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
