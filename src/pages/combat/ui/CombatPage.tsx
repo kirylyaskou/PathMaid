@@ -22,6 +22,9 @@ import { useCombatantStore } from '@/entities/combatant'
 import { CreatureStatBlock, fetchCreatureStatBlockData, toCreature, extractIwr } from '@/entities/creature'
 import type { CreatureStatBlockData, WeakEliteTier } from '@/entities/creature'
 import { getHpAdjustment } from '@engine'
+import type { PathbuilderBuild } from '@engine'
+import { PCCombatCard } from '@/features/characters'
+import { getCharacterById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
 import { EncounterTabBar } from './EncounterTabBar'
@@ -208,6 +211,9 @@ export function CombatPage() {
   const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
+  const [selectedPcBuild, setSelectedPcBuild] = useState<PathbuilderBuild | null>(null)
+  const [pcBuildLoading, setPcBuildLoading] = useState(false)
+  const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
 
   const pendingPersistentDamage = useCombatTrackerStore((s) => s.pendingPersistentDamage)
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
@@ -251,35 +257,63 @@ export function CombatPage() {
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
 
-    // Read combatants directly from the store (not the closed-over snapshot) so
-    // that in split mode — where setActiveTab may have just swapped global store
-    // contents — we look up the combatant in the freshly-restored encounter data.
     const combatant = useCombatantStore.getState().combatants.find((c) => c.id === id)
-    if (!combatant?.isNPC || !combatant.creatureRef) return
+    if (!combatant) return
 
-    // Cache hit
-    const cached = statBlockCache.current.get(combatant.creatureRef)
-    if (cached) {
-      setLastNpcStatBlock(cached)
+    // Branch: NPC — load stat block
+    if (combatant.isNPC && combatant.creatureRef) {
+      setSelectedPcBuild(null)
+      const cached = statBlockCache.current.get(combatant.creatureRef)
+      if (cached) {
+        setLastNpcStatBlock(cached)
+        return
+      }
+      setStatBlockLoading(true)
+      try {
+        const data = await fetchCreatureStatBlockData(combatant.creatureRef)
+        if (data) {
+          if (statBlockCache.current.size >= 10) {
+            const firstKey = statBlockCache.current.keys().next().value
+            if (firstKey !== undefined) statBlockCache.current.delete(firstKey)
+          }
+          statBlockCache.current.set(combatant.creatureRef, data)
+          setLastNpcStatBlock(data)
+        }
+      } finally {
+        setStatBlockLoading(false)
+      }
       return
     }
 
-    // Cache miss — fetch from SQLite
-    setStatBlockLoading(true)
-    try {
-      const data = await fetchCreatureStatBlockData(combatant.creatureRef)
-      if (data) {
-        // Keep cache bounded to last 10 entries
-        if (statBlockCache.current.size >= 10) {
-          const firstKey = statBlockCache.current.keys().next().value
-          if (firstKey !== undefined) statBlockCache.current.delete(firstKey)
-        }
-        statBlockCache.current.set(combatant.creatureRef, data)
-        setLastNpcStatBlock(data)
+    // Branch: PC — load PathbuilderBuild
+    if (!combatant.isNPC && !combatant.isHazard && combatant.creatureRef) {
+      setLastNpcStatBlock(null)
+      const cached = pcBuildCache.current.get(combatant.creatureRef)
+      if (cached) {
+        setSelectedPcBuild(cached)
+        return
       }
-    } finally {
-      setStatBlockLoading(false)
+      setPcBuildLoading(true)
+      try {
+        const character = await getCharacterById(combatant.creatureRef)
+        if (character) {
+          const build = JSON.parse(character.rawJson) as PathbuilderBuild
+          if (pcBuildCache.current.size >= 10) {
+            const firstKey = pcBuildCache.current.keys().next().value
+            if (firstKey !== undefined) pcBuildCache.current.delete(firstKey)
+          }
+          pcBuildCache.current.set(combatant.creatureRef, build)
+          setSelectedPcBuild(build)
+        }
+      } catch {
+        // rawJson parse failure — leave selectedPcBuild null
+      } finally {
+        setPcBuildLoading(false)
+      }
+      return
     }
+
+    // Branch: Hazard — leave right panel sticky (no update)
   }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -446,7 +480,14 @@ export function CombatPage() {
             {/* Right panel — Creature stat card */}
             <ResizablePanel defaultSize={40} minSize={28}>
               <div className="h-full overflow-y-auto">
-                {lastNpcStatBlock ? (
+                {/* PC selected */}
+                {selectedPcBuild && selectedId && (() => {
+                  const c = combatants.find((x) => x.id === selectedId)
+                  return c ? <PCCombatCard build={selectedPcBuild} combatant={c} /> : null
+                })()}
+
+                {/* NPC selected */}
+                {!selectedPcBuild && lastNpcStatBlock && (
                   <CreatureStatBlock
                     creature={lastNpcStatBlock}
                     className="rounded-none border-x-0 border-t-0"
@@ -456,16 +497,20 @@ export function CombatPage() {
                         : undefined
                     }
                   />
-                ) : (
+                )}
+
+                {/* Loading */}
+                {(statBlockLoading || pcBuildLoading) && !lastNpcStatBlock && !selectedPcBuild && (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                  </div>
+                )}
+
+                {/* Empty */}
+                {!selectedPcBuild && !lastNpcStatBlock && !statBlockLoading && !pcBuildLoading && (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
-                    {statBlockLoading ? (
-                      <p className="text-sm">Loading...</p>
-                    ) : (
-                      <>
-                        <Shield className="w-8 h-8 opacity-30" />
-                        <p className="text-sm">Select a creature to view its stat block</p>
-                      </>
-                    )}
+                    <Shield className="w-8 h-8 opacity-30" />
+                    <p className="text-sm">Select a creature to view its stat block</p>
                   </div>
                 )}
               </div>
