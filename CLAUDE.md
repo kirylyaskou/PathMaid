@@ -1,4 +1,4 @@
-# Pathbuddy — Claude Instructions
+# PathMaid — Claude Instructions
 
 ## Project
 PF2e (Pathfinder 2e) DM Assistant. Tauri 2 desktop app.
@@ -20,11 +20,10 @@ node "C:/Users/kiryl/.claude/get-shit-done/bin/gsd-tools.cjs" <command>
 ```
 Agents live at: `C:/Users/kiryl/.claude/agents/`
 
-### No subagents
-`parallelization` is set to `false` in `.planning/config.json`.
-- Run GSD workflows **inline** — do not spawn subagents/Task() calls
-- Use `--interactive` flag for `execute-phase`
-- If a workflow step says "spawn researcher" → execute that logic directly in current context
+### Subagents
+`parallelization` is set to `true` in `.planning/config.json`.
+- GSD workflows spawn subagents/Task() calls normally
+- Do **not** use `--interactive` flag unless explicitly requested
 
 ### Model preferences
 - **Planning** (`plan-phase`, `write-plan`, `brainstorming`): Opus
