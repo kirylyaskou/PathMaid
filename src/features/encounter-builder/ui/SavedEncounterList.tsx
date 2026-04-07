@@ -42,11 +42,12 @@ export function SavedEncounterList() {
         </span>
         <Button
           variant="ghost"
-          size="icon"
-          className="w-5 h-5"
+          size="sm"
+          className="h-7 text-xs"
           onClick={() => setIsCreating(true)}
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3 h-3 mr-1" />
+          New Encounter
         </Button>
       </div>
 
@@ -70,7 +71,7 @@ export function SavedEncounterList() {
         {encounters.length === 0 && !isCreating ? (
           <div className="flex flex-col items-center justify-center h-32 gap-1 text-muted-foreground">
             <p className="text-sm">No saved encounters</p>
-            <p className="text-xs">Press + to create your first encounter.</p>
+            <p className="text-xs">Click "New Encounter" to create your first encounter.</p>
           </div>
         ) : (
           <div className="p-1 space-y-0.5">
