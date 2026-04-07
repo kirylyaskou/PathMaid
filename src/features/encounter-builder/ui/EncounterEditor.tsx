@@ -165,14 +165,17 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
 
           {combatants.map((c) => {
             const effectivePartyLevel = partyLevel
+            const isPC = !c.isNPC
+            const isHazard = c.isHazard === true
             const adjustedLevel =
               c.weakEliteTier === 'elite' ? c.creatureLevel + 1
               : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
               : c.creatureLevel
-            const isHazard = c.isHazard === true
-            const xpResult = isHazard
-              ? getHazardXp(c.creatureLevel, effectivePartyLevel, 'simple')
-              : calculateCreatureXP(adjustedLevel, effectivePartyLevel)
+            const xpResult = isPC
+              ? null
+              : isHazard
+                ? getHazardXp(c.creatureLevel, effectivePartyLevel, 'simple')
+                : calculateCreatureXP(adjustedLevel, effectivePartyLevel)
 
             return (
               <div
@@ -180,14 +183,16 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-md group ${
                   isHazard
                     ? 'border-l-2 border-amber-600/60 bg-amber-950/30 hover:bg-amber-950/50'
-                    : 'bg-secondary/30 hover:bg-secondary/50'
+                    : isPC
+                      ? 'border-l-2 border-blue-600/40 bg-blue-950/20 hover:bg-blue-950/30'
+                      : 'bg-secondary/30 hover:bg-secondary/50'
                 }`}
               >
                 {isHazard && (
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 )}
-                <LevelBadge level={adjustedLevel} size="sm" />
-                {!isHazard && c.weakEliteTier !== 'normal' && (
+                <LevelBadge level={c.creatureLevel} size="sm" />
+                {!isHazard && !isPC && c.weakEliteTier !== 'normal' && (
                   <span
                     className={`text-[10px] px-1 rounded ${
                       c.weakEliteTier === 'elite'
@@ -199,9 +204,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
                   </span>
                 )}
                 <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
-                {xpResult.xp != null
-                  ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
-                  : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
+                {isPC
+                  ? <span className="text-xs text-blue-400/70">PC</span>
+                  : xpResult?.xp != null
+                    ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
+                    : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
                 }
                 <Button
                   variant="ghost"

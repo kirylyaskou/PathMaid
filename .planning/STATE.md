@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: — PC Import (Pathbuilder 2e)
 status: executing
-stopped_at: Phase 45 context gathered
-last_updated: "2026-04-06T23:02:18.312Z"
-last_activity: 2026-04-06
+stopped_at: Phase 46 UI-SPEC approved
+last_updated: "2026-04-07T13:21:32.372Z"
+last_activity: 2026-04-07
 progress:
   total_phases: 46
   completed_phases: 24
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-05)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 45 — combat-integration
+**Current focus:** Phase 46 — pc-combat-polish
 
 ## Current Position
 
 Phase: 999.1
 Plan: Not started
-Status: Executing Phase 45
-Last activity: 2026-04-06
+Status: Executing Phase 46
+Last activity: 2026-04-07
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 63
+- Total plans completed: 67
 - Average duration: —
 - Total execution time: —
 
@@ -48,6 +48,7 @@ Progress: [░░░░░░░░░░] 0%
 | 43 | 1 | - | - |
 | 44 | 3 | - | - |
 | 45 | 3 | - | - |
+| 46 | 4 | - | - |
 
 ## Accumulated Context
 
@@ -138,6 +139,7 @@ Key decisions carrying forward from prior milestones:
 - v0.8.5 started 2026-04-02, completed 2026-04-02: Actions Reference
 - Phase 35 added 2026-04-04: UX Polish + Starfinder Purge + Encounter Tabs
 - Phase 40 added 2026-04-04: Dice Rolls Extended (skills/DC/spells/items clickable + history context + drawer right)
+- Phase 46 added 2026-04-07: PC Combat Polish — PC tab, character card in right panel, initiative fix, combat/encounter filters, hazard initiative roll
 
 ### Pending Todos
 
@@ -156,6 +158,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T22:43:40.300Z
-Stopped at: Phase 45 context gathered
+Last session: 2026-04-07T09:19:42.549Z
+Stopped at: Phase 46 UI-SPEC approved
 Next step: /gsd-discuss-phase 42

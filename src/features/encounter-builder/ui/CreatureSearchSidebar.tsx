@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search } from 'lucide-react'
+import { Search, UserPlus } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { CreatureCard, toCreature } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
-import { searchCreatures, fetchCreatures, searchHazards, getAllHazards } from '@/shared/api'
-import type { CreatureRow, HazardRow } from '@/shared/api'
+import { searchCreatures, fetchCreatures, searchHazards, getAllHazards, getAllCharacters } from '@/shared/api'
+import type { CreatureRow, HazardRow, CharacterRecord } from '@/shared/api'
 import { useEncounterBuilderStore } from '../model/store'
 import { getHpAdjustment, getStatAdjustment } from '@engine'
 
-type SidebarTab = 'creatures' | 'hazards'
+type SidebarTab = 'creatures' | 'hazards' | 'characters'
 
 const TIERS: { value: WeakEliteTier; label: string }[] = [
   { value: 'weak', label: 'Weak' },
@@ -22,6 +22,7 @@ const TIERS: { value: WeakEliteTier; label: string }[] = [
 interface CreatureSearchSidebarProps {
   onAddCreature?: (row: CreatureRow, tier: WeakEliteTier) => void
   onAddHazard?: (hazard: HazardRow) => void
+  onAddCharacter?: (character: CharacterRecord) => void
 }
 
 function DraggableCreatureRow({
@@ -62,7 +63,7 @@ function DraggableHazardRow({
   )
 }
 
-export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSearchSidebarProps = {}) {
+export function CreatureSearchSidebar({ onAddCreature, onAddHazard, onAddCharacter }: CreatureSearchSidebarProps = {}) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('creatures')
   const [query, setQuery] = useState('')
 
@@ -74,6 +75,10 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
   // Hazard state
   const [hazardResults, setHazardResults] = useState<HazardRow[]>([])
   const [hazardLoading, setHazardLoading] = useState(false)
+
+  // Character state
+  const [characters, setCharacters] = useState<CharacterRecord[]>([])
+  const [characterLoadError, setCharacterLoadError] = useState(false)
 
   const addCreatureToDraft = useEncounterBuilderStore((s) => s.addCreatureToDraft)
   const addHazardToDraft = useEncounterBuilderStore((s) => s.addHazardToDraft)
@@ -115,6 +120,14 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
     const timer = setTimeout(search, 200)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [query, activeTab])
+
+  // Character loading
+  useEffect(() => {
+    if (activeTab !== 'characters') return
+    getAllCharacters()
+      .then(setCharacters)
+      .catch(() => setCharacterLoadError(true))
+  }, [activeTab])
 
   // Reset tier on query change
   useEffect(() => {
@@ -184,18 +197,30 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
           >
             Hazards
           </button>
+          <button
+            onClick={() => handleTabChange('characters')}
+            className={`flex-1 py-1 text-xs rounded font-semibold transition-colors ${
+              activeTab === 'characters'
+                ? 'bg-secondary text-foreground'
+                : 'text-muted-foreground hover:bg-secondary/50'
+            }`}
+          >
+            Characters
+          </button>
         </div>
 
-        {/* Search input */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={activeTab === 'creatures' ? 'Search creatures...' : 'Search hazards...'}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        {/* Search input — creatures and hazards only */}
+        {activeTab !== 'characters' && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={activeTab === 'creatures' ? 'Search creatures...' : 'Search hazards...'}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+        )}
 
         {/* Tier selector — creatures only */}
         {activeTab === 'creatures' && (
@@ -260,6 +285,36 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
                   </DraggableCreatureRow>
                 )
               })}
+            </>
+          )}
+
+          {/* Character results */}
+          {activeTab === 'characters' && (
+            <>
+              {characterLoadError && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Could not load characters. Check the Characters page.
+                </p>
+              )}
+              {!characterLoadError && characters.length === 0 && (
+                <div className="text-center py-4 space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">No characters</p>
+                  <p className="text-xs text-muted-foreground/70">Add characters on the Characters page.</p>
+                </div>
+              )}
+              {characters.map((character) => (
+                <div
+                  key={character.id}
+                  onClick={() => onAddCharacter?.(character)}
+                  className="flex items-center gap-2 px-2 py-1 rounded hover:bg-secondary/50 cursor-pointer"
+                >
+                  <UserPlus className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium flex-1 truncate">{character.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {character.class ?? '—'} {character.level ?? '?'}
+                  </span>
+                </div>
+              ))}
             </>
           )}
 

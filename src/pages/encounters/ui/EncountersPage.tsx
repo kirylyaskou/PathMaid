@@ -15,9 +15,10 @@ import {
   CreatureSearchSidebar,
 } from '@/features/encounter-builder'
 import { loadEncounterCombatants, saveEncounterCombatants } from '@/shared/api'
-import type { CreatureRow, HazardRow, EncounterCombatantRow } from '@/shared/api'
+import type { CreatureRow, HazardRow, EncounterCombatantRow, CharacterRecord } from '@/shared/api'
 import type { WeakEliteTier } from '@/entities/creature'
-import { calculateXP, getHpAdjustment } from '@engine'
+import { calculateXP, getHpAdjustment, calculatePCMaxHP } from '@engine'
+import type { PathbuilderBuild } from '@engine'
 import { CreatureCard, toCreature } from '@/entities/creature'
 
 type DragData =
@@ -83,12 +84,14 @@ export function EncountersPage() {
 
   // XP Budget: compute from selected encounter's combatants (hazards use base level)
   const selectedEncounter = encounters.find((e) => e.id === selectedId)
-  const adjustedLevels = selectedEncounter?.combatants.map((c) =>
-    c.isHazard ? c.creatureLevel
-    : c.weakEliteTier === 'elite' ? c.creatureLevel + 1
-    : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
-    : c.creatureLevel
-  ) ?? []
+  const adjustedLevels = selectedEncounter?.combatants
+    .filter((c) => c.isNPC)
+    .map((c) =>
+      c.isHazard ? c.creatureLevel
+      : c.weakEliteTier === 'elite' ? c.creatureLevel + 1
+      : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
+      : c.creatureLevel
+    ) ?? []
   const totalXp = selectedEncounter
     ? calculateXP(adjustedLevels, [], partyLevel, partySize).totalXp
     : 0
@@ -199,6 +202,64 @@ export function EncountersPage() {
     })))
   }
 
+  // Add character to currently selected encounter
+  async function handleAddCharacter(character: CharacterRecord) {
+    if (!selectedId) return
+    const enc = encounters.find((e) => e.id === selectedId)
+    if (!enc) return
+
+    let maxHp = 0
+    try {
+      const build = JSON.parse(character.rawJson) as PathbuilderBuild
+      maxHp = calculatePCMaxHP(build)
+    } catch {
+      // leave maxHp = 0
+    }
+
+    const newRow: EncounterCombatantRow = {
+      id: crypto.randomUUID(),
+      encounterId: selectedId,
+      creatureRef: character.id,
+      displayName: character.name,
+      initiative: 0,
+      hp: maxHp,
+      maxHp,
+      tempHp: 0,
+      isNPC: false,
+      weakEliteTier: 'normal',
+      creatureLevel: character.level ?? 1,
+      sortOrder: enc.combatants.length,
+      isHazard: false,
+      hazardRef: null,
+    }
+
+    const updatedRows: EncounterCombatantRow[] = [
+      ...enc.combatants.map((c, i) => ({
+        id: c.id,
+        encounterId: c.encounterId,
+        creatureRef: c.creatureRef,
+        displayName: c.displayName,
+        initiative: c.initiative,
+        hp: c.hp,
+        maxHp: c.maxHp,
+        tempHp: c.tempHp,
+        isNPC: c.isNPC,
+        weakEliteTier: c.weakEliteTier,
+        creatureLevel: c.creatureLevel,
+        sortOrder: i,
+        isHazard: c.isHazard ?? false,
+        hazardRef: c.hazardRef ?? null,
+      })),
+      newRow,
+    ]
+
+    await saveEncounterCombatants(selectedId, updatedRows)
+    setEncounterCombatants(selectedId, updatedRows.map((r) => ({
+      ...r,
+      weakEliteTier: r.weakEliteTier as 'normal' | 'weak' | 'elite',
+    })))
+  }
+
   function handleDragStart(event: DragStartEvent) {
     setActiveDragData(event.active.data.current as DragData)
   }
@@ -239,6 +300,7 @@ export function EncountersPage() {
             <CreatureSearchSidebar
               onAddCreature={handleAddCreature}
               onAddHazard={handleAddHazard}
+              onAddCharacter={handleAddCharacter}
             />
           </ResizablePanel>
 
