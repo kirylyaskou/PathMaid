@@ -14,6 +14,7 @@ import { getCreatureCount, getSpellCount, getItemCount, getHazardCount } from '@
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
+import { MascotHex } from '@/shared/ui/mascot-hex'
 import type { Combatant } from '@/entities/combatant'
 import type { Encounter } from '@/entities/encounter'
 import type { ActiveCondition } from '@/entities/condition'
@@ -215,7 +216,7 @@ function EncountersCard({ encounters, onNavigate }: EncountersCardProps) {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
-          <AlertTriangle className="w-8 h-8 opacity-30" />
+          <MascotHex size={80} />
           <p className="text-sm">No saved encounters</p>
           <Button variant="outline" size="sm" className="mt-1 text-xs" onClick={onNavigate}>
             Create Encounter
