@@ -18,6 +18,7 @@ import { loadEncounterCombatants, saveEncounterCombatants } from '@/shared/api'
 import type { CreatureRow, HazardRow, EncounterCombatantRow } from '@/shared/api'
 import type { WeakEliteTier } from '@/entities/creature'
 import { calculateXP, getHpAdjustment } from '@engine'
+import type { HazardType } from '@engine'
 import { CreatureCard, toCreature } from '@/entities/creature'
 
 type DragData =
@@ -69,6 +70,7 @@ export function EncountersPage() {
         sortOrder: r.sortOrder,
         isHazard: r.isHazard,
         hazardRef: r.hazardRef,
+        hazardType: r.hazardType,
       })))
     })
   }, [selectedId, encounters, setEncounterCombatants])
@@ -81,16 +83,20 @@ export function EncountersPage() {
     )
   }
 
-  // XP Budget: compute from selected encounter's combatants (hazards use base level)
+  // XP Budget: compute from selected encounter's combatants
   const selectedEncounter = encounters.find((e) => e.id === selectedId)
-  const adjustedLevels = selectedEncounter?.combatants.map((c) =>
-    c.isHazard ? c.creatureLevel
-    : c.weakEliteTier === 'elite' ? c.creatureLevel + 1
-    : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
-    : c.creatureLevel
-  ) ?? []
+  const creatureLevels = selectedEncounter?.combatants
+    .filter((c) => !c.isHazard)
+    .map((c) =>
+      c.weakEliteTier === 'elite' ? c.creatureLevel + 1
+      : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
+      : c.creatureLevel
+    ) ?? []
+  const hazardEntries = selectedEncounter?.combatants
+    .filter((c) => c.isHazard === true)
+    .map((c) => ({ level: c.creatureLevel, type: (c.hazardType ?? 'simple') as HazardType })) ?? []
   const totalXp = selectedEncounter
-    ? calculateXP(adjustedLevels, [], partyLevel, partySize).totalXp
+    ? calculateXP(creatureLevels, hazardEntries, partyLevel, partySize).totalXp
     : 0
   const xpPartySize = partySize
 

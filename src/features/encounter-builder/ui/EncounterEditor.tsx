@@ -89,6 +89,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       sortOrder: r.sortOrder,
       isHazard: r.isHazard,
       hazardRef: r.hazardRef,
+      hazardType: r.hazardType,
     }))
     setEncounterCombatants(encounterId, updated)
     if (encounter) {
@@ -171,7 +172,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
               : c.creatureLevel
             const isHazard = c.isHazard === true
             const xpResult = isHazard
-              ? getHazardXp(c.creatureLevel, effectivePartyLevel, 'simple')
+              ? getHazardXp(c.creatureLevel, effectivePartyLevel, c.hazardType ?? 'simple')
               : calculateCreatureXP(adjustedLevel, effectivePartyLevel)
 
             return (
