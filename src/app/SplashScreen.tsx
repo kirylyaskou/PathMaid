@@ -3,6 +3,7 @@ import { initDatabase } from '@/shared/api'
 import { useEncounterBuilderStore } from '@/features/encounter-builder'
 import { Button } from '@/shared/ui/button'
 import { AlertCircle } from 'lucide-react'
+import { MascotHex } from '@/shared/ui/mascot-hex'
 
 type SplashStatus = 'init' | 'migrating' | 'ready' | 'error'
 
@@ -38,19 +39,6 @@ const LOADING_MESSAGES = [
   "Critical failures build character. Yours and your character's.",
 ]
 
-function D20Die() {
-  return (
-    <div className="d20">
-      <div className="die">
-        {Array.from({ length: 20 }, (_, i) => (
-          <div key={i + 1} className="face">
-            <span>{i + 1}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export function SplashScreen({ onReady }: SplashScreenProps) {
   const [status, setStatus] = useState<SplashStatus>('init')
@@ -136,7 +124,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
           </div>
         ) : (
           <>
-            <D20Die />
+            <MascotHex size={160} />
             <p
               className="text-sm text-muted-foreground text-center max-w-xs transition-opacity duration-400"
               style={{ opacity: msgVisible ? 1 : 0 }}
