@@ -29,18 +29,20 @@ export function MascotHex({ size, className }: MascotHexProps) {
       className={cn('animate-mascot-sway', className)}
       style={{ width: size, height: size, position: 'relative' }}
     >
-      <img
-        src={`/mascot/maid_${gifIndex}.gif`}
-        alt="PathMaid mascot"
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-      />
+      {/* Soft black blob — seamless integration into dark background */}
       <div
         style={{
           position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(ellipse at center, transparent 40%, var(--background) 78%)',
-          pointerEvents: 'none',
+          inset: '-28%',
+          background: 'black',
+          borderRadius: '42% 58% 55% 45% / 52% 44% 56% 48%',
+          filter: 'blur(28px)',
         }}
+      />
+      <img
+        src={`/mascot/maid_${gifIndex}.gif`}
+        alt="PathMaid mascot"
+        style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </div>
   )
