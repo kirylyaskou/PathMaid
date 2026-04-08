@@ -124,7 +124,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
           </div>
         ) : (
           <>
-            <MascotHex size={160} />
+            <MascotHex size={320} />
             <p
               className="text-sm text-muted-foreground text-center max-w-xs transition-opacity duration-400"
               style={{ opacity: msgVisible ? 1 : 0 }}
