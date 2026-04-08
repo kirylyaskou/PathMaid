@@ -3,6 +3,7 @@ import { syncFoundryData, importLocalPacks, getSyncMetadata } from '@/shared/api
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'
+import { MascotHex } from '@/shared/ui/mascot-hex'
 import { RefreshCw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -102,7 +103,26 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <>
+      {syncing && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/95 backdrop-blur-sm"
+          aria-live="polite"
+          role="status"
+        >
+          <MascotHex size={160} />
+          <h2 className="text-xl font-semibold text-foreground">
+            Подготавливаем бардак
+          </h2>
+          <p className="text-sm text-muted-foreground">{stage}</p>
+          <Progress
+            value={progressPercent}
+            className="h-2 w-64"
+            aria-label="Sync progress"
+          />
+        </div>
+      )}
+      <div className="mx-auto max-w-2xl p-8">
       <h1 className="text-xl font-semibold text-foreground">Settings</h1>
       <Separator className="my-6" />
 
@@ -132,17 +152,6 @@ export function SettingsPage() {
           </Button>
         </div>
 
-        {syncing && stage && (
-          <div className="mt-4 space-y-2" aria-live="polite">
-            <Progress
-              value={progressPercent}
-              className="h-2 w-full"
-              aria-label="Sync progress"
-            />
-            <p className="text-sm text-muted-foreground">{stage}</p>
-          </div>
-        )}
-
         <p className="mt-4 text-sm text-muted-foreground">
           {lastSync && entityCount
             ? `Last synced: ${formatDate(lastSync)} — ${Number(entityCount).toLocaleString()} entities`
@@ -150,5 +159,6 @@ export function SettingsPage() {
         </p>
       </section>
     </div>
+    </>
   )
 }
