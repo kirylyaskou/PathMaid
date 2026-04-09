@@ -26,7 +26,7 @@ export function MascotHex({ height, className }: MascotHexProps) {
     <img
       src={`/mascot/maid_${gifIndex}.gif`}
       alt="PathMaid mascot"
-      className={cn('animate-mascot-sway', className)}
+      className={cn(className)}
       style={{ height, width: 'auto', objectFit: 'contain' }}
     />
   )
