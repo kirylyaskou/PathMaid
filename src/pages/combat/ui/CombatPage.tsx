@@ -19,9 +19,13 @@ import type { EncounterTab } from '@/features/combat-tracker'
 import { setupAutoSave, teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
 import { setupEncounterAutoSave, teardownEncounterAutoSave } from '@/features/combat-tracker/lib/encounter-persistence'
 import { useCombatantStore } from '@/entities/combatant'
+import { useEncounterStore } from '@/entities/encounter'
 import { CreatureStatBlock, fetchCreatureStatBlockData, toCreature, extractIwr } from '@/entities/creature'
 import type { CreatureStatBlockData, WeakEliteTier } from '@/entities/creature'
 import { getHpAdjustment } from '@engine'
+import type { PathbuilderBuild } from '@engine'
+import { PCCombatCard } from '@/features/characters'
+import { getCharacterById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
 import { EncounterTabBar } from './EncounterTabBar'
@@ -212,6 +216,9 @@ export function CombatPage() {
   const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
+  const [selectedPcBuild, setSelectedPcBuild] = useState<PathbuilderBuild | null>(null)
+  const [pcBuildLoading, setPcBuildLoading] = useState(false)
+  const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
 
   const pendingPersistentDamage = useCombatTrackerStore((s) => s.pendingPersistentDamage)
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
@@ -235,7 +242,7 @@ export function CombatPage() {
       const snapshot = snapshotFromGlobalStores()
       useEncounterTabsStore.getState().openTab({
         encounterId: isBacked ? cId : null,
-        name: isBacked ? 'Loaded Encounter' : 'Ad-hoc Combat',
+        name: isBacked ? (useEncounterStore.getState().encounters.find((e) => e.id === cId)?.name ?? 'Encounter') : 'Ad-hoc Combat',
         snapshot,
       })
     }
@@ -255,35 +262,63 @@ export function CombatPage() {
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
 
-    // Read combatants directly from the store (not the closed-over snapshot) so
-    // that in split mode — where setActiveTab may have just swapped global store
-    // contents — we look up the combatant in the freshly-restored encounter data.
     const combatant = useCombatantStore.getState().combatants.find((c) => c.id === id)
-    if (!combatant?.isNPC || !combatant.creatureRef) return
+    if (!combatant) return
 
-    // Cache hit
-    const cached = statBlockCache.current.get(combatant.creatureRef)
-    if (cached) {
-      setLastNpcStatBlock(cached)
+    // Branch: NPC — load stat block
+    if (combatant.isNPC && combatant.creatureRef) {
+      setSelectedPcBuild(null)
+      const cached = statBlockCache.current.get(combatant.creatureRef)
+      if (cached) {
+        setLastNpcStatBlock(cached)
+        return
+      }
+      setStatBlockLoading(true)
+      try {
+        const data = await fetchCreatureStatBlockData(combatant.creatureRef)
+        if (data) {
+          if (statBlockCache.current.size >= 10) {
+            const firstKey = statBlockCache.current.keys().next().value
+            if (firstKey !== undefined) statBlockCache.current.delete(firstKey)
+          }
+          statBlockCache.current.set(combatant.creatureRef, data)
+          setLastNpcStatBlock(data)
+        }
+      } finally {
+        setStatBlockLoading(false)
+      }
       return
     }
 
-    // Cache miss — fetch from SQLite
-    setStatBlockLoading(true)
-    try {
-      const data = await fetchCreatureStatBlockData(combatant.creatureRef)
-      if (data) {
-        // Keep cache bounded to last 10 entries
-        if (statBlockCache.current.size >= 10) {
-          const firstKey = statBlockCache.current.keys().next().value
-          if (firstKey !== undefined) statBlockCache.current.delete(firstKey)
-        }
-        statBlockCache.current.set(combatant.creatureRef, data)
-        setLastNpcStatBlock(data)
+    // Branch: PC — load PathbuilderBuild
+    if (!combatant.isNPC && !combatant.isHazard && combatant.creatureRef) {
+      setLastNpcStatBlock(null)
+      const cached = pcBuildCache.current.get(combatant.creatureRef)
+      if (cached) {
+        setSelectedPcBuild(cached)
+        return
       }
-    } finally {
-      setStatBlockLoading(false)
+      setPcBuildLoading(true)
+      try {
+        const character = await getCharacterById(combatant.creatureRef)
+        if (character) {
+          const build = JSON.parse(character.rawJson) as PathbuilderBuild
+          if (pcBuildCache.current.size >= 10) {
+            const firstKey = pcBuildCache.current.keys().next().value
+            if (firstKey !== undefined) pcBuildCache.current.delete(firstKey)
+          }
+          pcBuildCache.current.set(combatant.creatureRef, build)
+          setSelectedPcBuild(build)
+        }
+      } catch {
+        // rawJson parse failure — leave selectedPcBuild null
+      } finally {
+        setPcBuildLoading(false)
+      }
+      return
     }
+
+    // Branch: Hazard — leave right panel sticky (no update)
   }, [])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -291,7 +326,12 @@ export function CombatPage() {
     if (!over) return
 
     const overId = String(over.id)
-    const dragData = active.data.current as { type?: string; row?: import('@/shared/api').CreatureRow; tier?: WeakEliteTier } | undefined
+    const dragData = active.data.current as {
+      type?: string
+      row?: import('@/shared/api').CreatureRow
+      hazardRow?: import('@/shared/api').HazardRow
+      tier?: WeakEliteTier
+    } | undefined
 
     // Route 0: Bestiary creature add
     if (dragData?.type === 'bestiary-add' && dragData.row) {
@@ -300,12 +340,37 @@ export function CombatPage() {
       const hpDelta = getHpAdjustment(tier, creature.level)
       const adjustedHp = Math.max(1, creature.hp + hpDelta)
       const iwr = extractIwr(row)
-      const c = createCombatantFromCreature(creature.id, creature.name, creature.perception, adjustedHp, useCombatantStore.getState().combatants, creature.level)
+      const c = createCombatantFromCreature(
+        creature.id,
+        creature.name,
+        creature.perception,
+        adjustedHp,
+        useCombatantStore.getState().combatants,
+        creature.level,
+      )
       c.maxHp = adjustedHp
       c.iwrImmunities = iwr.immunities
       c.iwrWeaknesses = iwr.weaknesses
       c.iwrResistances = iwr.resistances
       useCombatantStore.getState().addCombatant(c)
+      return
+    }
+
+    // Route 0.5: Hazard add from HazardSearchPanel drag
+    if (dragData?.type === 'hazard-add' && dragData.hazardRow) {
+      const hr = dragData.hazardRow
+      useCombatantStore.getState().addCombatant({
+        id: crypto.randomUUID(),
+        creatureRef: `hazard-${hr.id}`,
+        displayName: hr.name,
+        initiative: 0,
+        hp: hr.hp ?? 0,
+        maxHp: hr.hp ?? 0,
+        tempHp: 0,
+        isNPC: false,
+        isHazard: true,
+        initiativeBonus: hr.stealth_dc ?? 0,
+      })
       return
     }
 
@@ -388,12 +453,13 @@ export function CombatPage() {
               ) : (
                 // Single column mode
                 <div className="flex flex-col h-full">
-                  {/* Center header: combat controls + add PC (share the same border-b) */}
+                  {/* Center header: combat controls + add buttons (share the same border-b) */}
                   <div className="flex items-stretch shrink-0">
                     <div className="flex-1">
                       <CombatControls />
                     </div>
-                    <div className="flex items-center px-2 border-b border-border/50">
+                    <div className="flex items-center gap-2 px-2 border-b border-border/50">
+                      <QuickAddCombatantForm mode="creature" />
                       <AddPCDialog />
                     </div>
                   </div>
@@ -427,10 +493,17 @@ export function CombatPage() {
 
             <ResizableHandle withHandle />
 
-            {/* Right panel — Creature stat card */}
+            {/* Right panel — Creature stat card / PC build */}
             <ResizablePanel defaultSize={40} minSize={28}>
               <div className="h-full overflow-y-auto">
-                {lastNpcStatBlock ? (
+                {/* PC selected */}
+                {selectedPcBuild && selectedId && (() => {
+                  const c = combatants.find((x) => x.id === selectedId)
+                  return c ? <PCCombatCard build={selectedPcBuild} combatant={c} encounterId={isEncounterBacked && combatId ? combatId : undefined} /> : null
+                })()}
+
+                {/* NPC selected */}
+                {!selectedPcBuild && lastNpcStatBlock && (
                   <CreatureStatBlock
                     creature={lastNpcStatBlock}
                     className="rounded-none border-x-0 border-t-0"
@@ -440,16 +513,20 @@ export function CombatPage() {
                         : undefined
                     }
                   />
-                ) : (
+                )}
+
+                {/* Loading */}
+                {(statBlockLoading || pcBuildLoading) && !lastNpcStatBlock && !selectedPcBuild && (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                  </div>
+                )}
+
+                {/* Empty */}
+                {!selectedPcBuild && !lastNpcStatBlock && !statBlockLoading && !pcBuildLoading && (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
-                    {statBlockLoading ? (
-                      <p className="text-sm">Loading...</p>
-                    ) : (
-                      <>
-                        <Shield className="w-8 h-8 opacity-30" />
-                        <p className="text-sm">Select a creature to view its stat block</p>
-                      </>
-                    )}
+                    <Shield className="w-8 h-8 opacity-30" />
+                    <p className="text-sm">Select a creature to view its stat block</p>
                   </div>
                 )}
               </div>

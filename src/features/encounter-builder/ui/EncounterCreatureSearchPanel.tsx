@@ -2,11 +2,24 @@ import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
-import { searchCreatures, fetchCreatures, saveEncounterCombatants } from '@/shared/api'
+import { searchCreaturesFiltered, saveEncounterCombatants } from '@/shared/api'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/select'
 import type { CreatureRow, EncounterCombatantRow } from '@/shared/api'
 import { useEncounterStore } from '@/entities/encounter'
 import type { EncounterCombatant } from '@/entities/encounter'
 import { getHpAdjustment } from '@engine'
+
+const CREATURE_TYPES = [
+  'aberration', 'animal', 'astral', 'beast', 'celestial', 'construct',
+  'dragon', 'dream', 'elemental', 'ethereal', 'fey', 'fiend', 'fungus',
+  'giant', 'humanoid', 'monitor', 'ooze', 'petitioner', 'plant', 'undead',
+] as const
 
 interface Props {
   encounterId: string
@@ -19,6 +32,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [creatureType, setCreatureType] = useState('__all__')
   const setEncounterCombatants = useEncounterStore((s) => s.setEncounterCombatants)
 
   useEffect(() => {
@@ -26,9 +40,13 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
     const run = async () => {
       setLoading(true)
       try {
-        const rows = query.trim()
-          ? await searchCreatures(query, 50)
-          : await fetchCreatures(50, 0)
+        const rows = await searchCreaturesFiltered(
+          {
+            query: query.trim() || undefined,
+            traits: creatureType !== '__all__' ? [creatureType] : undefined,
+          },
+          50
+        )
         if (!cancelled) setResults(rows)
       } finally {
         if (!cancelled) setLoading(false)
@@ -36,7 +54,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
     }
     const timer = setTimeout(run, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [query])
+  }, [query, creatureType])
 
   async function handleAdd(row: CreatureRow, tier: Tier) {
     const baseLevel = row.level ?? 0
@@ -115,6 +133,22 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
             className="pl-8 h-8 text-sm"
           />
         </div>
+      </div>
+      {/* Creature type filter */}
+      <div className="px-2 pb-1">
+        <Select value={creatureType} onValueChange={setCreatureType}>
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All types</SelectItem>
+            {CREATURE_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Results */}

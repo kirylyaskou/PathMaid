@@ -826,7 +826,7 @@ Plans:
 - [x] **Phase 49: Encounters UX Overhaul** — "New Encounter" button, extended creature filters (family/traits/source), level-sorted creature lists (completed 2026-04-08)
 - [ ] **Phase 50: Mascot Integration** — Goblin maid GIF on SplashScreen, Foundry sync overlay, and Dashboard empty state with CSS sway animation
 - [x] **Phase 51: XP Audit** — Audit XP budget and group level calculator for PF2e rules correctness (completed 2026-04-09)
-- [ ] **Phase 52: Bug Fixes** — Fix 0-initiative on encounter load after restart; dice toasts stack in column with auto-dismiss
+- [x] **Phase 52: Bug Fixes** — Fix 0-initiative on encounter load after restart; dice toasts stack in column with auto-dismiss (completed 2026-04-09)
 - [ ] **Phase 53: Code Audit** — Dead code removal, React perf patterns, FSD violation fixes, TypeScript strictness
 - [ ] **Phase 54: Linux/Android CI/CD Builds** — GitHub Actions pipelines for Linux and Android targets
 
@@ -894,7 +894,7 @@ Plans:
   2. If initiative data is missing, a re-roll prompt appears (not silent 0s)
   3. Multiple dice roll toasts stack vertically in a column without overlapping
   4. Each toast auto-dismisses after a configurable timeout (default ~4s)
-**Plans:** TBD
+**Plans:** 7/7 plans complete
 
 ### Phase 53: Code Audit
 **Goal**: Codebase is clean — dead code removed, React performance anti-patterns fixed, FSD violations resolved, TypeScript strict where feasible
@@ -939,7 +939,7 @@ Plans:
 | 49. Encounters UX Overhaul | 3/3 | Complete | 2026-04-08 |
 | 50. Mascot Integration | 2/? | In Progress | — |
 | 51. XP Audit | 3/3 | Complete    | 2026-04-09 |
-| 52. Bug Fixes | 0/? | Planned | — |
+| 52. Bug Fixes | 7/7 | Complete    | 2026-04-09 |
 | 53. Code Audit | 0/? | Planned | — |
 | 54. Linux/Android CI/CD | 0/? | Planned | — |
 

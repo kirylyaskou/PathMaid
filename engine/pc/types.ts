@@ -85,16 +85,16 @@ export interface PathbuilderBuild {
   abilities: PathbuilderAbilities
   attributes: PathbuilderAttributes
   proficiencies: PathbuilderProficiencies
-  /** Array of { name, proficiency, ability } */
-  skills: Array<{ name: string; proficiency: number; ability: string }>
+  /** Not present in actual Pathbuilder JSON — skills live in proficiencies */
+  skills?: Array<{ name: string; proficiency: number; ability: string }>
   /** Array of [name, proficiency] */
   lores: Array<[string, number]>
-  /** Array of [name, source, type, level, note] */
-  feats: Array<[string, string, string, number, string]>
-  /** Array of [name, level, note] */
-  specials: Array<[string, number, string]>
-  /** Array of [name, category, quantity] */
-  equipment: Array<[string, string, number]>
+  /** Array of [name, source, type, level, note?] */
+  feats: Array<[string, string | null, string, number, string?]>
+  /** Array of class feature names */
+  specials: string[]
+  /** Array of [name, qty, containerOrInvested?] */
+  equipment: Array<[string, number, string?]>
   spellCasters: PathbuilderSpellEntry[]
   weapons: PathbuilderWeapon[]
   armor: PathbuilderArmor[]

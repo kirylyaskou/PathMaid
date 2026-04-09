@@ -15,6 +15,7 @@ import { ChevronDown, ChevronRight, X, Backpack, Plus, Minus, HelpCircle, Search
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
+import { AbilityCard } from "@/shared/ui/ability-card"
 import type { CreatureStatBlockData } from '../model/types'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { SpellRow } from '@/entities/spell'
@@ -473,27 +474,16 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
                   >
                     {classifiedAbilities[actionTab].map((ability, i) => (
-                      <div key={`${actionTab}-${i}`} className="p-3 rounded bg-pf-parchment border-l-2 border-primary/30">
-                        <div className="flex items-center gap-2">
-                          {ability.actionCost !== undefined && ability.actionCost !== 0 && (
-                            <ActionIcon cost={ability.actionCost} className="text-lg text-primary" />
-                          )}
-                          <span className="font-semibold text-sm">{ability.name}</span>
-                        </div>
-                        <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}</p>
-                        {ability.traits && ability.traits.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {ability.traits.map((trait) => (
-                              <span
-                                key={trait}
-                                className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
-                              >
-                                {trait}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <AbilityCard
+                        key={`${actionTab}-${i}`}
+                        name={ability.name}
+                        actionCost={ability.actionCost !== 0 ? ability.actionCost : undefined}
+                        traits={ability.traits}
+                      >
+                        <p className="text-sm text-foreground/80 leading-relaxed">
+                          {highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}
+                        </p>
+                      </AbilityCard>
                     ))}
                     {classifiedAbilities[actionTab].length === 0 && (
                       <p className="text-xs text-muted-foreground italic col-span-full">No {actionTab} abilities.</p>
@@ -509,25 +499,16 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
                       >
                         {classifiedAbilities.reactions.map((ability, i) => (
-                          <div key={`react-${i}`} className="p-3 rounded bg-pf-parchment border-l-2 border-pf-blood/40">
-                            <div className="flex items-center gap-2">
-                              <ActionIcon cost="reaction" className="text-lg text-pf-blood" />
-                              <span className="font-semibold text-sm">{ability.name}</span>
-                            </div>
-                            <p className="mt-1 text-sm text-foreground/80 leading-relaxed">{highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}</p>
-                            {ability.traits && ability.traits.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {ability.traits.map((trait) => (
-                                  <span
-                                    key={trait}
-                                    className="px-1.5 py-0.5 text-[10px] rounded bg-pf-blood/10 text-pf-blood border border-pf-blood/20 uppercase tracking-wider"
-                                  >
-                                    {trait}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <AbilityCard
+                            key={`react-${i}`}
+                            name={ability.name}
+                            actionCost="reaction"
+                            traits={ability.traits}
+                          >
+                            <p className="text-sm text-foreground/80 leading-relaxed">
+                              {highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}
+                            </p>
+                          </AbilityCard>
                         ))}
                       </div>
                     </div>

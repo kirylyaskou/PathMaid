@@ -8,6 +8,8 @@ import { updateCharacterNotes } from '@/shared/api/characters'
 import type { PathbuilderBuild } from '@engine'
 import { calculatePCMaxHP } from '@engine'
 import type { PathbuilderAbilities } from '@engine'
+import { SpellInlineCard } from '@/entities/spell'
+import { FeatInlineCard } from '@/entities/feat'
 
 // ── Internal tab content stubs (filled in by Plans 02 and 03) ────────────
 
@@ -57,7 +59,9 @@ function CoreSkillsContent({ build }: { build: PathbuilderBuild }) {
     thievery: 'dex',
   }
 
-  const sortedSkills = (Array.isArray(build.skills) ? [...build.skills] : [])
+  const profs = build.proficiencies as Record<string, number>
+  const sortedSkills = Object.keys(SKILL_ABILITY)
+    .map((key) => ({ name: key.charAt(0).toUpperCase() + key.slice(1), proficiency: profs[key] ?? 0 }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   return (
@@ -162,16 +166,6 @@ function EquipmentContent({ build }: { build: PathbuilderBuild }) {
     )
   }
 
-  const inventoryByCategory = equipment.reduce<Record<string, Array<[string, string, number]>>>(
-    (acc, item) => {
-      const cat = item[1] || 'Other'
-      if (!acc[cat]) acc[cat] = []
-      acc[cat].push(item)
-      return acc
-    },
-    {}
-  )
-
   return (
     <div className="space-y-6">
 
@@ -218,18 +212,16 @@ function EquipmentContent({ build }: { build: PathbuilderBuild }) {
       {equipment.length > 0 && (
         <div>
           <h3 className="text-base font-semibold border-b border-border pb-1 mb-2">Inventory</h3>
-          <div className="space-y-3">
-            {Object.entries(inventoryByCategory).map(([cat, items]) => (
-              <div key={cat}>
-                <p className="text-xs text-muted-foreground mb-1">{cat}</p>
-                <div className="space-y-0.5 pl-2">
-                  {items.map(([name, , qty], idx) => (
-                    <div key={idx} className="text-sm flex justify-between">
-                      <span>{name}</span>
-                      {qty > 1 && <span className="text-xs text-muted-foreground">×{qty}</span>}
-                    </div>
-                  ))}
-                </div>
+          <div className="space-y-0.5">
+            {equipment.map(([name, qty, container], idx) => (
+              <div key={idx} className="text-sm flex justify-between items-baseline">
+                <span>
+                  {name}
+                  {container === 'Invested' && (
+                    <span className="ml-1 text-xs text-pf-gold">(invested)</span>
+                  )}
+                </span>
+                {qty > 1 && <span className="text-xs text-muted-foreground shrink-0 ml-2">×{qty}</span>}
               </div>
             ))}
           </div>
@@ -287,11 +279,9 @@ function SpellsContent({ build }: { build: PathbuilderBuild }) {
                   <p className="text-xs text-muted-foreground mb-1">
                     {spellLevelLabel(group.spellLevel)}
                   </p>
-                  <div className="space-y-0.5 pl-2">
-                    {group.list.map((spellName) => (
-                      <div key={spellName} className="text-sm">
-                        {spellName}
-                      </div>
+                  <div className="space-y-1">
+                    {group.list.map((name) => (
+                      <SpellInlineCard key={name} spellName={name} compact />
                     ))}
                   </div>
                 </div>
@@ -304,9 +294,13 @@ function SpellsContent({ build }: { build: PathbuilderBuild }) {
   )
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function FeatsContent({ build }: { build: PathbuilderBuild }) {
   const feats = build.feats ?? []
-  const specials = build.specials ?? []
+  const specials = (build.specials ?? []).filter(
+    (s) => s !== 'Low-Light Vision' && s !== 'Darkvision'
+  )
 
   if (feats.length === 0 && specials.length === 0) {
     return (
@@ -322,17 +316,15 @@ function FeatsContent({ build }: { build: PathbuilderBuild }) {
       {feats.length > 0 && (
         <div>
           <h3 className="text-base font-semibold mb-2">Feats</h3>
-          <div className="divide-y divide-border/50">
+          <div className="space-y-1">
             {feats.map(([name, , type, level, note], i) => (
-              <div key={i} className="py-1.5">
-                <p className="text-sm font-semibold">{name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {type} · {level}
-                </p>
-                {note && (
-                  <p className="text-xs text-muted-foreground italic pl-2 mt-0.5">{note}</p>
-                )}
-              </div>
+              <FeatInlineCard
+                key={i}
+                featName={name}
+                typeLabel={type}
+                level={level}
+                note={note && !UUID_RE.test(note) ? note : undefined}
+              />
             ))}
           </div>
         </div>
@@ -341,15 +333,9 @@ function FeatsContent({ build }: { build: PathbuilderBuild }) {
       {specials.length > 0 && (
         <div>
           <h3 className="text-base font-semibold mb-2">Class Features</h3>
-          <div className="divide-y divide-border/50">
-            {specials.map(([name, level, note], i) => (
-              <div key={i} className="py-1.5">
-                <p className="text-sm font-semibold">{name}</p>
-                <p className="text-xs text-muted-foreground">Level {level}</p>
-                {note && (
-                  <p className="text-xs text-muted-foreground italic pl-2 mt-0.5">{note}</p>
-                )}
-              </div>
+          <div className="space-y-1">
+            {specials.map((name, i) => (
+              <FeatInlineCard key={i} featName={name} />
             ))}
           </div>
         </div>
@@ -398,7 +384,7 @@ export function PCSheetPanel({ character, onClose }: PCSheetPanelProps) {
 
   return (
     <Sheet open={character !== null} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent side="right" className="w-[460px] p-0 flex flex-col gap-0">
+      <SheetContent side="right" className="w-[540px] p-0 flex flex-col gap-0">
         <SheetHeader className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
           <SheetTitle className="text-xl font-semibold text-primary">
             {character?.name ?? ''}

@@ -1,26 +1,35 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
-import { getSpellById } from '@/shared/api'
+import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
-import { stripHtml } from '@/shared/lib/html'
+import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 
 interface SpellInlineCardProps {
-  spellId: string
+  spellId?: string
+  /** Look up spell by name — used in PC sheet where only names are available */
+  spellName?: string
+  /** Hide the "Linked Spell" header — for use in spell lists */
+  compact?: boolean
 }
 
-export function SpellInlineCard({ spellId }: SpellInlineCardProps) {
+export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCardProps) {
   const [spell, setSpell] = useState<SpellRow | null | 'loading'>('loading')
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     setSpell('loading')
-    getSpellById(spellId).then(setSpell).catch(() => setSpell(null))
-  }, [spellId])
+    if (spellId) {
+      getSpellById(spellId).then(setSpell).catch(() => setSpell(null))
+    } else if (spellName) {
+      getSpellByName(spellName).then(setSpell).catch(() => setSpell(null))
+    }
+  }, [spellId, spellName])
 
   if (spell === 'loading') {
+    if (compact) return <div className="text-sm text-muted-foreground px-1 py-0.5">{spellName ?? '…'}</div>
     return (
       <div className="space-y-1">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>
@@ -30,6 +39,8 @@ export function SpellInlineCard({ spellId }: SpellInlineCardProps) {
   }
 
   if (!spell) {
+    // In compact mode just show the name as plain text (spell not in local DB)
+    if (compact) return <div className="text-sm px-1 py-0.5">{spellName}</div>
     return (
       <div className="space-y-1">
         <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>
@@ -45,7 +56,7 @@ export function SpellInlineCard({ spellId }: SpellInlineCardProps) {
 
   return (
     <div className="space-y-1">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>
+      {!compact && <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>}
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <div className={cn(
@@ -125,7 +136,7 @@ export function SpellInlineCard({ spellId }: SpellInlineCardProps) {
             {/* Description */}
             {spell.description && (
               <p className="text-xs text-foreground/75 leading-relaxed">
-                {stripHtml(spell.description)}
+                {sanitizeFoundryText(spell.description)}
               </p>
             )}
           </div>

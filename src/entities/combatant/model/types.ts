@@ -21,6 +21,10 @@ export interface Combatant {
   // Multiple Attack Penalty index for the current turn (0 = first attack, 1/2 = subsequent).
   // Resets to 0 when this combatant's turn ends.
   mapIndex?: number
+  // Hazard combatant — rendered with hazard styling, no stat block lookup.
+  isHazard?: boolean
+  // Hazard initiative bonus (e.g. stealth DC) — applied when combat starts.
+  initiativeBonus?: number
   iwrImmunities?: string[]
   iwrWeaknesses?: { type: string; value: number }[]
   iwrResistances?: { type: string; value: number }[]

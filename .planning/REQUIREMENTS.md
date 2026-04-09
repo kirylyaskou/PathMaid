@@ -1,84 +1,89 @@
-# Requirements: Pathfinder 2e DM Assistant — v1.0.0
+# Requirements: PathMaid — v1.1.0 Day-One Patch
 
-**Milestone:** PC Import (Pathbuilder 2e)
-**Created:** 2026-04-05
-**Core Value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
+**Milestone:** Day-One Patch (PathMaid rebrand + polish + fixes)
+**Created:** 2026-04-09
+**Core Value:** Feature-complete PF2e DM tool — accurate game logic engine powering a fast, well-organized React frontend with real Foundry VTT entity data.
 
 ---
 
 ## v1 Requirements
 
-### Import (PCImp) — Pathbuilder 2e JSON parsing and storage
+### Rebrand (BRAND)
 
-- [ ] **PCImp-01**: User can import a PC by uploading a Pathbuilder 2e `.json` file via file picker
-- [ ] **PCImp-02**: User can import a PC by pasting JSON text into a dialog
-- [ ] **PCImp-03**: Imported PC is stored in SQLite `characters` table with raw JSON blob + indexed fields (id, name, class, level, ancestry, created_at)
-- [ ] **PCImp-04**: Re-importing a PC with the same name updates the existing record (upsert by name)
+- [x] **BRAND-01**: App is renamed Pathbuddy → PathMaid across all configs (tauri.conf.json, package.json, DB filename, app identifier) and all UI strings — Phase 47
 
-### Characters Page (CHAR) — PC catalog and management
+### Data Quality (SANITIZE)
 
-- [ ] **CHAR-01**: User can view all imported PCs on `/characters` with name, class, level, ancestry displayed per card
-- [ ] **CHAR-02**: User can delete an imported PC from the list (with confirmation)
-- [ ] **CHAR-03**: User can add a PC to the active combat encounter directly from the Characters page
+- [x] **SANITIZE-01**: All unresolved Foundry @-tokens in entity descriptions are removed — no raw tokens visible in any UI surface — Phase 48
 
-### PC Sheet (SHEET) — Full character display
+### Encounters UX (ENC)
 
-- [ ] **SHEET-01**: User can view core stats — HP (calculated: ancestryhp + (classhp + bonushp + CON mod) × level), AC (from `acTotal`), speed, saves (fortitude/reflex/will), perception, all 6 ability scores, class/ancestry/background/heritage, level
-- [ ] **SHEET-02**: User can view all skill proficiency ranks with computed total modifiers (rank × 2 + ability mod + item bonus from `mods`)
-- [ ] **SHEET-03**: User can view equipment — worn armor (with rune notation), weapons, inventory items grouped by container
-- [ ] **SHEET-04**: User can view spellcasting — per caster entry: tradition, type (prepared/spontaneous), spell list by level, focus cantrips/spells (read-only reference, no slot tracking)
-- [ ] **SHEET-05**: User can view feats list and class features/specials
-- [ ] **SHEET-06**: User can write and save free-text DM notes per PC (stored in `characters.notes` column)
+- [x] **ENC-01**: Encounter creation uses explicit "New Encounter" button, not ambiguous "+" — Phase 49
+- [x] **ENC-02**: Creature search in encounters supports extended filters: family, traits, source — Phase 49
+- [x] **ENC-03**: Creature lists in encounter builder are sorted by level — Phase 49
 
-### Combat Integration (CMB)
+### Mascot (MASCOT)
 
-- [ ] **CMB-01**: PC added to combat tracker shows with correct calculated max HP, AC, PC badge, and class info — no encounter overrides
-- [ ] **CMB-02**: PC is tracked in combat identically to NPC (initiative, HP/tempHP, conditions, turn advancement) — no spell or item customization
+- [ ] **MASCOT-01**: Goblin maid GIF animation plays on SplashScreen (replaces D20Die), Foundry sync overlay, and Dashboard EncountersCard empty state — with CSS sway animation — Phase 50
+
+### XP Engine (XP)
+
+- [ ] **XP-01**: XP budget and group level calculator are audited and produce correct values per PF2e CRB rules for all encounter threat levels — Phase 51
+
+### Bug Fixes (BUG)
+
+- [ ] **BUG-01**: 0-initiative bug on encounter load after app restart is fixed — encounters load with correct initiative values — Phase 52
+- [ ] **DICE-01**: Dice roll toasts stack vertically in a column and auto-dismiss after timeout — no overlapping toasts — Phase 52
+
+### Code Quality (AUDIT)
+
+- [ ] **AUDIT-01**: Full code audit complete — dead code removed, React performance issues addressed, FSD violations fixed, TypeScript strictness improved — Phase 53
+
+### Platform Builds (CICD)
+
+- [ ] **CICD-01**: Linux and Android CI/CD builds work via GitHub Actions — Phase 54
 
 ## Future Requirements
 
-### v2 (deferred)
+### v1.2 (deferred)
 
-- Spell slot tracking per PC per session
-- Per-encounter PC item overrides
-- PC re-import from live Pathbuilder URL (by build ID)
-- Multiple PC sheets (dual-class full display)
+- Mascot in CombatPage empty state (openTabs.length === 0)
+- Mascot in InitiativeList empty state (combatants.length === 0)
+- Additional mascot variants per page
+- Hazard stat block in right panel when hazard selected in combat
+- Level range filter in BestiarySearchPanel
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Spell slot tracking in combat | DM tool — players track their own slots |
-| Per-encounter spell/item overrides for PC | NPC feature only; PC sheet is read-only reference |
-| Character creation/editing | Import only — Pathbuilder is the source of truth |
-| Pathbuilder API sync by ID | Requires network + auth; file/paste covers all cases |
-| Familiar/pet stat blocks | Low priority; rarely relevant in combat |
+| Custom monster creation | Import only, custom editing deferred |
+| Cloud sync | Local SQLite only |
+| Player-facing features | DM tool only |
+| Real-time multiplayer | Single-user desktop app |
+| Mobile version | Desktop-first with Tauri |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PCImp-01 | Phase 42 | Pending |
-| PCImp-02 | Phase 42 | Pending |
-| PCImp-03 | Phase 42 | Pending |
-| PCImp-04 | Phase 42 | Pending |
-| CHAR-01 | Phase 43 | Pending |
-| CHAR-02 | Phase 43 | Pending |
-| CHAR-03 | Phase 43 | Pending |
-| SHEET-01 | Phase 44 | Pending |
-| SHEET-02 | Phase 44 | Pending |
-| SHEET-03 | Phase 44 | Pending |
-| SHEET-04 | Phase 44 | Pending |
-| SHEET-05 | Phase 44 | Pending |
-| SHEET-06 | Phase 44 | Pending |
-| CMB-01 | Phase 45 | Pending |
-| CMB-02 | Phase 45 | Pending |
+| BRAND-01 | Phase 47 | Complete |
+| SANITIZE-01 | Phase 48 | Complete |
+| ENC-01 | Phase 49 | Complete |
+| ENC-02 | Phase 49 | Complete |
+| ENC-03 | Phase 49 | Complete |
+| MASCOT-01 | Phase 50 | In Progress |
+| XP-01 | Phase 51 | Pending |
+| BUG-01 | Phase 52 | Pending |
+| DICE-01 | Phase 52 | Pending |
+| AUDIT-01 | Phase 53 | Pending |
+| CICD-01 | Phase 54 | Pending |
 
 **Coverage:**
-- v1 requirements: 15 total
-- Mapped to phases: 15
+- v1 requirements: 11 total
+- Mapped to phases: 11
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after initial definition*
+*Requirements defined: 2026-04-09*
+*Last updated: 2026-04-09 after v1.1.0 milestone initialization*

@@ -9,7 +9,7 @@ import type { ConditionSlug } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
 import { cn } from '@/shared/lib/utils'
-import { stripHtml } from '@/shared/lib/html'
+import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 
 const GROUP_BADGE: Record<string, string> = {
   death:     'bg-red-900/50 text-red-300 border-red-700/40',
@@ -35,7 +35,7 @@ function ConditionDetailPanel({ row, onClose }: { row: ConditionRow | 'not-found
   const group = row.group_name ?? 'other'
   const groupColor = GROUP_BADGE[group] ?? 'bg-zinc-800/50 text-zinc-400 border-zinc-700/40'
   const overrides: string[] = row.overrides ? JSON.parse(row.overrides) : []
-  const descText = row.description ? stripHtml(row.description).slice(0, 350) : ''
+  const descText = row.description ? sanitizeFoundryText(row.description).slice(0, 350) : ''
 
   return (
     <div className="mt-2 rounded-md border border-primary/30 bg-card p-3 space-y-1.5">
