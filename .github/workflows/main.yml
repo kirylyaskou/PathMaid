@@ -9,14 +9,15 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            bundles: msi,nsis
+            args: --bundles msi,nsis
           - os: ubuntu-22.04
-            bundles: deb,appimage
+            args: --bundles deb,appimage
           - os: macos-latest
-            bundles: dmg,app
+            args: --bundles dmg,app
 
     runs-on: ${{ matrix.os }}
 
@@ -36,7 +37,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - uses: dtolnay/rust-toolchain@stable
@@ -54,6 +55,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: pathmaid ${{ github.ref_name }}
-          bundles: ${{ matrix.bundles }}
+          args: ${{ matrix.args }}
           releaseBody: ''
           releaseDraft: true
