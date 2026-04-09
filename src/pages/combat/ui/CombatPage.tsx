@@ -399,6 +399,13 @@ export function CombatPage() {
     }
   }, [combatants, reorderInitiative])
 
+  // FEAT-09: Raise Shield button only renders when the selected creature carries a shield.
+  const hasShield = Boolean(
+    lastNpcStatBlock?.equipment?.some(
+      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
+    )
+  )
+
   return (
     <div className="flex flex-col h-full">
       <PersistentDamageDialog
@@ -476,7 +483,7 @@ export function CombatPage() {
                       <div className="flex flex-col h-full">
                         {selectedId ? (
                           <div className="flex-1 min-h-0">
-                            <CombatantDetail combatantId={selectedId} />
+                            <CombatantDetail combatantId={selectedId} hasShield={hasShield} />
                           </div>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">

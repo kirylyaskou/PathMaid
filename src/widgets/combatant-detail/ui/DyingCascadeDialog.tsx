@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Skull, Dices, Keyboard } from 'lucide-react'
 import {
   Dialog,
@@ -50,15 +50,29 @@ export function DyingCascadeDialog({
 
   // Apply initial dying on open if not already dying.
   // Per CRB pg.460: dying starts at 1 + wounded value (handled via @engine pure fn).
+  // Uses a ref so we only initialize once per open session — avoids re-applying if
+  // the dialog remains open across heal+damage cycles.
+  const initializedForRef = useRef<string | null>(null)
   useEffect(() => {
-    if (open && dyingValue === 0) {
+    if (!open) {
+      initializedForRef.current = null
+      return
+    }
+    if (initializedForRef.current === combatantId) return
+    if (dyingValue === 0) {
+      // Read wounded directly from store to avoid stale closure values across multiple opens.
+      const latestWounded = useConditionStore
+        .getState()
+        .activeConditions
+        .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
       applyCondition(
         combatantId,
         'dying' as ConditionSlug,
-        getDyingValueOnKnockout(woundedValue),
+        getDyingValueOnKnockout(latestWounded),
       )
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+    initializedForRef.current = combatantId
+  }, [open, combatantId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -83,6 +97,12 @@ export function DyingCascadeDialog({
   const liveDc = 10 + dyingValue
   const dc = checkResult ? checkResult.dc : liveDc
 
+  const readLatestWounded = (): number =>
+    useConditionStore
+      .getState()
+      .activeConditions
+      .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
+
   const handleRecoveryCheck = () => {
     const roll = rollMode === 'manual' ? parseInt(manualRoll, 10) : undefined
     if (rollMode === 'manual' && (isNaN(roll!) || roll! < 1 || roll! > 20)) return
@@ -94,7 +114,7 @@ export function DyingCascadeDialog({
       setIsDead(true)
     } else if (result.stabilized) {
       // CRB pg.460: losing dying grants/increases wounded. Apply explicitly via pure fn.
-      const newWounded = getWoundedValueAfterStabilize(woundedValue)
+      const newWounded = getWoundedValueAfterStabilize(readLatestWounded())
       applyCondition(combatantId, 'wounded' as ConditionSlug, newWounded)
       removeCondition(combatantId, 'dying' as ConditionSlug)
     } else {
@@ -106,7 +126,7 @@ export function DyingCascadeDialog({
     applyCondition(
       combatantId,
       'dying' as ConditionSlug,
-      getDyingValueOnKnockout(woundedValue),
+      getDyingValueOnKnockout(readLatestWounded()),
     )
     setIsDead(false)
     setCheckResult(null)
@@ -114,7 +134,7 @@ export function DyingCascadeDialog({
 
   const handleCritKnockout = () => {
     // CRB crit rules: a crit hit that downs a target inflicts dying +2 (in addition to wounded).
-    const critDying = getDyingValueOnKnockout(woundedValue) + 1
+    const critDying = getDyingValueOnKnockout(readLatestWounded()) + 1
     applyCondition(combatantId, 'dying' as ConditionSlug, critDying)
     setCheckResult(null)
     setIsDead(false)

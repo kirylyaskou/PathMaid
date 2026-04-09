@@ -29,6 +29,7 @@ import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
 import { stripHtml } from '@/shared/lib/html'
 import { useModifiedStats, useSpellModifiers } from '@/shared/model/use-modified-stats'
 import type { StatModifierResult } from '@/shared/model/use-modified-stats'
+import { useCombatantStore } from '@/entities/combatant'
 
 export interface EncounterContext {
   encounterId: string
@@ -62,6 +63,17 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     [creature.skills],
   )
   const modStats = useModifiedStats(encounterContext?.combatantId, allStatSlugs)
+
+  // FEAT-11: per-strike MAP counter — clickable MAP numbers drive the mapIndex
+  // on the selected combatant, so strikes from the stat block roll at the correct
+  // Multiple Attack Penalty. Lives here (not in CombatantDetail) so it sits next
+  // to the attack numbers it controls.
+  const mapCombatantId = encounterContext?.combatantId
+  const mapCombatant = useCombatantStore((s) =>
+    mapCombatantId ? s.combatants.find((c) => c.id === mapCombatantId) : undefined,
+  )
+  const updateCombatantAction = useCombatantStore((s) => s.updateCombatant)
+  const currentMapIndex = mapCombatant?.mapIndex ?? 0
 
   // FEAT-04: detect troops/swarms from traits — they use a specialized layout
   // (no Strikes, collective damage in Actions, troop HP segments rendered inline).
@@ -401,14 +413,37 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         </span>
                       </div>
                     )}
-                    <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
-                      <span className="font-mono">
-                        MAP: <span className={strikeNet !== 0 ? (strikeNet < 0 ? 'text-pf-blood' : 'text-pf-threat-low') : 'text-primary'}>{fmt(modifiedMod)}</span>
-                        {' / '}
-                        <span className="text-muted-foreground">{fmt(map1)}</span>
-                        {' / '}
-                        <span className="text-muted-foreground">{fmt(map2)}</span>
-                      </span>
+                    {/* FEAT-11: MAP buttons — click to roll at that MAP and set the combatant's mapIndex */}
+                    <div className="mt-1 flex items-center gap-1.5 text-xs">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">MAP</span>
+                      {[0, 1, 2].map((i) => {
+                        const mod = i === 0 ? modifiedMod : i === 1 ? map1 : map2
+                        const title = i === 0
+                          ? `1st attack — Roll 1d20${fmt(mod)}`
+                          : i === 1
+                            ? `2nd attack (${isAgile ? '-4' : '-5'} agile/normal) — Roll 1d20${fmt(mod)}`
+                            : `3rd attack (${isAgile ? '-8' : '-10'} agile/normal) — Roll 1d20${fmt(mod)}`
+                        const active = Boolean(mapCombatantId) && currentMapIndex === i
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            title={title}
+                            onClick={() => {
+                              handleRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, `${strike.name} attack${i > 0 ? ` (MAP ${i + 1})` : ''}`)
+                              if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: i })
+                            }}
+                            className={cn(
+                              'px-1.5 py-0.5 rounded font-mono transition-colors border',
+                              active
+                                ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
+                                : 'bg-muted/30 border-border/30 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                            )}
+                          >
+                            {fmt(mod)}
+                          </button>
+                        )
+                      })}
                     </div>
                     {strike.traits.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">

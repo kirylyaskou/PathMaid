@@ -4,7 +4,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
-import { CreatureCard, toCreature } from '@/entities/creature'
+import { CreatureCard, StatBlockModal, toCreature } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
 import { searchCreatures, fetchCreatures, searchHazards, getAllHazards } from '@/shared/api'
 import type { CreatureRow, HazardRow } from '@/shared/api'
@@ -74,6 +74,9 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
   // Hazard state
   const [hazardResults, setHazardResults] = useState<HazardRow[]>([])
   const [hazardLoading, setHazardLoading] = useState(false)
+
+  // FEAT-12: clicking a creature card opens its stat block for preview (no add)
+  const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
   const addCreatureToDraft = useEncounterBuilderStore((s) => s.addCreatureToDraft)
   const addHazardToDraft = useEncounterBuilderStore((s) => s.addHazardToDraft)
@@ -244,6 +247,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
                       creature={creature}
                       compact
                       onAdd={() => handleAddCreature(row)}
+                      onClick={() => setStatBlockCreatureId(row.id)}
                     />
                     {hpDelta !== 0 && (
                       <p className="text-[10px] text-muted-foreground px-2 -mt-0.5 mb-1">
@@ -301,6 +305,13 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
           )}
         </div>
       </ScrollArea>
+
+      {/* Stat block preview modal — opens on creature card click (no add) */}
+      <StatBlockModal
+        creatureId={statBlockCreatureId}
+        open={statBlockCreatureId !== null}
+        onOpenChange={(open) => { if (!open) setStatBlockCreatureId(null) }}
+      />
     </div>
   )
 }

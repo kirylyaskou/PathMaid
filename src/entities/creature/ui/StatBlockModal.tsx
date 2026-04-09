@@ -25,7 +25,7 @@ export function StatBlockModal({ creatureId, open, onOpenChange }: StatBlockModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="!max-w-5xl w-[90vw] max-h-[90vh] overflow-y-auto p-0">
         {loading && (
           <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
         )}
