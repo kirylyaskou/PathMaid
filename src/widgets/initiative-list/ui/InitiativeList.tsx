@@ -17,15 +17,14 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
   const activeCombatantId = useCombatTrackerStore(
     useShallow((s) => s.activeCombatantId)
   )
-  const updateCombatant = useCombatantStore((s) => s.updateCombatant)
-  const { removeCombatant } = useCombatantStore()
+  const { removeCombatant, setInitiative } = useCombatantStore()
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const allZeroInit = combatants.length > 0 && combatants.every((c) => c.initiative === 0)
   const showBanner = allZeroInit && !bannerDismissed
 
   function handleRollAll() {
     combatants.forEach((c) => {
-      updateCombatant(c.id, { initiative: rollInitiative(0) })
+      setInitiative(c.id, rollInitiative(0))
     })
     setBannerDismissed(true)
   }

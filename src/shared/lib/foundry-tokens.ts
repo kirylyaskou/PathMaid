@@ -27,7 +27,10 @@ export function resolveFoundryTokens(text: string): string {
   // @Check[type:perception|dc:20] → "DC 20 perception check"
   text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
     const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
-    return `${params.dc ? `DC ${params.dc} ` : ''}${params.type ?? 'check'} check`
+    const checkType = params.type
+    return checkType
+      ? `${params.dc ? `DC ${params.dc} ` : ''}${checkType} check`
+      : `${params.dc ? `DC ${params.dc}` : 'flat check'}`
   })
   // @Template[type:cone|distance:15] → "15-foot cone"
   text = text.replace(/@Template\[([^\]]+)\]/g, (_, inner: string) => {

@@ -65,7 +65,7 @@ export async function searchSpells(
          ${tradition ? "AND s.traditions LIKE ?" : ''}
          ${traitFilter}
          ${focusFilter}
-       ORDER BY rank(matchinfo(spells_fts)) DESC
+       ORDER BY f.rank
        LIMIT 500`,
       [
         ftsQuery,

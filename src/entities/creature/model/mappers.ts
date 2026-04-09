@@ -215,9 +215,11 @@ function resolveFoundryTokens(text: string): string {
   //         @Check[type:will|dc:25] → "DC 25 Will check"
   text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
     const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
-    const type = params.type
-      ? params.type.charAt(0).toUpperCase() + params.type.slice(1)
-      : 'Unknown'
+    const rawType = params.type
+    if (!rawType) {
+      return params.dc ? `DC ${params.dc}` : 'flat check'
+    }
+    const type = rawType.charAt(0).toUpperCase() + rawType.slice(1)
     const dc = params.dc ? `DC ${params.dc} ` : ''
     return `${dc}${type} check`
   })
@@ -253,10 +255,11 @@ function resolveFoundryTokens(text: string): string {
 
 function stripHtml(html: string): string {
   return html
-    .replace(/<[^>]*>/g, '')
+    .replace(/<[^>]*>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, ' ')
     .trim()
 }
