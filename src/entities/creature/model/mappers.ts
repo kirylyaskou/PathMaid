@@ -212,10 +212,21 @@ function resolveFoundryTokens(text: string): string {
     return parts.join(' plus ')
   })
   // @Check: @Check[type:perception|dc:20] → "DC 20 Perception check"
-  //         @Check[type:will|dc:25] → "DC 25 Will check"
+  //         @Check[will|dc:25]            → "DC 25 Will check"  (Foundry positional)
+  //         @Check[dc:25]                 → "DC 25"             (no type at all)
   text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
-    const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
-    const rawType = params.type
+    const segments = inner.split('|')
+    const params: Record<string, string> = {}
+    let positionalType: string | undefined
+    for (const seg of segments) {
+      if (seg.includes(':')) {
+        const [k, v] = seg.split(':')
+        params[k] = v
+      } else if (!positionalType && seg) {
+        positionalType = seg
+      }
+    }
+    const rawType = params.type ?? positionalType
     if (!rawType) {
       return params.dc ? `DC ${params.dc}` : 'flat check'
     }
@@ -223,6 +234,10 @@ function resolveFoundryTokens(text: string): string {
     const dc = params.dc ? `DC ${params.dc} ` : ''
     return `${dc}${type} check`
   })
+  // Collapse accidental "check check" duplication left behind when the
+  // Foundry author wrote " check" after an @Check token that already
+  // renders its own "check" suffix.
+  text = text.replace(/\bcheck\s+check\b/gi, 'check')
   // @Template: @Template[type:cone|distance:15] → "15-foot cone"
   //            @Template[type:emanation|distance:30] → "30-foot emanation"
   text = text.replace(/@Template\[([^\]]+)\]/g, (_, inner: string) => {

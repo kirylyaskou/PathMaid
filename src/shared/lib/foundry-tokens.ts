@@ -24,14 +24,32 @@ export function resolveFoundryTokens(text: string): string {
       return m ? `${m[1]} ${m[2]}` : p.trim()
     }).join(' plus ')
   )
-  // @Check[type:perception|dc:20] → "DC 20 perception check"
+  // @Check[type:perception|dc:20] → "DC 20 Perception check"
+  // @Check[will|dc:17]             → "DC 17 Will check" (Foundry positional)
+  // @Check[dc:25]                  → "DC 25"            (no type)
   text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
-    const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
-    const checkType = params.type
-    return checkType
-      ? `${params.dc ? `DC ${params.dc} ` : ''}${checkType} check`
-      : `${params.dc ? `DC ${params.dc}` : 'flat check'}`
+    const segments = inner.split('|')
+    const params: Record<string, string> = {}
+    let positionalType: string | undefined
+    for (const seg of segments) {
+      if (seg.includes(':')) {
+        const [k, v] = seg.split(':')
+        params[k] = v
+      } else if (!positionalType && seg) {
+        positionalType = seg
+      }
+    }
+    const rawType = params.type ?? positionalType
+    if (!rawType) {
+      return params.dc ? `DC ${params.dc}` : 'flat check'
+    }
+    const type = rawType.charAt(0).toUpperCase() + rawType.slice(1)
+    const dc = params.dc ? `DC ${params.dc} ` : ''
+    return `${dc}${type} check`
   })
+  // Collapse accidental duplicate " check check" from source text that
+  // already had a manual " check" suffix after the token.
+  text = text.replace(/\bcheck\s+check\b/gi, 'check')
   // @Template[type:cone|distance:15] → "15-foot cone"
   text = text.replace(/@Template\[([^\]]+)\]/g, (_, inner: string) => {
     const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
