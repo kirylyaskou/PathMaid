@@ -36,6 +36,9 @@ export function advanceTurn(): void {
       combatantId: endingCombatantId,
     }
 
+    // FEAT-11: reset MAP (multiple attack penalty) when the turn ends.
+    useCombatantStore.getState().updateCombatant(endingCombatantId, { mapIndex: 0 })
+
     const changes = endTurnConditions(endingCombatantId)
     if (changes.length > 0) {
       const summary = changes

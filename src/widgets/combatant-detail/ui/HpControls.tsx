@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { cn } from '@/shared/lib/utils'
 import { useCombatantStore } from '@/entities/combatant'
 import type { Combatant } from '@/entities/combatant'
 import {
@@ -106,6 +107,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const [dyingDialogOpen, setDyingDialogOpen] = useState(false)
   const updateHp = useCombatantStore((s) => s.updateHp)
   const updateTempHp = useCombatantStore((s) => s.updateTempHp)
+  const updateCombatant = useCombatantStore((s) => s.updateCombatant)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const totalTypedDamage = damageEntries.reduce((s, e) => s + e.amount, 0)
@@ -229,11 +231,16 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
 
+  // FEAT-09: visual +2 AC bonus when the combatant is using Raise Shield.
+  const shieldBonus = combatant.shieldRaised ? 2 : 0
+  const baseAc = combatant.ac
+  const displayAc = baseAc !== undefined ? baseAc + shieldBonus : undefined
+
   return (
     <div className="space-y-3">
       {/* HP bar */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Heart className="w-4 h-4 text-destructive" />
           <span className="text-lg font-mono font-bold">
             {combatant.hp}
@@ -244,6 +251,26 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               <Shield className="w-3 h-3" />+{combatant.tempHp}
             </span>
           )}
+          <div className="flex-1" />
+          {displayAc !== undefined && (
+            <span className="text-xs font-mono text-muted-foreground">
+              AC <span className={cn('font-bold', combatant.shieldRaised ? 'text-amber-400' : 'text-foreground')}>{displayAc}</span>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => updateCombatant(combatant.id, { shieldRaised: !combatant.shieldRaised })}
+            title="Toggle Raise Shield (+2 AC)"
+            className={cn(
+              'flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors',
+              combatant.shieldRaised
+                ? 'bg-amber-700/40 text-amber-200 border border-amber-600/50'
+                : 'hover:bg-muted/50 text-muted-foreground border border-transparent',
+            )}
+          >
+            <Shield className="w-3 h-3" />
+            {combatant.shieldRaised ? 'Shield Raised' : 'Raise Shield'}
+          </button>
         </div>
         <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
           <div

@@ -1,7 +1,8 @@
-import { User, Skull } from 'lucide-react'
+import { User, Skull, RotateCcw } from 'lucide-react'
 import { Separator } from '@/shared/ui/separator'
 import { useCombatantStore } from '@/entities/combatant'
 import { useShallow } from 'zustand/react/shallow'
+import { cn } from '@/shared/lib/utils'
 import { HpControls } from './HpControls'
 import { ConditionSection } from './ConditionSection'
 
@@ -13,6 +14,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
   const combatant = useCombatantStore(
     useShallow((s) => s.combatants.find((c) => c.id === combatantId))
   )
+  const updateCombatant = useCombatantStore((s) => s.updateCombatant)
 
   if (!combatant) {
     return (
@@ -41,6 +43,38 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
             {combatant.isNPC ? ' — NPC' : ' — PC'}
           </p>
         </div>
+      </div>
+
+      {/* FEAT-11: MAP counter — 1st / 2nd / 3rd attack, resets on turn start */}
+      <div className="flex items-center gap-1 text-xs">
+        <span className="text-muted-foreground uppercase tracking-wider text-[10px]">MAP:</span>
+        {([0, 1, 2] as const).map((i) => {
+          const active = (combatant.mapIndex ?? 0) === i
+          const label = i === 0 ? '1st' : i === 1 ? '2nd (-5/-4)' : '3rd (-10/-8)'
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => updateCombatant(combatant.id, { mapIndex: i })}
+              className={cn(
+                'px-1.5 py-0.5 rounded transition-colors font-mono',
+                active
+                  ? 'bg-primary/20 text-primary font-semibold border border-primary/30'
+                  : 'hover:bg-muted/50 text-muted-foreground border border-transparent',
+              )}
+            >
+              {label}
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => updateCombatant(combatant.id, { mapIndex: 0 })}
+          title="Reset MAP"
+          className="ml-1 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RotateCcw className="w-3 h-3" />
+        </button>
       </div>
 
       <Separator />
