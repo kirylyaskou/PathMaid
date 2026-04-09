@@ -74,7 +74,27 @@ export async function searchSpells(
         ...traitParam,
       ]
     )
-    return rows
+    if (rows.length > 0) return rows
+
+    // FTS5 fallback: if the FTS index is empty/out-of-sync or the query
+    // tokenizer drops short inputs, fall back to a LIKE scan on name.
+    const likePattern = `%${query.trim().replace(/[%_]/g, '')}%`
+    return await db.select<SpellRow[]>(
+      `SELECT * FROM spells s
+       WHERE s.name LIKE ? COLLATE NOCASE
+         ${rank !== undefined ? 'AND s.rank = ?' : ''}
+         ${tradition ? "AND s.traditions LIKE ?" : ''}
+         ${traitFilter}
+         ${focusFilter}
+       ORDER BY s.rank ASC, s.name ASC
+       LIMIT 500`,
+      [
+        likePattern,
+        ...(rank !== undefined ? [rank] : []),
+        ...(tradition ? [`%"${tradition}"%`] : []),
+        ...traitParam,
+      ]
+    )
   }
 
   const rows = await db.select<SpellRow[]>(
