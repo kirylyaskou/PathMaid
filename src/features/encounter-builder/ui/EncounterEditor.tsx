@@ -116,6 +116,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       sortOrder: i,
       isHazard: c.isHazard ?? false,
       hazardRef: c.hazardRef ?? null,
+      hazardType: c.hazardType,
     }))
     await saveEncounterCombatants(encounterId, rows)
     setEncounterCombatants(encounterId, remaining.map((c, i) => ({ ...c, sortOrder: i })))

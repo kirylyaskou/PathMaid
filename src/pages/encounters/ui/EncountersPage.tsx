@@ -144,6 +144,7 @@ export function EncountersPage() {
         sortOrder: i,
         isHazard: c.isHazard ?? false,
         hazardRef: c.hazardRef ?? null,
+        hazardType: c.hazardType,
       })),
       newRow,
     ]
@@ -176,6 +177,7 @@ export function EncountersPage() {
       sortOrder: enc.combatants.length,
       isHazard: true,
       hazardRef: hazard.id,
+      hazardType: hazard.hazard_type as 'simple' | 'complex',
     }
 
     const updatedRows: EncounterCombatantRow[] = [
@@ -194,6 +196,7 @@ export function EncountersPage() {
         sortOrder: i,
         isHazard: c.isHazard ?? false,
         hazardRef: c.hazardRef ?? null,
+        hazardType: c.hazardType,
       })),
       newRow,
     ]
