@@ -1,8 +1,9 @@
-import { History, Moon, Sun } from 'lucide-react'
+import { History, Moon, Sun, Dices } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { RollDie20Button } from '@/shared/ui/roll-die20-button'
+import { DicePanel } from '@/shared/ui/DicePanel'
 import { RollHistoryPanel } from '@/widgets/roll-history'
 
 export function AppHeader() {
@@ -13,6 +14,17 @@ export function AppHeader() {
       <div />
       <div className="flex items-center gap-2">
         <RollDie20Button />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="w-8 h-8">
+              <Dices className="h-4 w-4" />
+              <span className="sr-only">Dice Roller</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="p-0">
+            <DicePanel />
+          </PopoverContent>
+        </Popover>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="w-8 h-8">
