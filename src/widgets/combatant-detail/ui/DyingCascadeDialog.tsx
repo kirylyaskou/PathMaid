@@ -8,7 +8,11 @@ import {
 } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { performRecoveryCheck } from '@engine'
+import {
+  performRecoveryCheck,
+  getWoundedValueAfterStabilize,
+  getDyingValueOnKnockout,
+} from '@engine'
 import type { RecoveryCheckResult } from '@engine'
 import { useConditionStore } from '@/entities/condition'
 import { applyCondition, removeCondition, setConditionValue } from '@/features/combat-tracker'
@@ -44,11 +48,15 @@ export function DyingCascadeDialog({
   const woundedValue = conditions.find((c) => c.slug === 'wounded')?.value ?? 0
   const doomedValue = conditions.find((c) => c.slug === 'doomed')?.value ?? 0
 
-  // Apply initial dying on open if not already dying
-  // Engine cm.add('dying') already adds wounded value, so pass base value (1) only
+  // Apply initial dying on open if not already dying.
+  // Per CRB pg.460: dying starts at 1 + wounded value (handled via @engine pure fn).
   useEffect(() => {
     if (open && dyingValue === 0) {
-      applyCondition(combatantId, 'dying' as ConditionSlug, 1)
+      applyCondition(
+        combatantId,
+        'dying' as ConditionSlug,
+        getDyingValueOnKnockout(woundedValue),
+      )
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -85,18 +93,31 @@ export function DyingCascadeDialog({
     if (result.newDyingValue === -1) {
       setIsDead(true)
     } else if (result.stabilized) {
-      // Engine cm.remove('dying') already increments wounded
+      // CRB pg.460: losing dying grants/increases wounded. Apply explicitly via pure fn.
+      const newWounded = getWoundedValueAfterStabilize(woundedValue)
+      applyCondition(combatantId, 'wounded' as ConditionSlug, newWounded)
       removeCondition(combatantId, 'dying' as ConditionSlug)
     } else {
-      // Use setValue to avoid re-adding wounded (cm.add('dying') always adds wounded)
       setConditionValue(combatantId, 'dying' as ConditionSlug, result.newDyingValue)
     }
   }
 
   const handleOverride = () => {
-    applyCondition(combatantId, 'dying' as ConditionSlug, 1)
+    applyCondition(
+      combatantId,
+      'dying' as ConditionSlug,
+      getDyingValueOnKnockout(woundedValue),
+    )
     setIsDead(false)
     setCheckResult(null)
+  }
+
+  const handleCritKnockout = () => {
+    // CRB crit rules: a crit hit that downs a target inflicts dying +2 (in addition to wounded).
+    const critDying = getDyingValueOnKnockout(woundedValue) + 1
+    applyCondition(combatantId, 'dying' as ConditionSlug, critDying)
+    setCheckResult(null)
+    setIsDead(false)
   }
 
   const outcomeLabel = (outcome: string) => {
@@ -206,6 +227,15 @@ export function DyingCascadeDialog({
 
             <Button className="w-full" onClick={handleRecoveryCheck}>
               Roll Recovery Check
+            </Button>
+
+            <Button
+              className="w-full"
+              variant="destructive"
+              size="sm"
+              onClick={handleCritKnockout}
+            >
+              Knocked Out (Crit) +2
             </Button>
 
             <Button

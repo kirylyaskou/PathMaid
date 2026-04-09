@@ -11,6 +11,7 @@ import { Input } from '@/shared/ui/input'
 import { useConditionStore } from '@/entities/condition'
 import { useCombatantStore } from '@/entities/combatant'
 import { applyCondition } from '@/features/combat-tracker'
+import { getDyingValueOnKnockout } from '@engine'
 import type { ConditionSlug } from '@engine'
 import type { PendingPersistentDamage } from '@/features/combat-tracker/model/store'
 
@@ -20,8 +21,11 @@ function incrementDying(combatantId: string): void {
   const wounded = conditions.find((c) => c.combatantId === combatantId && c.slug === 'wounded')
   const currentDying = dying?.value ?? 0
   const woundedVal = wounded?.value ?? 0
-  const desired = currentDying + 1
-  applyCondition(combatantId, 'dying' as ConditionSlug, Math.max(1, desired - woundedVal))
+  // If already dying: bump by 1. Otherwise: apply the knockout start value (1 + wounded).
+  const next = currentDying > 0
+    ? currentDying + 1
+    : getDyingValueOnKnockout(woundedVal)
+  applyCondition(combatantId, 'dying' as ConditionSlug, next)
 }
 
 function rollFormula(formula: string): number {

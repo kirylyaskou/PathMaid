@@ -132,16 +132,14 @@ export class ConditionManager {
       }
     }
 
-    // 4. Dying special case — add wounded value to dying value, cap at death threshold
-    // Source: AON dying condition page — "When you gain the dying condition, you must
-    //         add your wounded value to the dying value you gain."
+    // 4. Dying special case — cap at death threshold.
+    // Source: AON dying condition page — the UI layer is responsible for adding the
+    //         wounded value via `getDyingValueOnKnockout` from @engine. ConditionManager
+    //         only enforces the death threshold so the value passed in cannot exceed it.
     if (slug === 'dying') {
-      const wounded = this.conditions.get('wounded') ?? 0
-      const rawValue = value + wounded
-      // Death threshold capping (D-13, D-26): dying >= (4 - doomed) = dead
       const doomed = this.conditions.get('doomed') ?? 0
       const deathThreshold = 4 - doomed
-      this.conditions.set('dying', Math.min(rawValue, deathThreshold))
+      this.conditions.set('dying', Math.min(value, deathThreshold))
       // Apply grants for dying (dying grants unconscious which grants blinded, off-guard, prone)
       this.applyGrantsFor(slug)
       return
@@ -170,12 +168,9 @@ export class ConditionManager {
     // Remove conditions granted by this slug (D-05 grant chain cleanup)
     this.removeGranteesOf(slug)
 
-    // Source: AON dying condition page — "Any time you lose the dying condition,
-    //         you gain wounded 1, or increase wounded by 1 if already present."
-    if (slug === 'dying') {
-      const current = this.conditions.get('wounded') ?? 0
-      this.conditions.set('wounded', current + 1)
-    }
+    // Note: CRB pg.460 wounded-increment-on-dying-removal is handled at the UI
+    // layer via `getWoundedValueAfterStabilize` from @engine. Keeping it outside
+    // the engine avoids hidden side effects when removing dying programmatically.
   }
 
   has(slug: ConditionSlug): boolean {
