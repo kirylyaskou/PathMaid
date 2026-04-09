@@ -87,3 +87,29 @@ export function performRecoveryCheck(
     stabilized,
   }
 }
+
+// ─── Wounded Rule (CRB pg. 460) ──────────────────────────────────────────────
+
+/**
+ * CRB pg. 460: When a creature loses the dying condition (stabilizes or is healed),
+ * it gains the Wounded condition:
+ * - If not already Wounded: Wounded 1
+ * - If already Wounded: Wounded value +1
+ *
+ * @param currentWounded - Current Wounded value (0 if not wounded)
+ * @returns New Wounded value to set
+ */
+export function getWoundedValueAfterStabilize(currentWounded: number): number {
+  return currentWounded + 1
+}
+
+/**
+ * CRB pg. 460: When a creature with the Wounded condition is knocked out again,
+ * its dying value starts at (1 + wounded value) instead of 1.
+ *
+ * @param woundedValue - Current Wounded value (0 if not wounded)
+ * @returns Initial dying value to assign
+ */
+export function getDyingValueOnKnockout(woundedValue: number): number {
+  return 1 + woundedValue
+}

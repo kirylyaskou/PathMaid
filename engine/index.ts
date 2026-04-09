@@ -29,7 +29,11 @@ export type {
   ConditionEffect,
 } from './conditions/condition-effects'
 
-export { performRecoveryCheck } from './conditions/death-progression'
+export {
+  performRecoveryCheck,
+  getWoundedValueAfterStabilize,
+  getDyingValueOnKnockout,
+} from './conditions/death-progression'
 export type {
   RecoveryCheckOutcome,
   RecoveryCheckResult,
