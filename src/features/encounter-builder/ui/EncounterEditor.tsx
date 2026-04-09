@@ -22,6 +22,7 @@ import type { EncounterCombatantRow } from '@/shared/api'
 import { loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave } from '@/features/combat-tracker/lib/encounter-persistence'
 import { teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
 import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
+import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import { calculateCreatureXP, getHazardXp } from '@engine'
 
@@ -40,6 +41,8 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const [loading, setLoading] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
+  // FEAT-12 (52-03 follow-up): clicking a creature name opens its stat block.
+  const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
 
@@ -245,7 +248,18 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
                     {c.weakEliteTier === 'elite' ? 'E' : 'W'}
                   </span>
                 )}
-                <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
+                {isHazard || !c.creatureRef ? (
+                  <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setStatBlockCreatureId(c.creatureRef)}
+                    className="flex-1 text-sm font-medium truncate text-left hover:text-pf-gold transition-colors"
+                    title="View stat block"
+                  >
+                    {c.displayName}
+                  </button>
+                )}
                 {xpResult.xp != null
                   ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
                   : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
@@ -305,6 +319,13 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Creature stat block modal — opens when a creature row name is clicked */}
+      <StatBlockModal
+        creatureId={statBlockCreatureId}
+        open={statBlockCreatureId !== null}
+        onOpenChange={(open) => { if (!open) setStatBlockCreatureId(null) }}
+      />
     </div>
   )
 }
