@@ -27,8 +27,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
 import { stripHtml } from '@/shared/lib/html'
-import { useModifiedStats, useSpellModifiers } from '@/shared/model/use-modified-stats'
-import type { StatModifierResult } from '@/shared/model/use-modified-stats'
+import { useModifiedStats, useSpellModifiers } from '@/entities/creature/model/use-modified-stats'
+import type { StatModifierResult } from '@/entities/creature/model/use-modified-stats'
 import { useCombatantStore } from '@/entities/combatant'
 
 export interface EncounterContext {
@@ -1673,7 +1673,6 @@ function SpellcastingBlock({ section, creatureLevel, encounterContext, creatureN
   )
 }
 
-const resolveFoundryTokensForDisplay = resolveFoundryTokens
 const resolveFoundryTokensForSpell = resolveFoundryTokens
 
 interface StatItemProps {
