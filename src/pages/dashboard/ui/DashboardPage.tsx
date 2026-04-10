@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -295,9 +295,18 @@ export function DashboardPage() {
     })
   }, [loadEncounters])
 
-  const recentEncounters = [...encounters]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 6)
+  // Memoize: sort+slice on encounters array passed as prop to EncountersCard; recomputes only when encounters changes
+  const recentEncounters = useMemo(
+    () =>
+      [...encounters]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 6),
+    [encounters],
+  )
+
+  // Memoize: stable callbacks passed as props to child cards to avoid unnecessary re-renders
+  const handleNavigateCombat = useCallback(() => navigate(PATHS.COMBAT), [navigate])
+  const handleNavigateEncounters = useCallback(() => navigate(PATHS.ENCOUNTERS), [navigate])
 
   return (
     <div className="flex flex-col gap-4 p-4 h-full overflow-y-auto">
@@ -307,12 +316,12 @@ export function DashboardPage() {
         activeCombatantId={activeCombatantId}
         combatants={combatants}
         activeConditions={activeConditions}
-        onNavigate={() => navigate(PATHS.COMBAT)}
+        onNavigate={handleNavigateCombat}
       />
       <div className="grid grid-cols-[1fr_260px] gap-4">
         <EncountersCard
           encounters={recentEncounters}
-          onNavigate={() => navigate(PATHS.ENCOUNTERS)}
+          onNavigate={handleNavigateEncounters}
         />
         <CompendiumStatsCard stats={stats} />
       </div>

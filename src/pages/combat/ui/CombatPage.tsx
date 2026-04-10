@@ -29,8 +29,6 @@ import { PCCombatCard } from '@/features/characters'
 import { getCharacterById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
-import { loadItemOverrides } from '@/shared/api'
-import type { EncounterItemRow } from '@/shared/api'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
 
@@ -216,15 +214,12 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
 export function CombatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lastNpcStatBlock, setLastNpcStatBlock] = useState<CreatureStatBlockData | null>(null)
-  const [selectedEncounterItems, setSelectedEncounterItems] = useState<EncounterItemRow[]>([])
-  const [inventoryVersion, setInventoryVersion] = useState(0)
   const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
   const [selectedPcBuild, setSelectedPcBuild] = useState<PathbuilderBuild | null>(null)
   const [pcBuildLoading, setPcBuildLoading] = useState(false)
   const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
-  const handleSelectRef = useRef<(id: string) => Promise<void>>(() => Promise.resolve())
 
   // BUG-02 (52-08 follow-up): require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
@@ -236,8 +231,8 @@ export function CombatPage() {
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
   const pendingRecoveryCheck = useCombatTrackerStore((s) => s.pendingRecoveryCheck)
   const setPendingRecoveryCheck = useCombatTrackerStore((s) => s.setPendingRecoveryCheck)
-  const { combatId, isEncounterBacked, entityDataVersion } = useCombatTrackerStore(
-    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked, entityDataVersion: s.entityDataVersion }))
+  const { combatId, isEncounterBacked } = useCombatTrackerStore(
+    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked }))
   )
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
@@ -272,20 +267,6 @@ export function CombatPage() {
       return () => teardownAutoSave()
     }
   }, [activeTabId, isEncounterBacked])
-
-  // Clear stat block cache after sync and immediately reload selected creature.
-  useEffect(() => {
-    if (entityDataVersion > 0) {
-      statBlockCache.current.clear()
-      pcBuildCache.current.clear()
-      setLastNpcStatBlock(null)
-      setSelectedPcBuild(null)
-      const currentId = selectedId
-      if (currentId) {
-        setTimeout(() => handleSelectRef.current(currentId), 0)
-      }
-    }
-  }, [entityDataVersion, selectedId])
 
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
@@ -348,8 +329,6 @@ export function CombatPage() {
 
     // Branch: Hazard — leave right panel sticky (no update)
   }, [])
-  // Keep ref current so entityDataVersion effect can call it without being in deps
-  handleSelectRef.current = handleSelect
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
@@ -429,23 +408,20 @@ export function CombatPage() {
     }
   }, [combatants, reorderInitiative])
 
-  // Load encounter-inventory items for the selected combatant (for hasShield check).
-  // Runs whenever selection or stat block changes (stat block reload = items may have been added).
-  useEffect(() => {
-    if (!combatId || !selectedId) {
-      setSelectedEncounterItems([])
-      return
-    }
-    loadItemOverrides(combatId, selectedId).then(setSelectedEncounterItems).catch(() => setSelectedEncounterItems([]))
-  }, [combatId, selectedId, lastNpcStatBlock, inventoryVersion])
+  // Memoize: stable activate callbacks passed as props to CombatColumn in split mode; avoids re-renders on tab switches
+  const handleActivateTab0 = useCallback(() => {
+    if (openTabs[0] && activeTabId !== openTabs[0].id) setActiveTab(openTabs[0].id)
+  }, [openTabs, activeTabId, setActiveTab])
+  const handleActivateTab1 = useCallback(() => {
+    if (openTabs[1] && activeTabId !== openTabs[1].id) setActiveTab(openTabs[1].id)
+  }, [openTabs, activeTabId, setActiveTab])
 
-  // FEAT-09: Raise Shield button renders when the creature carries a shield.
-  // shieldAcBonus reads actual ac_bonus from shield item (not hardcoded +2).
-  const isShieldItem = (type: string) => type === 'shield'
-  const shieldFromBestiary = lastNpcStatBlock?.equipment?.find((it) => isShieldItem(it.item_type))
-  const shieldFromInventory = selectedEncounterItems.find((it) => !it.isRemoved && isShieldItem(it.itemType))
-  const hasShield = Boolean(shieldFromBestiary || shieldFromInventory)
-  const shieldAcBonus = shieldFromBestiary?.ac_bonus ?? shieldFromInventory?.acBonus ?? 2
+  // FEAT-09: Raise Shield button only renders when the selected creature carries a shield.
+  const hasShield = Boolean(
+    lastNpcStatBlock?.equipment?.some(
+      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
+    )
+  )
 
   return (
     <div className="flex flex-col h-full">
@@ -488,18 +464,14 @@ export function CombatPage() {
                   <CombatColumn
                     tab={openTabs[0]}
                     isActive={openTabs[0].id === activeTabId}
-                    onActivate={() => {
-                      if (activeTabId !== openTabs[0].id) setActiveTab(openTabs[0].id)
-                    }}
+                    onActivate={handleActivateTab0}
                     onSelect={handleSelect}
                     className="flex-1 border-r border-border/50"
                   />
                   <CombatColumn
                     tab={openTabs[1]}
                     isActive={openTabs[1].id === activeTabId}
-                    onActivate={() => {
-                      if (activeTabId !== openTabs[1].id) setActiveTab(openTabs[1].id)
-                    }}
+                    onActivate={handleActivateTab1}
                     onSelect={handleSelect}
                     className="flex-1"
                   />
@@ -530,7 +502,7 @@ export function CombatPage() {
                       <div className="flex flex-col h-full">
                         {selectedId ? (
                           <div className="flex-1 min-h-0">
-                            <CombatantDetail combatantId={selectedId} hasShield={hasShield} shieldAcBonus={shieldAcBonus} />
+                            <CombatantDetail combatantId={selectedId} hasShield={hasShield} />
                           </div>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -563,7 +535,7 @@ export function CombatPage() {
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={
                       isEncounterBacked && combatId && selectedId
-                        ? { encounterId: combatId, combatantId: selectedId, shieldAcBonus, onInventoryChanged: () => setInventoryVersion((v) => v + 1) }
+                        ? { encounterId: combatId, combatantId: selectedId }
                         : undefined
                     }
                   />

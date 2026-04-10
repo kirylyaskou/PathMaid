@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
@@ -39,6 +39,9 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
     [removeCombatant]
   )
 
+  // Memoize: stable ID array passed as prop to SortableContext; avoids new array reference on every render
+  const combatantIds = useMemo(() => combatants.map((c) => c.id), [combatants])
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-2 space-y-0.5">
@@ -60,7 +63,7 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
           </div>
         )}
         <SortableContext
-          items={combatants.map((c) => c.id)}
+          items={combatantIds}
           strategy={verticalListSortingStrategy}
         >
           {combatants.map((combatant) => (
