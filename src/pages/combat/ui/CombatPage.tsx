@@ -224,6 +224,7 @@ export function CombatPage() {
   const [selectedPcBuild, setSelectedPcBuild] = useState<PathbuilderBuild | null>(null)
   const [pcBuildLoading, setPcBuildLoading] = useState(false)
   const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
+  const handleSelectRef = useRef<(id: string) => Promise<void>>(() => Promise.resolve())
 
   // BUG-02 (52-08 follow-up): require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
@@ -272,16 +273,19 @@ export function CombatPage() {
     }
   }, [activeTabId, isEncounterBacked])
 
-  // Clear stat block cache when entity data changes (e.g. after sync).
-  // The currently selected creature will reload on next pointer interaction.
+  // Clear stat block cache after sync and immediately reload selected creature.
   useEffect(() => {
     if (entityDataVersion > 0) {
       statBlockCache.current.clear()
       pcBuildCache.current.clear()
       setLastNpcStatBlock(null)
       setSelectedPcBuild(null)
+      const currentId = selectedId
+      if (currentId) {
+        setTimeout(() => handleSelectRef.current(currentId), 0)
+      }
     }
-  }, [entityDataVersion])
+  }, [entityDataVersion, selectedId])
 
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
@@ -344,6 +348,8 @@ export function CombatPage() {
 
     // Branch: Hazard — leave right panel sticky (no update)
   }, [])
+  // Keep ref current so entityDataVersion effect can call it without being in deps
+  handleSelectRef.current = handleSelect
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
