@@ -105,7 +105,15 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     const other: typeof creature.abilities = []
     const OFFENSIVE_NAME = /strike|attack|bite|claw|breath|slam|gore|tail|tongue|spit|charge|rage|pounce|swallow|constrict|grab\b|trample|maul/i
     const DEFENSIVE_NAME = /shield|block|parry|evasion|deflect|resist|ward|defense|defen[sc]e|regenerat|fortify|hardness|absorb/i
+    // For troop/swarm creatures, exclude abilities already rendered in the formation section.
+    const troopDefensesName = troopDefenses?.name?.toLowerCase() ?? ''
     for (const a of creature.abilities) {
+      if (isSpecialFormation) {
+        const nameLower = a.name.toLowerCase()
+        // Skip abilities shown in the troop formation section (Troop Defenses, Troop/Swarm Formation).
+        if (troopDefensesName && nameLower === troopDefensesName) continue
+        if (/^(troop|swarm)\s+formation$/i.test(a.name)) continue
+      }
       if (a.actionCost === 'reaction') {
         reactions.push(a)
         continue
@@ -387,6 +395,17 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                             )}
                           </span>
                         ))}
+                        {/* Enfeebled penalty on Strength-based damage (melee only) */}
+                        {!isRanged && (() => {
+                          const enfeebledPenalty = strikeModResult?.modifiers
+                            .filter((m) => m.slug === 'enfeebled')
+                            .reduce((s, m) => s + m.modifier, 0) ?? 0
+                          return enfeebledPenalty < 0 ? (
+                            <span className="ml-1 font-mono text-xs text-pf-blood">
+                              {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
+                            </span>
+                          ) : null
+                        })()}
                       </div>
                     )}
                     {/* Additional damage */}
@@ -477,23 +496,21 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-4 py-3 space-y-3">
-                  {/* Tab selector */}
+                  {/* Tab selector — hide tabs with 0 abilities */}
                   <div className="flex flex-wrap gap-1">
                     {([
                       { id: 'offensive', label: 'Offensive', icon: Swords, count: classifiedAbilities.offensive.length },
                       { id: 'defensive', label: 'Defensive', icon: ShieldIcon, count: classifiedAbilities.defensive.length },
                       { id: 'other', label: 'Other', icon: Sparkles, count: classifiedAbilities.other.length },
-                    ] as const).map(({ id, label, icon: Icon, count }) => (
+                    ] as const).filter(({ count }) => count > 0).map(({ id, label, icon: Icon, count }) => (
                       <button
                         key={id}
                         onClick={() => setActionTab(id)}
-                        disabled={count === 0}
                         className={cn(
                           'flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors',
                           actionTab === id
                             ? 'bg-primary/20 text-primary border border-primary/30'
                             : 'hover:bg-muted/50 border border-transparent',
-                          count === 0 && 'opacity-40 cursor-not-allowed',
                         )}
                       >
                         <Icon className="w-3 h-3" />
@@ -503,27 +520,36 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     ))}
                   </div>
 
-                  {/* Active tab content — responsive auto-fill grid (FEAT-05) */}
-                  <div
-                    className="grid gap-2"
-                    style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
-                  >
-                    {classifiedAbilities[actionTab].map((ability, i) => (
-                      <AbilityCard
-                        key={`${actionTab}-${i}`}
-                        name={ability.name}
-                        actionCost={ability.actionCost !== 0 ? ability.actionCost : undefined}
-                        traits={ability.traits}
-                      >
-                        <p className="text-sm text-foreground/80 leading-relaxed">
-                          {highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}
-                        </p>
-                      </AbilityCard>
-                    ))}
-                    {classifiedAbilities[actionTab].length === 0 && (
-                      <p className="text-xs text-muted-foreground italic col-span-full">No {actionTab} abilities.</p>
-                    )}
-                  </div>
+                  {/* Active tab content — single item full-width, multiple items auto-fill grid */}
+                  {classifiedAbilities[actionTab].length === 1 ? (
+                    <AbilityCard
+                      name={classifiedAbilities[actionTab][0].name}
+                      actionCost={classifiedAbilities[actionTab][0].actionCost !== 0 ? classifiedAbilities[actionTab][0].actionCost : undefined}
+                      traits={classifiedAbilities[actionTab][0].traits}
+                    >
+                      <p className="text-sm text-foreground/80 leading-relaxed">
+                        {highlightGameText(classifiedAbilities[actionTab][0].description, (f) => handleRoll(f, classifiedAbilities[actionTab][0].name))}
+                      </p>
+                    </AbilityCard>
+                  ) : (
+                    <div
+                      className="grid gap-2"
+                      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+                    >
+                      {classifiedAbilities[actionTab].map((ability, i) => (
+                        <AbilityCard
+                          key={`${actionTab}-${i}`}
+                          name={ability.name}
+                          actionCost={ability.actionCost !== 0 ? ability.actionCost : undefined}
+                          traits={ability.traits}
+                        >
+                          <p className="text-sm text-foreground/80 leading-relaxed">
+                            {highlightGameText(ability.description, (f) => handleRoll(f, ability.name))}
+                          </p>
+                        </AbilityCard>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Reactions sub-section (D-16: Offensive → Defensive → Reactions → Spells) */}
                   {classifiedAbilities.reactions.length > 0 && (

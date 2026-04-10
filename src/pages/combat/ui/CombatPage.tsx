@@ -29,6 +29,8 @@ import { PCCombatCard } from '@/features/characters'
 import { getCharacterById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
+import { loadItemOverrides } from '@/shared/api'
+import type { EncounterItemRow } from '@/shared/api'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
 
@@ -214,6 +216,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
 export function CombatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lastNpcStatBlock, setLastNpcStatBlock] = useState<CreatureStatBlockData | null>(null)
+  const [selectedEncounterItems, setSelectedEncounterItems] = useState<EncounterItemRow[]>([])
   const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
@@ -408,11 +411,22 @@ export function CombatPage() {
     }
   }, [combatants, reorderInitiative])
 
-  // FEAT-09: Raise Shield button only renders when the selected creature carries a shield.
+  // Load encounter-inventory items for the selected combatant (for hasShield check).
+  useEffect(() => {
+    if (!isEncounterBacked || !combatId || !selectedId) {
+      setSelectedEncounterItems([])
+      return
+    }
+    loadItemOverrides(combatId, selectedId).then(setSelectedEncounterItems).catch(() => setSelectedEncounterItems([]))
+  }, [isEncounterBacked, combatId, selectedId])
+
+  // FEAT-09: Raise Shield button renders when the creature carries a shield —
+  // checked in both static bestiary equipment and encounter-inventory overrides.
+  const isShieldItem = (name: string, type: string) =>
+    type === 'shield' || name.toLowerCase().includes('shield')
   const hasShield = Boolean(
-    lastNpcStatBlock?.equipment?.some(
-      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
-    )
+    lastNpcStatBlock?.equipment?.some((it) => isShieldItem(it.item_name ?? '', it.item_type)) ||
+    selectedEncounterItems.some((it) => !it.isRemoved && isShieldItem(it.itemName, it.itemType))
   )
 
   return (
