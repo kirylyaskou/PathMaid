@@ -217,6 +217,7 @@ export function CombatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lastNpcStatBlock, setLastNpcStatBlock] = useState<CreatureStatBlockData | null>(null)
   const [selectedEncounterItems, setSelectedEncounterItems] = useState<EncounterItemRow[]>([])
+  const [inventoryVersion, setInventoryVersion] = useState(0)
   const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
@@ -419,7 +420,7 @@ export function CombatPage() {
       return
     }
     loadItemOverrides(combatId, selectedId).then(setSelectedEncounterItems).catch(() => setSelectedEncounterItems([]))
-  }, [combatId, selectedId, lastNpcStatBlock])
+  }, [combatId, selectedId, lastNpcStatBlock, inventoryVersion])
 
   // FEAT-09: Raise Shield button renders when the creature carries a shield —
   // checked in both static bestiary equipment and encounter-inventory overrides.
@@ -546,7 +547,7 @@ export function CombatPage() {
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={
                       isEncounterBacked && combatId && selectedId
-                        ? { encounterId: combatId, combatantId: selectedId }
+                        ? { encounterId: combatId, combatantId: selectedId, onInventoryChanged: () => setInventoryVersion((v) => v + 1) }
                         : undefined
                     }
                   />

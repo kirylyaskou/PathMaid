@@ -34,6 +34,8 @@ import { useCombatantStore } from '@/entities/combatant'
 export interface EncounterContext {
   encounterId: string
   combatantId: string
+  /** Called after any encounter-inventory mutation so parent can reload hasShield etc. */
+  onInventoryChanged?: () => void
 }
 
 interface CreatureStatBlockProps {
@@ -1781,6 +1783,7 @@ function EquipmentBlock({
     }
     setOverrides((prev) => [...prev.filter((o) => o.id !== override.id), override])
     await upsertItemOverride(override).catch(() => {})
+    encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
   const handleRestoreBase = useCallback(async (item: CreatureItemRow) => {
@@ -1788,6 +1791,7 @@ function EquipmentBlock({
     const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`
     setOverrides((prev) => prev.filter((o) => o.id !== id))
     await deleteItemOverride(id).catch(() => {})
+    encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
   const handleAddItem = useCallback(async (catalogItem: ItemRow) => {
@@ -1809,12 +1813,14 @@ function EquipmentBlock({
     setAddQuery('')
     setAddResults([])
     await upsertItemOverride(override).catch(() => {})
+    encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
   const handleRemoveAdded = useCallback(async (override: EncounterItemRow) => {
     setOverrides((prev) => prev.filter((o) => o.id !== override.id))
     await deleteItemOverride(override.id).catch(() => {})
-  }, [])
+    encounterContext?.onInventoryChanged?.()
+  }, [encounterContext])
 
   const removedIds = new Set(overrides.filter((o) => o.isRemoved).map((o) => o.itemFoundryId ?? o.itemName))
   const addedItems = overrides.filter((o) => !o.isRemoved)
