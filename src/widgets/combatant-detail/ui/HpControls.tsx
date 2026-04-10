@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X, Skull, HeartPulse, Sparkles, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
@@ -23,13 +23,14 @@ import {
   type PathbuilderBuild,
 } from '@engine'
 import { applyCondition, removeCondition, clearCombatantManager, getManagerState } from '@/features/combat-tracker'
+import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
+import { getCharacterById, loadItemOverrides } from '@/shared/api'
 import { useConditionStore } from '@/entities/condition'
 import { getDyingValueOnKnockout, getWoundedValueAfterStabilize } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 import { useRollStore } from '@/shared/model/roll-store'
 import { useModifiedStats } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
-import { getCharacterById } from '@/shared/api'
 import { toast } from 'sonner'
 
 // CRB pg.460: when a downed creature is healed back to positive HP, only the
@@ -40,9 +41,6 @@ interface HpControlsProps {
   iwrImmunities?: string[]
   iwrWeaknesses?: { type: string; value: number }[]
   iwrResistances?: { type: string; value: number }[]
-  hasShield?: boolean
-  /** AC bonus from the equipped shield (varies per shield type). */
-  shieldAcBonus?: number
   creature?: CreatureStatBlockData | null
 }
 
@@ -108,7 +106,7 @@ const CHIP_COLOR: Record<string, string> = {
   magic: 'bg-emerald-800/80 text-emerald-200',
 }
 
-export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, hasShield = false, shieldAcBonus = 2, creature }: HpControlsProps) {
+export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
   const [hpInput, setHpInput] = useState(0)
   // Each damage type has its own amount
   const [damageEntries, setDamageEntries] = useState<DamageEntry[]>([])
@@ -123,6 +121,31 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const statSlugs = useMemo(() => ['fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
   const modifiedStats = useModifiedStats(combatant.id, statSlugs)
   const allCombatants = useCombatantStore(useShallow((s) => s.combatants))
+
+  // FEAT-09: derive shield from base creature equipment OR encounter inventory
+  const { combatId, isEncounterBacked } = useCombatTrackerStore(
+    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked }))
+  )
+  const [encounterShieldBonus, setEncounterShieldBonus] = useState<number | null>(null)
+  useEffect(() => {
+    if (!isEncounterBacked || !combatId) { setEncounterShieldBonus(null); return }
+    loadItemOverrides(combatId, combatant.id).then((items) => {
+      const shield = items.find(
+        (it) => !it.isRemoved && (it.itemType === 'shield' || it.itemName.toLowerCase().includes('shield'))
+      )
+      setEncounterShieldBonus(shield ? (shield.acBonus ?? 2) : null)
+    }).catch(() => setEncounterShieldBonus(null))
+  }, [combatId, combatant.id, isEncounterBacked])
+
+  const { hasShield, shieldAcBonus } = useMemo(() => {
+    if (encounterShieldBonus !== null) return { hasShield: true, shieldAcBonus: encounterShieldBonus }
+    if (!creature?.equipment) return { hasShield: false, shieldAcBonus: 0 }
+    const shield = creature.equipment.find(
+      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
+    )
+    if (!shield) return { hasShield: false, shieldAcBonus: 0 }
+    return { hasShield: true, shieldAcBonus: shield.ac_bonus ?? 2 }
+  }, [creature?.equipment, encounterShieldBonus])
 
   // PF2e death check: dying >= (4 - doomed) = DEAD. Dead creatures cannot be healed.
   const { dyingValue, doomedValue } = useConditionStore(
