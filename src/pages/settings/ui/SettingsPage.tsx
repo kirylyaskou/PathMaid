@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { syncFoundryData, importLocalPacks, getSyncMetadata } from '@/shared/api'
+import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'
@@ -44,6 +45,7 @@ export function SettingsPage() {
       toast.success(
         `Sync complete — ${count.toLocaleString()} entities imported.`
       )
+      useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
       console.error('[Sync] Failed:', err)
@@ -71,6 +73,7 @@ export function SettingsPage() {
       toast.success(
         `Import complete — ${count.toLocaleString()} entities imported.`
       )
+      useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
       console.error('[Import] Failed:', err)

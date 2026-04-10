@@ -235,8 +235,8 @@ export function CombatPage() {
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
   const pendingRecoveryCheck = useCombatTrackerStore((s) => s.pendingRecoveryCheck)
   const setPendingRecoveryCheck = useCombatTrackerStore((s) => s.setPendingRecoveryCheck)
-  const { combatId, isEncounterBacked } = useCombatTrackerStore(
-    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked }))
+  const { combatId, isEncounterBacked, entityDataVersion } = useCombatTrackerStore(
+    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked, entityDataVersion: s.entityDataVersion }))
   )
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
@@ -271,6 +271,17 @@ export function CombatPage() {
       return () => teardownAutoSave()
     }
   }, [activeTabId, isEncounterBacked])
+
+  // Clear stat block cache when entity data changes (e.g. after sync).
+  // The currently selected creature will reload on next pointer interaction.
+  useEffect(() => {
+    if (entityDataVersion > 0) {
+      statBlockCache.current.clear()
+      pcBuildCache.current.clear()
+      setLastNpcStatBlock(null)
+      setSelectedPcBuild(null)
+    }
+  }, [entityDataVersion])
 
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)

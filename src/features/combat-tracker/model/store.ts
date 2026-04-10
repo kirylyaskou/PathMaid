@@ -23,6 +23,9 @@ export interface CombatTrackerState {
   isEncounterBacked: boolean
   pendingPersistentDamage: PendingPersistentDamage | null
   pendingRecoveryCheck: PendingRecoveryCheck | null
+  /** Incremented after each data sync to invalidate stat block caches. */
+  entityDataVersion: number
+  bumpEntityDataVersion: () => void
   startCombat: (combatId: string) => void
   endCombat: () => void
   startEncounterCombat: (
@@ -57,6 +60,8 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
     isEncounterBacked: false,
     pendingPersistentDamage: null,
     pendingRecoveryCheck: null,
+    entityDataVersion: 0,
+    bumpEntityDataVersion: () => set((state) => { state.entityDataVersion += 1 }),
     startCombat: (combatId) =>
       set((state) => {
         state.combatId = combatId
