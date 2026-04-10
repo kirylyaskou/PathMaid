@@ -91,13 +91,17 @@ jobs:
       - run: pnpm install
 
       - name: Initialize Tauri Android project
-        run: pnpm tauri android init
+        run: |
+          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
+          pnpm tauri android init
         env:
           NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           OPENSSL_VENDORED: "1"
 
       - name: Build Android APK
-        run: pnpm tauri android build
+        run: |
+          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
+          pnpm tauri android build
         env:
           NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           OPENSSL_VENDORED: "1"
