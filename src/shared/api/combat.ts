@@ -42,9 +42,9 @@ export async function saveCombatState(state: CombatSnapshot): Promise<void> {
   for (let i = 0; i < state.combatants.length; i++) {
     const c = state.combatants[i]
     await db.execute(
-      `INSERT INTO combat_combatants (id, combat_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp, is_npc, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [c.id, state.id, c.creatureRef, c.displayName, c.initiative, c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, i]
+      `INSERT INTO combat_combatants (id, combat_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp, is_npc, sort_order, level)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [c.id, state.id, c.creatureRef, c.displayName, c.initiative, c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, i, c.level ?? null]
     )
   }
   for (const cond of state.conditions) {
@@ -68,7 +68,7 @@ export async function loadCombatState(combatId: string): Promise<CombatSnapshot 
   const rows = await db.select<Array<{
     id: string; creature_ref: string | null; display_name: string;
     initiative: number; hp: number; max_hp: number; temp_hp: number;
-    is_npc: number; sort_order: number
+    is_npc: number; sort_order: number; level: number | null
   }>>(
     'SELECT * FROM combat_combatants WHERE combat_id = ? ORDER BY sort_order',
     [combatId]
@@ -82,6 +82,7 @@ export async function loadCombatState(combatId: string): Promise<CombatSnapshot 
     maxHp: r.max_hp,
     tempHp: r.temp_hp,
     isNPC: r.is_npc === 1,
+    ...(r.level != null ? { level: r.level } : {}),
   }))
 
   const condRows = await db.select<Array<{

@@ -24,7 +24,8 @@ function recomputeDrainedHp(combatantId: string): void {
   const combatant = state.combatants.find((c) => c.id === combatantId)
   if (!combatant) return
 
-  const level = combatant.level ?? 0
+  // PF2e: Drained max-HP reduction = level (min 1) × drained value.
+  const level = Math.max(1, combatant.level ?? 1)
   // Lazily initialize baseMaxHp to current maxHp the first time drained is applied.
   const baseMaxHp = combatant.baseMaxHp ?? combatant.maxHp
   if (combatant.baseMaxHp === undefined) {
