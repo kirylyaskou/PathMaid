@@ -16,8 +16,10 @@ export interface Combatant {
   baseMaxHp?: number
   // Session-only AC for Quick Add creatures (not stored in DB, not tied to creatureRef).
   ac?: number
-  // Shield Raised toggle — adds +2 AC visually when true (session-only).
+  // Shield Raised toggle (session-only). shieldAcBonus holds the actual bonus from item data.
   shieldRaised?: boolean
+  // AC bonus from the equipped shield — set when creature stat block is loaded. null/undefined = no shield.
+  shieldAcBonus?: number | null
   // Multiple Attack Penalty index for the current turn (0 = first attack, 1/2 = subsequent).
   // Resets to 0 when this combatant's turn ends.
   mapIndex?: number

@@ -22,7 +22,7 @@ import type { CreatureStatBlockData, WeakEliteTier } from '@/entities/creature'
 import { getHpAdjustment } from '@engine'
 import type { PathbuilderBuild } from '@engine'
 import { PCCombatCard } from '@/features/characters'
-import { getCharacterById } from '@/shared/api'
+import { getCharacterById, loadItemOverrides } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
 import { EncounterTabBar } from './EncounterTabBar'
@@ -276,6 +276,15 @@ export function CombatPage() {
       const cached = statBlockCache.current.get(combatant.creatureRef)
       if (cached) {
         setLastNpcStatBlock(cached)
+        // Re-apply shield bonus from cache (combatant.shieldAcBonus may be unset after reload)
+        if (combatant.shieldAcBonus === undefined) {
+          const baseShield = cached.equipment?.find(
+            (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield')
+          )
+          useCombatantStore.getState().updateCombatant(id, {
+            shieldAcBonus: baseShield ? (baseShield.ac_bonus ?? 0) : null,
+          })
+        }
         return
       }
       setStatBlockLoading(true)
@@ -288,6 +297,24 @@ export function CombatPage() {
           }
           statBlockCache.current.set(combatant.creatureRef, data)
           setLastNpcStatBlock(data)
+
+          // Detect shield AC bonus from creature items OR encounter inventory
+          const isShield = (type: string, name: string) =>
+            type === 'shield' || name.toLowerCase().includes('shield')
+          let shieldAcBonus: number | null = null
+          const baseShield = data.equipment?.find((it) => isShield(it.item_type, it.item_name ?? ''))
+          if (baseShield) {
+            shieldAcBonus = baseShield.ac_bonus ?? 0
+          } else {
+            // Check encounter inventory (items added via encounter builder)
+            const { combatId: cid, isEncounterBacked: enc } = useCombatTrackerStore.getState()
+            if (enc && cid) {
+              const encItems = await loadItemOverrides(cid, id).catch(() => [])
+              const encShield = encItems.find((it) => !it.isRemoved && isShield(it.itemType, it.itemName))
+              if (encShield) shieldAcBonus = encShield.acBonus ?? 0
+            }
+          }
+          useCombatantStore.getState().updateCombatant(id, { shieldAcBonus })
         }
       } finally {
         setStatBlockLoading(false)
@@ -412,13 +439,6 @@ export function CombatPage() {
     if (openTabs[1] && activeTabId !== openTabs[1].id) setActiveTab(openTabs[1].id)
   }, [openTabs, activeTabId, setActiveTab])
 
-  // FEAT-09: Raise Shield button only renders when the selected creature carries a shield.
-  const hasShield = Boolean(
-    lastNpcStatBlock?.equipment?.some(
-      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
-    )
-  )
-
   return (
     <div className="flex flex-col h-full">
       <PersistentDamageDialog
@@ -498,7 +518,7 @@ export function CombatPage() {
                       <div className="flex flex-col h-full">
                         {selectedId ? (
                           <div className="flex-1 min-h-0">
-                            <CombatantDetail combatantId={selectedId} hasShield={hasShield} />
+                            <CombatantDetail combatantId={selectedId} />
                           </div>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
