@@ -32,8 +32,6 @@ import { useCombatantStore } from '@/entities/combatant'
 export interface EncounterContext {
   encounterId: string
   combatantId: string
-  /** AC bonus from the combatant's equipped shield (0 if none). Used to show raised-shield AC. */
-  shieldAcBonus?: number
   /** Called after any encounter-inventory mutation so parent can reload hasShield etc. */
   onInventoryChanged?: () => void
 }
@@ -89,6 +87,15 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
   // FEAT-03a: hide Strikes section when the creature has none (troops/swarms also skip)
   const hasStrikes = creature.strikes.length > 0 && !isSpecialFormation
+
+  // FEAT-09: derive shield AC bonus from creature equipment data
+  const derivedShieldAcBonus = useMemo(() => {
+    if (!creature.equipment) return 0
+    const shield = creature.equipment.find(
+      (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield'),
+    )
+    return shield?.ac_bonus ?? 0
+  }, [creature.equipment])
 
   // FEAT-04: extract "Troop Defenses" ability for inline HP segment display
   const troopDefenses = useMemo(() => {
@@ -174,7 +181,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
             <StatItem label="HP" value={creature.hp} highlight />
             <StatItem
               label={mapCombatant?.shieldRaised ? 'AC*' : 'AC'}
-              value={creature.ac + (mapCombatant?.shieldRaised ? (encounterContext?.shieldAcBonus ?? 0) : 0)}
+              value={creature.ac + (mapCombatant?.shieldRaised ? derivedShieldAcBonus : 0)}
               colorClass="text-pf-gold"
               modResult={modStats.get('ac')}
             />

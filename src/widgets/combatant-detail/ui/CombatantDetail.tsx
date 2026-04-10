@@ -10,11 +10,9 @@ import { ConditionSection } from './ConditionSection'
 
 interface CombatantDetailProps {
   combatantId: string
-  hasShield?: boolean
-  shieldAcBonus?: number
 }
 
-export function CombatantDetail({ combatantId, hasShield = false, shieldAcBonus = 2 }: CombatantDetailProps) {
+export function CombatantDetail({ combatantId }: CombatantDetailProps) {
   const combatant = useCombatantStore(
     useShallow((s) => s.combatants.find((c) => c.id === combatantId))
   )
@@ -68,8 +66,6 @@ export function CombatantDetail({ combatantId, hasShield = false, shieldAcBonus 
         iwrImmunities={combatant.iwrImmunities}
         iwrWeaknesses={combatant.iwrWeaknesses}
         iwrResistances={combatant.iwrResistances}
-        hasShield={hasShield}
-        shieldAcBonus={shieldAcBonus}
         creature={creature}
       />
 

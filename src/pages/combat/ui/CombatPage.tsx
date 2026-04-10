@@ -276,14 +276,34 @@ export function CombatPage() {
       const cached = statBlockCache.current.get(combatant.creatureRef)
       if (cached) {
         setLastNpcStatBlock(cached)
-        // Re-apply shield bonus from cache (combatant.shieldAcBonus may be unset after reload)
+        // Re-apply shield bonus from cache when unset (e.g. after encounter reload).
+        // Always re-check: base equipment first, then encounter inventory (async).
         if (combatant.shieldAcBonus === undefined) {
+          const isShieldItem = (type: string, name: string) =>
+            type === 'shield' || name.toLowerCase().includes('shield')
           const baseShield = cached.equipment?.find(
-            (it) => it.item_type === 'shield' || (it.item_name ?? '').toLowerCase().includes('shield')
+            (it) => isShieldItem(it.item_type, it.item_name ?? '')
           )
-          useCombatantStore.getState().updateCombatant(id, {
-            shieldAcBonus: baseShield ? (baseShield.ac_bonus ?? 0) : null,
-          })
+          if (baseShield) {
+            useCombatantStore.getState().updateCombatant(id, {
+              shieldAcBonus: baseShield.ac_bonus ?? 0,
+            })
+          } else {
+            // Check encounter inventory — may have a shield added via encounter builder
+            const { combatId: cid, isEncounterBacked: enc } = useCombatTrackerStore.getState()
+            if (enc && cid) {
+              loadItemOverrides(cid, id).catch(() => []).then((encItems) => {
+                const encShield = encItems.find(
+                  (it) => !it.isRemoved && isShieldItem(it.itemType, it.itemName)
+                )
+                useCombatantStore.getState().updateCombatant(id, {
+                  shieldAcBonus: encShield ? (encShield.acBonus ?? 0) : null,
+                })
+              })
+            } else {
+              useCombatantStore.getState().updateCombatant(id, { shieldAcBonus: null })
+            }
+          }
         }
         return
       }
@@ -551,7 +571,36 @@ export function CombatPage() {
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={
                       isEncounterBacked && combatId && selectedId
-                        ? { encounterId: combatId, combatantId: selectedId }
+                        ? {
+                            encounterId: combatId,
+                            combatantId: selectedId,
+                            onInventoryChanged: async () => {
+                              if (!combatId || !selectedId) return
+                              const isShieldItem = (type: string, name: string) =>
+                                type === 'shield' || name.toLowerCase().includes('shield')
+                              // Re-check base equipment first
+                              const cached = statBlockCache.current.get(
+                                useCombatantStore.getState().combatants.find((c) => c.id === selectedId)?.creatureRef ?? ''
+                              )
+                              const baseShield = cached?.equipment?.find(
+                                (it) => isShieldItem(it.item_type, it.item_name ?? '')
+                              )
+                              if (baseShield) {
+                                useCombatantStore.getState().updateCombatant(selectedId, {
+                                  shieldAcBonus: baseShield.ac_bonus ?? 0,
+                                })
+                                return
+                              }
+                              // Check encounter inventory
+                              const encItems = await loadItemOverrides(combatId, selectedId).catch(() => [])
+                              const encShield = encItems.find(
+                                (it) => !it.isRemoved && isShieldItem(it.itemType, it.itemName)
+                              )
+                              useCombatantStore.getState().updateCombatant(selectedId, {
+                                shieldAcBonus: encShield ? (encShield.acBonus ?? 0) : null,
+                              })
+                            },
+                          }
                         : undefined
                     }
                   />

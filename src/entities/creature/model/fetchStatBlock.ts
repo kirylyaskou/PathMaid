@@ -11,7 +11,10 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
   const row = await fetchCreatureById(id)
   if (!row) return null
 
-  const base = toCreatureStatBlockData(row)
+  let base = toCreatureStatBlockData(row)
+
+  const equipment = await getCreatureItems(id)
+  if (equipment.length > 0) base = { ...base, equipment }
 
   const { entries, spells } = await getCreatureSpellcasting(id)
   if (entries.length === 0) return base
@@ -57,7 +60,5 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
     }
   })
 
-  const equipment = await getCreatureItems(id)
-
-  return { ...base, spellcasting, ...(equipment.length > 0 ? { equipment } : {}) }
+  return { ...base, spellcasting }
 }
