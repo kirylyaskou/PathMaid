@@ -324,170 +324,129 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         {/* Strikes — hidden when creature has no melee/ranged attacks or is a troop/swarm */}
         {hasStrikes && (
-        <Collapsible defaultOpen>
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-            <span className="font-semibold text-sm text-foreground">Strikes</span>
-            <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 py-3 space-y-3">
-              {creature.strikes.map((strike, i) => {
-                const isAgile = strike.traits.includes('agile')
-                const isRanged = strike.traits.includes('ranged') || strike.traits.some((t) => /^range\s/i.test(t))
-                // Melee strikes pick up str-based condition penalties (enfeebled) via virtual slug.
-                const strikeSlug = isRanged ? 'strike-attack' : 'melee-strike-attack'
-                const strikeNet = modStats.get(strikeSlug)?.netModifier ?? 0
-                const modifiedMod = strike.modifier + strikeNet
-                const map1 = modifiedMod - (isAgile ? 4 : 5)
-                const map2 = modifiedMod - (isAgile ? 8 : 10)
-                const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
-                const strikeModResult = modStats.get(strikeSlug)
-                const strikeBtnColor = strikeNet < 0
-                  ? 'text-pf-blood decoration-pf-blood/50'
-                  : strikeNet > 0
-                    ? 'text-pf-threat-low decoration-pf-threat-low/50'
-                    : 'text-primary decoration-primary/50'
-                return (
-                  <div key={i} className="p-3 rounded-md bg-secondary/50">
-                    <div className="flex items-center gap-2">
-                      <ActionIcon cost={1} className="text-lg" />
-                      <span className="font-semibold">{strike.name}</span>
-                      {(() => {
-                        const strikeBtn = (
-                          <button
-                            onClick={() => handleRoll(`1d20+${modifiedMod}`, `${strike.name} attack`)}
-                            title={`Roll 1d20+${modifiedMod}`}
-                            className={cn(
-                              'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
-                              strikeBtnColor,
-                            )}
-                          >
-                            {fmt(modifiedMod)}
-                          </button>
-                        )
-                        return strikeModResult && strikeModResult.modifiers.length > 0 ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>{strikeBtn}</TooltipTrigger>
-                            <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-                              {strikeModResult.modifiers.map((m) => (
-                                <div key={m.slug} className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">{m.label}</span>
-                                  <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
-                                    {m.modifier > 0 ? '+' : ''}{m.modifier}
-                                  </span>
-                                </div>
-                              ))}
-                              <div className="border-t border-border mt-1 pt-1 flex justify-between">
-                                <span className="text-muted-foreground">Total</span>
-                                <span className={strikeNet < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
-                                  {fmt(modifiedMod)}
-                                </span>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : strikeBtn
-                      })()}
-                    </div>
-                    {/* Main damage */}
-                    {strike.damage.length > 0 && (
-                      <div className="mt-1 text-sm">
-                        <span className="font-semibold">Damage </span>
-                        {strike.damage.map((d, di) => (
-                          <span key={di}>
-                            {di > 0 && <span className="text-muted-foreground"> plus </span>}
-                            <ClickableFormula formula={d.formula} label={`${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
-                            {d.type && (
-                              <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
-                            )}
-                          </span>
-                        ))}
-                        {/* Enfeebled penalty on Strength-based damage (melee only) */}
-                        {!isRanged && (() => {
-                          const enfeebledPenalty = strikeModResult?.modifiers
-                            .filter((m) => m.slug.startsWith('enfeebled:'))
-                            .reduce((s, m) => s + m.modifier, 0) ?? 0
-                          return enfeebledPenalty < 0 ? (
-                            <span className="ml-1 font-mono text-xs text-pf-blood">
-                              {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+              <span className="font-semibold text-sm text-foreground">Strikes</span>
+              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 py-3 space-y-3">
+                {creature.strikes.map((strike, i) => {
+                  const isAgile = strike.traits.includes('agile')
+                  const isRanged = strike.traits.includes('ranged') || strike.traits.some((t) => /^range\s/i.test(t))
+                  // Melee strikes pick up str-based condition penalties (enfeebled) via virtual slug.
+                  const strikeSlug = isRanged ? 'strike-attack' : 'melee-strike-attack'
+                  const strikeNet = modStats.get(strikeSlug)?.netModifier ?? 0
+                  const modifiedMod = strike.modifier + strikeNet
+                  const map1 = modifiedMod - (isAgile ? 4 : 5)
+                  const map2 = modifiedMod - (isAgile ? 8 : 10)
+                  const fmt = (n: number) => (n >= 0 ? `+${n}` : `${n}`)
+                  const strikeModResult = modStats.get(strikeSlug)
+                  return (
+                    <div key={i} className="p-3 rounded-md bg-secondary/50">
+                      <div className="flex items-center gap-2">
+                        <ActionIcon cost={1} className="text-lg" />
+                        <span className="font-semibold">{strike.name}</span>
+                        {/* FEAT-11: MAP buttons — click to roll at that MAP and set the combatant's mapIndex */}
+                        <div className="mt-1 flex items-center gap-1.5 text-xs">
+                          {[0, 1, 2].map((i) => {
+                            const mod = i === 0 ? modifiedMod : i === 1 ? map1 : map2
+                            const title = i === 0
+                              ? `1st attack — Roll 1d20${fmt(mod)}`
+                              : i === 1
+                                ? `2nd attack (${isAgile ? '-4' : '-5'} agile/normal) — Roll 1d20${fmt(mod)}`
+                                : `3rd attack (${isAgile ? '-8' : '-10'} agile/normal) — Roll 1d20${fmt(mod)}`
+                            const active = Boolean(mapCombatantId) && currentMapIndex === i
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                title={title}
+                                onClick={() => {
+                                  handleRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, `${strike.name} attack${i > 0 ? ` (MAP ${i + 1})` : ''}`)
+                                  if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: i })
+                                }}
+                                className={cn(
+                                  'px-1.5 py-0.5 rounded font-mono transition-colors border',
+                                  active
+                                    ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
+                                    : 'bg-muted/30 border-border/30 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                                )}
+                              >
+                                {fmt(mod)}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      {/* Main damage */}
+                      {strike.damage.length > 0 && (
+                        <div className="mt-1 text-sm">
+                          <span className="font-semibold">Damage </span>
+                          {strike.damage.map((d, di) => (
+                            <span key={di}>
+                              {di > 0 && <span className="text-muted-foreground"> plus </span>}
+                              <ClickableFormula formula={d.formula} label={`${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
+                              {d.type && (
+                                <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
+                              )}
                             </span>
-                          ) : null
-                        })()}
-                      </div>
-                    )}
-                    {/* Additional damage */}
-                    {strike.additionalDamage && strike.additionalDamage.length > 0 && (
-                      <div className="mt-1 text-sm space-y-0.5">
-                        {strike.additionalDamage.map((ad, adi) => (
-                          <div key={adi}>
-                            {ad.label && (
-                              <span className="text-muted-foreground text-xs">{ad.label}: </span>
-                            )}
-                            <ClickableFormula formula={ad.formula} label={ad.label ?? `${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
-                            {ad.type && (
-                              <span className={cn("font-mono", damageTypeColor(ad.type))}> {ad.type}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {/* Weapon group badge */}
-                    {strike.group && (
-                      <div className="mt-1">
-                        <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                          Group: {strike.group}
-                        </span>
-                      </div>
-                    )}
-                    {/* FEAT-11: MAP buttons — click to roll at that MAP and set the combatant's mapIndex */}
-                    <div className="mt-1 flex items-center gap-1.5 text-xs">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">MAP</span>
-                      {[0, 1, 2].map((i) => {
-                        const mod = i === 0 ? modifiedMod : i === 1 ? map1 : map2
-                        const title = i === 0
-                          ? `1st attack — Roll 1d20${fmt(mod)}`
-                          : i === 1
-                            ? `2nd attack (${isAgile ? '-4' : '-5'} agile/normal) — Roll 1d20${fmt(mod)}`
-                            : `3rd attack (${isAgile ? '-8' : '-10'} agile/normal) — Roll 1d20${fmt(mod)}`
-                        const active = Boolean(mapCombatantId) && currentMapIndex === i
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            title={title}
-                            onClick={() => {
-                              handleRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, `${strike.name} attack${i > 0 ? ` (MAP ${i + 1})` : ''}`)
-                              if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: i })
-                            }}
-                            className={cn(
-                              'px-1.5 py-0.5 rounded font-mono transition-colors border',
-                              active
-                                ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
-                                : 'bg-muted/30 border-border/30 text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                            )}
-                          >
-                            {fmt(mod)}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {strike.traits.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {strike.traits.map((trait) => (
-                          <span
-                            key={trait}
-                            className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground"
-                          >
-                            {trait}
+                          ))}
+                          {/* Enfeebled penalty on Strength-based damage (melee only) */}
+                          {!isRanged && (() => {
+                            const enfeebledPenalty = strikeModResult?.modifiers
+                              .filter((m) => m.slug.startsWith('enfeebled:'))
+                              .reduce((s, m) => s + m.modifier, 0) ?? 0
+                            return enfeebledPenalty < 0 ? (
+                              <span className="ml-1 font-mono text-xs text-pf-blood">
+                                {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
+                              </span>
+                            ) : null
+                          })()}
+                        </div>
+                      )}
+                      {/* Additional damage */}
+                      {strike.additionalDamage && strike.additionalDamage.length > 0 && (
+                        <div className="mt-1 text-sm space-y-0.5">
+                          {strike.additionalDamage.map((ad, adi) => (
+                            <div key={adi}>
+                              {ad.label && (
+                                <span className="text-muted-foreground text-xs">{ad.label}: </span>
+                              )}
+                              <ClickableFormula formula={ad.formula} label={ad.label ?? `${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
+                              {ad.type && (
+                                <span className={cn("font-mono", damageTypeColor(ad.type))}> {ad.type}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Weapon group badge */}
+                      {strike.group && (
+                        <div className="mt-1">
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                            Group: {strike.group}
                           </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+                        </div>
+                      )}
+                      {strike.traits.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {strike.traits.map((trait) => (
+                            <span
+                              key={trait}
+                              className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground"
+                            >
+                              {trait}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         <Separator />
@@ -720,31 +679,31 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 const DAMAGE_TYPE_COLORS: Record<string, string> = {
   // Physical — dark grey
   bludgeoning: "text-zinc-400",
-  slashing:    "text-zinc-400",
-  piercing:    "text-zinc-400",
+  slashing: "text-zinc-400",
+  piercing: "text-zinc-400",
   // Energy
-  fire:        "text-orange-400",
-  cold:        "text-cyan-300",
+  fire: "text-orange-400",
+  cold: "text-cyan-300",
   electricity: "text-yellow-300",
-  acid:        "text-lime-400",
-  sonic:       "text-violet-400",
-  force:       "text-blue-400",
+  acid: "text-lime-400",
+  sonic: "text-violet-400",
+  force: "text-blue-400",
   // Positive/Negative
-  positive:    "text-green-400",
-  healing:     "text-green-400",
-  negative:    "text-pink-400",
+  positive: "text-green-400",
+  healing: "text-green-400",
+  negative: "text-pink-400",
   // Other
-  poison:      "text-emerald-400",
-  mental:      "text-indigo-400",
-  bleed:       "text-red-400",
-  holy:        "text-yellow-200",
-  unholy:      "text-purple-600",
-  chaotic:     "text-orange-500",
-  lawful:      "text-slate-400",
-  good:        "text-amber-300",
-  evil:        "text-purple-800",
-  untyped:     "text-zinc-500",
-  spirit:      "text-violet-300",
+  poison: "text-emerald-400",
+  mental: "text-indigo-400",
+  bleed: "text-red-400",
+  holy: "text-yellow-200",
+  unholy: "text-purple-600",
+  chaotic: "text-orange-500",
+  lawful: "text-slate-400",
+  good: "text-amber-300",
+  evil: "text-purple-800",
+  untyped: "text-zinc-500",
+  spirit: "text-violet-300",
 }
 
 function damageTypeColor(type: string): string {
@@ -815,10 +774,10 @@ function highlightGameText(raw: string, onRoll?: (formula: string) => void): Rea
 
 function traditionColor(tradition: string): string {
   const map: Record<string, string> = {
-    arcane:  'bg-blue-500/20 text-blue-300 border-blue-500/30',
-    divine:  'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    occult:  'bg-purple-500/20 text-purple-300 border-purple-500/30',
-    primal:  'bg-green-500/20 text-green-300 border-green-500/30',
+    arcane: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    divine: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    occult: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    primal: 'bg-green-500/20 text-green-300 border-green-500/30',
   }
   return map[tradition.toLowerCase()] ?? 'bg-secondary text-secondary-foreground border-border'
 }
@@ -1028,10 +987,10 @@ function SlotPips({ total, used, baseSlots, tradition, onToggle }: {
 
 const DIALOG_TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
 const DIALOG_TRADITION_COLORS: Record<string, string> = {
-  arcane:  'bg-blue-500/20 text-blue-300 border-blue-500/40',
-  divine:  'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
-  occult:  'bg-purple-500/20 text-purple-300 border-purple-500/40',
-  primal:  'bg-green-500/20 text-green-300 border-green-500/40',
+  arcane: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+  divine: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
+  occult: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+  primal: 'bg-green-500/20 text-green-300 border-green-500/40',
 }
 
 function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTradition, focusOnly, onAdd }: {
@@ -1555,45 +1514,45 @@ function SpellcastingBlock({ section, creatureLevel, encounterContext, creatureN
                     </span>
                   )}
                   {rank === 0 ? null
-                  : encounterId && totalSlots > 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleSlotDelta(rank, -1)}
-                        disabled={totalSlots <= 0}
-                        className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-destructive hover:border-destructive/40 disabled:opacity-30 transition-colors"
-                        title="Remove slot"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <SlotPips
-                        total={totalSlots}
-                        used={used}
-                        baseSlots={baseSlots}
-                        tradition={section.tradition}
-                        onToggle={(idx) => handleTogglePip(rank, idx, totalSlots)}
-                      />
-                      <button
-                        onClick={() => handleSlotDelta(rank, 1)}
-                        className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-                        title="Add slot"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : encounterId && totalSlots === 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground">(0 slots)</span>
-                      <button
-                        onClick={() => handleSlotDelta(rank, 1)}
-                        className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
-                        title="Add slot"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : !encounterId && baseSlots > 0 ? (
-                    <span className="text-xs text-muted-foreground">({baseSlots} slots)</span>
-                  ) : null}
+                    : encounterId && totalSlots > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleSlotDelta(rank, -1)}
+                          disabled={totalSlots <= 0}
+                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-destructive hover:border-destructive/40 disabled:opacity-30 transition-colors"
+                          title="Remove slot"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <SlotPips
+                          total={totalSlots}
+                          used={used}
+                          baseSlots={baseSlots}
+                          tradition={section.tradition}
+                          onToggle={(idx) => handleTogglePip(rank, idx, totalSlots)}
+                        />
+                        <button
+                          onClick={() => handleSlotDelta(rank, 1)}
+                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                          title="Add slot"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : encounterId && totalSlots === 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">(0 slots)</span>
+                        <button
+                          onClick={() => handleSlotDelta(rank, 1)}
+                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                          title="Add slot"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : !encounterId && baseSlots > 0 ? (
+                      <span className="text-xs text-muted-foreground">({baseSlots} slots)</span>
+                    ) : null}
                 </div>
                 <div className="space-y-1">
                   {visibleSpells.map((spell, i) => (
@@ -1758,13 +1717,13 @@ function EquipmentBlock({
     if (!encounterContext) return
     loadItemOverrides(encounterContext.encounterId, encounterContext.combatantId)
       .then(setOverrides)
-      .catch(() => {})
+      .catch(() => { })
   }, [encounterContext?.encounterId, encounterContext?.combatantId])
 
   useEffect(() => {
     if (!encounterContext || !addQuery.trim()) { setAddResults([]); return }
     const timer = setTimeout(() => {
-      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(() => {})
+      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(() => { })
     }, 200)
     return () => clearTimeout(timer)
   }, [addQuery, encounterContext])
@@ -1784,7 +1743,7 @@ function EquipmentBlock({
       isRemoved: true,
     }
     setOverrides((prev) => [...prev.filter((o) => o.id !== override.id), override])
-    await upsertItemOverride(override).catch(() => {})
+    await upsertItemOverride(override).catch(() => { })
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
@@ -1792,7 +1751,7 @@ function EquipmentBlock({
     if (!encounterContext) return
     const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`
     setOverrides((prev) => prev.filter((o) => o.id !== id))
-    await deleteItemOverride(id).catch(() => {})
+    await deleteItemOverride(id).catch(() => { })
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
@@ -1814,13 +1773,13 @@ function EquipmentBlock({
     setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
     setAddQuery('')
     setAddResults([])
-    await upsertItemOverride(override).catch(() => {})
+    await upsertItemOverride(override).catch(() => { })
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
   const handleRemoveAdded = useCallback(async (override: EncounterItemRow) => {
     setOverrides((prev) => prev.filter((o) => o.id !== override.id))
-    await deleteItemOverride(override.id).catch(() => {})
+    await deleteItemOverride(override.id).catch(() => { })
     encounterContext?.onInventoryChanged?.()
   }, [encounterContext])
 
@@ -1877,83 +1836,83 @@ function EquipmentBlock({
 
   return (
     <>
-    <Collapsible defaultOpen={false}>
-      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-        <div className="flex items-center gap-2">
-          <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="font-semibold text-sm text-foreground">Equipment</span>
-          <span className="text-xs text-muted-foreground">({totalCount})</span>
-        </div>
-        <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="px-4 pb-3 pt-2 space-y-1">
-          {visibleBase.map((item) => (
-            <ItemRow_
-              key={item.id}
-              item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
-              onRemove={encounterContext ? () => handleRemove(item) : undefined}
-              foundryItemId={item.foundry_item_id}
-              onItemClick={(id) => setDrawerItemId(id)}
-            />
-          ))}
-          {/* Removed items shown struck-through with undo */}
-          {overrides.filter((o) => o.isRemoved).map((o) => {
-            const base = items.find((i) => (i.foundry_item_id ?? i.item_name) === (o.itemFoundryId ?? o.itemName))
-            if (!base) return null
-            return (
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
+          <div className="flex items-center gap-2">
+            <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="font-semibold text-sm text-foreground">Equipment</span>
+            <span className="text-xs text-muted-foreground">({totalCount})</span>
+          </div>
+          <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-3 pt-2 space-y-1">
+            {visibleBase.map((item) => (
+              <ItemRow_
+                key={item.id}
+                item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
+                onRemove={encounterContext ? () => handleRemove(item) : undefined}
+                foundryItemId={item.foundry_item_id}
+                onItemClick={(id) => setDrawerItemId(id)}
+              />
+            ))}
+            {/* Removed items shown struck-through with undo */}
+            {overrides.filter((o) => o.isRemoved).map((o) => {
+              const base = items.find((i) => (i.foundry_item_id ?? i.item_name) === (o.itemFoundryId ?? o.itemName))
+              if (!base) return null
+              return (
+                <ItemRow_
+                  key={o.id}
+                  item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+                  isRemoved
+                  onRestore={() => handleRestoreBase(base)}
+                  foundryItemId={o.itemFoundryId}
+                  onItemClick={(id) => setDrawerItemId(id)}
+                />
+              )
+            })}
+            {/* Added items */}
+            {addedItems.map((o) => (
               <ItemRow_
                 key={o.id}
                 item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
-                isRemoved
-                onRestore={() => handleRestoreBase(base)}
+                onRemove={() => handleRemoveAdded(o)}
                 foundryItemId={o.itemFoundryId}
                 onItemClick={(id) => setDrawerItemId(id)}
               />
-            )
-          })}
-          {/* Added items */}
-          {addedItems.map((o) => (
-            <ItemRow_
-              key={o.id}
-              item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
-              onRemove={() => handleRemoveAdded(o)}
-              foundryItemId={o.itemFoundryId}
-              onItemClick={(id) => setDrawerItemId(id)}
-            />
-          ))}
+            ))}
 
-          {/* Add item row — encounter context only */}
-          {encounterContext && (
-            <div className="relative mt-2">
-              <input
-                type="text"
-                placeholder="Add item…"
-                value={addQuery}
-                onChange={(e) => setAddQuery(e.target.value)}
-                className="w-full text-xs px-2 h-8 rounded-md border border-border/50 bg-secondary/40 placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-              />
-              {addResults.length > 0 && (
-                <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">
-                  {addResults.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => handleAddItem(r)}
-                      className="w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-secondary/60 transition-colors"
-                    >
-                      <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
-                      <span className="flex-1 truncate">{r.name}</span>
-                      {r.damage_formula && <span className="font-mono text-muted-foreground shrink-0">{r.damage_formula}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-    <ItemReferenceDrawer itemId={drawerItemId} onClose={() => setDrawerItemId(null)} />
+            {/* Add item row — encounter context only */}
+            {encounterContext && (
+              <div className="relative mt-2">
+                <input
+                  type="text"
+                  placeholder="Add item…"
+                  value={addQuery}
+                  onChange={(e) => setAddQuery(e.target.value)}
+                  className="w-full text-xs px-2 h-8 rounded-md border border-border/50 bg-secondary/40 placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                />
+                {addResults.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">
+                    {addResults.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => handleAddItem(r)}
+                        className="w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-secondary/60 transition-colors"
+                      >
+                        <span className={cn("px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0", ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
+                        <span className="flex-1 truncate">{r.name}</span>
+                        {r.damage_formula && <span className="font-mono text-muted-foreground shrink-0">{r.damage_formula}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+      <ItemReferenceDrawer itemId={drawerItemId} onClose={() => setDrawerItemId(null)} />
     </>
   )
 }

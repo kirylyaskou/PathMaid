@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
-import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X } from 'lucide-react'
+import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X, Skull, HeartPulse, Sparkles, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Separator } from '@/shared/ui/separator'
 import { cn } from '@/shared/lib/utils'
 import { useCombatantStore } from '@/entities/combatant'
 import type { Combatant } from '@/entities/combatant'
@@ -18,10 +19,18 @@ import {
   type ImmunityType,
   type WeaknessType,
   type ResistanceType,
+  rollDice,
+  type PathbuilderBuild,
 } from '@engine'
-import { applyCondition, removeCondition } from '@/features/combat-tracker'
+import { applyCondition, removeCondition, clearCombatantManager, getManagerState } from '@/features/combat-tracker'
 import { useConditionStore } from '@/entities/condition'
-import { getDyingValueOnKnockout } from '@engine'
+import { getDyingValueOnKnockout, getWoundedValueAfterStabilize } from '@engine'
+import { useShallow } from 'zustand/react/shallow'
+import { useRollStore } from '@/shared/model/roll-store'
+import { useModifiedStats } from '@/entities/creature'
+import type { CreatureStatBlockData } from '@/entities/creature'
+import { getCharacterById } from '@/shared/api'
+import { toast } from 'sonner'
 
 // CRB pg.460: when a downed creature is healed back to positive HP, only the
 // Dying condition is lost. All other conditions (Wounded, Prone, Frightened, etc.) persist.
@@ -34,6 +43,7 @@ interface HpControlsProps {
   hasShield?: boolean
   /** AC bonus from the equipped shield (varies per shield type). */
   shieldAcBonus?: number
+  creature?: CreatureStatBlockData | null
 }
 
 interface DamageEntry {
@@ -98,7 +108,7 @@ const CHIP_COLOR: Record<string, string> = {
   magic: 'bg-emerald-800/80 text-emerald-200',
 }
 
-export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, hasShield = false, shieldAcBonus = 2 }: HpControlsProps) {
+export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, hasShield = false, shieldAcBonus = 2, creature }: HpControlsProps) {
   const [hpInput, setHpInput] = useState(0)
   // Each damage type has its own amount
   const [damageEntries, setDamageEntries] = useState<DamageEntry[]>([])
@@ -109,6 +119,116 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const updateTempHp = useCombatantStore((s) => s.updateTempHp)
   const updateCombatant = useCombatantStore((s) => s.updateCombatant)
   const inputRef = useRef<HTMLInputElement>(null)
+  const addRoll = useRollStore((s) => s.addRoll)
+  const statSlugs = useMemo(() => ['fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
+  const modifiedStats = useModifiedStats(combatant.id, statSlugs)
+  const allCombatants = useCombatantStore(useShallow((s) => s.combatants))
+
+  // PF2e death check: dying >= (4 - doomed) = DEAD. Dead creatures cannot be healed.
+  const { dyingValue, doomedValue } = useConditionStore(
+    useShallow((s) => {
+      const conds = s.activeConditions.filter((c) => c.combatantId === combatant.id)
+      return {
+        dyingValue: conds.find((c) => c.slug === 'dying')?.value ?? 0,
+        doomedValue: conds.find((c) => c.slug === 'doomed')?.value ?? 0,
+      }
+    })
+  )
+  const deathThreshold = 4 - doomedValue
+  const isDead = dyingValue > 0 && dyingValue >= deathThreshold
+
+  function getModified(base: number, statSlug: string): number {
+    return base + (modifiedStats.get(statSlug)?.netModifier ?? 0)
+  }
+
+  const fmt = (n: number) => (n >= 0 ? '+' + n : String(n))
+
+  function rollStat(mod: number, label: string) {
+    const formula = `1d20${mod >= 0 ? '+' : ''}${mod}`
+    addRoll(rollDice(formula, label, { source: combatant.displayName }))
+  }
+
+  const stealthSkill = creature?.skills.find((s) => s.name.toLowerCase() === 'stealth')
+  const baseStealth = stealthSkill?.modifier ?? null
+
+  async function handleHide() {
+    if (baseStealth === null) return
+    const mod = getModified(baseStealth, 'stealth')
+    const formula = `1d20${mod >= 0 ? '+' : ''}${mod}`
+    const roll = rollDice(formula, 'Hide (Stealth)', { source: combatant.displayName })
+    addRoll(roll)
+
+    const pcs = allCombatants.filter((c) => !c.isNPC && !c.isHazard && c.creatureRef)
+    if (pcs.length === 0) return
+
+    const pcResults: { name: string; perceptionDC: number }[] = []
+    for (const pc of pcs) {
+      try {
+        const record = await getCharacterById(pc.creatureRef)
+        if (!record) continue
+        const build = JSON.parse(record.rawJson) as PathbuilderBuild
+        const abilityMod = Math.floor((build.abilities.wis - 10) / 2)
+        const percMod =
+          build.proficiencies.perception > 0
+            ? abilityMod + build.level + build.proficiencies.perception
+            : abilityMod
+        pcResults.push({ name: pc.displayName, perceptionDC: 10 + percMod })
+      } catch { /* skip */ }
+    }
+    if (pcResults.length === 0) return
+
+    const sees = pcResults.filter((p) => roll.total < p.perceptionDC).map((p) => p.name)
+    const doesntSee = pcResults.filter((p) => roll.total >= p.perceptionDC).map((p) => p.name)
+
+    toast(`Hide: ${roll.total}`, {
+      description: [
+        sees.length > 0 ? `Видят: ${sees.join(', ')}` : null,
+        doesntSee.length > 0 ? `Не видят: ${doesntSee.join(', ')}` : null,
+      ].filter(Boolean).join(' | '),
+      duration: 6000,
+    })
+  }
+
+  // Stabilize: remove dying, apply wounded +1, creature stays at 0 HP unconscious/prone.
+  // CRB: stabilize only stops the dying process. Creature remains unconscious with all
+  // cascade conditions (unconscious, prone, blinded, off-guard) intact.
+  // Problem: removeCondition('dying') cascade-removes dying's grantees (unconscious,
+  // which in turn removes blinded + off-guard). We snapshot and re-apply them.
+  const handleStabilize = useCallback(() => {
+    // 1. Apply wounded +1 before removing dying
+    const curWounded = useConditionStore.getState().activeConditions
+      .find((c) => c.combatantId === combatant.id && c.slug === 'wounded')?.value ?? 0
+    const newWounded = getWoundedValueAfterStabilize(curWounded)
+    applyCondition(combatant.id, 'wounded' as ConditionSlug, newWounded)
+
+    // 2. Snapshot cascade conditions that must survive stabilization
+    const CASCADE_PRESERVE: ConditionSlug[] = ['unconscious', 'prone', 'blinded', 'off-guard'] as ConditionSlug[]
+    const managerState = getManagerState(combatant.id)
+    const preserveSet = new Map<ConditionSlug, number>()
+    for (const slug of CASCADE_PRESERVE) {
+      const cond = managerState.find((c) => c.slug === slug)
+      if (cond) preserveSet.set(slug, cond.value)
+    }
+
+    // 3. Remove dying — this cascade-removes unconscious -> blinded, off-guard
+    //    (prone is already preserved by condition-bridge)
+    removeCondition(combatant.id, 'dying' as ConditionSlug)
+
+    // 4. Re-apply any cascade conditions that were lost
+    const afterState = getManagerState(combatant.id)
+    const afterSlugs = new Set(afterState.map((c) => c.slug))
+    for (const [slug, value] of preserveSet) {
+      if (!afterSlugs.has(slug)) {
+        applyCondition(combatant.id, slug, value)
+      }
+    }
+  }, [combatant.id])
+
+  // Resurrect: clear ALL conditions, set HP to 1 (GM fiat / magical resurrection).
+  const handleResurrect = useCallback(() => {
+    clearCombatantManager(combatant.id)
+    updateHp(combatant.id, 1 - combatant.hp)
+  }, [combatant.id, combatant.hp, updateHp])
 
   const totalTypedDamage = damageEntries.reduce((s, e) => s + e.amount, 0)
   const hasEntries = damageEntries.length > 0
@@ -208,7 +328,13 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           // If healing brings a downed creature back to positive HP, clear
           // all conditions except Wounded and Prone (CRB pg.460).
           if (wasDown && combatant.hp + hpInput > 0) {
-            // CRB pg.460: only Dying is lost when healed from 0 HP.
+            // CRB pg.460: losing dying grants/increases wounded.
+            const curWounded = useConditionStore.getState().activeConditions
+              .find((c) => c.combatantId === combatant.id && c.slug === 'wounded')?.value ?? 0
+            const newWounded = getWoundedValueAfterStabilize(curWounded)
+            applyCondition(combatant.id, 'wounded' as ConditionSlug, newWounded)
+            // Remove dying (cascades: unconscious, blinded, off-guard removed;
+            // prone is preserved by condition-bridge).
             removeCondition(combatant.id, 'dying' as ConditionSlug)
           }
         } else {
@@ -273,6 +399,26 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
         </div>
       </div>
 
+      {isDead ? (
+        /* Dead creature — no HP controls, only status indicator + stabilize/resurrect */
+        <div className="flex flex-col items-center gap-3 py-4 rounded border border-destructive/30 bg-destructive/10">
+          <Skull className="w-10 h-10 text-destructive" />
+          <p className="text-lg font-bold text-destructive">DEAD</p>
+          <p className="text-xs text-muted-foreground">
+            Dying {dyingValue} reached death threshold ({deathThreshold})
+          </p>
+          <div className="flex gap-2 w-full px-4">
+            <Button
+              variant="secondary"
+              className="flex-1 h-8 text-xs gap-1.5 bg-emerald-900/50 hover:bg-emerald-900/70 text-emerald-300"
+              onClick={handleResurrect}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Resurrect
+            </Button>
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-col gap-1">
         {/* Damage button — full width */}
         <Button
@@ -394,7 +540,20 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             Temp HP
           </Button>
         </div>
+
+        {/* Stabilize — only when creature is dying but not yet dead */}
+        {dyingValue > 0 && (
+          <Button
+            variant="secondary"
+            className="h-8 text-xs justify-start gap-1.5 w-full bg-amber-900/50 hover:bg-amber-900/70 text-amber-300"
+            onClick={handleStabilize}
+          >
+            <HeartPulse className="w-3.5 h-3.5" />
+            Stabilize
+          </Button>
+        )}
       </div>
+      )}
 
       {/* Trait selector dialog */}
       <Dialog modal={false} open={traitSelectorOpen} onOpenChange={setTraitSelectorOpen}>
@@ -461,6 +620,72 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AC, saves, seek, hide */}
+      {creature && (
+        <>
+          <Separator />
+          {/* AC */}
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">AC</span>
+            <span className="text-lg font-mono font-bold">
+              {creature.ac + (combatant.shieldRaised ? shieldAcBonus : 0)}
+            </span>
+          </div>
+          {/* Saves */}
+          <div className="flex gap-1">
+            {[
+              { label: 'Fort', slug: 'fortitude', base: creature.fort },
+              { label: 'Ref', slug: 'reflex', base: creature.ref },
+              { label: 'Will', slug: 'will', base: creature.will },
+            ].map(({ label, slug, base }) => {
+              const mod = getModified(base, slug)
+              return (
+                <Button
+                  key={slug}
+                  variant="secondary"
+                  className="flex-1 h-7 text-xs gap-1"
+                  onClick={() =>
+                    rollStat(
+                      mod,
+                      label === 'Fort' ? 'Fortitude' : label === 'Ref' ? 'Reflex' : 'Will',
+                    )
+                  }
+                >
+                  {label} <span className="font-mono">{fmt(mod)}</span>
+                </Button>
+              )
+            })}
+          </div>
+          {/* Seek + Hide */}
+          <div className="flex gap-1">
+            <Button
+              variant="secondary"
+              className="flex-1 h-7 text-xs gap-1"
+              onClick={() =>
+                rollStat(getModified(creature.perception, 'perception'), 'Seek (Perception)')
+              }
+            >
+              <Eye className="w-3 h-3" />
+              Seek{' '}
+              <span className="font-mono">
+                {fmt(getModified(creature.perception, 'perception'))}
+              </span>
+            </Button>
+            {baseStealth !== null && (
+              <Button
+                variant="secondary"
+                className="flex-1 h-7 text-xs gap-1"
+                onClick={() => void handleHide()}
+              >
+                <EyeOff className="w-3 h-3" />
+                Hide <span className="font-mono">{fmt(getModified(baseStealth, 'stealth'))}</span>
+              </Button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* IWR preview */}
       {iwrPreviews && iwrPreviews.length > 0 && (

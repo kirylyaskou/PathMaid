@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react'
 import { User, Skull } from 'lucide-react'
 import { Separator } from '@/shared/ui/separator'
 import { useCombatantStore } from '@/entities/combatant'
 import { useShallow } from 'zustand/react/shallow'
+import { fetchCreatureStatBlockData } from '@/entities/creature'
+import type { CreatureStatBlockData } from '@/entities/creature'
 import { HpControls } from './HpControls'
 import { ConditionSection } from './ConditionSection'
 
@@ -15,6 +18,19 @@ export function CombatantDetail({ combatantId, hasShield = false, shieldAcBonus 
   const combatant = useCombatantStore(
     useShallow((s) => s.combatants.find((c) => c.id === combatantId))
   )
+  const [creature, setCreature] = useState<CreatureStatBlockData | null>(null)
+
+  useEffect(() => {
+    if (!combatant || !combatant.creatureRef || !combatant.isNPC) {
+      setCreature(null)
+      return
+    }
+    let cancelled = false
+    fetchCreatureStatBlockData(combatant.creatureRef).then((data) => {
+      if (!cancelled) setCreature(data)
+    })
+    return () => { cancelled = true }
+  }, [combatant?.creatureRef, combatant?.isNPC])
 
   if (!combatant) {
     return (
@@ -54,6 +70,7 @@ export function CombatantDetail({ combatantId, hasShield = false, shieldAcBonus 
         iwrResistances={combatant.iwrResistances}
         hasShield={hasShield}
         shieldAcBonus={shieldAcBonus}
+        creature={creature}
       />
 
       <Separator />
