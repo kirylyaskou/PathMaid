@@ -525,10 +525,8 @@ async function extractCreatureItems(entities: RawEntity[]): Promise<void> {
   const SKIP_TYPES = new Set(['spellcastingEntry', 'spell', 'melee', 'ranged', 'action', 'lore'])
   const creatureItems: RawCreatureItem[] = []
 
-  let npcCount = 0; let parseErrors = 0; let sampleTypes = new Set<string>()
   for (const entity of entities) {
     if (entity.entity_type !== 'npc') continue
-    npcCount++
     try {
       const raw = JSON.parse(entity.raw_json)
       const items: unknown[] = raw.items ?? []
@@ -536,7 +534,6 @@ async function extractCreatureItems(entities: RawEntity[]): Promise<void> {
       for (const item of items) {
         const it = item as Record<string, unknown>
         const itemType = it.type as string
-        sampleTypes.add(itemType)
         if (SKIP_TYPES.has(itemType)) continue
         if (!ITEM_TYPES.includes(itemType)) continue
 
@@ -565,12 +562,10 @@ async function extractCreatureItems(entities: RawEntity[]): Promise<void> {
           sort_order: (it.sort as number) ?? 0,
         })
       }
-    } catch (e) {
-      parseErrors++
-      if (parseErrors <= 3) console.error('[extractCreatureItems] parse error:', entity.id, e)
+    } catch {
+      // skip malformed creature JSON
     }
   }
-  console.log(`[extractCreatureItems] NPCs: ${npcCount}, parseErrors: ${parseErrors}, creatureItems: ${creatureItems.length}, itemTypes seen: ${[...sampleTypes].join(', ')}`)
 
   for (let i = 0; i < creatureItems.length; i += BATCH_SIZE) {
     const batch = creatureItems.slice(i, i + BATCH_SIZE)

@@ -145,9 +145,6 @@ export async function getItemCount(): Promise<number> {
 
 export async function getCreatureItems(creatureId: string): Promise<CreatureItemRow[]> {
   const db = await getDb()
-  const total = await db.select<[{ c: number }]>('SELECT COUNT(*) as c FROM creature_items', [])
-  const sample = await db.select<[{ creature_id: string }]>('SELECT creature_id FROM creature_items LIMIT 1', [])
-  console.log(`[getCreatureItems] querying id="${creatureId}" | total rows: ${total[0]?.c} | sample creature_id: "${sample[0]?.creature_id}"`)
   return await db.select<CreatureItemRow[]>(
     `SELECT * FROM creature_items
      WHERE creature_id = ?
