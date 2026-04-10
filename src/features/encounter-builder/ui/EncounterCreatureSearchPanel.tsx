@@ -162,7 +162,6 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
           )}
           {results.map((row) => {
             const baseLevel = row.level ?? 0
-            const baseHp = row.hp ?? 0
             return (
               <div key={row.id}>
                 <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30">

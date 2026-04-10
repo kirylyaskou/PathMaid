@@ -3,8 +3,6 @@ import { X } from 'lucide-react'
 import { useConditionStore, ConditionBadge } from '@/entities/condition'
 import { ConditionCombobox } from '@/features/combat-tracker/ui/ConditionCombobox'
 import { removeCondition, setConditionLocked } from '@/features/combat-tracker'
-import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
-import { useCombatantStore } from '@/entities/combatant'
 import { getConditionBySlug } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
 import type { ConditionSlug } from '@engine'
@@ -90,7 +88,7 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
       if (removed.length > 0) {
         toast(`Removed ${slug} — also removed: ${removed.join(', ')}`)
       }
-      if (openConditionSlug === slug || removed.includes(openConditionSlug ?? '')) {
+      if (openConditionSlug === slug || removed.includes(openConditionSlug as ConditionSlug)) {
         setDetailRow(null)
         setOpenConditionSlug(null)
       }
@@ -105,29 +103,12 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
     [combatantId]
   )
 
-  const openPersistentDialog = useCallback((slug: string) => {
-    const allConditions = useConditionStore.getState().activeConditions
-    const persistentConds = allConditions.filter(
-      (c) => c.combatantId === combatantId && c.slug.startsWith('persistent-')
-    )
-    if (persistentConds.length > 0) {
-      const combatant = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
-      useCombatTrackerStore.getState().setPendingPersistentDamage({
-        combatantId,
-        combatantName: combatant?.displayName ?? 'Combatant',
-        conditions: persistentConds.map((pc) => ({
-          slug: pc.slug,
-          formula: pc.formula || '?',
-          damageType: pc.slug.replace('persistent-', ''),
-        })),
-      })
-    }
-  }, [combatantId])
-
   const handleInfo = useCallback(async (slug: string) => {
     setOpenConditionSlug(slug)
+    // Strip persistent-* prefix to look up base condition
+    const baseSlug = slug.startsWith('persistent-') ? slug.replace('persistent-', '') : slug
     try {
-      const row = await getConditionBySlug(slug)
+      const row = await getConditionBySlug(baseSlug)
       setDetailRow(row ?? 'not-found')
     } catch {
       setDetailRow('not-found')
@@ -151,7 +132,7 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
             <ConditionBadge
               key={c.slug}
               condition={c}
-              onRemove={c.slug.startsWith('persistent-') ? () => openPersistentDialog(c.slug) : () => handleRemove(c.slug)}
+              onRemove={() => handleRemove(c.slug)}
               onToggleLock={() => handleToggleLock(c.slug, !!c.isLocked)}
               onInfo={() => handleInfo(c.slug)}
             />

@@ -23,7 +23,7 @@ function buildSnapshot(): CombatSnapshot | null {
     turn: tracker.turn,
     activeCombatantId: tracker.activeCombatantId,
     isRunning: tracker.isRunning,
-    combatants,
+    combatants: combatants.map((c) => ({ ...c, level: c.level ?? null })),
     conditions,
   }
 }
@@ -70,7 +70,9 @@ export async function loadActiveCombat(): Promise<boolean> {
     const snapshot = await loadCombatState(running.id)
     if (!snapshot) return false
 
-    useCombatantStore.getState().setCombatants(snapshot.combatants)
+    useCombatantStore.getState().setCombatants(
+      snapshot.combatants.map((c) => ({ ...c, level: c.level ?? undefined }))
+    )
     useCombatTrackerStore.getState().setCombatId(snapshot.id)
     useCombatTrackerStore.getState().setRound(snapshot.round)
     useCombatTrackerStore.getState().setTurn(snapshot.turn)

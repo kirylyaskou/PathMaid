@@ -9,6 +9,7 @@ export interface CombatCombatantRow {
   maxHp: number
   tempHp: number
   isNPC: boolean
+  level: number | null
 }
 
 export interface CombatConditionRow {
@@ -82,7 +83,7 @@ export async function loadCombatState(combatId: string): Promise<CombatSnapshot 
     maxHp: r.max_hp,
     tempHp: r.temp_hp,
     isNPC: r.is_npc === 1,
-    ...(r.level != null ? { level: r.level } : {}),
+    level: r.level,
   }))
 
   const condRows = await db.select<Array<{

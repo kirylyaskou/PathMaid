@@ -42,7 +42,7 @@ const norm = (s: string) => fmt(s).toLowerCase()
 function ConditionPill({
   slug,
   disabled,
-  selected,
+  selected: _selected,
   onClick,
 }: {
   slug: string

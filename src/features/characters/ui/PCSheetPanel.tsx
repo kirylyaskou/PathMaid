@@ -59,7 +59,7 @@ function CoreSkillsContent({ build }: { build: PathbuilderBuild }) {
     thievery: 'dex',
   }
 
-  const profs = build.proficiencies as Record<string, number>
+  const profs: Record<string, number> = { ...build.proficiencies }
   const sortedSkills = Object.keys(SKILL_ABILITY)
     .map((key) => ({ name: key.charAt(0).toUpperCase() + key.slice(1), proficiency: profs[key] ?? 0 }))
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -424,7 +424,7 @@ export function PCSheetPanel({ character, onClose }: PCSheetPanelProps) {
                   <FeatsContent build={build} />
                 </TabsContent>
                 <TabsContent value="notes" className="m-0">
-                  <NotesContent character={character} />
+                  {character ? <NotesContent character={character} /> : null}
                 </TabsContent>
               </div>
             </ScrollArea>

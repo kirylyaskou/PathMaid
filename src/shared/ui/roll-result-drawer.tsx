@@ -3,7 +3,6 @@ import { X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
-import { Separator } from '@/shared/ui/separator'
 import { useRollStore } from '@/shared/model/roll-store'
 import { DiceCubeAnimation } from './dice-cube-animation'
 import type { Roll } from '@engine'
@@ -12,7 +11,6 @@ function RollBreakdown({ roll }: { roll: Roll }) {
   const isNat20 = roll.dice.some((d) => d.sides === 20 && d.value === 20)
   const isNat1 = roll.dice.some((d) => d.sides === 20 && d.value === 1)
   const dieLabel = `d${roll.dice[0]?.sides ?? 20}`
-  const totalColor = isNat1 ? 'var(--pf-blood)' : 'var(--pf-gold)'
 
   const diceGroups = new Map<number, number[]>()
   for (const die of roll.dice) {
