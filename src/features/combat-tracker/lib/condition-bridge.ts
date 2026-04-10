@@ -39,7 +39,18 @@ function recomputeDrainedHp(combatantId: string): void {
 
   const reduction = level * drainedValue
   const newMaxHp = Math.max(1, baseMaxHp - reduction)
+
+  // Delta from current maxHp → apply same delta to current HP (CRB: not damage).
+  const maxHpDelta = newMaxHp - combatant.maxHp
   state.setMaxHp(combatantId, newMaxHp)
+
+  if (maxHpDelta !== 0) {
+    const newHp = Math.max(0, Math.min(newMaxHp, combatant.hp + maxHpDelta))
+    useCombatantStore.setState((s) => {
+      const c = s.combatants.find((c) => c.id === combatantId)
+      if (c) c.hp = newHp
+    })
+  }
 }
 
 function getOrCreate(combatantId: string): ConditionManager {

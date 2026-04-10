@@ -398,7 +398,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                         {/* Enfeebled penalty on Strength-based damage (melee only) */}
                         {!isRanged && (() => {
                           const enfeebledPenalty = strikeModResult?.modifiers
-                            .filter((m) => m.slug === 'enfeebled')
+                            .filter((m) => m.slug.startsWith('enfeebled:'))
                             .reduce((s, m) => s + m.modifier, 0) ?? 0
                           return enfeebledPenalty < 0 ? (
                             <span className="ml-1 font-mono text-xs text-pf-blood">

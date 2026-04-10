@@ -23,6 +23,8 @@ interface ConditionBadgeProps {
   onRemove?: () => void
   onToggleLock?: () => void
   onInfo?: () => void
+  /** If provided, overrides onRemove as the badge body click handler. */
+  onClick?: () => void
   className?: string
 }
 
@@ -31,9 +33,11 @@ export function ConditionBadge({
   onRemove,
   onToggleLock,
   onInfo,
+  onClick,
   className,
 }: ConditionBadgeProps) {
   const colorClass = getCategoryColor(condition.slug)
+  const handleClick = onClick ?? onRemove
 
   return (
     <div
@@ -42,8 +46,8 @@ export function ConditionBadge({
         colorClass,
         className
       )}
-      onClick={onRemove}
-      title={`Click to remove ${condition.slug}`}
+      onClick={handleClick}
+      title={onClick ? `Click to open ${condition.slug} dialog` : `Click to remove ${condition.slug}`}
     >
       {condition.grantedBy && (
         <Link className="w-2.5 h-2.5 opacity-60" />

@@ -141,6 +141,7 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
         maxHp: c.maxHp,
         tempHp: c.tempHp,
         isNPC: c.isNPC,
+        ...(row?.level != null ? { level: row.level } : {}),
         ...(iwr && iwr.immunities.length > 0 ? { iwrImmunities: iwr.immunities } : {}),
         ...(iwr && iwr.weaknesses.length > 0 ? { iwrWeaknesses: iwr.weaknesses } : {}),
         ...(iwr && iwr.resistances.length > 0 ? { iwrResistances: iwr.resistances } : {}),

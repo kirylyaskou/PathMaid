@@ -412,13 +412,14 @@ export function CombatPage() {
   }, [combatants, reorderInitiative])
 
   // Load encounter-inventory items for the selected combatant (for hasShield check).
+  // Runs whenever selection or stat block changes (stat block reload = items may have been added).
   useEffect(() => {
-    if (!isEncounterBacked || !combatId || !selectedId) {
+    if (!combatId || !selectedId) {
       setSelectedEncounterItems([])
       return
     }
     loadItemOverrides(combatId, selectedId).then(setSelectedEncounterItems).catch(() => setSelectedEncounterItems([]))
-  }, [isEncounterBacked, combatId, selectedId])
+  }, [combatId, selectedId, lastNpcStatBlock])
 
   // FEAT-09: Raise Shield button renders when the creature carries a shield —
   // checked in both static bestiary equipment and encounter-inventory overrides.
