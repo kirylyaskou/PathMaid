@@ -10,23 +10,8 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { useConditionStore } from '@/entities/condition'
 import { useCombatantStore } from '@/entities/combatant'
-import { applyCondition } from '@/features/combat-tracker'
-import { getDyingValueOnKnockout } from '@engine'
-import type { ConditionSlug } from '@engine'
 import type { PendingPersistentDamage } from '@/features/combat-tracker/model/store'
-
-function incrementDying(combatantId: string): void {
-  const conditions = useConditionStore.getState().activeConditions
-  const dying = conditions.find((c) => c.combatantId === combatantId && c.slug === 'dying')
-  const wounded = conditions.find((c) => c.combatantId === combatantId && c.slug === 'wounded')
-  const currentDying = dying?.value ?? 0
-  const woundedVal = wounded?.value ?? 0
-  // If already dying: bump by 1. Otherwise: apply the knockout start value (1 + wounded).
-  const next = currentDying > 0
-    ? currentDying + 1
-    : getDyingValueOnKnockout(woundedVal)
-  applyCondition(combatantId, 'dying' as ConditionSlug, next)
-}
+import { incrementDyingForCombatant } from '../model/use-combatant-hp'
 
 function rollFormula(formula: string): number {
   const match = formula.match(/^(\d+)d(\d+)(?:\s*\+\s*(\d+))?$/)
@@ -63,7 +48,7 @@ function applyResult(
   const combatant = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
   let dyingIncreased = false
   if (combatant && combatant.hp <= 0) {
-    incrementDying(combatantId)
+    incrementDyingForCombatant(combatantId)
     dyingIncreased = true
   } else {
     useCombatantStore.getState().updateHp(combatantId, -damage)

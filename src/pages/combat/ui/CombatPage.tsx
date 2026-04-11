@@ -17,14 +17,13 @@ import { setupAutoSave, teardownAutoSave } from '@/features/combat-tracker/lib/c
 import { setupEncounterAutoSave, teardownEncounterAutoSave } from '@/features/combat-tracker/lib/encounter-persistence'
 import { useCombatantStore } from '@/entities/combatant'
 import { useEncounterStore } from '@/entities/encounter'
-import { CreatureStatBlock, fetchCreatureStatBlockData, toCreature, extractIwr } from '@/entities/creature'
-import type { CreatureStatBlockData, WeakEliteTier } from '@/entities/creature'
+import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
+import type { WeakEliteTier } from '@/entities/creature'
 import { getHpAdjustment } from '@engine'
-import type { PathbuilderBuild } from '@engine'
 import { PCCombatCard } from '@/features/characters'
-import { getCharacterById, loadItemOverrides } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
+import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
 
@@ -209,13 +208,9 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
 
 export function CombatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [lastNpcStatBlock, setLastNpcStatBlock] = useState<CreatureStatBlockData | null>(null)
-  const [statBlockLoading, setStatBlockLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
-  const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
-  const [selectedPcBuild, setSelectedPcBuild] = useState<PathbuilderBuild | null>(null)
-  const [pcBuildLoading, setPcBuildLoading] = useState(false)
-  const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
+  const { lastNpcStatBlock, statBlockLoading, selectedPcBuild, pcBuildLoading, loadForCombatant, refreshShieldBonus } =
+    useCombatDetailLoader()
 
   // BUG-02 (52-08 follow-up): require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
@@ -266,112 +261,8 @@ export function CombatPage() {
 
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
-
-    const combatant = useCombatantStore.getState().combatants.find((c) => c.id === id)
-    if (!combatant) return
-
-    // Branch: NPC — load stat block
-    if (combatant.isNPC && combatant.creatureRef) {
-      setSelectedPcBuild(null)
-      const cached = statBlockCache.current.get(combatant.creatureRef)
-      if (cached) {
-        setLastNpcStatBlock(cached)
-        // Re-apply shield bonus from cache when unset (e.g. after encounter reload).
-        // Always re-check: base equipment first, then encounter inventory (async).
-        if (combatant.shieldAcBonus === undefined) {
-          const isShieldItem = (type: string, name: string) =>
-            type === 'shield' || name.toLowerCase().includes('shield')
-          const baseShield = cached.equipment?.find(
-            (it) => isShieldItem(it.item_type, it.item_name ?? '')
-          )
-          if (baseShield) {
-            useCombatantStore.getState().updateCombatant(id, {
-              shieldAcBonus: baseShield.ac_bonus ?? 0,
-            })
-          } else {
-            // Check encounter inventory — may have a shield added via encounter builder
-            const { combatId: cid, isEncounterBacked: enc } = useCombatTrackerStore.getState()
-            if (enc && cid) {
-              loadItemOverrides(cid, id).catch(() => []).then((encItems) => {
-                const encShield = encItems.find(
-                  (it) => !it.isRemoved && isShieldItem(it.itemType, it.itemName)
-                )
-                useCombatantStore.getState().updateCombatant(id, {
-                  shieldAcBonus: encShield ? (encShield.acBonus ?? 0) : null,
-                })
-              })
-            } else {
-              useCombatantStore.getState().updateCombatant(id, { shieldAcBonus: null })
-            }
-          }
-        }
-        return
-      }
-      setStatBlockLoading(true)
-      try {
-        const data = await fetchCreatureStatBlockData(combatant.creatureRef)
-        if (data) {
-          if (statBlockCache.current.size >= 10) {
-            const firstKey = statBlockCache.current.keys().next().value
-            if (firstKey !== undefined) statBlockCache.current.delete(firstKey)
-          }
-          statBlockCache.current.set(combatant.creatureRef, data)
-          setLastNpcStatBlock(data)
-
-          // Detect shield AC bonus from creature items OR encounter inventory
-          const isShield = (type: string, name: string) =>
-            type === 'shield' || name.toLowerCase().includes('shield')
-          let shieldAcBonus: number | null = null
-          const baseShield = data.equipment?.find((it) => isShield(it.item_type, it.item_name ?? ''))
-          if (baseShield) {
-            shieldAcBonus = baseShield.ac_bonus ?? 0
-          } else {
-            // Check encounter inventory (items added via encounter builder)
-            const { combatId: cid, isEncounterBacked: enc } = useCombatTrackerStore.getState()
-            if (enc && cid) {
-              const encItems = await loadItemOverrides(cid, id).catch(() => [])
-              const encShield = encItems.find((it) => !it.isRemoved && isShield(it.itemType, it.itemName))
-              if (encShield) shieldAcBonus = encShield.acBonus ?? 0
-            }
-          }
-          useCombatantStore.getState().updateCombatant(id, { shieldAcBonus })
-        }
-      } finally {
-        setStatBlockLoading(false)
-      }
-      return
-    }
-
-    // Branch: PC — load PathbuilderBuild
-    if (!combatant.isNPC && !combatant.isHazard && combatant.creatureRef) {
-      setLastNpcStatBlock(null)
-      const cached = pcBuildCache.current.get(combatant.creatureRef)
-      if (cached) {
-        setSelectedPcBuild(cached)
-        return
-      }
-      setPcBuildLoading(true)
-      try {
-        const character = await getCharacterById(combatant.creatureRef)
-        if (character) {
-          const build = JSON.parse(character.rawJson) as PathbuilderBuild
-          if (pcBuildCache.current.size >= 10) {
-            const firstKey = pcBuildCache.current.keys().next().value
-            if (firstKey !== undefined) pcBuildCache.current.delete(firstKey)
-          }
-          pcBuildCache.current.set(combatant.creatureRef, build)
-          setSelectedPcBuild(build)
-        }
-      } catch {
-        // rawJson parse failure — leave selectedPcBuild null
-      } finally {
-        setPcBuildLoading(false)
-      }
-      return
-    }
-
-    // Branch: Hazard — leave right panel sticky (no update)
-  }, [])
+    await loadForCombatant(id)
+  }, [loadForCombatant])
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
@@ -574,32 +465,7 @@ export function CombatPage() {
                         ? {
                             encounterId: combatId,
                             combatantId: selectedId,
-                            onInventoryChanged: async () => {
-                              if (!combatId || !selectedId) return
-                              const isShieldItem = (type: string, name: string) =>
-                                type === 'shield' || name.toLowerCase().includes('shield')
-                              // Re-check base equipment first
-                              const cached = statBlockCache.current.get(
-                                useCombatantStore.getState().combatants.find((c) => c.id === selectedId)?.creatureRef ?? ''
-                              )
-                              const baseShield = cached?.equipment?.find(
-                                (it) => isShieldItem(it.item_type, it.item_name ?? '')
-                              )
-                              if (baseShield) {
-                                useCombatantStore.getState().updateCombatant(selectedId, {
-                                  shieldAcBonus: baseShield.ac_bonus ?? 0,
-                                })
-                                return
-                              }
-                              // Check encounter inventory
-                              const encItems = await loadItemOverrides(combatId, selectedId).catch(() => [])
-                              const encShield = encItems.find(
-                                (it) => !it.isRemoved && isShieldItem(it.itemType, it.itemName)
-                              )
-                              useCombatantStore.getState().updateCombatant(selectedId, {
-                                shieldAcBonus: encShield ? (encShield.acBonus ?? 0) : null,
-                              })
-                            },
+                            onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
                           }
                         : undefined
                     }

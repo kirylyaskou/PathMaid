@@ -8,15 +8,12 @@ import {
 } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import {
-  performRecoveryCheck,
-  getWoundedValueAfterStabilize,
-  getDyingValueOnKnockout,
-} from '@engine'
+import { performRecoveryCheck } from '@engine'
 import type { RecoveryCheckResult, ConditionSlug } from '@engine'
 import { useConditionStore } from '@/entities/condition'
-import { applyCondition, removeCondition, setConditionValue } from '@/features/combat-tracker'
+import { setConditionValue } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
+import { useCombatantHp } from '../model/use-combatant-hp'
 
 interface DyingCascadeDialogProps {
   open: boolean
@@ -45,6 +42,8 @@ export function DyingCascadeDialog({
   const [checkResult, setCheckResult] = useState<RecoveryCheckResult | null>(null)
   const [isDead, setIsDead] = useState(false)
 
+  const { stabilize, knockOut, critKnockOut } = useCombatantHp(combatantId)
+
   const conditions = useConditionStore(
     useShallow((s) => s.activeConditions.filter((c) => c.combatantId === combatantId))
   )
@@ -64,16 +63,7 @@ export function DyingCascadeDialog({
     }
     if (initializedForRef.current === combatantId) return
     if (dyingValue === 0) {
-      // Read wounded directly from store to avoid stale closure values across multiple opens.
-      const latestWounded = useConditionStore
-        .getState()
-        .activeConditions
-        .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
-      applyCondition(
-        combatantId,
-        'dying' as ConditionSlug,
-        getDyingValueOnKnockout(latestWounded),
-      )
+      knockOut()
     }
     initializedForRef.current = combatantId
   }, [open, combatantId])
@@ -101,12 +91,6 @@ export function DyingCascadeDialog({
   const liveDc = 10 + dyingValue
   const dc = checkResult ? checkResult.dc : liveDc
 
-  const readLatestWounded = (): number =>
-    useConditionStore
-      .getState()
-      .activeConditions
-      .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
-
   const handleRecoveryCheck = () => {
     const roll = rollMode === 'manual' ? parseInt(manualRoll, 10) : undefined
     if (rollMode === 'manual' && (isNaN(roll!) || roll! < 1 || roll! > 20)) return
@@ -117,29 +101,20 @@ export function DyingCascadeDialog({
     if (result.newDyingValue === -1) {
       setIsDead(true)
     } else if (result.stabilized) {
-      // CRB pg.460: losing dying grants/increases wounded. Apply explicitly via pure fn.
-      const newWounded = getWoundedValueAfterStabilize(readLatestWounded())
-      applyCondition(combatantId, 'wounded' as ConditionSlug, newWounded)
-      removeCondition(combatantId, 'dying' as ConditionSlug)
+      stabilize()
     } else {
       setConditionValue(combatantId, 'dying' as ConditionSlug, result.newDyingValue)
     }
   }
 
   const handleOverride = () => {
-    applyCondition(
-      combatantId,
-      'dying' as ConditionSlug,
-      getDyingValueOnKnockout(readLatestWounded()),
-    )
+    knockOut()
     setIsDead(false)
     setCheckResult(null)
   }
 
   const handleCritKnockout = () => {
-    // CRB crit rules: a crit hit that downs a target inflicts dying +2 (in addition to wounded).
-    const critDying = getDyingValueOnKnockout(readLatestWounded()) + 1
-    applyCondition(combatantId, 'dying' as ConditionSlug, critDying)
+    critKnockOut()
     setCheckResult(null)
     setIsDead(false)
   }
