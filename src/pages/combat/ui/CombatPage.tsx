@@ -232,6 +232,7 @@ export function CombatPage() {
   const activeTabId = useEncounterTabsStore((s) => s.activeTabId)
   const splitMode = useEncounterTabsStore((s) => s.splitMode)
   const setActiveTab = useEncounterTabsStore((s) => s.setActiveTab)
+  const selectedCombatant = selectedId ? combatants.find((x) => x.id === selectedId) : null
 
   // Mount: migrate existing running combat to a tab, then setup auto-save per active tab
   useEffect(() => {
@@ -450,10 +451,9 @@ export function CombatPage() {
             <ResizablePanel defaultSize={40} minSize={28}>
               <div className="h-full overflow-y-auto">
                 {/* PC selected */}
-                {selectedPcBuild && selectedId && (() => {
-                  const c = combatants.find((x) => x.id === selectedId)
-                  return c ? <PCCombatCard build={selectedPcBuild} combatant={c} encounterId={isEncounterBacked && combatId ? combatId : undefined} /> : null
-                })()}
+                {selectedPcBuild && selectedCombatant && (
+                  <PCCombatCard build={selectedPcBuild} combatant={selectedCombatant} encounterId={isEncounterBacked && combatId ? combatId : undefined} />
+                )}
 
                 {/* NPC selected */}
                 {!selectedPcBuild && lastNpcStatBlock && (

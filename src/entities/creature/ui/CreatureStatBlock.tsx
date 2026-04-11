@@ -27,6 +27,31 @@ import { StatItem } from './StatItem'
 import { SpellcastingBlock } from './SpellcastingBlock'
 import { EquipmentBlock } from './EquipmentBlock'
 
+import type { StatModifierResult } from '../model/use-modified-stats'
+
+/** Renders a DC value (Spell DC / Class DC) with condition modifier tinting. */
+function DcDisplay({
+  label,
+  baseDc,
+  modResult,
+}: {
+  label: string
+  baseDc: number
+  modResult: StatModifierResult | undefined
+}) {
+  const net = modResult?.netModifier ?? 0
+  const finalDc = baseDc + net
+  const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
+  return (
+    <div className="text-center">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <ModifierTooltip modifiers={modResult?.modifiers ?? []} netModifier={net} finalDisplay={String(finalDc)}>
+        <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
+      </ModifierTooltip>
+    </div>
+  )
+}
+
 export interface EncounterContext {
   encounterId: string
   combatantId: string
@@ -158,34 +183,12 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           </div>
           {(creature.spellDC != null || creature.classDC != null) && (
             <div className="flex gap-6 mt-3 pt-3 border-t border-border/40">
-              {creature.spellDC != null && (() => {
-                const r = modStats.get('spell-dc')
-                const net = r?.netModifier ?? 0
-                const finalDc = creature.spellDC! + net
-                const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
-                return (
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Spell DC</p>
-                    <ModifierTooltip modifiers={r?.modifiers ?? []} netModifier={net} finalDisplay={String(finalDc)}>
-                      <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
-                    </ModifierTooltip>
-                  </div>
-                )
-              })()}
-              {creature.classDC != null && (() => {
-                const r = modStats.get('spell-dc')
-                const net = r?.netModifier ?? 0
-                const finalDc = creature.classDC! + net
-                const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
-                return (
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Class DC</p>
-                    <ModifierTooltip modifiers={r?.modifiers ?? []} netModifier={net} finalDisplay={String(finalDc)}>
-                      <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
-                    </ModifierTooltip>
-                  </div>
-                )
-              })()}
+              {creature.spellDC != null && (
+                <DcDisplay label="Spell DC" baseDc={creature.spellDC} modResult={modStats.get('spell-dc')} />
+              )}
+              {creature.classDC != null && (
+                <DcDisplay label="Class DC" baseDc={creature.classDC} modResult={modStats.get('spell-dc')} />
+              )}
             </div>
           )}
         </div>
@@ -280,6 +283,11 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                   const map1 = modifiedMod - (isAgile ? 4 : 5)
                   const map2 = modifiedMod - (isAgile ? 8 : 10)
                   const strikeModResult = modStats.get(strikeSlug)
+                  const enfeebledPenalty = !isRanged
+                    ? (strikeModResult?.modifiers
+                        .filter((m) => m.slug.startsWith('enfeebled:'))
+                        .reduce((s, m) => s + m.modifier, 0) ?? 0)
+                    : 0
                   return (
                     <div key={i} className="p-3 rounded-md bg-secondary/50">
                       <div className="flex items-center gap-2">
@@ -331,16 +339,11 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                             </span>
                           ))}
                           {/* Enfeebled penalty on Strength-based damage (melee only) */}
-                          {!isRanged && (() => {
-                            const enfeebledPenalty = strikeModResult?.modifiers
-                              .filter((m) => m.slug.startsWith('enfeebled:'))
-                              .reduce((s, m) => s + m.modifier, 0) ?? 0
-                            return enfeebledPenalty < 0 ? (
-                              <span className="ml-1 font-mono text-xs text-pf-blood">
-                                {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
-                              </span>
-                            ) : null
-                          })()}
+                          {enfeebledPenalty < 0 && (
+                            <span className="ml-1 font-mono text-xs text-pf-blood">
+                              {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
+                            </span>
+                          )}
                         </div>
                       )}
                       {/* Additional damage */}
