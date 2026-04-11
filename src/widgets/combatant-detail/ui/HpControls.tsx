@@ -28,6 +28,9 @@ import { useConditionStore } from '@/entities/condition'
 import { getDyingValueOnKnockout, getWoundedValueAfterStabilize } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 import { useRollStore } from '@/shared/model/roll-store'
+import { useRoll } from '@/shared/hooks/use-roll'
+import { formatModifier } from '@/shared/lib/format'
+import { damageTypeChip } from '@/shared/lib/damage-colors'
 import { useModifiedStats } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
 import { toast } from 'sonner'
@@ -79,31 +82,6 @@ const MATERIAL_GROUP = {
   traits: ['cold-iron', 'silver', 'adamantine', 'mithral', 'magic'],
 }
 
-const CHIP_COLOR: Record<string, string> = {
-  bludgeoning: 'bg-slate-600 text-slate-100',
-  piercing: 'bg-slate-600 text-slate-100',
-  slashing: 'bg-slate-600 text-slate-100',
-  bleed: 'bg-slate-600 text-slate-100',
-  acid: 'bg-amber-800/80 text-amber-200',
-  cold: 'bg-amber-800/80 text-amber-200',
-  electricity: 'bg-amber-800/80 text-amber-200',
-  fire: 'bg-amber-800/80 text-amber-200',
-  sonic: 'bg-amber-800/80 text-amber-200',
-  force: 'bg-amber-800/80 text-amber-200',
-  vitality: 'bg-amber-800/80 text-amber-200',
-  void: 'bg-amber-800/80 text-amber-200',
-  holy: 'bg-violet-800/80 text-violet-200',
-  unholy: 'bg-violet-800/80 text-violet-200',
-  spirit: 'bg-zinc-600 text-zinc-200',
-  mental: 'bg-zinc-600 text-zinc-200',
-  poison: 'bg-zinc-600 text-zinc-200',
-  untyped: 'bg-zinc-600 text-zinc-200',
-  'cold-iron': 'bg-emerald-800/80 text-emerald-200',
-  silver: 'bg-emerald-800/80 text-emerald-200',
-  adamantine: 'bg-emerald-800/80 text-emerald-200',
-  mithral: 'bg-emerald-800/80 text-emerald-200',
-  magic: 'bg-emerald-800/80 text-emerald-200',
-}
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
   const [hpInput, setHpInput] = useState(0)
@@ -117,6 +95,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const updateCombatant = useCombatantStore((s) => s.updateCombatant)
   const inputRef = useRef<HTMLInputElement>(null)
   const addRoll = useRollStore((s) => s.addRoll)
+  const doRoll = useRoll(combatant.displayName)
   const statSlugs = useMemo(() => ['fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
   const modifiedStats = useModifiedStats(combatant.id, statSlugs)
   const allCombatants = useCombatantStore(useShallow((s) => s.combatants))
@@ -142,11 +121,8 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     return base + (modifiedStats.get(statSlug)?.netModifier ?? 0)
   }
 
-  const fmt = (n: number) => (n >= 0 ? '+' + n : String(n))
-
   function rollStat(mod: number, label: string) {
-    const formula = `1d20${mod >= 0 ? '+' : ''}${mod}`
-    addRoll(rollDice(formula, label, { source: combatant.displayName }))
+    doRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, label)
   }
 
   const stealthSkill = creature?.skills.find((s) => s.name.toLowerCase() === 'stealth')
@@ -445,7 +421,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           {damageEntries.map((entry) => (
             <div key={entry.damageType} className="flex items-center gap-0.5">
               <span
-                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${CHIP_COLOR[entry.damageType] ?? 'bg-muted text-muted-foreground'}`}
+                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${damageTypeChip(entry.damageType)}`}
               >
                 {entry.damageType}
               </span>
@@ -473,7 +449,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           {materials.map((m) => (
             <div key={m} className="flex items-center gap-0.5">
               <span
-                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${CHIP_COLOR[m] ?? 'bg-muted text-muted-foreground'}`}
+                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-l capitalize ${damageTypeChip(m)}`}
               >
                 {m}
               </span>
@@ -654,7 +630,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                     )
                   }
                 >
-                  {label} <span className="font-mono">{fmt(mod)}</span>
+                  {label} <span className="font-mono">{formatModifier(mod)}</span>
                 </Button>
               )
             })}
@@ -671,7 +647,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               <Eye className="w-3 h-3" />
               Seek{' '}
               <span className="font-mono">
-                {fmt(getModified(creature.perception, 'perception'))}
+                {formatModifier(getModified(creature.perception, 'perception'))}
               </span>
             </Button>
             {baseStealth !== null && (
@@ -681,7 +657,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
                 onClick={() => void handleHide()}
               >
                 <EyeOff className="w-3 h-3" />
-                Hide <span className="font-mono">{fmt(getModified(baseStealth, 'stealth'))}</span>
+                Hide <span className="font-mono">{formatModifier(getModified(baseStealth, 'stealth'))}</span>
               </Button>
             )}
           </div>

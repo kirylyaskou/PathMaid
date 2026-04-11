@@ -6,15 +6,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { ChevronDown } from 'lucide-react'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { TraitList } from '@/shared/ui/trait-pill'
 import { cn } from '@/shared/lib/utils'
-import { rollDice } from '@engine'
-import { useRollStore } from '@/shared/model/roll-store'
-import { useModifiedStats, useSpellModifiers } from '@/entities/creature/model/use-modified-stats'
-import type { StatModifierResult } from '@/entities/creature/model/use-modified-stats'
+import { useRoll } from '@/shared/hooks/use-roll'
+import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
+import { useModifiedStats, useSpellModifiers } from '@/entities/creature'
+import type { StatModifierResult } from '@/entities/creature'
 import { SpellInlineCard, TRADITION_COLORS } from '@/entities/spell'
 import { FeatInlineCard } from '@/entities/feat'
 import type {
@@ -75,26 +74,6 @@ const ALL_STAT_SLUGS = [
   ...Object.keys(SKILL_ABILITY),
 ]
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
-function modTooltipBody(modResult: StatModifierResult, finalValue: string, net: number) {
-  return (
-    <>
-      {modResult.modifiers.map((m) => (
-        <div key={m.slug} className="flex justify-between gap-4">
-          <span className="text-muted-foreground">{m.label}</span>
-          <span className={m.modifier < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>
-            {m.modifier > 0 ? '+' : ''}{m.modifier}
-          </span>
-        </div>
-      ))}
-      <div className="border-t border-border mt-1 pt-1 flex justify-between">
-        <span className="text-muted-foreground">Total</span>
-        <span className={net < 0 ? 'text-pf-blood' : 'text-pf-threat-low'}>{finalValue}</span>
-      </div>
-    </>
-  )
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -137,14 +116,9 @@ function StatCell({ label, value, colorClass, highlight, onRoll, modResult }: {
   return (
     <div className="flex-1 px-2 py-2.5 text-center">
       <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">{label}</p>
-      {modResult && modResult.modifiers.length > 0 ? (
-        <Tooltip>
-          <TooltipTrigger asChild>{el}</TooltipTrigger>
-          <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-            {modTooltipBody(modResult, String(value), net)}
-          </TooltipContent>
-        </Tooltip>
-      ) : el}
+      <ModifierTooltip modifiers={modResult?.modifiers ?? []} netModifier={net} finalDisplay={String(value)}>
+        {el}
+      </ModifierTooltip>
     </div>
   )
 }
@@ -184,8 +158,6 @@ function PCSpellCaster({ caster, abilities, level, combatantId, handleRoll }: {
   const dcCol = spellMod.netModifier < 0 ? 'text-pf-blood'
     : spellMod.netModifier > 0 ? 'text-pf-threat-low' : 'text-primary'
 
-  const hasSpellMod = spellMod.modifiers.length > 0
-
   const atkBtn = (
     <button
       onClick={() => handleRoll(`1d20+${finalSpellAtk}`, `${tradition} spell attack`)}
@@ -198,7 +170,6 @@ function PCSpellCaster({ caster, abilities, level, combatantId, handleRoll }: {
       {signed(finalSpellAtk)}
     </button>
   )
-  const dcEl = <span className={cn('font-mono font-bold', dcCol)}>{finalSpellDC}</span>
 
   return (
     <Collapsible defaultOpen>
@@ -219,24 +190,14 @@ function PCSpellCaster({ caster, abilities, level, combatantId, handleRoll }: {
           {/* DC + Attack */}
           <div className="flex gap-4 text-sm">
             <span className="text-muted-foreground">DC{' '}
-              {hasSpellMod ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>{dcEl}</TooltipTrigger>
-                  <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-                    {modTooltipBody(spellMod, String(finalSpellDC), spellMod.netModifier)}
-                  </TooltipContent>
-                </Tooltip>
-              ) : dcEl}
+              <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={String(finalSpellDC)}>
+                <span className={cn('font-mono font-bold', dcCol)}>{finalSpellDC}</span>
+              </ModifierTooltip>
             </span>
             <span className="text-muted-foreground">Attack{' '}
-              {hasSpellMod ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>{atkBtn}</TooltipTrigger>
-                  <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-                    {modTooltipBody(spellMod, signed(finalSpellAtk), spellMod.netModifier)}
-                  </TooltipContent>
-                </Tooltip>
-              ) : atkBtn}
+              <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={signed(finalSpellAtk)}>
+                {atkBtn}
+              </ModifierTooltip>
             </span>
           </div>
 
@@ -267,7 +228,7 @@ function PCSpellCaster({ caster, abilities, level, combatantId, handleRoll }: {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProps) {
-  const addRoll = useRollStore((state) => state.addRoll)
+  const handleRoll = useRoll(build.name, encounterId)
   const { abilities, proficiencies, level } = build
 
   const abilityMod = (score: number) => Math.floor((score - 10) / 2)
@@ -279,9 +240,6 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
     return prof > 0 ? mod + level + prof : mod
   }
 
-  function handleRoll(formula: string, label?: string) {
-    addRoll(rollDice(formula, label, { source: build.name, combatId: encounterId }))
-  }
   function rollCheck(mod: number, label: string) {
     handleRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, label)
   }
@@ -432,14 +390,9 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
                         {rank}
                       </span>
                       <span className="text-muted-foreground">{skill.name}</span>{' '}
-                      {modResult && modResult.modifiers.length > 0 ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>{btn}</TooltipTrigger>
-                          <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-                            {modTooltipBody(modResult, signed(finalMod), net)}
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : btn}
+                      <ModifierTooltip modifiers={modResult?.modifiers ?? []} netModifier={net} finalDisplay={signed(finalMod)}>
+                        {btn}
+                      </ModifierTooltip>
                     </span>
                   )
                 })}
@@ -510,14 +463,9 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
                       <div key={i} className="p-3 rounded-md bg-secondary/50">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">{w.name}</span>
-                          {strikeResult && strikeResult.modifiers.length > 0 ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>{atkBtn}</TooltipTrigger>
-                              <TooltipContent side="top" className="min-w-[180px] max-w-[240px] p-2 font-mono text-xs">
-                                {modTooltipBody(strikeResult, signed(finalAtkMod), strikeNet)}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : atkBtn}
+                          <ModifierTooltip modifiers={strikeResult?.modifiers ?? []} netModifier={strikeNet} finalDisplay={signed(finalAtkMod)}>
+                            {atkBtn}
+                          </ModifierTooltip>
                         </div>
                         <div className="mt-1 text-sm">
                           <span className="font-semibold">Damage </span>
