@@ -1,5 +1,5 @@
-import { useRoll } from '@/shared/hooks/use-roll'
-import { formatModifier } from '@/shared/lib/format'
+import { useRoll } from '@/shared/hooks'
+import { formatModifier, formatRollFormula } from '@/shared/lib/format'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import { cn } from '@/shared/lib/utils'
 import {
@@ -10,7 +10,8 @@ import {
 import { ChevronDown, Plus, Minus, X, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import type { SpellcastingSection } from '@/entities/spell'
-import { traditionColor, rankLabel } from '../lib/spellcasting-helpers'
+import { traditionColor } from '../lib/spellcasting-helpers'
+import { rankLabel } from '@/shared/lib/pf2e-display'
 import { useSpellcasting } from '../model/use-spellcasting'
 import { SlotPips } from './SlotPips'
 import { SpellCard } from './SpellCard'
@@ -86,8 +87,8 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                 <span className="text-muted-foreground">Attack{' '}
                   <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={formatModifier(modifiedSpellAttack)}>
                     <button
-                      onClick={() => handleSpellRoll(`1d20+${modifiedSpellAttack}`, `${section.tradition} spell attack`)}
-                      title={`Roll spell attack 1d20+${modifiedSpellAttack}`}
+                      onClick={() => handleSpellRoll(formatRollFormula(modifiedSpellAttack), `${section.tradition} spell attack`)}
+                      title={`Roll spell attack ${formatRollFormula(modifiedSpellAttack)}`}
                       className={cn(
                         'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
                         spellModColor || 'text-primary decoration-primary/50',

@@ -1,5 +1,6 @@
 import { cn } from '@/shared/lib/utils'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
+import { formatRollFormula } from '@/shared/lib/format'
 import type { StatModifierResult } from '../model/use-modified-stats'
 
 interface StatItemProps {
@@ -27,7 +28,7 @@ export function StatItem({ label, value, modifier, highlight, colorClass, showDc
     !highlight && netMod === 0 && colorClass,
   )
 
-  const formula = `1d20${finalValue >= 0 ? '+' : ''}${finalValue}`
+  const formula = formatRollFormula(finalValue)
 
   const valueEl = onRoll ? (
     <button

@@ -1,6 +1,7 @@
 import { Zap, Flame, Leaf, Feather } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
+export { rankLabel, actionCostLabel } from '@/shared/lib/pf2e-display'
 
 export function traditionColor(tradition: string): string {
   const map: Record<string, string> = {
@@ -10,20 +11,6 @@ export function traditionColor(tradition: string): string {
     primal: 'bg-green-500/20 text-green-300 border-green-500/30',
   }
   return map[tradition.toLowerCase()] ?? 'bg-secondary text-secondary-foreground border-border'
-}
-
-export function rankLabel(rank: number): string {
-  return rank === 0 ? 'Cantrips' : `Rank ${rank}`
-}
-
-export function actionCostLabel(cost: string): string {
-  if (cost === 'free') return '◇'
-  if (cost === 'reaction') return '↺'
-  const n = parseInt(cost)
-  if (n === 1) return '◆'
-  if (n === 2) return '◆◆'
-  if (n === 3) return '◆◆◆'
-  return cost
 }
 
 export const TRADITION_SLOT_CONFIG: Record<string, {

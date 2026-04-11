@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
-import { useRoll } from '@/shared/hooks/use-roll'
-import { formatModifier } from '@/shared/lib/format'
+import { useRoll } from '@/shared/hooks'
+import { formatModifier, formatRollFormula } from '@/shared/lib/format'
 import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
@@ -19,7 +19,7 @@ import { ActionIcon } from "@/shared/ui/action-icon"
 import { AbilityCard } from "@/shared/ui/ability-card"
 import type { CreatureStatBlockData } from '../model/types'
 import { stripHtml } from '@/shared/lib/html'
-import { useModifiedStats } from '@/entities/creature/model/use-modified-stats'
+import { useModifiedStats } from '../model/use-modified-stats'
 import { useCombatantStore } from '@/entities/combatant'
 import { classifyAbilities } from '../model/classify-abilities'
 import { highlightGameText } from '../lib/foundry-text'
@@ -301,7 +301,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                                 type="button"
                                 title={title}
                                 onClick={() => {
-                                  handleRoll(`1d20${mod >= 0 ? '+' : ''}${mod}`, `${strike.name} attack${i > 0 ? ` (MAP ${i + 1})` : ''}`)
+                                  handleRoll(formatRollFormula(mod), `${strike.name} attack${i > 0 ? ` (MAP ${i + 1})` : ''}`)
                                   if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: i })
                                 }}
                                 className={cn(
@@ -531,7 +531,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                       : 'text-primary decoration-primary/50'
                   const btn = (
                     <button
-                      onClick={() => handleRoll(`1d20+${finalMod}`, `${skill.name} check`)}
+                      onClick={() => handleRoll(formatRollFormula(finalMod), `${skill.name} check`)}
                       title={`Roll ${skill.name} check`}
                       className={cn(
                         'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
