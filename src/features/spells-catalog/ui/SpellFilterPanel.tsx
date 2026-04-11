@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Search, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
+import { SearchInput } from '@/shared/ui/search-input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/shared/ui/command'
 import { fetchDistinctSpellTraits } from '@/shared/api'
@@ -46,15 +47,12 @@ export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
   return (
     <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
       {/* Row 1: Search */}
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search spells…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="pl-8 h-8 text-sm"
-        />
-      </div>
+      <SearchInput
+        placeholder="Search spells…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className="h-8 text-sm"
+      />
 
       {/* Row 2: Tradition buttons (hidden on Focus tab) */}
       {!isFocusTab && (

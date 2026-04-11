@@ -2,9 +2,11 @@ import { cn } from '@/shared/lib/utils'
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { ChevronDown, X, Backpack } from 'lucide-react'
+import { X, Backpack } from 'lucide-react'
+import { SectionHeader } from '@/shared/ui/section-header'
+import { IconButton } from '@/shared/ui/icon-button'
+import { Input } from '@/shared/ui/input'
 import type { CreatureItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
@@ -62,9 +64,9 @@ export function EquipmentBlock({
         {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
         {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
         {encounterContext && onRemove && !isRemoved && (
-          <button onClick={onRemove} className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-opacity shrink-0">
+          <IconButton intent="danger" showOnHover onClick={onRemove} className="ml-auto shrink-0">
             <X className="w-3 h-3" />
-          </button>
+          </IconButton>
         )}
         {encounterContext && onRestore && isRemoved && (
           <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
@@ -76,14 +78,10 @@ export function EquipmentBlock({
   return (
     <>
       <Collapsible defaultOpen={false}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-          <div className="flex items-center gap-2">
-            <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="font-semibold text-sm text-foreground">Equipment</span>
-            <span className="text-xs text-muted-foreground">({totalCount})</span>
-          </div>
-          <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
+        <SectionHeader trailing={<span className="text-xs text-muted-foreground">({totalCount})</span>}>
+          <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
+          Equipment
+        </SectionHeader>
         <CollapsibleContent>
           <div className="px-4 pb-3 pt-2 space-y-1">
             {visibleBase.map((item) => (
@@ -124,12 +122,11 @@ export function EquipmentBlock({
             {/* Add item row — encounter context only */}
             {encounterContext && (
               <div className="relative mt-2">
-                <input
-                  type="text"
+                <Input
                   placeholder="Add item…"
                   value={addQuery}
                   onChange={(e) => setAddQuery(e.target.value)}
-                  className="w-full text-xs px-2 h-8 rounded-md border border-border/50 bg-secondary/40 placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  className="text-xs h-8 bg-secondary/40 border-border/50"
                 />
                 {addResults.length > 0 && (
                   <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">

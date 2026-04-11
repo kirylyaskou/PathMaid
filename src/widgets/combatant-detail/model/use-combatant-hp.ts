@@ -4,7 +4,7 @@ import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
 import { getDyingValueOnKnockout, getWoundedValueAfterStabilize } from '@engine'
 import type { ConditionSlug } from '@engine'
-import { applyCondition, removeCondition, clearCombatantManager, getManagerState } from '@/features/combat-tracker'
+import { applyCondition, removeCondition, clearCombatantManager, getManagerState } from '@/entities/condition'
 
 /** Standalone: increment dying for any combatant id without needing the hook.
  *  Used by PersistentDamageDialog which operates outside component tree context. */

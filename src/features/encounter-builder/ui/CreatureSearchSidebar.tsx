@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
-import { Input } from '@/shared/ui/input'
+import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { CreatureCard, StatBlockModal, toCreature } from '@/entities/creature'
@@ -190,15 +189,12 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
         </div>
 
         {/* Search input */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={activeTab === 'creatures' ? 'Search creatures...' : 'Search hazards...'}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        <SearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={activeTab === 'creatures' ? 'Search creatures...' : 'Search hazards...'}
+          className="h-8 text-sm"
+        />
 
         {/* Tier selector — creatures only */}
         {activeTab === 'creatures' && (

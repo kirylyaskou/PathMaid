@@ -11,7 +11,7 @@ import { Input } from '@/shared/ui/input'
 import { performRecoveryCheck } from '@engine'
 import type { RecoveryCheckResult, ConditionSlug } from '@engine'
 import { useConditionStore } from '@/entities/condition'
-import { setConditionValue } from '@/features/combat-tracker'
+import { setConditionValue } from '@/entities/condition'
 import { useShallow } from 'zustand/react/shallow'
 import { useCombatantHp } from '../model/use-combatant-hp'
 

@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Rarity } from '@engine'
 import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
 import { parseJsonArray } from '@/shared/lib/json'
 import type { Creature, CreatureStatBlockData, DisplayActionCost } from './types'
+import type { FoundrySystem, FoundryItem, FoundryIwrEntry, FoundrySenseEntry, FoundryDamageRoll } from './foundry-types'
 
 export function toCreature(row: CreatureRow): Creature {
   return {
@@ -24,27 +24,27 @@ export function toCreature(row: CreatureRow): Creature {
 }
 
 // Safely coerce unknown JSON value to array (guards against objects/strings/nulls)
-function asArray(val: unknown): any[] {
+function asArray(val: unknown): unknown[] {
   return Array.isArray(val) ? val : []
 }
 
 export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData {
   const base = toCreature(row)
   const raw = JSON.parse(row.raw_json)
-  const system = raw.system || {}
+  const system = (raw.system || {}) as FoundrySystem
   const details = system.details || {}
 
   const immunities: string[] = asArray(system.attributes?.immunities).map(
-    (i: any) => i.type || String(i)
+    (i) => (i as FoundryIwrEntry).type || String(i)
   )
-  const weaknesses = asArray(system.attributes?.weaknesses).map((w: any) => ({
-    type: w.type || String(w),
-    value: w.value ?? 0,
-  }))
-  const resistances = asArray(system.attributes?.resistances).map((r: any) => ({
-    type: r.type || String(r),
-    value: r.value ?? 0,
-  }))
+  const weaknesses = asArray(system.attributes?.weaknesses).map((w) => {
+    const entry = w as FoundryIwrEntry
+    return { type: entry.type || String(w), value: entry.value ?? 0 }
+  })
+  const resistances = asArray(system.attributes?.resistances).map((r) => {
+    const entry = r as FoundryIwrEntry
+    return { type: entry.type || String(r), value: entry.value ?? 0 }
+  })
 
   const speedData = system.attributes?.speed || {}
   const speeds: Record<string, number | null> = { land: speedData.value ?? null }
@@ -55,22 +55,22 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   } else if (speedData.otherSpeeds && typeof speedData.otherSpeeds === 'object') {
     for (const [key, val] of Object.entries(speedData.otherSpeeds)) {
       if (typeof val === 'object' && val !== null && 'value' in val) {
-        speeds[key] = (val as any).value ?? null
+        speeds[key] = (val as { value?: number }).value ?? null
       }
     }
   }
 
-  const items = asArray(raw.items)
+  const items = asArray(raw.items) as FoundryItem[]
   // Build weapon lookup for resolving group from linked weapon items
-  const weaponsById = new Map<string, any>(
-    items.filter((item: any) => item.type === 'weapon').map((item: any) => [item._id, item])
+  const weaponsById = new Map<string, FoundryItem>(
+    items.filter((item) => item.type === 'weapon').map((item) => [item._id, item])
   )
   const strikes = items
-    .filter((item: any) => item.type === 'melee' || item.type === 'ranged')
-    .map((item: any) => {
+    .filter((item) => item.type === 'melee' || item.type === 'ranged')
+    .map((item) => {
       const linkedWeaponId = item.flags?.pf2e?.linkedWeapon
       const linkedWeapon = linkedWeaponId ? weaponsById.get(linkedWeaponId) : undefined
-      const group = (linkedWeapon?.system?.group as string) || undefined
+      const group = linkedWeapon?.system?.group || undefined
       return {
         name: item.name || 'Strike',
         modifier: item.system?.bonus?.value ?? 0,
@@ -81,8 +81,8 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     })
 
   const abilities = items
-    .filter((item: any) => item.type === 'action')
-    .map((item: any) => ({
+    .filter((item) => item.type === 'action')
+    .map((item) => ({
       name: item.name || 'Ability',
       actionCost: parseActionCost(item.system?.actionType?.value, item.system?.actions?.value),
       description: stripHtml(resolveFoundryTokens(item.system?.description?.value || '')),
@@ -98,8 +98,8 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const skillsObj = system.skills || {}
   const foundrySkills = new Map<string, number>(
     Object.entries(skillsObj)
-      .filter(([, v]: [string, any]) => v && typeof v.base === 'number')
-      .map(([k, v]: [string, any]) => [k, v.base as number])
+      .filter(([, v]) => v && typeof v.base === 'number')
+      .map(([k, v]) => [k, v.base as number])
   )
 
   // All 17 standard skills — use Foundry value if present, else derive from level
@@ -111,8 +111,8 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
 
   // Lore skills — any Foundry skill keys not in STANDARD_SKILLS
   const loreSkills = Object.entries(skillsObj)
-    .filter(([k, v]: [string, any]) => !STANDARD_SKILLS.includes(k) && v && typeof v.base === 'number')
-    .map(([k, v]: [string, any]) => ({
+    .filter(([k, v]) => !STANDARD_SKILLS.includes(k) && v && typeof v.base === 'number')
+    .map(([k, v]) => ({
       name: k.charAt(0).toUpperCase() + k.slice(1),
       modifier: v.base as number,
       calculated: false as const,
@@ -121,10 +121,10 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
 
   const skills = [...standardSkills, ...loreSkills]
 
-  const languages: string[] = asArray(details.languages?.value ?? system.traits?.languages?.value)
+  const languages: string[] = asArray(details.languages?.value ?? system.traits?.languages?.value) as string[]
   const senseData = system.perception?.senses || system.traits?.senses || []
   const senses: string[] = Array.isArray(senseData)
-    ? senseData.map((s: any) => (typeof s === 'string' ? s : s.type || String(s)))
+    ? senseData.map((s) => (typeof s === 'string' ? s : (s as FoundrySenseEntry).type || String(s)))
     : []
 
   const description = stripHtml(resolveFoundryTokens(details.publicNotes || details.description?.value || ''))
@@ -165,30 +165,29 @@ export function extractIwr(row: CreatureRow): {
   resistances: { type: string; value: number }[]
 } {
   const raw = JSON.parse(row.raw_json)
-  const system = raw.system || {}
+  const system = (raw.system || {}) as FoundrySystem
   return {
-    immunities: (system.attributes?.immunities || []).map((i: any) => i.type || String(i)),
-    weaknesses: (system.attributes?.weaknesses || []).map((w: any) => ({
+    immunities: (system.attributes?.immunities || []).map((i) => i.type || String(i)),
+    weaknesses: (system.attributes?.weaknesses || []).map((w) => ({
       type: w.type || String(w),
       value: w.value ?? 0,
     })),
-    resistances: (system.attributes?.resistances || []).map((r: any) => ({
+    resistances: (system.attributes?.resistances || []).map((r) => ({
       type: r.type || String(r),
       value: r.value ?? 0,
     })),
   }
 }
 
-function formatDamage(damageRolls: any): { formula: string; type: string }[] {
+function formatDamage(damageRolls: Record<string, FoundryDamageRoll> | undefined | null): { formula: string; type: string }[] {
   if (!damageRolls) return []
-  const entries = Object.values(damageRolls) as any[]
-  return entries.map((d: any) => ({
+  return Object.values(damageRolls).map((d) => ({
     formula: (d.damage || d.formula || '?').trim(),
     type: (d.damageType || d.type || '').trim(),
   }))
 }
 
-function parseActionCost(actionType?: string, actions?: number): DisplayActionCost | undefined {
+function parseActionCost(actionType?: string, actions?: number | null): DisplayActionCost | undefined {
   if (actionType === 'reaction') return 'reaction'
   if (actionType === 'free') return 'free'
   if (actionType === 'passive') return undefined

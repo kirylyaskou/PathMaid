@@ -10,9 +10,10 @@ import { Separator } from "@/shared/ui/separator"
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/shared/ui/collapsible"
-import { ChevronDown, Swords, Shield as ShieldIcon, Sparkles } from "lucide-react"
+import { Swords, Shield as ShieldIcon, Sparkles } from "lucide-react"
+import { SectionHeader } from "@/shared/ui/section-header"
+import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
@@ -200,26 +201,17 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           <>
             <div className="p-4 space-y-2">
               {creature.immunities.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Immunities</span>
-                  <span>{creature.immunities.join(", ")}</span>
-                </div>
+                <StatRow label="Immunities">{creature.immunities.join(", ")}</StatRow>
               )}
               {creature.resistances.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Resistances</span>
-                  <span>
-                    {creature.resistances.map((r) => `${r.type} ${r.value}`).join(", ")}
-                  </span>
-                </div>
+                <StatRow label="Resistances">
+                  {creature.resistances.map((r) => `${r.type} ${r.value}`).join(", ")}
+                </StatRow>
               )}
               {creature.weaknesses.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Weaknesses</span>
-                  <span>
-                    {creature.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")}
-                  </span>
-                </div>
+                <StatRow label="Weaknesses">
+                  {creature.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")}
+                </StatRow>
               )}
             </div>
             <Separator />
@@ -228,15 +220,12 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         {/* Speed */}
         <div className="p-4">
-          <div className="flex gap-2 text-sm">
-            <span className="font-semibold text-muted-foreground w-24 shrink-0">Speed</span>
-            <span>
-              {Object.entries(creature.speeds)
-                .filter(([, value]) => value)
-                .map(([type, value]) => (type === "land" ? `${value} feet` : `${type} ${value} feet`))
-                .join(", ")}
-            </span>
-          </div>
+          <StatRow label="Speed">
+            {Object.entries(creature.speeds)
+              .filter(([, value]) => value)
+              .map(([type, value]) => (type === "land" ? `${value} feet` : `${type} ${value} feet`))
+              .join(", ")}
+          </StatRow>
         </div>
 
         {/* FEAT-04: Troop/Swarm formation badge + troop HP segments */}
@@ -267,10 +256,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         {/* Strikes — hidden when creature has no melee/ranged attacks or is a troop/swarm */}
         {hasStrikes && (
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-              <span className="font-semibold text-sm text-foreground">Strikes</span>
-              <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
+            <SectionHeader>Strikes</SectionHeader>
             <CollapsibleContent>
               <div className="px-4 py-3 space-y-3">
                 {creature.strikes.map((strike, i) => {
@@ -396,10 +382,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         {creature.abilities.length > 0 && (
           <>
             <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-                <span className="font-semibold text-sm text-foreground">Abilities</span>
-                <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              </CollapsibleTrigger>
+              <SectionHeader>Abilities</SectionHeader>
               <CollapsibleContent>
                 <div className="px-4 py-3 space-y-3">
                   {/* Tab selector — hide tabs with 0 abilities */}
@@ -516,10 +499,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         {/* Skills — all 17 standard skills in Collapsible */}
         <Collapsible defaultOpen>
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-            <span className="font-semibold text-sm text-foreground">Skills</span>
-            <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
+          <SectionHeader>Skills</SectionHeader>
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2">
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -562,16 +542,10 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         {/* Languages & Senses */}
         <div className="p-4 space-y-2">
           {creature.languages.length > 0 && (
-            <div className="flex gap-2 text-sm">
-              <span className="font-semibold text-muted-foreground w-24 shrink-0">Languages</span>
-              <span>{creature.languages.join(", ")}</span>
-            </div>
+            <StatRow label="Languages">{creature.languages.join(", ")}</StatRow>
           )}
           {creature.senses.length > 0 && (
-            <div className="flex gap-2 text-sm">
-              <span className="font-semibold text-muted-foreground w-24 shrink-0">Senses</span>
-              <span>{creature.senses.join(", ")}</span>
-            </div>
+            <StatRow label="Senses">{creature.senses.join(", ")}</StatRow>
           )}
         </div>
 

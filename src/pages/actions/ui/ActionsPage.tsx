@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, Zap } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { Zap } from 'lucide-react'
+import { SearchInput } from '@/shared/ui/search-input'
 import { getAllActions } from '@/shared/api'
 import type { ActionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
@@ -134,15 +134,12 @@ export function ActionsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
       <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search actions…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search actions…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-8 text-sm"
+        />
 
         {/* Category tabs */}
         <div className="flex flex-wrap gap-1">

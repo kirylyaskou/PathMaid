@@ -3,6 +3,7 @@ import { X, AlertTriangle, Skull, Pencil, ArrowUpDown, Trash2 } from 'lucide-rea
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import {
@@ -177,9 +178,9 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50 shrink-0">
         {editingName ? (
-          <input
+          <Input
             autoFocus
-            className="text-base font-semibold bg-transparent border-b border-primary outline-none px-0 w-full"
+            className="text-base font-semibold bg-transparent border-b border-primary rounded-none border-x-0 border-t-0 px-0 h-auto outline-none focus-visible:ring-0 w-full"
             value={nameValue}
             onChange={(e) => setNameValue(e.target.value)}
             onBlur={handleSaveName}

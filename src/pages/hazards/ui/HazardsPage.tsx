@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, AlertTriangle } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { AlertTriangle } from 'lucide-react'
+import { SearchInput } from '@/shared/ui/search-input'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { getAllHazards } from '@/shared/api'
 import type { HazardRow } from '@/shared/api'
@@ -208,15 +208,12 @@ export function HazardsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
       <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search hazards…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search hazards…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-8 text-sm"
+        />
 
         <div className="flex gap-1">
           {TYPE_TABS.map((tab) => (

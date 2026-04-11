@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, ShieldAlert } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { ShieldAlert } from 'lucide-react'
+import { SearchInput } from '@/shared/ui/search-input'
 import { getAllConditions } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
@@ -144,15 +144,12 @@ export function ConditionsPage() {
       {/* Toolbar */}
       <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search conditions…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search conditions…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-8 text-sm"
+        />
 
         {/* Group filter tabs */}
         <div className="flex flex-wrap gap-1">

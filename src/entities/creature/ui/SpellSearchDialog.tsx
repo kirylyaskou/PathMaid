@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { SearchInput } from '@/shared/ui/search-input'
 import { searchSpells } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
 import { rankLabel, actionCostLabel } from '../lib/spellcasting-helpers'
@@ -67,16 +67,14 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
 
         {/* Search + filters */}
         <div className="px-4 pt-3 pb-2 space-y-2 border-b border-border/30">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              placeholder={focusOnly ? "Search focus spells…" : "Search spells…"}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-8 h-8 text-sm rounded-md border border-border bg-secondary/30 px-3 focus:outline-none focus:border-primary/50"
-            />
-          </div>
+          <SearchInput
+            ref={inputRef}
+            loading={loading}
+            placeholder={focusOnly ? "Search focus spells…" : "Search spells…"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-8 text-sm bg-secondary/30"
+          />
           {/* Tradition filter (hidden for focus spells) */}
           {!focusOnly && (
             <div className="flex flex-wrap gap-1.5">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { searchCreaturesFiltered, saveEncounterCombatants } from '@/shared/api'
 import {
@@ -124,15 +123,12 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
     <div className="border-t border-border/50">
       {/* Search input */}
       <div className="px-2 pt-2 pb-1">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search creatures..."
-            className="pl-8 h-8 text-sm"
-          />
-        </div>
+        <SearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search creatures..."
+          className="h-8 text-sm"
+        />
       </div>
       {/* Creature type filter */}
       <div className="px-2 pb-1">

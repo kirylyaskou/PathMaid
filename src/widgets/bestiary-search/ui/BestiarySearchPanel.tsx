@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Search } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { SearchInput } from '@/shared/ui/search-input'
 import {
   Select,
   SelectContent,
@@ -143,15 +142,12 @@ export function BestiarySearchPanel() {
         <>
           <div className="p-2 border-b border-border/50 space-y-1.5 shrink-0">
             {/* Search input */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search bestiary..."
-                className="pl-8 h-8 text-sm"
-              />
-            </div>
+            <SearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search bestiary..."
+              className="h-8 text-sm"
+            />
             {/* Creature type filter */}
             <Select value={creatureType} onValueChange={setCreatureType}>
               <SelectTrigger className="h-7 text-xs">

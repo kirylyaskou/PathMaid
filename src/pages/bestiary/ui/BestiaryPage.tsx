@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
+import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import {
   ResizablePanelGroup,
@@ -102,15 +101,12 @@ export function BestiaryPage() {
         <div className="flex flex-col h-full">
           {/* Search */}
           <div className="p-3 border-b border-border/50">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search bestiary..."
-                className="pl-9 h-9"
-              />
-            </div>
+            <SearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search bestiary..."
+              className="h-9"
+            />
           </div>
 
           {/* Filters */}
