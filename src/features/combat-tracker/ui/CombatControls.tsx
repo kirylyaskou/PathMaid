@@ -1,4 +1,4 @@
-import { Play, Square, Swords } from 'lucide-react'
+import { Play, Square, Swords, AlertCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { useCombatTrackerStore, clearAllManagers } from '@/features/combat-tracker'
@@ -7,8 +7,8 @@ import { useCombatantStore } from '@/entities/combatant'
 import { useShallow } from 'zustand/react/shallow'
 
 export function CombatControls() {
-  const { isRunning, round, turn } = useCombatTrackerStore(
-    useShallow((s) => ({ isRunning: s.isRunning, round: s.round, turn: s.turn }))
+  const { isRunning, round, turn, lastSaveError } = useCombatTrackerStore(
+    useShallow((s) => ({ isRunning: s.isRunning, round: s.round, turn: s.turn, lastSaveError: s.lastSaveError }))
   )
   const { startCombat, endCombat, setActiveCombatant } = useCombatTrackerStore()
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
@@ -39,6 +39,11 @@ export function CombatControls() {
           <Badge variant="secondary" className="text-xs font-mono">
             R{round} T{turn + 1}
           </Badge>
+          {lastSaveError && (
+            <span title={lastSaveError} className="text-destructive">
+              <AlertCircle className="w-3.5 h-3.5" />
+            </span>
+          )}
           <div className="flex-1" />
           <Button
             size="sm"

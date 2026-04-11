@@ -1,4 +1,4 @@
-import type { Combatant } from '@/entities/combatant'
+import type { Combatant, NpcCombatant, PcCombatant } from '@/entities/combatant'
 
 export function rollInitiative(perception: number): number {
   return perception + Math.floor(Math.random() * 20) + 1
@@ -31,8 +31,9 @@ export function createCombatantFromCreature(
   hp: number,
   existingCombatants: Combatant[],
   level?: number,
-): Combatant {
+): NpcCombatant {
   return {
+    kind: 'npc',
     id: crypto.randomUUID(),
     creatureRef: creatureId,
     displayName: autoName(creatureName, existingCombatants),
@@ -40,7 +41,6 @@ export function createCombatantFromCreature(
     hp,
     maxHp: hp,
     tempHp: 0,
-    isNPC: true,
     ...(level !== undefined ? { level } : {}),
   }
 }
@@ -61,16 +61,17 @@ export function getMAPPenalty(mapIndex: number, isAgile: boolean): number {
 export function createPCCombatant(
   name: string,
   initiative: number,
-  maxHp: number
-): Combatant {
+  maxHp: number,
+  creatureRef = '',
+): PcCombatant {
   return {
+    kind: 'pc',
     id: crypto.randomUUID(),
-    creatureRef: '',
+    creatureRef,
     displayName: name,
     initiative,
     hp: maxHp,
     maxHp,
     tempHp: 0,
-    isNPC: false,
   }
 }

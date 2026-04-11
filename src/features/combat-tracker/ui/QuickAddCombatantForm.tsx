@@ -50,6 +50,7 @@ export function QuickAddCombatantForm({ mode }: QuickAddCombatantFormProps) {
     const parsedAc = ac ? Math.max(0, parseInt(ac, 10) || 0) : undefined
 
     addCombatant({
+      kind: mode === 'creature' ? 'npc' : 'pc',
       id: crypto.randomUUID(),
       creatureRef: '',
       displayName: autoName(trimmed, combatants),
@@ -57,7 +58,6 @@ export function QuickAddCombatantForm({ mode }: QuickAddCombatantFormProps) {
       hp: parsedHp,
       maxHp: parsedHp,
       tempHp: 0,
-      isNPC: mode === 'creature',
       ...(mode === 'creature' && parsedAc !== undefined ? { ac: parsedAc } : {}),
     })
     reset()

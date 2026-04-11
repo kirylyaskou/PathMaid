@@ -19,7 +19,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
   const [creature, setCreature] = useState<CreatureStatBlockData | null>(null)
 
   useEffect(() => {
-    if (!combatant || !combatant.creatureRef || !combatant.isNPC) {
+    if (!combatant || !combatant.creatureRef || combatant.kind !== 'npc') {
       setCreature(null)
       return
     }
@@ -28,7 +28,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
       if (!cancelled) setCreature(data)
     })
     return () => { cancelled = true }
-  }, [combatant?.creatureRef, combatant?.isNPC])
+  }, [combatant?.creatureRef, combatant?.kind])
 
   if (!combatant) {
     return (
@@ -41,7 +41,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
       <div className="flex items-center gap-3">
-        {combatant.isNPC ? (
+        {combatant.kind !== 'pc' ? (
           <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center">
             <Skull className="w-5 h-5 text-destructive" />
           </div>
@@ -54,7 +54,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
           <h2 className="text-lg font-semibold">{combatant.displayName}</h2>
           <p className="text-xs text-muted-foreground">
             Initiative: <span className="font-mono">{combatant.initiative}</span>
-            {combatant.isNPC ? ' — NPC' : ' — PC'}
+            {combatant.kind !== 'pc' ? ' — NPC' : ' — PC'}
           </p>
         </div>
       </div>
@@ -63,9 +63,9 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
 
       <HpControls
         combatant={combatant}
-        iwrImmunities={combatant.iwrImmunities}
-        iwrWeaknesses={combatant.iwrWeaknesses}
-        iwrResistances={combatant.iwrResistances}
+        iwrImmunities={combatant.kind === 'npc' ? combatant.iwrImmunities : undefined}
+        iwrWeaknesses={combatant.kind === 'npc' ? combatant.iwrWeaknesses : undefined}
+        iwrResistances={combatant.kind === 'npc' ? combatant.iwrResistances : undefined}
         creature={creature}
       />
 

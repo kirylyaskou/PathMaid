@@ -5,7 +5,14 @@ import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescrip
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'dist/**', 'src-tauri/**', 'engine/**'],
+    ignores: ['node_modules/**', 'dist/**', 'src-tauri/**'],
+  },
+  {
+    files: ['engine/**/*.ts'],
+    extends: [...tseslint.configs.recommended],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
   {
     files: ['src/**/*.{ts,tsx}'],

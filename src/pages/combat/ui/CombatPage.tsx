@@ -312,8 +312,7 @@ export function CombatPage() {
         hp: hr.hp ?? 0,
         maxHp: hr.hp ?? 0,
         tempHp: 0,
-        isNPC: false,
-        isHazard: true,
+        kind: 'hazard',
         initiativeBonus: hr.stealth_dc ?? 0,
       })
       return

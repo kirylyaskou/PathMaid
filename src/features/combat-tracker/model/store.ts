@@ -26,6 +26,9 @@ export interface CombatTrackerState {
   /** Incremented after each data sync to invalidate stat block caches. */
   entityDataVersion: number
   bumpEntityDataVersion: () => void
+  /** Non-null when the last auto-save attempt failed; cleared on next successful save. */
+  lastSaveError: string | null
+  setLastSaveError: (err: string | null) => void
   startCombat: (combatId: string) => void
   endCombat: () => void
   startEncounterCombat: (
@@ -62,6 +65,8 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
     pendingRecoveryCheck: null,
     entityDataVersion: 0,
     bumpEntityDataVersion: () => set((state) => { state.entityDataVersion += 1 }),
+    lastSaveError: null,
+    setLastSaveError: (err) => set((state) => { state.lastSaveError = err }),
     startCombat: (combatId) =>
       set((state) => {
         state.combatId = combatId

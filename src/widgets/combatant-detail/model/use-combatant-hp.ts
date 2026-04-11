@@ -23,6 +23,7 @@ export function incrementDyingForCombatant(combatantId: string): void {
 
 /** Single source of truth for a combatant's HP + dying/wounded state machine. */
 export function useCombatantHp(combatantId: string) {
+  // Reactive snapshot — used only for return values (UI rendering).
   const combatant = useCombatantStore(useShallow((s) => s.combatants.find((c) => c.id === combatantId)))
   const updateHp = useCombatantStore((s) => s.updateHp)
   const updateTempHp = useCombatantStore((s) => s.updateTempHp)
@@ -43,14 +44,15 @@ export function useCombatantHp(combatantId: string) {
 
   /** Apply effective damage (post-IWR). Absorbs temp HP first, then triggers dying on knockout. */
   const applyDamage = useCallback((effectiveDamage: number) => {
-    if (!combatant) return
+    const current = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
+    if (!current) return
     let remaining = effectiveDamage
-    if (combatant.tempHp > 0) {
-      const absorbed = Math.min(combatant.tempHp, remaining)
-      updateTempHp(combatantId, combatant.tempHp - absorbed)
+    if (current.tempHp > 0) {
+      const absorbed = Math.min(current.tempHp, remaining)
+      updateTempHp(combatantId, current.tempHp - absorbed)
       remaining -= absorbed
     }
-    const hpBefore = combatant.hp
+    const hpBefore = current.hp
     if (remaining > 0) updateHp(combatantId, -remaining)
     const newHp = Math.max(0, hpBefore - remaining)
     // CRB pg.460: on HP → 0 auto-apply dying (1 + wounded).
@@ -59,26 +61,28 @@ export function useCombatantHp(combatantId: string) {
         .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
       applyCondition(combatantId, 'dying' as ConditionSlug, getDyingValueOnKnockout(wounded))
     }
-  }, [combatant, combatantId, updateHp, updateTempHp])
+  }, [combatantId, updateHp, updateTempHp])
 
   /** Heal HP. If creature was downed (hp ≤ 0) and healed to positive, remove dying + grant wounded. */
   const applyHeal = useCallback((amount: number) => {
-    if (!combatant) return
-    const wasDown = combatant.hp <= 0
+    const current = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
+    if (!current) return
+    const wasDown = current.hp <= 0
     updateHp(combatantId, amount)
-    if (wasDown && combatant.hp + amount > 0) {
+    if (wasDown && current.hp + amount > 0) {
       const curWounded = useConditionStore.getState().activeConditions
         .find((c) => c.combatantId === combatantId && c.slug === 'wounded')?.value ?? 0
       applyCondition(combatantId, 'wounded' as ConditionSlug, getWoundedValueAfterStabilize(curWounded))
       removeCondition(combatantId, 'dying' as ConditionSlug)
     }
-  }, [combatant, combatantId, updateHp])
+  }, [combatantId, updateHp])
 
   /** Set temp HP to max(current, amount). */
   const applyTempHp = useCallback((amount: number) => {
-    if (!combatant) return
-    updateTempHp(combatantId, Math.max(combatant.tempHp, amount))
-  }, [combatant, combatantId, updateTempHp])
+    const current = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
+    if (!current) return
+    updateTempHp(combatantId, Math.max(current.tempHp, amount))
+  }, [combatantId, updateTempHp])
 
   /** Stabilize a dying creature: wounded +1, snapshot cascade conditions, remove dying, re-apply lost cascades. */
   const stabilize = useCallback(() => {
@@ -107,10 +111,11 @@ export function useCombatantHp(combatantId: string) {
 
   /** Resurrect (GM fiat): clear all conditions, set HP to 1. */
   const resurrect = useCallback(() => {
-    if (!combatant) return
+    const current = useCombatantStore.getState().combatants.find((c) => c.id === combatantId)
+    if (!current) return
     clearCombatantManager(combatantId)
-    updateHp(combatantId, 1 - combatant.hp)
-  }, [combatant, combatantId, updateHp])
+    updateHp(combatantId, 1 - current.hp)
+  }, [combatantId, updateHp])
 
   /** Apply dying at standard knockout value (1 + wounded). */
   const knockOut = useCallback(() => {

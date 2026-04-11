@@ -28,7 +28,7 @@ export function useHideAction(
     const mod = getModified(baseStealth, 'stealth')
     const roll = doRoll(formatRollFormula(mod), 'Hide (Stealth)')
 
-    const pcs = allCombatants.filter((c) => !c.isNPC && !c.isHazard && c.creatureRef)
+    const pcs = allCombatants.filter((c) => c.kind === 'pc' && c.creatureRef)
     if (pcs.length === 0) return
 
     const pcResults: { name: string; perceptionDC: number }[] = []

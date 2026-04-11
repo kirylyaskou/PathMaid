@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { Combatant } from '@/entities/combatant'
-import { useCombatantStore } from '@/entities/combatant'
+import { useCombatantStore, kindFromLegacy } from '@/entities/combatant'
 import { useCombatTrackerStore } from './store'
 
 export interface TabSnapshot {
@@ -182,7 +182,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
             hp: ec.maxHp,
             maxHp: ec.maxHp,
             tempHp: 0,
-            isNPC: ec.isNPC,
+            kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
           }))
           freshSnapshot = {
             combatants,

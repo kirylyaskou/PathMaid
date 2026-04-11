@@ -2,12 +2,14 @@ import { saveEncounterCombatState, loadEncounterState, fetchCreatureById } from 
 import type { EncounterConditionRow } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
 import type { Combatant } from '@/entities/combatant'
+import { kindFromLegacy } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
 import { extractIwr } from '@/entities/creature'
 import { useCombatTrackerStore } from '../model/store'
 import { hydrateManager, clearAllManagers } from '@/entities/condition'
 import { rollInitiative } from './initiative'
 import type { ConditionSlug } from '@engine'
+import { logErrorWithToast } from '@/shared/lib/error'
 
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -57,8 +59,10 @@ function debouncedEncounterSave(): void {
         payload.combatants,
         payload.conditions
       )
+      useCombatTrackerStore.getState().setLastSaveError(null)
     } catch (err) {
-      console.error('Encounter auto-save failed:', err)
+      logErrorWithToast('encounter-auto-save')(err)
+      useCombatTrackerStore.getState().setLastSaveError('Auto-save failed')
     }
   }, 300)
 }
@@ -128,11 +132,12 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
       const iwr = row ? extractIwr(row) : null
 
       let initiative = c.initiative
-      if (needsInitiative && c.isNPC && row) {
+      if (needsInitiative && (c.isNPC || c.isHazard) && row) {
         initiative = rollInitiative(row.perception ?? 0)
       }
 
       return {
+        kind: kindFromLegacy(c.isNPC, c.isHazard ?? false),
         id: c.id,
         creatureRef: c.creatureRef,
         displayName: c.displayName,
@@ -140,7 +145,6 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
         hp: c.hp,
         maxHp: c.maxHp,
         tempHp: c.tempHp,
-        isNPC: c.isNPC,
         ...(row?.level != null ? { level: row.level } : {}),
         ...(iwr && iwr.immunities.length > 0 ? { iwrImmunities: iwr.immunities } : {}),
         ...(iwr && iwr.weaknesses.length > 0 ? { iwrWeaknesses: iwr.weaknesses } : {}),
