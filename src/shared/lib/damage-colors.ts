@@ -1,3 +1,5 @@
+import type { DamageType } from '@engine'
+
 export const DAMAGE_TYPE_THEME: Record<string, { text: string; chip: string }> = {
   // Physical
   bludgeoning: { text: 'text-zinc-400',    chip: 'bg-slate-600 text-slate-100' },
@@ -45,4 +47,33 @@ export function damageTypeColor(type: string): string {
 /** CSS classes for damage type chip/badge (background + text) */
 export function damageTypeChip(type: string): string {
   return DAMAGE_TYPE_THEME[type.toLowerCase()]?.chip ?? 'bg-muted text-muted-foreground'
+}
+
+export const DAMAGE_GROUPS: { label: string; color: string; traits: DamageType[] }[] = [
+  {
+    label: 'Physical',
+    color: 'bg-slate-700 text-slate-200 hover:bg-slate-600 data-[selected=true]:bg-slate-400 data-[selected=true]:text-slate-900',
+    traits: ['bludgeoning', 'piercing', 'slashing', 'bleed'],
+  },
+  {
+    label: 'Energy',
+    color: 'bg-amber-900/60 text-amber-200 hover:bg-amber-800/60 data-[selected=true]:bg-amber-400 data-[selected=true]:text-amber-900',
+    traits: ['acid', 'cold', 'electricity', 'fire', 'sonic', 'force', 'vitality', 'void'],
+  },
+  {
+    label: 'Alignment',
+    color: 'bg-violet-900/60 text-violet-200 hover:bg-violet-800/60 data-[selected=true]:bg-violet-400 data-[selected=true]:text-violet-900',
+    traits: ['holy', 'unholy'],
+  },
+  {
+    label: 'Other',
+    color: 'bg-zinc-700 text-zinc-200 hover:bg-zinc-600 data-[selected=true]:bg-zinc-400 data-[selected=true]:text-zinc-900',
+    traits: ['spirit', 'mental', 'poison', 'untyped'],
+  },
+]
+
+export const MATERIAL_GROUP = {
+  label: 'Material traits',
+  color: 'bg-emerald-900/60 text-emerald-200 hover:bg-emerald-800/60 data-[selected=true]:bg-emerald-400 data-[selected=true]:text-emerald-900',
+  traits: ['cold-iron', 'silver', 'adamantine', 'mithral', 'magic'],
 }

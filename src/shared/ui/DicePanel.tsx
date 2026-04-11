@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Dices } from 'lucide-react'
-import { rollDice } from '@engine'
 import type { Roll } from '@engine'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRoll } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
 
 // FEAT-15: full die set — d100, d20, d12, d10, d8, d6, d4
@@ -27,13 +26,11 @@ const QUANTITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 export function DicePanel() {
   const [quantity, setQuantity] = useState(1)
   const [lastRoll, setLastRoll] = useState<Roll | null>(null)
-  const addRoll = useRollStore((s) => s.addRoll)
+  const roll = useRoll()
 
   function handleRoll(sides: number, label: string) {
     const formula = `${quantity}d${sides}`
-    const result = rollDice(formula, label)
-    addRoll(result)
-    setLastRoll(result)
+    setLastRoll(roll(formula, label))
   }
 
   // rolls array for display — individual die values from the last roll

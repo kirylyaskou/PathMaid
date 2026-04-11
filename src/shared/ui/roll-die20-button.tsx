@@ -1,14 +1,12 @@
 import { Dices } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { rollDice } from '@engine'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRoll } from '@/shared/hooks'
 
 export function RollDie20Button() {
-  const addRoll = useRollStore((state) => state.addRoll)
+  const roll = useRoll()
 
   function handleClick() {
-    const roll = rollDice('1d20')
-    addRoll(roll)
+    roll('1d20')
   }
 
   return (

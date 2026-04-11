@@ -178,3 +178,5 @@ export type {
   PathbuilderExport,
 } from './pc/types'
 export { calculatePCMaxHP } from './pc/hp'
+export { abilityModifier, proficiencyModifier } from './pc/math'
+export { SKILL_ABILITY } from './pc/skills'
