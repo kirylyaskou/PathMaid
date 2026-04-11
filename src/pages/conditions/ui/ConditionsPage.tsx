@@ -5,6 +5,8 @@ import { getAllConditions } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { parseJsonArray } from '@/shared/lib/json'
+import { logError } from '@/shared/lib/error'
 
 type GroupFilter = 'all' | 'death' | 'abilities' | 'senses' | 'detection' | 'attitudes' | 'other'
 
@@ -34,7 +36,7 @@ function ConditionCard({ condition, expanded, onToggle }: {
 }) {
   const group = condition.group_name ?? 'other'
   const groupColor = GROUP_BADGE[group] ?? 'bg-zinc-800/50 text-zinc-400 border-zinc-700/40'
-  const overrides: string[] = condition.overrides ? JSON.parse(condition.overrides) : []
+  const overrides = parseJsonArray(condition.overrides)
 
   return (
     <div
@@ -117,7 +119,7 @@ export function ConditionsPage() {
   useEffect(() => {
     getAllConditions()
       .then(setAllConditions)
-      .catch(() => {})
+      .catch(logError('load-conditions'))
       .finally(() => setLoading(false))
   }, [])
 

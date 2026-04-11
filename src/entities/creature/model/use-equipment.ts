@@ -6,6 +6,7 @@ import {
   searchItems,
 } from '@/shared/api'
 import type { CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
+import { logError } from '@/shared/lib/error'
 
 interface EncounterContext {
   encounterId: string
@@ -26,13 +27,13 @@ export function useEquipment(
     if (!encounterContext) return
     loadItemOverrides(encounterContext.encounterId, encounterContext.combatantId)
       .then(setOverrides)
-      .catch(() => {})
+      .catch(logError('load-item-overrides'))
   }, [encounterContext?.encounterId, encounterContext?.combatantId])
 
   useEffect(() => {
     if (!encounterContext || !addQuery.trim()) { setAddResults([]); return }
     const timer = setTimeout(() => {
-      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(() => {})
+      searchItems(addQuery).then((r) => setAddResults(r.slice(0, 8))).catch(logError('search-items'))
     }, 200)
     return () => clearTimeout(timer)
   }, [addQuery, encounterContext])
@@ -52,7 +53,7 @@ export function useEquipment(
       isRemoved: true,
     }
     setOverrides((prev) => [...prev.filter((o) => o.id !== override.id), override])
-    await upsertItemOverride(override).catch(() => {})
+    await upsertItemOverride(override).catch(logError('upsert-item-override'))
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
@@ -60,7 +61,7 @@ export function useEquipment(
     if (!encounterContext) return
     const id = `${encounterContext.encounterId}:${encounterContext.combatantId}:${item.id}`
     setOverrides((prev) => prev.filter((o) => o.id !== id))
-    await deleteItemOverride(id).catch(() => {})
+    await deleteItemOverride(id).catch(logError('delete-item-override'))
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
@@ -82,13 +83,13 @@ export function useEquipment(
     setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
     setAddQuery('')
     setAddResults([])
-    await upsertItemOverride(override).catch(() => {})
+    await upsertItemOverride(override).catch(logError('upsert-item-override'))
     encounterContext.onInventoryChanged?.()
   }, [encounterContext])
 
   const handleRemoveAdded = useCallback(async (override: EncounterItemRow) => {
     setOverrides((prev) => prev.filter((o) => o.id !== override.id))
-    await deleteItemOverride(override.id).catch(() => {})
+    await deleteItemOverride(override.id).catch(logError('delete-item-override'))
     encounterContext?.onInventoryChanged?.()
   }, [encounterContext])
 

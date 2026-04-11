@@ -8,6 +8,7 @@ import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '@/entities/it
 import { fetchDistinctItemTraits, fetchDistinctItemSources, fetchDistinctSubcategories } from '@/shared/api'
 import { useItemsCatalogStore } from '../model/store'
 import { cn } from '@/shared/lib/utils'
+import { logError } from '@/shared/lib/error'
 
 const ITEM_TYPES = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'treasure', 'backpack', 'kit', 'book', 'effect'] as const
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'] as const
@@ -37,12 +38,12 @@ export function ItemFilterPanel() {
   const [traitsOpen, setTraitsOpen] = useState(false)
 
   useEffect(() => {
-    fetchDistinctItemTraits().then(setTraits).catch(() => {})
-    fetchDistinctItemSources().then(setSources).catch(() => {})
+    fetchDistinctItemTraits().then(setTraits).catch(logError('fetch-item-traits'))
+    fetchDistinctItemSources().then(setSources).catch(logError('fetch-item-sources'))
   }, [])
 
   useEffect(() => {
-    fetchDistinctSubcategories(selectedType).then(setSubcategories).catch(() => {})
+    fetchDistinctSubcategories(selectedType).then(setSubcategories).catch(logError('fetch-item-subcategories'))
   }, [selectedType])
 
   const showSubcategory = selectedType === 'weapon' || selectedType === 'consumable'

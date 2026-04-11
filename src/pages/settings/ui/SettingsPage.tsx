@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { syncFoundryData, importLocalPacks, getSyncMetadata } from '@/shared/api'
-import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
+import { useCombatTrackerStore } from '@/features/combat-tracker'
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'

@@ -7,6 +7,7 @@ import { fetchDistinctSpellTraits } from '@/shared/api'
 import { TRADITION_COLORS } from '@/entities/spell'
 import { useSpellsCatalogStore } from '../model/useSpellsCatalogStore'
 import { cn } from '@/shared/lib/utils'
+import { logError } from '@/shared/lib/error'
 
 const RANKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 const ACTION_COSTS = [
@@ -39,7 +40,7 @@ export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
   const [traitsOpen, setTraitsOpen] = useState(false)
 
   useEffect(() => {
-    fetchDistinctSpellTraits().then(setAllTraits).catch(() => {})
+    fetchDistinctSpellTraits().then(setAllTraits).catch(logError('fetch-spell-traits'))
   }, [])
 
   return (

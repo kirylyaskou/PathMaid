@@ -3,7 +3,7 @@ import { useCombatantStore } from '@/entities/combatant'
 import { fetchCreatureStatBlockData } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
 import { getCharacterById, loadItemOverrides } from '@/shared/api'
-import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
+import { useCombatTrackerStore } from '@/features/combat-tracker'
 import { isShieldItem } from '@/shared/lib/equipment'
 import type { PathbuilderBuild } from '@engine'
 

@@ -41,6 +41,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
     rankWarning, minAvailableRank, effectiveSelectedSlotLevel, filteredRanks,
   } = useSpellcasting(section, creatureLevel, encounterContext)
   const { encounterId } = encounterContext ?? {}
+  const dcCol = spellMod.netModifier < 0 ? 'text-pf-blood' : spellMod.netModifier > 0 ? 'text-pf-threat-low' : 'text-primary'
 
   return (
     <Collapsible defaultOpen>
@@ -72,34 +73,29 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
         <div className="px-4 pb-3 pt-2 space-y-3">
           {/* DC + Attack */}
           <div className="flex gap-4 text-sm">
-            {section.spellDc > 0 && (() => {
-              const dcCol = spellMod.netModifier < 0 ? 'text-pf-blood' : spellMod.netModifier > 0 ? 'text-pf-threat-low' : 'text-primary'
-              return (
-                <span className="text-muted-foreground">DC{' '}
-                  <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={String(modifiedSpellDc)}>
-                    <span className={cn('font-mono font-bold', dcCol)}>{modifiedSpellDc}</span>
-                  </ModifierTooltip>
-                </span>
-              )
-            })()}
-            {section.spellAttack !== 0 && (() => {
-              return (
-                <span className="text-muted-foreground">Attack{' '}
-                  <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={formatModifier(modifiedSpellAttack)}>
-                    <button
-                      onClick={() => handleSpellRoll(formatRollFormula(modifiedSpellAttack), `${section.tradition} spell attack`)}
-                      title={`Roll spell attack ${formatRollFormula(modifiedSpellAttack)}`}
-                      className={cn(
-                        'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
-                        spellModColor || 'text-primary decoration-primary/50',
-                      )}
-                    >
-                      {formatModifier(modifiedSpellAttack)}
-                    </button>
-                  </ModifierTooltip>
-                </span>
-              )
-            })()}
+            {section.spellDc > 0 && (
+              <span className="text-muted-foreground">DC{' '}
+                <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={String(modifiedSpellDc)}>
+                  <span className={cn('font-mono font-bold', dcCol)}>{modifiedSpellDc}</span>
+                </ModifierTooltip>
+              </span>
+            )}
+            {section.spellAttack !== 0 && (
+              <span className="text-muted-foreground">Attack{' '}
+                <ModifierTooltip modifiers={spellMod.modifiers} netModifier={spellMod.netModifier} finalDisplay={formatModifier(modifiedSpellAttack)}>
+                  <button
+                    onClick={() => handleSpellRoll(formatRollFormula(modifiedSpellAttack), `${section.tradition} spell attack`)}
+                    title={`Roll spell attack ${formatRollFormula(modifiedSpellAttack)}`}
+                    className={cn(
+                      'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
+                      spellModColor || 'text-primary decoration-primary/50',
+                    )}
+                  >
+                    {formatModifier(modifiedSpellAttack)}
+                  </button>
+                </ModifierTooltip>
+              </span>
+            )}
           </div>
           {/* FEAT-13: slot-level filter pills — tap a rank to focus, All to show everything */}
           {effectiveRanks.length > 1 && (

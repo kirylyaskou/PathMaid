@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils'
 import { stripHtml } from '@/shared/lib/html'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { SpellInlineCard } from '@/entities/spell'
+import { parseJsonArray } from '@/shared/lib/json'
 
 
 interface ItemReferenceDrawerProps {
@@ -27,7 +28,7 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
     getItemById(itemId).then(setItem).catch(() => setItem(null))
   }, [itemId])
 
-  const traits: string[] = item?.traits ? JSON.parse(item.traits) : []
+  const traits = parseJsonArray(item?.traits)
   const typeColor = item ? (ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40') : ''
   const typeLabel = item ? (ITEM_TYPE_LABELS[item.item_type] ?? item.item_type) : ''
 

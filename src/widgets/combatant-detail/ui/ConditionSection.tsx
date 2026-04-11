@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { useConditionStore, ConditionBadge } from '@/entities/condition'
-import { ConditionCombobox } from '@/features/combat-tracker/ui/ConditionCombobox'
+import { ConditionCombobox } from '@/features/combat-tracker'
 import { removeCondition, setConditionLocked } from '@/features/combat-tracker'
 import { getConditionBySlug } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
@@ -10,6 +10,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { parseJsonArray } from '@/shared/lib/json'
 
 const GROUP_BADGE: Record<string, string> = {
   death:     'bg-red-900/50 text-red-300 border-red-700/40',
@@ -34,7 +35,7 @@ function ConditionDetailPanel({ row, onClose }: { row: ConditionRow | 'not-found
 
   const group = row.group_name ?? 'other'
   const groupColor = GROUP_BADGE[group] ?? 'bg-zinc-800/50 text-zinc-400 border-zinc-700/40'
-  const overrides: string[] = row.overrides ? JSON.parse(row.overrides) : []
+  const overrides = parseJsonArray(row.overrides)
   const descText = row.description ? sanitizeFoundryText(row.description).slice(0, 350) : ''
 
   return (

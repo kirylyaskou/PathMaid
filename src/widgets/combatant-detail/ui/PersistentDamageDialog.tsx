@@ -10,7 +10,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { useConditionStore } from '@/entities/condition'
 import { useCombatantStore } from '@/entities/combatant'
-import type { PendingPersistentDamage } from '@/features/combat-tracker/model/store'
+import type { PendingPersistentDamage } from '@/features/combat-tracker'
 import { incrementDyingForCombatant } from '../model/use-combatant-hp'
 
 function rollFormula(formula: string): number {

@@ -6,6 +6,8 @@ import { getAllHazards } from '@/shared/api'
 import type { HazardRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { parseJsonArray } from '@/shared/lib/json'
+import { logError } from '@/shared/lib/error'
 
 type TypeFilter = 'all' | 'simple' | 'complex'
 
@@ -29,8 +31,8 @@ function HazardCard({ hazard, expanded, onToggle }: {
   expanded: boolean
   onToggle: () => void
 }) {
-  const traits: string[] = hazard.traits ? JSON.parse(hazard.traits) : []
-  const actions: HazardAction[] = hazard.actions_json ? JSON.parse(hazard.actions_json) : []
+  const traits = parseJsonArray(hazard.traits)
+  const actions = parseJsonArray<HazardAction>(hazard.actions_json)
 
   return (
     <div
@@ -180,7 +182,7 @@ export function HazardsPage() {
   useEffect(() => {
     getAllHazards()
       .then(setAllHazards)
-      .catch(() => {})
+      .catch(logError('load-hazards'))
       .finally(() => setLoading(false))
   }, [])
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
@@ -7,6 +7,7 @@ import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
 import { stripHtml } from '@/shared/lib/html'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
+import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
 
 export function SpellCard({ foundryId, name, source, combatId }: {
   foundryId: string | null
@@ -47,8 +48,20 @@ export function SpellCard({ foundryId, name, source, combatId }: {
     setOpen((v) => !v)
   }
 
-  const traditions: string[] = spell?.traditions ? JSON.parse(spell.traditions) : []
-  const traits: string[] = spell?.traits ? JSON.parse(spell.traits) : []
+  const traditions = useMemo(() => parseJsonArray(spell?.traditions), [spell?.traditions])
+  const traits = useMemo(() => parseJsonArray(spell?.traits), [spell?.traits])
+  const parsedArea = useMemo(() => {
+    const a = parseJsonOrNull<{ type?: string; value?: number }>(spell?.area)
+    return a?.value ? { type: a.type, value: a.value } : null
+  }, [spell?.area])
+  const parsedDamage = useMemo(() => {
+    const dmg = parseJsonOrNull<Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>>(spell?.damage)
+    if (!dmg) return null
+    const parts = Object.values(dmg)
+      .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
+      .filter((d) => d.formula)
+    return parts.length > 0 ? parts : null
+  }, [spell?.damage])
 
   return (
     <div className="rounded border border-border/30 bg-secondary/30 overflow-hidden">
@@ -74,12 +87,9 @@ export function SpellCard({ foundryId, name, source, combatId }: {
             {spell.range_text && (
               <span className="text-muted-foreground">Range: <span className="text-foreground">{spell.range_text}</span></span>
             )}
-            {spell.area && (() => {
-              const a = JSON.parse(spell.area) as { type?: string; value?: number }
-              return a.value
-                ? <span className="text-muted-foreground">Area: <span className="text-foreground">{a.value}-foot {a.type}</span></span>
-                : null
-            })()}
+            {parsedArea && (
+              <span className="text-muted-foreground">Area: <span className="text-foreground">{parsedArea.value}-foot {parsedArea.type}</span></span>
+            )}
             {spell.duration_text && (
               <span className="text-muted-foreground">Duration: <span className="text-foreground">{spell.duration_text}</span></span>
             )}
@@ -88,32 +98,24 @@ export function SpellCard({ foundryId, name, source, combatId }: {
             )}
           </div>
           {/* Damage */}
-          {spell.damage && (() => {
-            const dmg = JSON.parse(spell.damage) as Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>
-            const parts = Object.values(dmg)
-              .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
-              .filter((d) => d.formula)
-            return parts.length > 0
-              ? (
-                <p className="text-xs flex flex-wrap items-center gap-1">
-                  <span className="text-muted-foreground">Damage:</span>
-                  {parts.map((d, i) => (
-                    <span key={i} className="flex items-center gap-0.5">
-                      {i > 0 && <span className="text-muted-foreground">+</span>}
-                      <ClickableFormula
-                        formula={d.formula!}
-                        label={`${name} damage`}
-                        source={source}
-                        combatId={combatId}
-                        className="text-xs"
-                      />
-                      {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{d.type}</span>}
-                    </span>
-                  ))}
-                </p>
-              )
-              : null
-          })()}
+          {parsedDamage && (
+            <p className="text-xs flex flex-wrap items-center gap-1">
+              <span className="text-muted-foreground">Damage:</span>
+              {parsedDamage.map((d, i) => (
+                <span key={i} className="flex items-center gap-0.5">
+                  {i > 0 && <span className="text-muted-foreground">+</span>}
+                  <ClickableFormula
+                    formula={d.formula!}
+                    label={`${name} damage`}
+                    source={source}
+                    combatId={combatId}
+                    className="text-xs"
+                  />
+                  {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{d.type}</span>}
+                </span>
+              ))}
+            </p>
+          )}
           {/* Traits */}
           {(traits.length > 0 || traditions.length > 0) && (
             <div className="flex flex-wrap gap-1">

@@ -6,6 +6,7 @@ import type { ItemRow } from '@/shared/api'
 import { useItemsCatalogStore, ItemFilterPanel, ItemsTable, FavoritesStar, FavoritesCategoryGroup } from '@/features/items-catalog'
 import { ItemReferenceDrawer, ITEM_TYPE_LABELS } from '@/entities/item'
 import { useShallow } from 'zustand/react/shallow'
+import { logError } from '@/shared/lib/error'
 
 const CATEGORY_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'treasure', 'backpack', 'kit', 'book', 'effect']
 
@@ -22,7 +23,7 @@ function FavoritesContent({ favoriteIds, onItemClick, onToggleFavorite }: Favori
     const ids = Array.from(favoriteIds)
     getItemsByIds(ids)
       .then(setFavoriteItems)
-      .catch(() => {})
+      .catch(logError('load-favorite-items'))
   }, [favoriteIds])
 
   const grouped = CATEGORY_ORDER.reduce<Record<string, ItemRow[]>>((acc, cat) => {
@@ -77,7 +78,7 @@ export function ItemsPage() {
 
   // Load favorites on mount
   useEffect(() => {
-    getFavoriteIds().then((ids) => setFavoriteIds(new Set(ids))).catch(() => {})
+    getFavoriteIds().then((ids) => setFavoriteIds(new Set(ids))).catch(logError('load-favorite-ids'))
   }, [])
 
   // Optimistic toggle
@@ -89,7 +90,7 @@ export function ItemsPage() {
       else next.add(itemId)
       return next
     })
-    await toggleFavoriteDb(itemId, !wasFavorited).catch(() => {})
+    await toggleFavoriteDb(itemId, !wasFavorited).catch(logError('toggle-favorite'))
   }, [favoriteIds])
 
   useEffect(() => {

@@ -19,10 +19,11 @@ import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
 import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
-import { loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave } from '@/features/combat-tracker/lib/encounter-persistence'
-import { teardownAutoSave } from '@/features/combat-tracker/lib/combat-persistence'
-import { useCombatTrackerStore } from '@/features/combat-tracker/model/store'
-import { useEncounterTabsStore, snapshotFromGlobalStores } from '@/features/combat-tracker'
+import {
+  loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave,
+  teardownAutoSave, useCombatTrackerStore,
+  useEncounterTabsStore, snapshotFromGlobalStores,
+} from '@/features/combat-tracker'
 import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import { calculateCreatureXP, getHazardXp } from '@engine'
