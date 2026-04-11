@@ -5,7 +5,7 @@ import type { Combatant } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
 import { extractIwr } from '@/entities/creature'
 import { useCombatTrackerStore } from '../model/store'
-import { hydrateManager, clearAllManagers } from './condition-bridge'
+import { hydrateManager, clearAllManagers } from '@/entities/condition'
 import { rollInitiative } from './initiative'
 import type { ConditionSlug } from '@engine'
 

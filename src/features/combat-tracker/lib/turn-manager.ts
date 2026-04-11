@@ -1,7 +1,7 @@
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
 import { useCombatTrackerStore } from '../model/store'
-import { endTurnConditions, clearCombatantManager, hydrateManager } from './condition-bridge'
+import { endTurnConditions, clearCombatantManager, hydrateManager } from '@/entities/condition'
 import type { ActiveCondition } from '@/entities/condition'
 import type { ConditionSlug } from '@engine'
 import { toast } from 'sonner'

@@ -3,7 +3,7 @@ import type { CombatSnapshot } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
 import { useCombatTrackerStore } from '../model/store'
-import { hydrateManager, clearAllManagers } from './condition-bridge'
+import { hydrateManager, clearAllManagers } from '@/entities/condition'
 import type { ConditionSlug } from '@engine'
 
 let unsubscribers: Array<() => void> = []

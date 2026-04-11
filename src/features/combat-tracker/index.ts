@@ -10,7 +10,7 @@ export {
   clearAllManagers,
   getManagerState,
   hydrateManager,
-} from './lib/condition-bridge'
+} from '@/entities/condition'
 export { advanceTurn, reverseTurn, canReverseTurn, clearTurnSnapshot } from './lib/turn-manager'
 export { setupAutoSave, teardownAutoSave, loadActiveCombat } from './lib/combat-persistence'
 export { AddPCDialog } from './ui/AddPCDialog'
