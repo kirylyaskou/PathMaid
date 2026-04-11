@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
 import { ChevronDown, Plus, Minus, X, HelpCircle } from 'lucide-react'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import type { SpellcastingSection } from '@/entities/spell'
 import { traditionColor } from '../lib/spellcasting-helpers'
@@ -167,14 +168,14 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                   {rank === 0 ? null
                     : encounterId && totalSlots > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <button
+                        <IconButton
+                          intent="danger"
                           onClick={() => handleSlotDelta(rank, -1)}
                           disabled={totalSlots <= 0}
-                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-destructive hover:border-destructive/40 disabled:opacity-30 transition-colors"
                           title="Remove slot"
                         >
                           <Minus className="w-3 h-3" />
-                        </button>
+                        </IconButton>
                         <SlotPips
                           total={totalSlots}
                           used={used}
@@ -182,24 +183,24 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                           tradition={section.tradition}
                           onToggle={(idx) => handleTogglePip(rank, idx, totalSlots)}
                         />
-                        <button
+                        <IconButton
+                          intent="primary"
                           onClick={() => handleSlotDelta(rank, 1)}
-                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
                           title="Add slot"
                         >
                           <Plus className="w-3 h-3" />
-                        </button>
+                        </IconButton>
                       </div>
                     ) : encounterId && totalSlots === 0 ? (
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-muted-foreground">(0 slots)</span>
-                        <button
+                        <IconButton
+                          intent="primary"
                           onClick={() => handleSlotDelta(rank, 1)}
-                          className="w-5 h-5 flex items-center justify-center rounded border border-border/60 bg-secondary/60 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
                           title="Add slot"
                         >
                           <Plus className="w-3 h-3" />
-                        </button>
+                        </IconButton>
                       </div>
                     ) : !encounterId && baseSlots > 0 ? (
                       <span className="text-xs text-muted-foreground">({baseSlots} slots)</span>
@@ -207,34 +208,36 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                 </div>
                 <div className="space-y-1">
                   {visibleSpells.map((spell, i) => (
-                    <div key={i} className="flex items-center gap-1 group/spell">
+                    <div key={i} className="flex items-center gap-1 group">
                       <div className="flex-1">
                         <SpellCard name={spell.name} foundryId={spell.foundryId} source={creatureName} combatId={encounterContext?.encounterId} />
                       </div>
                       {encounterId && (
-                        <button
+                        <IconButton
+                          intent="danger"
+                          showOnHover
                           onClick={() => handleRemoveSpell(spell.name, rank, true)}
-                          className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                           title="Remove for this encounter"
                         >
                           <X className="w-3 h-3" />
-                        </button>
+                        </IconButton>
                       )}
                     </div>
                   ))}
                   {added.map((name, i) => (
-                    <div key={`added-${i}`} className="flex items-center gap-1 group/spell">
+                    <div key={`added-${i}`} className="flex items-center gap-1 group">
                       <div className="flex-1">
                         <SpellCard name={name} foundryId={null} source={creatureName} combatId={encounterContext?.encounterId} />
                       </div>
                       {encounterId && (
-                        <button
+                        <IconButton
+                          intent="danger"
+                          showOnHover
                           onClick={() => handleRemoveSpell(name, rank, false)}
-                          className="opacity-0 group-hover/spell:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                           title="Remove added spell"
                         >
                           <X className="w-3 h-3" />
-                        </button>
+                        </IconButton>
                       )}
                     </div>
                   ))}

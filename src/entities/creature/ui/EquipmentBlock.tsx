@@ -5,6 +5,7 @@ import {
 } from '@/shared/ui/collapsible'
 import { X, Backpack } from 'lucide-react'
 import { SectionHeader } from '@/shared/ui/section-header'
+import { IconButton } from '@/shared/ui/icon-button'
 import type { CreatureItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
@@ -62,9 +63,9 @@ export function EquipmentBlock({
         {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
         {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
         {encounterContext && onRemove && !isRemoved && (
-          <button onClick={onRemove} className="ml-auto opacity-0 group-hover:opacity-100 p-0.5 hover:text-destructive transition-opacity shrink-0">
+          <IconButton intent="danger" showOnHover onClick={onRemove} className="ml-auto shrink-0">
             <X className="w-3 h-3" />
-          </button>
+          </IconButton>
         )}
         {encounterContext && onRestore && isRemoved && (
           <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
