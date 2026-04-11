@@ -2,9 +2,9 @@ import { cn } from '@/shared/lib/utils'
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { ChevronDown, X, Backpack } from 'lucide-react'
+import { X, Backpack } from 'lucide-react'
+import { SectionHeader } from '@/shared/ui/section-header'
 import type { CreatureItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
@@ -76,14 +76,10 @@ export function EquipmentBlock({
   return (
     <>
       <Collapsible defaultOpen={false}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-          <div className="flex items-center gap-2">
-            <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="font-semibold text-sm text-foreground">Equipment</span>
-            <span className="text-xs text-muted-foreground">({totalCount})</span>
-          </div>
-          <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
+        <SectionHeader trailing={<span className="text-xs text-muted-foreground">({totalCount})</span>}>
+          <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
+          Equipment
+        </SectionHeader>
         <CollapsibleContent>
           <div className="px-4 pb-3 pt-2 space-y-1">
             {visibleBase.map((item) => (

@@ -4,9 +4,8 @@ import { Separator } from '@/shared/ui/separator'
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { ChevronDown } from 'lucide-react'
+import { SectionHeader } from '@/shared/ui/section-header'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { TraitList } from '@/shared/ui/trait-pill'
 import { cn } from '@/shared/lib/utils'
@@ -63,15 +62,6 @@ const ALL_STAT_SLUGS = [
 
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function SectionTrigger({ label }: { label: string }) {
-  return (
-    <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40 hover:from-primary/15 hover:to-transparent transition-colors">
-      <span className="font-semibold text-sm text-foreground">{label}</span>
-      <ChevronDown className="w-4 h-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-    </CollapsibleTrigger>
-  )
-}
 
 function StatCell({ label, value, colorClass, highlight, onRoll, modResult }: {
   label: string
@@ -324,7 +314,7 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
 
         {/* Skills */}
         <Collapsible defaultOpen>
-          <SectionTrigger label="Skills" />
+          <SectionHeader>Skills</SectionHeader>
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2">
               <div className="flex flex-wrap gap-x-3 gap-y-1.5">
@@ -398,7 +388,7 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
           <>
             <Separator />
             <Collapsible defaultOpen>
-              <SectionTrigger label="Strikes" />
+              <SectionHeader>Strikes</SectionHeader>
               <CollapsibleContent>
                 <div className="px-4 py-3 space-y-3">
                   {weapons.map((w, i) => {
@@ -496,7 +486,7 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
           <>
             <Separator />
             <Collapsible defaultOpen={false}>
-              <SectionTrigger label="Feats & Features" />
+              <SectionHeader>Feats & Features</SectionHeader>
               <CollapsibleContent>
                 <div className="px-4 py-3 space-y-1">
                   {feats.map(([name, , type, lvl, note], i) => (
