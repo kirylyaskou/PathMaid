@@ -13,6 +13,7 @@ import {
 } from "@/shared/ui/collapsible"
 import { Swords, Shield as ShieldIcon, Sparkles } from "lucide-react"
 import { SectionHeader } from "@/shared/ui/section-header"
+import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
@@ -200,26 +201,17 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           <>
             <div className="p-4 space-y-2">
               {creature.immunities.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Immunities</span>
-                  <span>{creature.immunities.join(", ")}</span>
-                </div>
+                <StatRow label="Immunities">{creature.immunities.join(", ")}</StatRow>
               )}
               {creature.resistances.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Resistances</span>
-                  <span>
-                    {creature.resistances.map((r) => `${r.type} ${r.value}`).join(", ")}
-                  </span>
-                </div>
+                <StatRow label="Resistances">
+                  {creature.resistances.map((r) => `${r.type} ${r.value}`).join(", ")}
+                </StatRow>
               )}
               {creature.weaknesses.length > 0 && (
-                <div className="flex gap-2 text-sm">
-                  <span className="font-semibold text-muted-foreground w-24 shrink-0">Weaknesses</span>
-                  <span>
-                    {creature.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")}
-                  </span>
-                </div>
+                <StatRow label="Weaknesses">
+                  {creature.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")}
+                </StatRow>
               )}
             </div>
             <Separator />
@@ -228,15 +220,12 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         {/* Speed */}
         <div className="p-4">
-          <div className="flex gap-2 text-sm">
-            <span className="font-semibold text-muted-foreground w-24 shrink-0">Speed</span>
-            <span>
-              {Object.entries(creature.speeds)
-                .filter(([, value]) => value)
-                .map(([type, value]) => (type === "land" ? `${value} feet` : `${type} ${value} feet`))
-                .join(", ")}
-            </span>
-          </div>
+          <StatRow label="Speed">
+            {Object.entries(creature.speeds)
+              .filter(([, value]) => value)
+              .map(([type, value]) => (type === "land" ? `${value} feet` : `${type} ${value} feet`))
+              .join(", ")}
+          </StatRow>
         </div>
 
         {/* FEAT-04: Troop/Swarm formation badge + troop HP segments */}
@@ -553,16 +542,10 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         {/* Languages & Senses */}
         <div className="p-4 space-y-2">
           {creature.languages.length > 0 && (
-            <div className="flex gap-2 text-sm">
-              <span className="font-semibold text-muted-foreground w-24 shrink-0">Languages</span>
-              <span>{creature.languages.join(", ")}</span>
-            </div>
+            <StatRow label="Languages">{creature.languages.join(", ")}</StatRow>
           )}
           {creature.senses.length > 0 && (
-            <div className="flex gap-2 text-sm">
-              <span className="font-semibold text-muted-foreground w-24 shrink-0">Senses</span>
-              <span>{creature.senses.join(", ")}</span>
-            </div>
+            <StatRow label="Senses">{creature.senses.join(", ")}</StatRow>
           )}
         </div>
 
