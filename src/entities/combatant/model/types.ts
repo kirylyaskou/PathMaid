@@ -1,5 +1,9 @@
 // Combatant is a runtime concept: creature in an active combat slot.
 // Conditions are managed by ConditionManager (module-level) and stored in useConditionStore.
+
+/** Allowed fields for updateCombatant. Excludes id and HP fields that have dedicated setters
+ *  (updateHp, updateTempHp, setMaxHp) so direct Object.assign cannot bypass their guards. */
+export type CombatantPatch = Omit<Partial<Combatant>, 'id' | 'hp' | 'maxHp' | 'tempHp'>
 export interface Combatant {
   id: string           // uuid — unique per combat slot
   creatureRef: string  // creature entity id or empty string for PCs

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { Combatant } from './types'
+import type { Combatant, CombatantPatch } from './types'
 
 export interface CombatantState {
   combatants: Combatant[]
@@ -9,7 +9,7 @@ export interface CombatantState {
   updateHp: (id: string, delta: number) => void
   updateTempHp: (id: string, tempHp: number) => void
   setMaxHp: (id: string, newMaxHp: number) => void
-  updateCombatant: (id: string, patch: Partial<Combatant>) => void
+  updateCombatant: (id: string, patch: CombatantPatch) => void
   setInitiative: (id: string, initiative: number) => void
   reorderInitiative: (orderedIds: string[]) => void
   setCombatants: (combatants: Combatant[]) => void
