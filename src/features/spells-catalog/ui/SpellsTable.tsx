@@ -1,6 +1,7 @@
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { TRADITION_COLORS, actionCostLabel, parseDamageDisplay } from '@/entities/spell'
+import { parseJsonArray } from '@/shared/lib/json'
 
 const MAX_TRADITIONS = 2
 const MAX_TRAITS = 3
@@ -38,8 +39,8 @@ export function SpellsTable({ spells, isFocusTab, onSpellClick }: SpellsTablePro
 }
 
 function SpellRow({ spell, isFocusTab, onClick }: { spell: SpellRow; isFocusTab: boolean; onClick: () => void }) {
-  const traditions: string[] = spell.traditions ? JSON.parse(spell.traditions) : []
-  const traits: string[] = spell.traits ? JSON.parse(spell.traits) : []
+  const traditions = parseJsonArray(spell.traditions)
+  const traits = parseJsonArray(spell.traits)
   const damage = parseDamageDisplay(spell.damage)
   const visibleTraditions = traditions.slice(0, MAX_TRADITIONS)
   const overflowTraditions = traditions.length - MAX_TRADITIONS

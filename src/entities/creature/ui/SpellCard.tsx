@@ -7,6 +7,7 @@ import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
 import { stripHtml } from '@/shared/lib/html'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
+import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
 
 export function SpellCard({ foundryId, name, source, combatId }: {
   foundryId: string | null
@@ -47,30 +48,19 @@ export function SpellCard({ foundryId, name, source, combatId }: {
     setOpen((v) => !v)
   }
 
-  const traditions: string[] = useMemo(
-    () => (spell?.traditions ? JSON.parse(spell.traditions) : []),
-    [spell?.traditions],
-  )
-  const traits: string[] = useMemo(
-    () => (spell?.traits ? JSON.parse(spell.traits) : []),
-    [spell?.traits],
-  )
+  const traditions = useMemo(() => parseJsonArray(spell?.traditions), [spell?.traditions])
+  const traits = useMemo(() => parseJsonArray(spell?.traits), [spell?.traits])
   const parsedArea = useMemo(() => {
-    if (!spell?.area) return null
-    try {
-      const a = JSON.parse(spell.area) as { type?: string; value?: number }
-      return a.value ? { type: a.type, value: a.value } : null
-    } catch { return null }
+    const a = parseJsonOrNull<{ type?: string; value?: number }>(spell?.area)
+    return a?.value ? { type: a.type, value: a.value } : null
   }, [spell?.area])
   const parsedDamage = useMemo(() => {
-    if (!spell?.damage) return null
-    try {
-      const dmg = JSON.parse(spell.damage) as Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>
-      const parts = Object.values(dmg)
-        .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
-        .filter((d) => d.formula)
-      return parts.length > 0 ? parts : null
-    } catch { return null }
+    const dmg = parseJsonOrNull<Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>>(spell?.damage)
+    if (!dmg) return null
+    const parts = Object.values(dmg)
+      .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
+      .filter((d) => d.formula)
+    return parts.length > 0 ? parts : null
   }, [spell?.damage])
 
   return (

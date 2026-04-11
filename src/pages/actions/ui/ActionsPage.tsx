@@ -5,6 +5,7 @@ import { getAllActions } from '@/shared/api'
 import type { ActionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { parseJsonArray } from '@/shared/lib/json'
 
 type CategoryFilter = 'all' | 'basic' | 'skill' | 'exploration' | 'downtime'
 
@@ -39,7 +40,7 @@ function ActionCard({ action, expanded, onToggle }: {
   expanded: boolean
   onToggle: () => void
 }) {
-  const traits: string[] = action.traits ? JSON.parse(action.traits) : []
+  const traits = parseJsonArray(action.traits)
   const costDisplay = actionCostDisplay(action)
   const badgeClass = CATEGORY_BADGE[action.action_category] ?? CATEGORY_BADGE.basic
 

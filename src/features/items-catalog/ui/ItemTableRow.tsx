@@ -1,6 +1,7 @@
 import type { ItemRow } from '@/shared/api'
 import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS, formatPrice } from '@/entities/item'
 import { cn } from '@/shared/lib/utils'
+import { parseJsonArray } from '@/shared/lib/json'
 
 interface ItemTableRowProps {
   item: ItemRow
@@ -10,7 +11,7 @@ interface ItemTableRowProps {
 }
 
 export function ItemTableRow({ item, selectedType, onNameClick, starSlot }: ItemTableRowProps) {
-  const traits: string[] = item.traits ? JSON.parse(item.traits) : []
+  const traits = parseJsonArray(item.traits)
   const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
   const typeLabel = ITEM_TYPE_LABELS[item.item_type] ?? item.item_type
 

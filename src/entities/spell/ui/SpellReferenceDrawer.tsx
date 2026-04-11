@@ -6,6 +6,7 @@ import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { stripHtml } from '@/shared/lib/html'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
+import { parseJsonArray } from '@/shared/lib/json'
 
 interface SpellReferenceDrawerProps {
   spellId: string | null
@@ -23,8 +24,8 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
     getSpellById(spellId).then(setSpell).catch(() => setSpell(null))
   }, [spellId])
 
-  const traditions: string[] = spell?.traditions ? JSON.parse(spell.traditions) : []
-  const traits: string[] = spell?.traits ? JSON.parse(spell.traits) : []
+  const traditions = parseJsonArray(spell?.traditions)
+  const traits = parseJsonArray(spell?.traits)
   const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 

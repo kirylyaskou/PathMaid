@@ -6,6 +6,7 @@ import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
+import { parseJsonArray } from '@/shared/lib/json'
 
 interface SpellInlineCardProps {
   spellId?: string
@@ -49,8 +50,8 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
     )
   }
 
-  const traditions: string[] = spell.traditions ? JSON.parse(spell.traditions) : []
-  const traits: string[] = spell.traits ? JSON.parse(spell.traits) : []
+  const traditions = parseJsonArray(spell.traditions)
+  const traits = parseJsonArray(spell.traits)
   const damageDisplay = parseDamageDisplay(spell.damage)
   const areaDisplay = parseAreaDisplay(spell.area)
 

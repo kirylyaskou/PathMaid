@@ -2,6 +2,7 @@
 import type { Rarity } from '@engine'
 import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
+import { parseJsonArray } from '@/shared/lib/json'
 import type { Creature, CreatureStatBlockData, DisplayActionCost } from './types'
 
 export function toCreature(row: CreatureRow): Creature {
@@ -15,7 +16,7 @@ export function toCreature(row: CreatureRow): Creature {
     ref: row.ref ?? 0,
     will: row.will ?? 0,
     perception: row.perception ?? 0,
-    traits: row.traits ? JSON.parse(row.traits) : [],
+    traits: parseJsonArray(row.traits),
     rarity: (row.rarity ?? 'common') as Rarity,
     size: mapSize(row.size),
     type: row.type,

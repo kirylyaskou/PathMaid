@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { searchSpells } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
 import { rankLabel, actionCostLabel } from '../lib/spellcasting-helpers'
+import { parseJsonArray } from '@/shared/lib/json'
 
 const DIALOG_TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
 const DIALOG_TRADITION_COLORS: Record<string, string> = {
@@ -119,7 +120,7 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5 min-h-0">
           {results.map((s) => {
-            const traditions: string[] = s.traditions ? JSON.parse(s.traditions) : []
+            const traditions = parseJsonArray(s.traditions)
             return (
               <div
                 key={s.id}
