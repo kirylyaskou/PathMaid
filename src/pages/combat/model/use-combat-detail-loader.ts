@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useCombatantStore } from '@/entities/combatant'
 import { fetchCreatureStatBlockData } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
@@ -25,6 +25,10 @@ export function useCombatDetailLoader() {
 
   const statBlockCache = useRef<Map<string, CreatureStatBlockData>>(new Map())
   const pcBuildCache = useRef<Map<string, PathbuilderBuild>>(new Map())
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Cancel any in-flight load on unmount.
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   /** Detect + apply shield AC bonus for an NPC combatant from cached data or encounter inventory. */
   const applyShieldBonus = useCallback(async (combatantId: string, data: CreatureStatBlockData) => {
@@ -60,8 +64,15 @@ export function useCombatDetailLoader() {
     })
   }, [])
 
-  /** Load detail for the selected combatant. Handles NPC, PC, and hazard branches. */
+  /** Load detail for the selected combatant. Handles NPC, PC, and hazard branches.
+   *  Cancels any previous in-flight request so rapid selection changes never
+   *  apply a stale result over a newer one. */
   const loadForCombatant = useCallback(async (id: string) => {
+    // Cancel previous in-flight request and start a new one.
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     const combatant = useCombatantStore.getState().combatants.find((c) => c.id === id)
     if (!combatant) return
 
@@ -70,6 +81,7 @@ export function useCombatDetailLoader() {
       setSelectedPcBuild(null)
       const cached = statBlockCache.current.get(combatant.creatureRef)
       if (cached) {
+        if (controller.signal.aborted) return
         setLastNpcStatBlock(cached)
         // Re-apply shield bonus when unset (e.g. after encounter reload).
         if (combatant.shieldAcBonus === undefined) {
@@ -80,6 +92,7 @@ export function useCombatDetailLoader() {
       setStatBlockLoading(true)
       try {
         const data = await fetchCreatureStatBlockData(combatant.creatureRef)
+        if (controller.signal.aborted) return
         if (data) {
           evictIfFull(statBlockCache.current)
           statBlockCache.current.set(combatant.creatureRef, data)
@@ -87,7 +100,7 @@ export function useCombatDetailLoader() {
           await applyShieldBonus(id, data)
         }
       } finally {
-        setStatBlockLoading(false)
+        if (!controller.signal.aborted) setStatBlockLoading(false)
       }
       return
     }
@@ -97,12 +110,14 @@ export function useCombatDetailLoader() {
       setLastNpcStatBlock(null)
       const cached = pcBuildCache.current.get(combatant.creatureRef)
       if (cached) {
+        if (controller.signal.aborted) return
         setSelectedPcBuild(cached)
         return
       }
       setPcBuildLoading(true)
       try {
         const character = await getCharacterById(combatant.creatureRef)
+        if (controller.signal.aborted) return
         if (character) {
           const build = JSON.parse(character.rawJson) as PathbuilderBuild
           evictIfFull(pcBuildCache.current)
@@ -112,7 +127,7 @@ export function useCombatDetailLoader() {
       } catch {
         // rawJson parse failure — leave selectedPcBuild null
       } finally {
-        setPcBuildLoading(false)
+        if (!controller.signal.aborted) setPcBuildLoading(false)
       }
       return
     }
