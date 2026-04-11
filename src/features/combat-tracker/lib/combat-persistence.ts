@@ -6,6 +6,7 @@ import { useCombatTrackerStore } from '../model/store'
 import { hydrateManager, clearAllManagers } from '@/entities/condition'
 import type { ConditionSlug } from '@engine'
 import { logErrorWithToast } from '@/shared/lib/error'
+import { kindFromLegacy } from '@/entities/combatant'
 
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -24,7 +25,7 @@ function buildSnapshot(): CombatSnapshot | null {
     turn: tracker.turn,
     activeCombatantId: tracker.activeCombatantId,
     isRunning: tracker.isRunning,
-    combatants: combatants.map((c) => ({ ...c, level: c.level ?? null })),
+    combatants: combatants.map((c) => ({ ...c, level: c.level ?? null, isNPC: c.kind !== 'pc' })),
     conditions,
   }
 }
@@ -74,7 +75,11 @@ export async function loadActiveCombat(): Promise<boolean> {
     if (!snapshot) return false
 
     useCombatantStore.getState().setCombatants(
-      snapshot.combatants.map((c) => ({ ...c, level: c.level ?? undefined }))
+      snapshot.combatants.map((c) => ({
+        ...c,
+        level: c.level ?? undefined,
+        kind: kindFromLegacy(c.isNPC, false),
+      }))
     )
     useCombatTrackerStore.getState().setCombatId(snapshot.id)
     useCombatTrackerStore.getState().setRound(snapshot.round)

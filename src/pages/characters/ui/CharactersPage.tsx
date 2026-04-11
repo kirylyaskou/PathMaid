@@ -52,7 +52,7 @@ export function CharactersPage() {
         hp: maxHp,
         maxHp,
         tempHp: 0,
-        isNPC: false,
+        kind: 'pc',
       }
       addCombatant(combatant)
       toast(`${character.name} added to combat`, {

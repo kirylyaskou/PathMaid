@@ -77,7 +77,7 @@ export function useCombatDetailLoader() {
     if (!combatant) return
 
     // NPC branch — load creature stat block
-    if (combatant.isNPC && combatant.creatureRef) {
+    if (combatant.kind === 'npc' && combatant.creatureRef) {
       setSelectedPcBuild(null)
       const cached = statBlockCache.current.get(combatant.creatureRef)
       if (cached) {
@@ -106,7 +106,7 @@ export function useCombatDetailLoader() {
     }
 
     // PC branch — load PathbuilderBuild
-    if (!combatant.isNPC && !combatant.isHazard && combatant.creatureRef) {
+    if (combatant.kind === 'pc' && combatant.creatureRef) {
       setLastNpcStatBlock(null)
       const cached = pcBuildCache.current.get(combatant.creatureRef)
       if (cached) {

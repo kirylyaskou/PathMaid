@@ -64,7 +64,7 @@ export function InitiativeRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          {combatant.isNPC ? (
+          {combatant.kind !== 'pc' ? (
             <Skull className="w-3 h-3 text-destructive/60 shrink-0" />
           ) : (
             <User className="w-3 h-3 text-primary/60 shrink-0" />

@@ -6,6 +6,7 @@ import { useEncounterTabsStore, createEmptySnapshot } from '@/features/combat-tr
 import type { TabSnapshot } from '@/features/combat-tracker'
 import { loadEncounterCombatants } from '@/shared/api'
 import type { Combatant } from '@/entities/combatant'
+import { kindFromLegacy } from '@/entities/combatant'
 
 interface BlueprintSelectorDialogProps {
   open: boolean
@@ -32,7 +33,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
         hp: ec.maxHp,
         maxHp: ec.maxHp,
         tempHp: 0,
-        isNPC: ec.isNPC,
+        kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
       }))
       const snapshot: TabSnapshot = {
         combatants,
