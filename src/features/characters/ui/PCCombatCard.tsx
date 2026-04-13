@@ -4,6 +4,7 @@ import { Separator } from '@/shared/ui/separator'
 import {
   Collapsible,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
 import { SectionHeader } from '@/shared/ui/section-header'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -24,6 +25,7 @@ import type {
   PathbuilderSpellEntry,
 } from '@engine'
 import { abilityModifier, proficiencyModifier, SKILL_ABILITY } from '@engine'
+import { ChevronDown } from 'lucide-react'
 import type { Combatant } from '@/entities/combatant'
 
 interface PCCombatCardProps {
@@ -275,7 +277,7 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
         {/* Core stats */}
         <div className="flex flex-nowrap border-b border-border/40">
           <StatCell label="HP" value={`${combatant.hp}/${combatant.maxHp}`} highlight />
-          <StatCell label="AC" value={combatant.ac ?? '—'} colorClass="text-pf-gold" />
+          <StatCell label="AC" value={'—'} colorClass="text-pf-gold" />
           {saveData.map((s) => {
             const modResult = modStats.get(s.key)
             const net = modResult?.netModifier ?? 0

@@ -21,7 +21,7 @@ import { AbilityCard } from "@/shared/ui/ability-card"
 import type { CreatureStatBlockData } from '../model/types'
 import { stripHtml } from '@/shared/lib/html'
 import { useModifiedStats } from '../model/use-modified-stats'
-import { useCombatantStore } from '@/entities/combatant'
+import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { classifyAbilities } from '../model/classify-abilities'
 import { highlightGameText } from '../lib/foundry-text'
 import { StatItem } from './StatItem'
@@ -91,7 +91,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     mapCombatantId ? s.combatants.find((c) => c.id === mapCombatantId) : undefined,
   )
   const updateCombatantAction = useCombatantStore((s) => s.updateCombatant)
-  const currentMapIndex = mapCombatant?.mapIndex ?? 0
+  const currentMapIndex = mapCombatant && isNpc(mapCombatant) ? mapCombatant.mapIndex ?? 0 : 0
 
   // FEAT-04: detect troops/swarms from traits — they use a specialized layout
   // (no Strikes, collective damage in Actions, troop HP segments rendered inline).
@@ -172,8 +172,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           <div className="flex flex-nowrap overflow-hidden">
             <StatItem label="HP" value={creature.hp} highlight />
             <StatItem
-              label={mapCombatant?.shieldRaised ? 'AC*' : 'AC'}
-              value={creature.ac + (mapCombatant?.shieldRaised ? derivedShieldAcBonus : 0)}
+              label={(mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? 'AC*' : 'AC'}
+              value={creature.ac + ((mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? derivedShieldAcBonus : 0)}
               colorClass="text-pf-gold"
               modResult={modStats.get('ac')}
             />

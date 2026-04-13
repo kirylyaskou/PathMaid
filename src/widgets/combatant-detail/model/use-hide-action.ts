@@ -12,7 +12,7 @@ import type { CreatureStatBlockData } from '@/entities/creature'
 /** Extracts the Hide action logic from HpControls into a standalone hook.
  *  Returns handleHide (async) and baseStealth (null if creature has no stealth). */
 export function useHideAction(
-  combatantId: string,
+  _combatantId: string,
   combatantName: string,
   creature: CreatureStatBlockData | null | undefined,
   getModified: (base: number, statSlug: string) => number,

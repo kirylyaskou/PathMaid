@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
-import { damageTypeChip, DAMAGE_GROUPS, MATERIAL_GROUP } from '@/shared/lib/damage-colors'
+import { DAMAGE_GROUPS, MATERIAL_GROUP } from '@/shared/lib/damage-colors'
 import type { DamageType } from '@engine'
 
 interface DamageEntry {

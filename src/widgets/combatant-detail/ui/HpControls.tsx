@@ -3,7 +3,7 @@ import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X, Skull, HeartPul
 import { Button } from '@/shared/ui/button'
 import { Separator } from '@/shared/ui/separator'
 import { cn } from '@/shared/lib/utils'
-import { useCombatantStore } from '@/entities/combatant'
+import { useCombatantStore, isNpc } from '@/entities/combatant'
 import type { Combatant } from '@/entities/combatant'
 import {
   applyIWR,
@@ -59,8 +59,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     return base + (modifiedStats.get(statSlug)?.netModifier ?? 0)
   }
 
-  const hasShield = combatant.shieldAcBonus != null
-  const shieldAcBonus = combatant.shieldAcBonus ?? 0
+  const shieldAcBonus = isNpc(combatant) ? combatant.shieldAcBonus ?? 0 : 0
 
   const totalTypedDamage = damageEntries.reduce((s, e) => s + e.amount, 0)
   const hasEntries = damageEntries.length > 0
@@ -157,7 +156,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             </span>
           )}
           <div className="flex-1" />
-          {hasShield && (
+          {isNpc(combatant) && combatant.shieldAcBonus != null && (
             <button
               type="button"
               onClick={() => updateCombatant(combatant.id, { shieldRaised: !combatant.shieldRaised })}
@@ -343,7 +342,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             combatantId={combatant.id}
             combatantName={combatant.displayName}
             creature={creature}
-            ac={creature.ac + (combatant.shieldRaised ? shieldAcBonus : 0)}
+            ac={creature.ac + (isNpc(combatant) && combatant.shieldRaised ? shieldAcBonus : 0)}
             getModified={getModified}
           />
         </>

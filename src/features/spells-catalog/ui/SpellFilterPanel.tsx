@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { Input } from '@/shared/ui/input'
 import { SearchInput } from '@/shared/ui/search-input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/shared/ui/command'
