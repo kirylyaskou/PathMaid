@@ -1,12 +1,10 @@
 import { saveCombatState, loadCombatState, listCombats } from '@/shared/api'
 import type { CombatSnapshot } from '@/shared/api'
-import { useCombatantStore } from '@/entities/combatant'
-import { useConditionStore } from '@/entities/condition'
+import { useCombatantStore, kindFromLegacy } from '@/entities/combatant'
+import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
 import { useCombatTrackerStore } from '../model/store'
-import { hydrateManager, clearAllManagers } from '@/entities/condition'
 import type { ConditionSlug } from '@engine'
 import { logErrorWithToast } from '@/shared/lib/error'
-import { kindFromLegacy } from '@/entities/combatant'
 
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null

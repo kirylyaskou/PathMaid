@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-05)
 Phase: 999.1
 Plan: Not started
 Status: Executing Phase 52
-Last activity: 2026-04-10
+Last activity: 2026-04-13 - Completed quick task 260413-dae: fix TypeScript build errors after Combatant discriminated union refactor
 
 Progress: [████████░░] 75% (phases 47-49 complete, 50 in progress)
 
@@ -145,11 +145,12 @@ None.
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260405-52e | damage-type-multi-trait-chip-selector | 2026-04-05 | eb20c204 | [260405-52e](./quick/260405-52e-damage-type-multi-trait-chip-selector/) |
-| 260405-64b | condition picker modal — full names, no truncation | 2026-04-05 | 96ed79ce | [260405-64b](./quick/260405-64b-redesign-the-condition-picker-in-combat-/) |
-| 260408-wlt | сделай bg-background чёрным для SplashScreen | 2026-04-08 | b206dcd5 | [260408-wlt](./quick/260408-wlt-bg-background-splashscreen/) |
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260405-52e | damage-type-multi-trait-chip-selector | 2026-04-05 | eb20c204 | | [260405-52e](./quick/260405-52e-damage-type-multi-trait-chip-selector/) |
+| 260405-64b | condition picker modal — full names, no truncation | 2026-04-05 | 96ed79ce | | [260405-64b](./quick/260405-64b-redesign-the-condition-picker-in-combat-/) |
+| 260408-wlt | сделай bg-background чёрным для SplashScreen | 2026-04-08 | b206dcd5 | | [260408-wlt](./quick/260408-wlt-bg-background-splashscreen/) |
+| 260413-dae | fix TypeScript build errors after Combatant discriminated union refactor | 2026-04-13 | 5d9cce4e | Verified | [260413-dae](./quick/260413-dae-fix-typescript-build-errors-after-combat/) |
 
 ### Blockers/Concerns
 
