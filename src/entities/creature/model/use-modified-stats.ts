@@ -1,15 +1,18 @@
-// ─── useModifiedStats + resolveSpellModifiers (Phase 39) ─────────────────────
+// ─── useModifiedStats + resolveSpellModifiers (Phase 39, extended Phase 56) ───
 // React hook layer on top of engine computeStatModifier.
-// Subscribes to useConditionStore, computes modified values reactively.
+// Subscribes to useConditionStore and useEffectStore, computes modified values
+// reactively from both condition and spell effect sources.
 
 import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useConditionStore } from '@/entities/condition'
+import { useEffectStore } from '@/entities/spell-effect'
 import {
   computeStatModifier,
   Modifier,
   StatisticModifier,
   CONDITION_EFFECTS,
+  parseSpellEffectModifiers,
 } from '@engine'
 import type { ConditionInput, StatModifierResult, ConditionModifierEffect } from '@engine'
 
@@ -57,22 +60,45 @@ export function useModifiedStats(
     [rawConditions],
   )
 
+  // Subscribe to spell effects for this combatant (same anti-pattern avoidance as conditions)
+  const rawEffects = useEffectStore(
+    useShallow((s) =>
+      combatantId
+        ? s.activeEffects.filter((e) => e.combatantId === combatantId)
+        : [],
+    ),
+  )
+
+  // Parse FlatModifier inputs from effect rules_json — OUTSIDE selector to avoid .map() in useShallow
+  const spellEffectModifiers = useMemo(
+    () =>
+      rawEffects.flatMap((e) =>
+        parseSpellEffectModifiers(e.rulesJson, e.effectId, e.effectName),
+      ),
+    [rawEffects],
+  )
+
   // Use joined key for stable memo dependency (avoids array reference churn)
   const slugsKey = statSlugs.join(',')
 
   return useMemo(() => {
     const result = new Map<string, StatModifierResult>()
-    if (!combatantId || conditions.length === 0) return result
+    if (!combatantId || (conditions.length === 0 && spellEffectModifiers.length === 0)) return result
 
     for (const statSlug of statSlugs) {
-      const mod = computeStatModifier(conditions, statSlug, statSlugs)
+      const mod = computeStatModifier(
+        conditions,
+        statSlug,
+        statSlugs,
+        spellEffectModifiers.length > 0 ? spellEffectModifiers : undefined,
+      )
       if (mod.netModifier !== 0) {
         result.set(statSlug, mod)
       }
     }
 
     return result
-  }, [combatantId, conditions, slugsKey])
+  }, [combatantId, conditions, spellEffectModifiers, slugsKey])
 }
 
 // ─── resolveSpellModifiers ────────────────────────────────────────────────────
