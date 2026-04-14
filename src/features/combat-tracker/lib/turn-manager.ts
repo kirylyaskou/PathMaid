@@ -1,5 +1,8 @@
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, type ActiveCondition } from '@/entities/condition'
+import { useEffectStore } from '@/entities/spell-effect'
+import type { ActiveEffect } from '@/entities/spell-effect'
+import { decrementEffectTurns as decrementEffectTurnsApi } from '@/shared/api/effects'
 import { useCombatTrackerStore } from '../model/store'
 import type { ConditionSlug } from '@engine'
 import { toast } from 'sonner'
@@ -10,6 +13,7 @@ interface TurnSnapshot {
   turn: number
   conditionsBefore: ActiveCondition[]
   combatantId: string
+  effectsBefore: ActiveEffect[]
 }
 
 let lastSnapshot: TurnSnapshot | null = null
@@ -32,6 +36,9 @@ export function advanceTurn(): void {
         .getState()
         .activeConditions.filter((c) => c.combatantId === endingCombatantId),
       combatantId: endingCombatantId,
+      effectsBefore: useEffectStore
+        .getState()
+        .activeEffects.filter((e) => e.combatantId === endingCombatantId),
     }
 
     // FEAT-11: reset MAP (multiple attack penalty) when the turn ends.
@@ -48,6 +55,20 @@ export function advanceTurn(): void {
         .join(', ')
       const combatant = combatants.find((cb) => cb.id === endingCombatantId)
       toast(`${combatant?.displayName ?? 'Combatant'}: ${summary}`)
+    }
+
+    // ── Spell Effect auto-decrement (D-04) ────────────────────────────────────
+    const encounterId = tracker.combatId
+    if (encounterId && endingCombatantId) {
+      const removed = useEffectStore.getState().decrementTurns(endingCombatantId)
+      decrementEffectTurnsApi(encounterId, endingCombatantId).catch(() => {
+        // DB sync failure is non-fatal — effects still tracked in store
+      })
+      if (removed.length > 0) {
+        const combatant = combatants.find((cb) => cb.id === endingCombatantId)
+        const names = removed.map((r) => r.effectName).join(', ')
+        toast(`${combatant?.displayName ?? 'Combatant'}: ${names} expired`)
+      }
     }
 
     // Persistent damage flat-checks — set pending state for dialog
@@ -129,6 +150,9 @@ export function reverseTurn(): void {
   for (const pc of persistentConditions) {
     useConditionStore.getState().setCondition(pc)
   }
+
+  // Restore spell effects to pre-turn state
+  useEffectStore.getState().setEffectsForCombatant(combatantId, lastSnapshot.effectsBefore)
 
   toast('Reversed to previous turn')
 
