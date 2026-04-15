@@ -835,6 +835,33 @@ Full details: `.planning/milestones/v1.1.0-ROADMAP.md`
 
 </details>
 
+### Phase 55: CreatureStatBlock Refactor
+**Goal**: Split the 1964-line CreatureStatBlock.tsx into separate focused files
+**Depends on**: Phase 54
+**Requirements**: STG-01, STG-02, STG-03, STG-04, STG-05, STG-06, STG-07
+**Success Criteria** (what must be TRUE):
+  1. CreatureStatBlock.tsx is split into multiple smaller files
+  2. tsc --noEmit passes with 0 errors
+  3. All existing functionality preserved
+**Plans:** 0/0 plans
+
+### Phase 56: Staging Pool
+**Goal**: Add a hidden staging pool in Encounter Builder for creatures that enter combat later (phases, summons, reinforcements). GM can deploy any staged creature into active initiative with a roll.
+**Depends on**: Phase 54
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. Encounter Builder shows a collapsible "Reinforcements / Summons [N]" section
+  2. Quick Add and Add PC flows have a "to staging" option
+  3. Each staged creature can have an optional free-text label (Phase 2, Summons, etc.)
+  4. "→ Enter combat" button moves creature from staging to active combatants
+  5. Initiative roll dialog appears after deploying (reuses InitiativeRow popover pattern)
+  6. stagingCombatants persisted in DB alongside active combatants
+  7. tsc --noEmit passes with 0 errors
+**Plans:** 2 plans
+Plans:
+- [ ] 56-01-PLAN.md — DB migration + StagingCombatant type + store extension + API + encounter-persistence wiring
+- [ ] 56-02-PLAN.md — Staging pool UI: collapsible section, deploy dialog, Quick Add/Add PC toggle
+
 ## Progress
 
 ### v1.0.0 — PC Import (Pathbuilder 2e)
@@ -865,7 +892,8 @@ Full details: `.planning/milestones/v1.1.0-ROADMAP.md`
 _(Not yet defined — run `/gsd-new-milestone` to start)_
 
 - [ ] **Phase 55: CreatureStatBlock Refactor** — Split 1964-line CreatureStatBlock.tsx into separate files
+- [ ] **Phase 56: Staging Pool** — Add a hidden pool of creatures in Encounter Builder for phases/summons/reinforcements, with one-click deploy into active combat initiative
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-10 — v1.1.0 PathMaid Day-One Patch shipped (phases 47-54)*
+*Last updated: 2026-04-15 — added Phase 56 Staging Pool*
