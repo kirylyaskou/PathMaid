@@ -16,7 +16,7 @@ export interface CombatantState {
   clearAll: () => void
   // ── Staging pool ──────────────────────────────────────────────────────────
   stagingCombatants: StagingCombatant[]
-  addStagingCombatant: (combatant: Combatant, label?: string) => void
+  addStagingCombatant: (combatant: Combatant, round?: number) => void
   removeStagingCombatant: (id: string) => void
   setStagingCombatants: (staging: StagingCombatant[]) => void
   releaseFromStaging: (id: string) => Combatant | undefined
@@ -81,11 +81,11 @@ export const useCombatantStore = create<CombatantState>()(
       }),
     // ── Staging pool ──────────────────────────────────────────────────────────
     stagingCombatants: [],
-    addStagingCombatant: (combatant, label) =>
+    addStagingCombatant: (combatant, round) =>
       set((state) => {
         state.stagingCombatants.push({
           combatant,
-          label,
+          round,
           sortOrder: state.stagingCombatants.length,
         })
       }),

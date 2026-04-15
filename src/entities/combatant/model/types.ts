@@ -68,7 +68,7 @@ export function kindFromLegacy(isNPC: boolean, isHazard: boolean): 'npc' | 'pc' 
  *  Uses the same Combatant union type — lives in a separate array, never in turn-manager. */
 export interface StagingCombatant {
   combatant: Combatant    // same union type (D-02)
-  label?: string          // optional free-text tag displayed as badge (D-10)
+  round?: number          // combat round on which this creature auto-enters (triggers deploy dialog)
   sortOrder: number
 }
 

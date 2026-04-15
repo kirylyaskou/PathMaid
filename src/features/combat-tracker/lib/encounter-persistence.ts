@@ -165,7 +165,7 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
         tempHp: row.tempHp,
         ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
       } as Combatant,
-      label: row.label ?? undefined,
+      round: row.round ?? undefined,
       sortOrder: row.sortOrder,
     }))
     useCombatantStore.getState().setStagingCombatants(stagingCombatants)

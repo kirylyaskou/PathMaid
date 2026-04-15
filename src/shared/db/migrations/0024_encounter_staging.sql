@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS encounter_staging_combatants (
   temp_hp INTEGER NOT NULL DEFAULT 0,
   creature_level INTEGER NOT NULL DEFAULT 0,
   weak_elite_tier TEXT NOT NULL DEFAULT 'normal',
-  label TEXT,
+  round INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 

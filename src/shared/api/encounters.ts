@@ -519,7 +519,7 @@ export interface EncounterStagingRow {
   tempHp: number
   creatureLevel: number
   weakEliteTier: 'normal' | 'weak' | 'elite'
-  label: string | null
+  round: number | null
   sortOrder: number
 }
 
@@ -537,10 +537,10 @@ export async function saveEncounterStagingCombatants(
     await db.execute(
       `INSERT INTO encounter_staging_combatants
          (id, encounter_id, kind, creature_ref, display_name, hp, max_hp, temp_hp,
-          creature_level, weak_elite_tier, label, sort_order)
+          creature_level, weak_elite_tier, round, sort_order)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [s.id, encounterId, s.kind, s.creatureRef, s.displayName,
-       s.hp, s.maxHp, s.tempHp, s.creatureLevel, s.weakEliteTier, s.label ?? null, i]
+       s.hp, s.maxHp, s.tempHp, s.creatureLevel, s.weakEliteTier, s.round ?? null, i]
     )
   }
 }
@@ -560,7 +560,7 @@ export async function loadEncounterStagingCombatants(
     temp_hp: number
     creature_level: number
     weak_elite_tier: string
-    label: string | null
+    round: number | null
     sort_order: number
   }>>(
     `SELECT * FROM encounter_staging_combatants WHERE encounter_id = ? ORDER BY sort_order`,
@@ -577,7 +577,7 @@ export async function loadEncounterStagingCombatants(
     tempHp: r.temp_hp,
     creatureLevel: r.creature_level,
     weakEliteTier: r.weak_elite_tier as 'normal' | 'weak' | 'elite',
-    label: r.label,
+    round: r.round,
     sortOrder: r.sort_order,
   }))
 }
