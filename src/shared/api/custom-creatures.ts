@@ -38,7 +38,7 @@ function defaultStatBlock(id: string): CreatureStatBlockData {
     will: 0,
     perception: 0,
     rarity: 'common',
-    size: 'med',
+    size: 'Medium',
     type: 'npc',
     traits: [],
     immunities: [],
