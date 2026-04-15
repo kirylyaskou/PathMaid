@@ -28,6 +28,8 @@ import {
 import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import { calculateCreatureXP, getHazardXp } from '@engine'
+import { useCombatantStore } from '@/entities/combatant'
+import { StagingTable } from './StagingTable'
 
 interface Props {
   encounterId: string
@@ -117,6 +119,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       hazardType: r.hazardType,
     }))
     setEncounterCombatants(encounterId, updated)
+    useCombatantStore.getState().setStagingCombatants([])
     if (encounter) {
       upsertEncounter({ ...encounter, round: 0, turn: 0, activeCombatantId: null, isRunning: false, combatants: updated })
     }
@@ -301,6 +304,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
           })}
         </div>
       </ScrollArea>
+
+      {/* Staging pool — creatures queued to enter combat later */}
+      <div className="px-3 pb-3 shrink-0">
+        <StagingTable encounterId={encounterId} combatMode={false} />
+      </div>
 
       {/* Load into Combat — confirm when combat is active */}
       <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>

@@ -247,6 +247,7 @@ export function EncountersPage() {
             <CreatureSearchSidebar
               onAddCreature={handleAddCreature}
               onAddHazard={handleAddHazard}
+              encounterId={selectedId}
             />
           </ResizablePanel>
 
