@@ -261,7 +261,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                 const statDelta = getStatAdjustment(selectedTier)
                 return (
                   <DraggableCreatureRow key={row.id} row={row} tier={selectedTier}>
-                    <div className="relative">
+                    <div className="relative group">
                       <CreatureCard
                         creature={creature}
                         compact
