@@ -1,20 +1,22 @@
 -- Phase 56 staging pool: schema drift fix.
 --
 -- Migration 0024_encounter_staging.sql originally created encounter_staging_combatants
--- with a `label TEXT` column. That design was replaced by "round" INTEGER and the 0024
--- file itself was rewritten in commit c822a1c6. Databases that applied the old 0024
--- (with `label`) never picked up the change because the table already exists and
--- CREATE TABLE IF NOT EXISTS is a no-op. Result: every insert from the current code
--- path fails with "no such column: round", silently lost as an unhandled promise.
+-- with a `label TEXT` column. Commit c822a1c6 rewrote the file to replace it with
+-- `round INTEGER` but CREATE TABLE IF NOT EXISTS is a no-op on existing tables, so
+-- databases that applied the old 0024 kept the `label` column and saves broke silently.
 --
--- SQLite accepts `round` as a column identifier only inside CREATE TABLE. In a bare
--- column list of an INSERT it is parsed as the built-in round() function and raises a
--- syntax error. All references to the column are therefore double-quoted below.
+-- Two earlier attempts at this migration both failed with `near "round": syntax error`
+-- because this version of SQLite parses `round` inconsistently as an identifier in
+-- certain positions (collision with the built-in round() function) and the standard
+-- "round" quoting falls back to a string literal due to a long-standing SQLite quirk
+-- (https://www.sqlite.org/quirks.html#dblquote).
 --
--- This migration rebuilds the table to converge both legacy and fresh databases on the
--- current schema. Existing rows are preserved by id/content; "round" is set to NULL
--- for all rows (SQLite DDL has no IF-COLUMN-EXISTS conditional; staging feature is
--- pre-release so acceptable).
+-- To avoid both issues permanently, the column is renamed to `enter_round`. The TS
+-- domain type still exposes the field as `round`; the mapping lives in
+-- src/shared/api/encounters.ts (saveEncounterStagingCombatants / loadEncounterStagingCombatants).
+--
+-- Existing rows are preserved by id/content; enter_round becomes NULL for all rows
+-- (SQLite DDL has no IF-COLUMN-EXISTS conditional and the feature is pre-release).
 
 DROP TABLE IF EXISTS encounter_staging_combatants_v2;
 
@@ -29,13 +31,13 @@ CREATE TABLE encounter_staging_combatants_v2 (
   temp_hp INTEGER NOT NULL DEFAULT 0,
   creature_level INTEGER NOT NULL DEFAULT 0,
   weak_elite_tier TEXT NOT NULL DEFAULT 'normal',
-  "round" INTEGER,
+  enter_round INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO encounter_staging_combatants_v2
   (id, encounter_id, kind, creature_ref, display_name, hp, max_hp, temp_hp,
-   creature_level, weak_elite_tier, "round", sort_order)
+   creature_level, weak_elite_tier, enter_round, sort_order)
 SELECT
   id, encounter_id, kind, creature_ref, display_name, hp, max_hp, temp_hp,
   creature_level, weak_elite_tier, NULL, sort_order

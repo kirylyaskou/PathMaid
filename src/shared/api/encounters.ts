@@ -535,9 +535,12 @@ export async function saveEncounterStagingCombatants(
   for (let i = 0; i < staging.length; i++) {
     const s = staging[i]
     await db.execute(
+      // Column `enter_round` is the physical name for the domain field `round` —
+      // see migrations/0026_fix_staging_round_column.sql for the rationale (avoids
+      // SQLite's `round()` function name collision + its double-quote identifier quirk).
       `INSERT INTO encounter_staging_combatants
          (id, encounter_id, kind, creature_ref, display_name, hp, max_hp, temp_hp,
-          creature_level, weak_elite_tier, round, sort_order)
+          creature_level, weak_elite_tier, enter_round, sort_order)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [s.id, encounterId, s.kind, s.creatureRef, s.displayName,
        s.hp, s.maxHp, s.tempHp, s.creatureLevel, s.weakEliteTier, s.round ?? null, i]
@@ -560,10 +563,16 @@ export async function loadEncounterStagingCombatants(
     temp_hp: number
     creature_level: number
     weak_elite_tier: string
-    round: number | null
+    enter_round: number | null
     sort_order: number
   }>>(
-    `SELECT * FROM encounter_staging_combatants WHERE encounter_id = ? ORDER BY sort_order`,
+    // Explicit column list — avoids SELECT * relying on physical column order and makes
+    // the enter_round → round mapping (see 0026 migration) obvious.
+    `SELECT id, encounter_id, kind, creature_ref, display_name, hp, max_hp, temp_hp,
+            creature_level, weak_elite_tier, enter_round, sort_order
+     FROM encounter_staging_combatants
+     WHERE encounter_id = ?
+     ORDER BY sort_order`,
     [encounterId]
   )
   return rows.map((r) => ({
@@ -577,7 +586,7 @@ export async function loadEncounterStagingCombatants(
     tempHp: r.temp_hp,
     creatureLevel: r.creature_level,
     weakEliteTier: r.weak_elite_tier as 'normal' | 'weak' | 'elite',
-    round: r.round,
+    round: r.enter_round,
     sortOrder: r.sort_order,
   }))
 }
