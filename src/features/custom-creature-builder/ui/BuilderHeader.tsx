@@ -4,6 +4,8 @@ import { Button } from '@/shared/ui/button'
 import { Spinner } from '@/shared/ui/spinner'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { PATHS } from '@/shared/routes'
+import type { AppliedRoleValues } from '@engine'
+import { ApplyRoleButton } from './ApplyRoleButton'
 
 interface Props {
   name: string
@@ -11,7 +13,7 @@ interface Props {
   dirty: boolean
   saving: boolean
   onSave: () => void
-  onApplyRole: () => void // placeholder — real menu lands in 59-08
+  onApplyRole: (values: AppliedRoleValues) => void
   onClone: () => void // placeholder — real modal lands in 59-09
   onExport: () => void // placeholder — real export lands in 59-09
 }
@@ -46,9 +48,7 @@ export function BuilderHeader({
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <Button variant="outline" size="sm" onClick={onApplyRole}>
-          Apply Role
-        </Button>
+        <ApplyRoleButton level={level} onApply={onApplyRole} />
         <Button variant="outline" size="sm" onClick={onClone}>
           <Copy className="w-3.5 h-3.5 mr-1.5" />
           Clone from Bestiary

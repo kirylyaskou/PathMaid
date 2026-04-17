@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { AppliedRoleValues } from '@engine'
 import {
   getCustomCreatureById,
   updateCustomCreature,
@@ -15,6 +16,7 @@ import {
 import { isDirty as checkIsDirty } from '../model/isDirty'
 import { BuilderHeader } from './BuilderHeader'
 import { BuilderTabs } from './BuilderTabs'
+import { DesignReviewPanel } from './DesignReviewPanel'
 import { DirtyGuardDialog } from './DirtyGuardDialog'
 
 interface Props {
@@ -112,6 +114,10 @@ export function BuilderPage({ creatureId }: Props) {
     return undefined
   }, [wasSaved])
 
+  const handleApplyRole = useCallback((values: AppliedRoleValues) => {
+    dispatch({ type: 'APPLY_ROLE_VALUES', values })
+  }, [])
+
   // UI-SPEC: Ctrl+S / Cmd+S saves. Same pattern as CommandPalette.tsx.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -140,7 +146,7 @@ export function BuilderPage({ creatureId }: Props) {
         dirty={dirty}
         saving={saving}
         onSave={() => void handleSave()}
-        onApplyRole={() => toast.info('Apply Role ships in plan 59-08')}
+        onApplyRole={handleApplyRole}
         onClone={() => toast.info('Clone from Bestiary ships in plan 59-09')}
         onExport={() => toast.info('Export JSON ships in plan 59-09')}
       />
@@ -152,6 +158,7 @@ export function BuilderPage({ creatureId }: Props) {
         <div className="flex flex-col min-h-0 overflow-y-auto">
           {/* Live preview — renders form state directly per UI-SPEC. */}
           <CreatureStatBlock creature={state.form} />
+          <DesignReviewPanel form={state.form} />
         </div>
       </div>
 
