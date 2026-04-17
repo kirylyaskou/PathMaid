@@ -56,8 +56,9 @@ export function calculateCreatureXP(
  *
  * - Complex hazard XP equals creature XP at the same delta.
  * - Simple hazard XP equals 1/5 of complex hazard XP.
- * - Delta below table minimum returns { xp: 0 } (trivially weak).
- * - Delta above table maximum is capped at the table maximum (delta +4).
+ * - Delta below -4 returns { xp: 0 } (trivially weak, per PF2e rules).
+ * - Delta -4..+4 uses the official GM Core lookup tables.
+ * - Delta above +4 extrapolates using the same ×1.5 / ×(4/3) progression as creatures.
  */
 export function getHazardXp(
   hazardLevel: number,
@@ -68,13 +69,17 @@ export function getHazardXp(
   const delta = level - partyLevel
 
   if (delta < -4) return { xp: 0 }
-  const clampedDelta = Math.min(delta, 4)
 
-  if (type === 'complex') {
-    return { xp: CREATURE_XP[clampedDelta]! }
+  if (delta > 4) {
+    const creatureXp = extrapolateCreatureXP(delta)
+    return { xp: type === 'complex' ? creatureXp : creatureXp / 5 }
   }
 
-  return { xp: SIMPLE_HAZARD_XP[clampedDelta]! }
+  if (type === 'complex') {
+    return { xp: CREATURE_XP[delta]! }
+  }
+
+  return { xp: SIMPLE_HAZARD_XP[delta]! }
 }
 
 // ─── Encounter Budget & Rating ──────────────────────────────────────────────
