@@ -1,3 +1,4 @@
+import type { AppliedRoleValues } from '@engine'
 import type { CreatureStatBlockData } from '@/entities/creature/model/types'
 
 export interface BuilderState {
@@ -38,6 +39,7 @@ export type BuilderAction =
   | { type: 'ADD_SPELLCASTING_ENTRY'; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
   | { type: 'UPDATE_SPELLCASTING_ENTRY'; index: number; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
   | { type: 'REMOVE_SPELLCASTING_ENTRY'; index: number }
+  | { type: 'APPLY_ROLE_VALUES'; values: AppliedRoleValues }
 
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
@@ -219,6 +221,71 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
           spellcasting: (state.form.spellcasting ?? []).filter((_, i) => i !== action.index),
         },
       }
+    case 'APPLY_ROLE_VALUES': {
+      const v = action.values
+      const form = state.form
+
+      // Ability mods: partial patch — merge selected ability keys into existing block.
+      const abilityMods = { ...form.abilityMods, ...v.abilityMods }
+
+      // Simple numeric overrides — only write keys that role actually provided.
+      const patched: CreatureStatBlockData = {
+        ...form,
+        abilityMods,
+        ...(v.fort !== undefined ? { fort: v.fort } : {}),
+        ...(v.ref !== undefined ? { ref: v.ref } : {}),
+        ...(v.will !== undefined ? { will: v.will } : {}),
+        ...(v.perception !== undefined ? { perception: v.perception } : {}),
+        ...(v.ac !== undefined ? { ac: v.ac } : {}),
+        ...(v.hp !== undefined ? { hp: v.hp } : {}),
+      }
+
+      // Strike attack + damage: patch first strike if any, otherwise skip silently.
+      if (v.strikeAttackBonus !== undefined || v.strikeDamage !== undefined) {
+        if (form.strikes.length > 0) {
+          const first = form.strikes[0]
+          patched.strikes = [
+            {
+              ...first,
+              ...(v.strikeAttackBonus !== undefined ? { modifier: v.strikeAttackBonus } : {}),
+              ...(v.strikeDamage !== undefined
+                ? {
+                    damage:
+                      first.damage.length > 0
+                        ? [{ ...first.damage[0], formula: v.strikeDamage.formula }, ...first.damage.slice(1)]
+                        : [{ formula: v.strikeDamage.formula, type: 'slashing' }],
+                  }
+                : {}),
+            },
+            ...form.strikes.slice(1),
+          ]
+        }
+      }
+
+      // Spell DC + attack: patch first spellcasting entry if any, otherwise skip silently.
+      if (v.spellDC !== undefined || v.spellAttack !== undefined) {
+        const entries = form.spellcasting ?? []
+        if (entries.length > 0) {
+          const first = entries[0]
+          patched.spellcasting = [
+            {
+              ...first,
+              ...(v.spellDC !== undefined ? { spellDc: v.spellDC } : {}),
+              ...(v.spellAttack !== undefined ? { spellAttack: v.spellAttack } : {}),
+            },
+            ...entries.slice(1),
+          ]
+        }
+      }
+
+      // Skill: apply to EXISTING skills' modifier only — do not invent new skill names.
+      if (v.skill !== undefined) {
+        const nextSkill = v.skill
+        patched.skills = form.skills.map((s) => ({ ...s, modifier: nextSkill }))
+      }
+
+      return { form: patched }
+    }
   }
 }
 
