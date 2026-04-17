@@ -35,6 +35,9 @@ export type BuilderAction =
   | { type: 'ADD_SKILL'; entry: CreatureStatBlockData['skills'][number] }
   | { type: 'UPDATE_SKILL'; index: number; entry: CreatureStatBlockData['skills'][number] }
   | { type: 'REMOVE_SKILL'; index: number }
+  | { type: 'ADD_SPELLCASTING_ENTRY'; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
+  | { type: 'UPDATE_SPELLCASTING_ENTRY'; index: number; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
+  | { type: 'REMOVE_SPELLCASTING_ENTRY'; index: number }
 
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
@@ -194,6 +197,26 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         form: {
           ...state.form,
           skills: state.form.skills.filter((_, i) => i !== action.index),
+        },
+      }
+    case 'ADD_SPELLCASTING_ENTRY':
+      return {
+        form: { ...state.form, spellcasting: [...(state.form.spellcasting ?? []), action.entry] },
+      }
+    case 'UPDATE_SPELLCASTING_ENTRY':
+      return {
+        form: {
+          ...state.form,
+          spellcasting: (state.form.spellcasting ?? []).map((e, i) =>
+            i === action.index ? action.entry : e,
+          ),
+        },
+      }
+    case 'REMOVE_SPELLCASTING_ENTRY':
+      return {
+        form: {
+          ...state.form,
+          spellcasting: (state.form.spellcasting ?? []).filter((_, i) => i !== action.index),
         },
       }
   }
