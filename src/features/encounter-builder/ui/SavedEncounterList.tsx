@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { useEncounterStore } from '@/entities/encounter'
+import { ImportEncounterDialog } from '@/features/encounter-import'
 
 export function SavedEncounterList() {
   const encounters = useEncounterStore((s) => s.encounters)
@@ -14,6 +15,7 @@ export function SavedEncounterList() {
 
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -40,16 +42,29 @@ export function SavedEncounterList() {
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
           Encounters
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs gap-1.5"
-          onClick={() => setIsCreating(true)}
-        >
-          <Plus className="w-3 h-3" />
-          New Encounter
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => setImportOpen(true)}
+            title="Import encounter from JSON"
+          >
+            <Upload className="w-3 h-3" />
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => setIsCreating(true)}
+          >
+            <Plus className="w-3 h-3" />
+            New Encounter
+          </Button>
+        </div>
       </div>
+      <ImportEncounterDialog open={importOpen} onOpenChange={setImportOpen} />
 
       {/* Inline create input */}
       {isCreating && (
