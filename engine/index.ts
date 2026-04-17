@@ -187,3 +187,20 @@ export type {
 export { calculatePCMaxHP } from './pc/hp'
 export { abilityModifier, proficiencyModifier } from './pc/math'
 export { SKILL_ABILITY } from './pc/skills'
+
+// ── Creature Building ─────────────────────────────────────────────────────
+export { getBenchmark, classifyStat, BENCHMARK_TABLES, SAFE_ITEM_LEVEL_TABLE } from './creature-building/getBenchmark'
+export { ROLE_PRESETS, applyRole } from './creature-building/roles'
+export type { AppliedRoleValues } from './creature-building/roles'
+export { runSanityChecks } from './creature-building/sanity'
+export type { CreatureStatsForSanity } from './creature-building/sanity'
+export type {
+  Tier,
+  StatKind,
+  RoleId,
+  RolePreset,
+  BenchmarkValue,
+  DamageBenchmark,
+  SanityIssue,
+  SanityIssueSeverity,
+} from './creature-building/types'

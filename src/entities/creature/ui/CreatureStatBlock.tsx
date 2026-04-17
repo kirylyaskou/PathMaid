@@ -19,6 +19,10 @@ import { TraitList } from "@/shared/ui/trait-pill"
 import { ActionIcon } from "@/shared/ui/action-icon"
 import { AbilityCard } from "@/shared/ui/ability-card"
 import type { CreatureStatBlockData } from '../model/types'
+import {
+  normalizeImmunities,
+  formatImmunityWithExceptions,
+} from '../model/iwr-normalize'
 import { stripHtml } from '@/shared/lib/html'
 import { useModifiedStats } from '../model/use-modified-stats'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
@@ -201,16 +205,34 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           <>
             <div className="p-4 space-y-2">
               {creature.immunities.length > 0 && (
-                <StatRow label="Immunities">{creature.immunities.join(", ")}</StatRow>
+                <StatRow label="Immunities">
+                  {normalizeImmunities(creature.immunities)
+                    .map((i) => formatImmunityWithExceptions(i))
+                    .join(", ")}
+                </StatRow>
               )}
               {creature.resistances.length > 0 && (
                 <StatRow label="Resistances">
-                  {creature.resistances.map((r) => `${r.type} ${r.value}`).join(", ")}
+                  {creature.resistances
+                    .map((r) => {
+                      const base = `${r.type} ${r.value}`
+                      return r.exceptions && r.exceptions.length > 0
+                        ? `${base} (except ${r.exceptions.join(', ')})`
+                        : base
+                    })
+                    .join(", ")}
                 </StatRow>
               )}
               {creature.weaknesses.length > 0 && (
                 <StatRow label="Weaknesses">
-                  {creature.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")}
+                  {creature.weaknesses
+                    .map((w) => {
+                      const base = `${w.type} ${w.value}`
+                      return w.exceptions && w.exceptions.length > 0
+                        ? `${base} (except ${w.exceptions.join(', ')})`
+                        : base
+                    })
+                    .join(", ")}
                 </StatRow>
               )}
             </div>

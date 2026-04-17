@@ -15,6 +15,7 @@ export interface SpellRow {
   save_stat: string | null
   source_book: string | null
   source_pack: string | null
+  heightened_json: string | null
 }
 
 export interface SpellcastingEntry {

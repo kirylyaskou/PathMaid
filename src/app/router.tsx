@@ -13,6 +13,12 @@ const HazardsPage    = lazy(() => import('@/pages/hazards').then(m => ({ default
 const SpellsPage     = lazy(() => import('@/pages/spells').then(m => ({ default: m.SpellsPage })))
 const ItemsPage      = lazy(() => import('@/pages/items').then(m => ({ default: m.ItemsPage })))
 const CharactersPage = lazy(() => import('@/pages/characters').then(m => ({ default: m.CharactersPage })))
+const CustomCreaturesListPage = lazy(() =>
+  import('@/pages/custom-creatures').then(m => ({ default: m.CustomCreaturesListPage }))
+)
+const CustomCreaturesEditPage = lazy(() =>
+  import('@/pages/custom-creatures').then(m => ({ default: m.CustomCreaturesEditPage }))
+)
 const SettingsPage   = lazy(() => import('@/pages/settings').then(m => ({ default: m.SettingsPage })))
 
 function SuspenseOutlet() {
@@ -41,6 +47,8 @@ const router = createHashRouter([
           { path: 'spells', element: <SpellsPage /> },
           { path: 'items', element: <ItemsPage /> },
           { path: 'characters', element: <CharactersPage /> },
+          { path: 'custom-creatures', element: <CustomCreaturesListPage /> },
+          { path: 'custom-creatures/:id/edit', element: <CustomCreaturesEditPage /> },
           { path: 'settings', element: <SettingsPage /> },
         ],
       },

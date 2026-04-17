@@ -95,7 +95,12 @@ export async function searchCreaturesFiltered(
     params.push(filters.rarity)
   }
   if (filters.source) {
-    conditions.push('e.source_pack = ?')
+    // Filter by source_name (human-readable, unique per row).
+    // Previously filtered by source_pack, but many distinct sources share
+    // pack='pf2e' (Monster Core, Bestiary 1, Bestiary 2…), so the filter
+    // effectively did nothing — picking "Monster Core" returned every pf2e row.
+    // Fallback to source_pack when source_name is NULL keeps legacy entries usable.
+    conditions.push('COALESCE(e.source_name, e.source_pack) = ?')
     params.push(filters.source)
   }
   if (filters.traits && filters.traits.length > 0) {

@@ -93,11 +93,53 @@ export function rollDice(
 }
 
 /**
+ * Merge a `+`-joined damage expression into canonical form.
+ * Sums dice of the same die size and combines flat modifiers.
+ *
+ * @example
+ * mergeDamageExpression('6d6+2d6+2d6')       // '10d6'
+ * mergeDamageExpression('6d6+4+2d6+2d6')     // '10d6+4'
+ * mergeDamageExpression('2d8+4+1d6+2d6')     // '2d8+3d6+4'
+ *
+ * Falls back to the input untouched if any part can't be parsed
+ * (e.g. contains subtraction, parentheses, or math beyond NdS / flat ints).
+ */
+function mergeDamageExpression(expr: string): string {
+  const parts = expr.split('+').map((p) => p.trim()).filter(Boolean)
+  const diceBySize: Record<number, number> = {}
+  let flatTotal = 0
+  for (const part of parts) {
+    const m = /^(\d+)d(\d+)$/.exec(part)
+    if (m) {
+      const count = parseInt(m[1], 10)
+      const size = parseInt(m[2], 10)
+      diceBySize[size] = (diceBySize[size] ?? 0) + count
+      continue
+    }
+    const flat = Number(part)
+    if (!Number.isNaN(flat)) {
+      flatTotal += flat
+      continue
+    }
+    // Unparseable fragment (e.g. math operator other than +) — abort and return input.
+    return expr
+  }
+  const sizes = Object.keys(diceBySize).map(Number).sort((a, b) => b - a) // larger dice first
+  const out = sizes.map((s) => `${diceBySize[s]}d${s}`)
+  if (flatTotal !== 0) out.push(String(flatTotal))
+  return out.join('+') || expr
+}
+
+/**
  * Compute the heightened formula for a spell at a given cast rank.
  * Returns the base formula unchanged if castRank <= baseRank.
  *
+ * Result is rendered in canonical form: same-die-size dice are summed
+ * and flat modifiers are combined.
+ *
  * @example
- * heightenFormula('6d6', { perRanks: 1, add: '2d6' }, 5, 3) // '6d6+2d6+2d6'
+ * heightenFormula('6d6', { perRanks: 1, add: '2d6' }, 5, 3) // '10d6'
+ * heightenFormula('6d6', { perRanks: 1, add: '2d6' }, 8, 3) // '16d6'
  * heightenFormula('6d6', { perRanks: 1, add: '2d6' }, 3, 3) // '6d6'
  */
 export function heightenFormula(
@@ -111,9 +153,6 @@ export function heightenFormula(
   const increments = Math.floor((castRank - baseRank) / heightened.perRanks)
   if (increments <= 0) return base
 
-  let result = base
-  for (let i = 0; i < increments; i++) {
-    result = result + '+' + heightened.add
-  }
-  return result
+  const raw = [base, ...Array<string>(increments).fill(heightened.add)].join('+')
+  return mergeDamageExpression(raw)
 }

@@ -210,7 +210,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                   {visibleSpells.map((spell, i) => (
                     <div key={i} className="flex items-center gap-1 group">
                       <div className="flex-1">
-                        <SpellCard name={spell.name} foundryId={spell.foundryId} source={creatureName} combatId={encounterContext?.encounterId} />
+                        <SpellCard name={spell.name} foundryId={spell.foundryId} source={creatureName} combatId={encounterContext?.encounterId} castRank={rank} />
                       </div>
                       {encounterId && (
                         <IconButton
@@ -227,7 +227,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
                   {added.map((name, i) => (
                     <div key={`added-${i}`} className="flex items-center gap-1 group">
                       <div className="flex-1">
-                        <SpellCard name={name} foundryId={null} source={creatureName} combatId={encounterContext?.encounterId} />
+                        <SpellCard name={name} foundryId={null} source={creatureName} combatId={encounterContext?.encounterId} castRank={rank} />
                       </div>
                       {encounterId && (
                         <IconButton

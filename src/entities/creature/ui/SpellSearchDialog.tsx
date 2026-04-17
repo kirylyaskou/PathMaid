@@ -21,7 +21,10 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
   defaultRank: number
   defaultTradition?: string
   focusOnly?: boolean
-  onAdd: (name: string, rank: number) => void
+  /** foundryId is the resolvable spell id (SpellRow.id). Callers that only
+   *  care about name+rank can ignore the third argument — it's null-safe by
+   *  the API contract of SpellRow. */
+  onAdd: (name: string, rank: number, foundryId: string | null) => void
 }) {
   const [query, setQuery] = useState('')
   const [tradition, setTradition] = useState<string | null>(defaultTradition ?? null)
@@ -144,7 +147,7 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
                   </div>
                 </div>
                 <button
-                  onClick={() => onAdd(s.name, rank ?? s.rank)}
+                  onClick={() => onAdd(s.name, rank ?? s.rank, s.id)}
                   className="shrink-0 px-2 py-1 text-xs rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
                 >
                   Add

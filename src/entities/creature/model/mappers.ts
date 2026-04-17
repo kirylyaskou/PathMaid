@@ -2,7 +2,15 @@ import type { Rarity } from '@engine'
 import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
 import { parseJsonArray } from '@/shared/lib/json'
-import type { Creature, CreatureStatBlockData, DisplayActionCost } from './types'
+import type {
+  Creature,
+  CreatureStatBlockData,
+  DisplayActionCost,
+  ImmunityEntry,
+  WeaknessEntry,
+  ResistanceEntry,
+  AbilityMods,
+} from './types'
 import type { FoundrySystem, FoundryItem, FoundryIwrEntry, FoundrySenseEntry, FoundryDamageRoll } from './foundry-types'
 
 export function toCreature(row: CreatureRow): Creature {
@@ -34,16 +42,38 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const system = (raw.system || {}) as FoundrySystem
   const details = system.details || {}
 
-  const immunities: string[] = asArray(system.attributes?.immunities).map(
-    (i) => (i as FoundryIwrEntry).type || String(i)
-  )
-  const weaknesses = asArray(system.attributes?.weaknesses).map((w) => {
-    const entry = w as FoundryIwrEntry
-    return { type: entry.type || String(w), value: entry.value ?? 0 }
+  // D-09: structured IWR transform at map-time. Legacy string[] inputs wrapped as { type }.
+  // Foundry `.exceptions` may be string[] or { label }[] — coerce to string[] with filter(Boolean).
+  const immunities = asArray(system.attributes?.immunities).map((i): ImmunityEntry => {
+    const entry = i as FoundryIwrEntry & { exceptions?: unknown }
+    const type = entry.type || String(i)
+    const rawExc = Array.isArray(entry.exceptions) ? entry.exceptions : []
+    const exceptions = rawExc
+      .map((e) => (typeof e === 'string' ? e : (e as { label?: string })?.label))
+      .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    return exceptions.length > 0 ? { type, exceptions } : type
   })
-  const resistances = asArray(system.attributes?.resistances).map((r) => {
-    const entry = r as FoundryIwrEntry
-    return { type: entry.type || String(r), value: entry.value ?? 0 }
+
+  const weaknesses = asArray(system.attributes?.weaknesses).map((w): WeaknessEntry => {
+    const entry = w as FoundryIwrEntry & { exceptions?: unknown }
+    const rawExc = Array.isArray(entry.exceptions) ? entry.exceptions : []
+    const exceptions = rawExc
+      .map((e) => (typeof e === 'string' ? e : (e as { label?: string })?.label))
+      .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    const result: WeaknessEntry = { type: entry.type || String(w), value: entry.value ?? 0 }
+    if (exceptions.length > 0) result.exceptions = exceptions
+    return result
+  })
+
+  const resistances = asArray(system.attributes?.resistances).map((r): ResistanceEntry => {
+    const entry = r as FoundryIwrEntry & { exceptions?: unknown }
+    const rawExc = Array.isArray(entry.exceptions) ? entry.exceptions : []
+    const exceptions = rawExc
+      .map((e) => (typeof e === 'string' ? e : (e as { label?: string })?.label))
+      .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    const result: ResistanceEntry = { type: entry.type || String(r), value: entry.value ?? 0 }
+    if (exceptions.length > 0) result.exceptions = exceptions
+    return result
   })
 
   const speedData = system.attributes?.speed || {}
@@ -141,6 +171,18 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     classDCFromMod != null ? 10 + Number(classDCFromMod) :
     undefined
 
+  // D-08: Ability modifiers from Foundry `system.abilities.{str,dex,con,int,wis,cha}.mod`.
+  // Bestiary rows have these; fallback to 0 if missing.
+  const foundryAbilities = (system as { abilities?: Record<string, { mod?: number }> }).abilities ?? {}
+  const abilityMods: AbilityMods = {
+    str: foundryAbilities.str?.mod ?? 0,
+    dex: foundryAbilities.dex?.mod ?? 0,
+    con: foundryAbilities.con?.mod ?? 0,
+    int: foundryAbilities.int?.mod ?? 0,
+    wis: foundryAbilities.wis?.mod ?? 0,
+    cha: foundryAbilities.cha?.mod ?? 0,
+  }
+
   return {
     ...base,
     immunities,
@@ -156,6 +198,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     source,
     spellDC,
     classDC,
+    abilityMods,
   }
 }
 

@@ -1,10 +1,25 @@
 import { getDb, runMigrations } from '@/shared/db'
 
+// Module-level guard: React StrictMode fires the SplashScreen useEffect twice in
+// dev, which launched two parallel initDatabase() calls. They race through the
+// migration loop and produced `UNIQUE constraint failed: _migrations.name` when
+// both INSERT'ed the same migration record. Cache the in-flight promise so
+// concurrent callers share it.
+let initPromise: Promise<void> | null = null
+
 export async function initDatabase(): Promise<void> {
-  const db = await getDb()
-  await db.execute('PRAGMA journal_mode=WAL', [])
-  await db.execute('PRAGMA foreign_keys=ON', [])
-  await runMigrations(db)
+  if (initPromise) return initPromise
+  initPromise = (async () => {
+    const db = await getDb()
+    await db.execute('PRAGMA journal_mode=WAL', [])
+    await db.execute('PRAGMA foreign_keys=ON', [])
+    await runMigrations(db)
+  })().catch((err) => {
+    // Clear the cache on failure so the user's Retry button actually retries.
+    initPromise = null
+    throw err
+  })
+  return initPromise
 }
 
 export async function getSyncMetadata(

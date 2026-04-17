@@ -13,6 +13,7 @@ export interface SpellRow {
   save_stat: string | null    // "will" | "fortitude" | "reflex"
   source_book: string | null
   source_pack: string | null
+  heightened_json: string | null   // JSON: { type:'interval', perRanks, damage:Record<key,string> } | { type:'fixed', levels } | null
 }
 
 export interface SpellcastingSection {

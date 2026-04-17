@@ -40,7 +40,11 @@ export async function runMigrations(db: Database): Promise<void> {
       await db.execute(stmt, [])
     }
 
-    await db.execute('INSERT INTO _migrations (name) VALUES (?)', [name])
+    // INSERT OR IGNORE — defense against races where two concurrent runMigrations
+    // calls both pass the applied-check for the same migration. The primary guard
+    // is the initPromise cache in shared/api/db.ts, but this keeps migrate.ts
+    // safe for any other caller that might run it directly.
+    await db.execute('INSERT OR IGNORE INTO _migrations (name) VALUES (?)', [name])
     console.log(`[migrate] Applied: ${name}`)
   }
 }

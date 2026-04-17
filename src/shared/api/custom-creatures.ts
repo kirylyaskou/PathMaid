@@ -22,8 +22,20 @@ function parseStatBlock(row: {
   id: string
   data_json: string
 }): CreatureStatBlockData {
-  const parsed = JSON.parse(row.data_json) as Omit<CreatureStatBlockData, 'id'>
-  return { ...parsed, id: row.id } as CreatureStatBlockData
+  const parsed = JSON.parse(row.data_json) as Partial<CreatureStatBlockData>
+
+  // D-10: backfill new fields so pre-D-08 records read without crashing.
+  const backfilled: CreatureStatBlockData = {
+    ...(parsed as CreatureStatBlockData),
+    id: row.id,
+    abilityMods: parsed.abilityMods ?? { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+    immunities: parsed.immunities ?? [],
+    weaknesses: parsed.weaknesses ?? [],
+    resistances: parsed.resistances ?? [],
+    auras: parsed.auras ?? undefined,   // optional — preserve undefined distinction from []
+    rituals: parsed.rituals ?? undefined,
+  }
+  return backfilled
 }
 
 function defaultStatBlock(id: string): CreatureStatBlockData {
@@ -41,6 +53,7 @@ function defaultStatBlock(id: string): CreatureStatBlockData {
     size: 'Medium',
     type: 'npc',
     traits: [],
+    abilityMods: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
     immunities: [],
     weaknesses: [],
     resistances: [],
@@ -50,6 +63,8 @@ function defaultStatBlock(id: string): CreatureStatBlockData {
     skills: [],
     languages: [],
     senses: [],
+    auras: [],
+    rituals: [],
     source: 'custom',
   }
 }

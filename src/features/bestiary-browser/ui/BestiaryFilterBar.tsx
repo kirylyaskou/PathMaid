@@ -99,7 +99,11 @@ export function BestiaryFilterBar() {
         </SelectContent>
       </Select>
 
-      {/* Source */}
+      {/* Source — key + value are the human-readable name (unique);
+          pack is non-unique (most entries are pack='pf2e'), which caused
+          "two children with the same key" spam and broke the filter by
+          collapsing every Monster Core / Bestiary 1/2 entry into one pf2e
+          option. Backend query uses COALESCE(source_name, source_pack). */}
       {sources.length > 0 && (
         <Select
           value={filters.source ?? '__all__'}
@@ -111,7 +115,7 @@ export function BestiaryFilterBar() {
           <SelectContent>
             <SelectItem value="__all__">All Sources</SelectItem>
             {sources.map((s) => (
-              <SelectItem key={s.pack} value={s.pack}>
+              <SelectItem key={`${s.pack}|${s.name}`} value={s.name}>
                 {s.name}
               </SelectItem>
             ))}

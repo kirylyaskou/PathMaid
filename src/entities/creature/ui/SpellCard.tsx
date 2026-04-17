@@ -6,14 +6,23 @@ import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
 import { stripHtml } from '@/shared/lib/html'
+import { heightenFormula } from '@engine'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
 
-export function SpellCard({ foundryId, name, source, combatId }: {
+type IntervalHeighten = { type: 'interval'; perRanks: number; damage: Record<string, string> }
+type FixedHeighten = { type: 'fixed'; levels: Record<string, unknown> }
+type HeightenSpec = IntervalHeighten | FixedHeighten
+
+export function SpellCard({ foundryId, name, source, combatId, castRank }: {
   foundryId: string | null
   name: string
   source?: string
   combatId?: string
+  /** Rank the caster has this spell prepared at / is casting it as. When > spell.rank
+   *  and the spell has an interval heighten spec, damage formulas scale automatically.
+   *  PF2e rules: https://2e.aonprd.com/Rules.aspx?ID=2225 */
+  castRank?: number
 }) {
   const [open, setOpen] = useState(true)
   const [spell, setSpell] = useState<SpellRow | null>(null)
@@ -54,14 +63,44 @@ export function SpellCard({ foundryId, name, source, combatId }: {
     const a = parseJsonOrNull<{ type?: string; value?: number }>(spell?.area)
     return a?.value ? { type: a.type, value: a.value } : null
   }, [spell?.area])
+  const heighten = useMemo(
+    () => parseJsonOrNull<HeightenSpec>(spell?.heightened_json),
+    [spell?.heightened_json],
+  )
+
   const parsedDamage = useMemo(() => {
     const dmg = parseJsonOrNull<Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>>(spell?.damage)
-    if (!dmg) return null
-    const parts = Object.values(dmg)
-      .map((d) => ({ formula: d.formula ?? d.damage ?? null, type: d.damageType ?? d.type ?? null }))
-      .filter((d) => d.formula)
+    if (!dmg || !spell) return null
+    const baseRank = spell.rank
+    const effectiveRank = castRank ?? baseRank
+    const parts = Object.entries(dmg)
+      .map(([key, d]) => {
+        const rawFormula = d.formula ?? d.damage ?? null
+        if (!rawFormula) return null
+        // Only apply heighten when interval spec has a matching key AND we're
+        // casting above base rank. Fixed-rank heighten (magic missile-style)
+        // is stored but not yet applied at display time — see 0029 migration note.
+        let formula = rawFormula
+        if (
+          heighten?.type === 'interval' &&
+          effectiveRank > baseRank &&
+          heighten.damage[key]
+        ) {
+          formula = heightenFormula(
+            rawFormula,
+            { perRanks: heighten.perRanks, add: heighten.damage[key] },
+            effectiveRank,
+            baseRank,
+          )
+        }
+        return {
+          formula,
+          type: d.damageType ?? d.type ?? null,
+        }
+      })
+      .filter((d): d is { formula: string; type: string | null } => d !== null)
     return parts.length > 0 ? parts : null
-  }, [spell?.damage])
+  }, [spell, heighten, castRank])
 
   return (
     <div className="rounded border border-border/30 bg-secondary/30 overflow-hidden">

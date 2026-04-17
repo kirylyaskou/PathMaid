@@ -7,5 +7,7 @@ export const PATHS = {
   SPELLS: '/spells',
   ITEMS: '/items',
   CHARACTERS: '/characters',
+  CUSTOM_CREATURES: '/custom-creatures',
+  CUSTOM_CREATURE_EDIT: (id: string) => `/custom-creatures/${id}/edit`,
   SETTINGS: '/settings',
 } as const
