@@ -9,10 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Search } from 'lucide-react'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { BuilderTabsProps } from '../BuilderTabs'
 import { BenchmarkHint } from '../BenchmarkHint'
+import { SpellSearchDialog } from '@/entities/creature'
 
 const TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
 const CAST_TYPES = ['prepared', 'spontaneous', 'focus', 'innate'] as const
@@ -109,12 +110,12 @@ function SpellcastingEntryEditor({ entry, level, onChange, onRemove }: EditorPro
     })
   }
 
-  function addSpell(rankIdx: number, name: string) {
+  function addSpell(rankIdx: number, name: string, foundryId: string | null) {
     const t = name.trim()
     if (!t) return
     const rankEntry = entry.spellsByRank[rankIdx]
     updateRank(rankIdx, {
-      spells: [...rankEntry.spells, { name: t, foundryId: null, entryId: entry.entryId }],
+      spells: [...rankEntry.spells, { name: t, foundryId, entryId: entry.entryId }],
     })
   }
 
@@ -242,8 +243,9 @@ function SpellcastingEntryEditor({ entry, level, onChange, onRemove }: EditorPro
           <RankEditor
             key={`${rankEntry.rank}-${ri}`}
             rankEntry={rankEntry}
+            tradition={entry.tradition}
             onSlotsChange={(n) => updateRank(ri, { slots: n })}
-            onAddSpell={(name) => addSpell(ri, name)}
+            onAddSpell={(name, foundryId) => addSpell(ri, name, foundryId)}
             onRemoveSpell={(si) => removeSpell(ri, si)}
             onRemoveRank={() => removeRank(ri)}
           />
@@ -255,20 +257,23 @@ function SpellcastingEntryEditor({ entry, level, onChange, onRemove }: EditorPro
 
 interface RankEditorProps {
   rankEntry: SpellcastingSection['spellsByRank'][number]
+  /** Default tradition used to pre-filter SpellSearchDialog when opened. */
+  tradition: string
   onSlotsChange: (n: number) => void
-  onAddSpell: (name: string) => void
+  onAddSpell: (name: string, foundryId: string | null) => void
   onRemoveSpell: (idx: number) => void
   onRemoveRank: () => void
 }
 
 function RankEditor({
   rankEntry,
+  tradition,
   onSlotsChange,
   onAddSpell,
   onRemoveSpell,
   onRemoveRank,
 }: RankEditorProps) {
-  const [spellInput, setSpellInput] = useState('')
+  const [dialogOpen, setDialogOpen] = useState(false)
   const label = rankEntry.rank === 0 ? 'Cantrips' : `Rank ${rankEntry.rank}`
 
   return (
@@ -283,38 +288,23 @@ function RankEditor({
           value={rankEntry.slots}
           onChange={(e) => onSlotsChange(Number(e.target.value))}
         />
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto"
+          onClick={() => setDialogOpen(true)}
+        >
+          <Search className="w-3 h-3 mr-1" />
+          Add spell…
+        </Button>
         <button
           type="button"
           aria-label="Remove rank"
           onClick={onRemoveRank}
-          className="p-1 text-muted-foreground hover:text-destructive ml-auto"
+          className="p-1 text-muted-foreground hover:text-destructive"
         >
           <X className="w-3.5 h-3.5" />
         </button>
-      </div>
-      <div className="flex items-center gap-2">
-        <Input
-          value={spellInput}
-          onChange={(e) => setSpellInput(e.target.value)}
-          placeholder="Add spell name…"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              onAddSpell(spellInput)
-              setSpellInput('')
-            }
-          }}
-        />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            onAddSpell(spellInput)
-            setSpellInput('')
-          }}
-        >
-          Add
-        </Button>
       </div>
       {rankEntry.spells.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -324,6 +314,11 @@ function RankEditor({
               className="inline-flex items-center gap-1 text-xs rounded bg-secondary/50 border border-border/50 px-2 py-0.5"
             >
               {s.name}
+              {s.foundryId === null && (
+                <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70" title="Free-form entry, no resolved spell data">
+                  manual
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`Remove ${s.name}`}
@@ -336,6 +331,15 @@ function RankEditor({
           ))}
         </div>
       )}
+      <SpellSearchDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultRank={rankEntry.rank}
+        defaultTradition={tradition}
+        onAdd={(name, _rank, foundryId) => {
+          onAddSpell(name, foundryId)
+        }}
+      />
     </div>
   )
 }
