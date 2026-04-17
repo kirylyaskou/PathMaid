@@ -8,6 +8,9 @@ import { PerceptionSkillsTab } from './tabs/PerceptionSkillsTab'
 import { SpeedsSensesTab } from './tabs/SpeedsSensesTab'
 import { StrikesTab } from './tabs/StrikesTab'
 import { SpellcastingTab } from './tabs/SpellcastingTab'
+import { AbilitiesTab } from './tabs/AbilitiesTab'
+import { IwrTab } from './tabs/IwrTab'
+import { AurasRitualsTab } from './tabs/AurasRitualsTab'
 
 export interface BuilderTabsProps {
   state: BuilderState
@@ -29,17 +32,6 @@ const TAB_DEFS = [
 ] as const
 
 export type BuilderTabId = typeof TAB_DEFS[number]['id']
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div className="p-4">
-      <h2 className="text-base font-semibold mb-3">{label}</h2>
-      <p className="text-sm text-muted-foreground">
-        Tab content pending (plans 59-06 / 59-07).
-      </p>
-    </div>
-  )
-}
 
 export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
   return (
@@ -77,13 +69,13 @@ export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
         <SpellcastingTab state={state} dispatch={dispatch} />
       </TabsContent>
       <TabsContent value="abilities" className="flex-1 overflow-y-auto">
-        <Placeholder label="Abilities" />
+        <AbilitiesTab state={state} dispatch={dispatch} />
       </TabsContent>
       <TabsContent value="iwr" className="flex-1 overflow-y-auto">
-        <Placeholder label="IWR" />
+        <IwrTab state={state} dispatch={dispatch} />
       </TabsContent>
       <TabsContent value="auras-rituals" className="flex-1 overflow-y-auto">
-        <Placeholder label="Auras & Rituals" />
+        <AurasRitualsTab state={state} dispatch={dispatch} />
       </TabsContent>
     </Tabs>
   )
