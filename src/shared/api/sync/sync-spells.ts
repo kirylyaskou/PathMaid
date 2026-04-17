@@ -34,11 +34,16 @@ function extractHeightening(sys: Record<string, unknown>): string | null {
 
   if (h.type === 'interval') {
     const interval = typeof h.interval === 'number' ? h.interval : 1
-    const damage = h.damage as Record<string, { formula?: string }> | undefined
+    // Foundry pf2e has two coexisting shapes for heightening.damage entries:
+    //   fireball-style:   damage["0"] = "2d6"                (bare string)
+    //   some older specs: damage["0"] = { formula: "2d6" }   (object)
+    // Accept both. Any entry that yields no formula is skipped.
+    const damage = h.damage as Record<string, { formula?: string } | string> | undefined
     if (!damage || Object.keys(damage).length === 0) return null
     const normalized: Record<string, string> = {}
     for (const [key, part] of Object.entries(damage)) {
-      if (part?.formula) normalized[key] = part.formula
+      const formula = typeof part === 'string' ? part : part?.formula
+      if (formula) normalized[key] = formula
     }
     if (Object.keys(normalized).length === 0) return null
     return JSON.stringify({ type: 'interval', perRanks: interval, damage: normalized })
