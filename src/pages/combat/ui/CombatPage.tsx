@@ -30,6 +30,7 @@ import { cn } from '@/shared/lib/utils'
 import { saveEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterStagingRow } from '@/shared/api'
 import { StagingTable } from '@/features/encounter-builder/ui/StagingTable'
+import { logErrorWithToast } from '@/shared/lib/error'
 import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
@@ -276,7 +277,7 @@ export function CombatPage() {
         const released = useCombatantStore.getState().releaseFromStaging(first.combatant.id)
         if (released) {
           const updated = useCombatantStore.getState().stagingCombatants
-          saveEncounterStagingCombatants(combatId, toRowsInline(combatId, updated))
+          saveEncounterStagingCombatants(combatId, toRowsInline(combatId, updated)).catch(logErrorWithToast('staging-save'))
           setAutoDeployTarget({
             combatantId: released.id,
             creatureRef: 'creatureRef' in released ? (released as NpcCombatant).creatureRef : '',

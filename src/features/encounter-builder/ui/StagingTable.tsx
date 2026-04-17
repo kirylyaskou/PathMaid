@@ -8,6 +8,7 @@ import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { saveEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterStagingRow } from '@/shared/api'
 import { StagingDeployDialog } from '@/widgets/initiative-list/ui/StagingDeployDialog'
+import { logErrorWithToast } from '@/shared/lib/error'
 
 interface StagingTableProps {
   encounterId: string
@@ -80,7 +81,7 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
                     const released = releaseFromStaging(sc.combatant.id)
                     if (!released) return
                     const updated = useCombatantStore.getState().stagingCombatants
-                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated))
+                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated)).catch(logErrorWithToast('staging-save'))
                     setDeployTarget({
                       combatantId: released.id,
                       creatureRef: 'creatureRef' in released ? (released as NpcCombatant).creatureRef : '',
@@ -106,7 +107,7 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
                     const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10)
                     updateStagingRound(sc.combatant.id, v)
                     const updated = useCombatantStore.getState().stagingCombatants
-                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated))
+                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated)).catch(logErrorWithToast('staging-save'))
                   }}
                 />
                 <Button
@@ -116,7 +117,7 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
                   onClick={() => {
                     removeStagingCombatant(sc.combatant.id)
                     const updated = useCombatantStore.getState().stagingCombatants
-                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated))
+                    saveEncounterStagingCombatants(encounterId, toRows(encounterId, updated)).catch(logErrorWithToast('staging-save'))
                   }}
                 >
                   <X className="w-3 h-3" />

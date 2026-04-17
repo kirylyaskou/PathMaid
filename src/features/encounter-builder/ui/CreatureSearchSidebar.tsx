@@ -11,6 +11,7 @@ import { useEncounterBuilderStore } from '../model/store'
 import { useCombatantStore } from '@/entities/combatant'
 import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { getHpAdjustment, getStatAdjustment } from '@engine'
+import { logErrorWithToast } from '@/shared/lib/error'
 
 function stagingToRows(encounterId: string, staging: StagingCombatant[]): EncounterStagingRow[] {
   return staging.map((sc, i) => ({
@@ -279,6 +280,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                           useCombatantStore.getState().addStagingCombatant(combatant)
                           const staging = useCombatantStore.getState().stagingCombatants
                           saveEncounterStagingCombatants(encounterId, stagingToRows(encounterId, staging))
+                            .catch(logErrorWithToast('staging-save'))
                         } : undefined}
                         onClick={() => setStatBlockCreatureId(row.id)}
                       />

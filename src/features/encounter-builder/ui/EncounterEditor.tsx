@@ -20,6 +20,7 @@ import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
 import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName, loadEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
+import { logErrorWithToast } from '@/shared/lib/error'
 import {
   loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave,
   teardownAutoSave, useCombatTrackerStore,
@@ -55,25 +56,27 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   // Load staging pool from DB when encounter selection changes so StagingTable reflects this encounter's staged creatures.
   useEffect(() => {
     let cancelled = false
-    loadEncounterStagingCombatants(encounterId).then((rows) => {
-      if (cancelled) return
-      const staging: StagingCombatant[] = rows.map((row) => ({
-        combatant: {
-          kind: row.kind,
-          id: row.id,
-          creatureRef: row.creatureRef,
-          displayName: row.displayName,
-          initiative: 0,
-          hp: row.hp,
-          maxHp: row.maxHp,
-          tempHp: row.tempHp,
-          ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
-        } as Combatant,
-        round: row.round ?? undefined,
-        sortOrder: row.sortOrder,
-      }))
-      useCombatantStore.getState().setStagingCombatants(staging)
-    })
+    loadEncounterStagingCombatants(encounterId)
+      .then((rows) => {
+        if (cancelled) return
+        const staging: StagingCombatant[] = rows.map((row) => ({
+          combatant: {
+            kind: row.kind,
+            id: row.id,
+            creatureRef: row.creatureRef,
+            displayName: row.displayName,
+            initiative: 0,
+            hp: row.hp,
+            maxHp: row.maxHp,
+            tempHp: row.tempHp,
+            ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
+          } as Combatant,
+          round: row.round ?? undefined,
+          sortOrder: row.sortOrder,
+        }))
+        useCombatantStore.getState().setStagingCombatants(staging)
+      })
+      .catch(logErrorWithToast('staging-load'))
     return () => {
       cancelled = true
     }
