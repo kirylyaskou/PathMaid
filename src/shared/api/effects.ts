@@ -4,9 +4,24 @@ import type { SpellEffectRow } from '@/entities/spell-effect'
 // 60-02: level = COALESCE(spells.rank, 1). Used by parseSpellEffectModifiers to
 // evaluate @item.level in scaling FlatModifier expressions (Heroism etc.).
 // Effects without a linked spell (spell_id IS NULL) fall back to level=1.
+//
+// 61-01: category derived at query time for picker grouping. spell_effects has
+// no source_pack column, so we infer: spell_id non-null → 'spell'; alchemical
+// name patterns → 'alchemical'; else → 'other'.
+const CATEGORY_EXPR = `
+  CASE
+    WHEN se.spell_id IS NOT NULL THEN 'spell'
+    WHEN LOWER(se.name) LIKE '%elixir%'
+      OR LOWER(se.name) LIKE '%bomb%'
+      OR LOWER(se.name) LIKE '%mutagen%'
+      OR LOWER(se.name) LIKE '%potion%' THEN 'alchemical'
+    ELSE 'other'
+  END
+`
 const SELECT_WITH_LEVEL = `
   SELECT se.id, se.name, se.rules_json, se.duration_json, se.description, se.spell_id,
-         COALESCE(s.rank, 1) AS level
+         COALESCE(s.rank, 1) AS level,
+         ${CATEGORY_EXPR} AS category
   FROM spell_effects se
   LEFT JOIN spells s ON se.spell_id = s.id
 `
@@ -24,6 +39,30 @@ export async function searchSpellEffects(query: string): Promise<SpellEffectRow[
   return db.select<SpellEffectRow[]>(
     `${SELECT_WITH_LEVEL} WHERE se.name LIKE ? ORDER BY se.name`,
     [`%${query}%`]
+  )
+}
+
+// 61-01: effects whose linked spell is referenced by any combatant's spell list
+// in this encounter. Custom creatures store spells in data_json blob — not
+// queryable here; they contribute no context. Callers fall back to listSpellEffects
+// when this returns empty.
+export async function getContextEffectsForEncounter(
+  encounterId: string
+): Promise<SpellEffectRow[]> {
+  const db = await getDb()
+  return db.select<SpellEffectRow[]>(
+    `${SELECT_WITH_LEVEL}
+     WHERE se.spell_id IS NOT NULL
+       AND se.spell_id IN (
+         SELECT DISTINCT csl.spell_foundry_id
+         FROM creature_spell_lists csl
+         JOIN encounter_combatants ec
+           ON ec.creature_ref = csl.creature_id
+         WHERE ec.encounter_id = ?
+           AND csl.spell_foundry_id IS NOT NULL
+       )
+     ORDER BY se.name`,
+    [encounterId]
   )
 }
 

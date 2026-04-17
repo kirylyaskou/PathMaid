@@ -1,3 +1,5 @@
+export type SpellEffectCategory = 'spell' | 'alchemical' | 'other'
+
 export interface SpellEffectRow {
   id: string
   name: string
@@ -6,6 +8,7 @@ export interface SpellEffectRow {
   description: string | null
   spell_id: string | null
   level: number  // 60-02: COALESCE(spells.rank, 1) — used for @item.level eval
+  category: SpellEffectCategory  // 61-01: derived at API layer for picker grouping
 }
 
 export interface ActiveEffect {
