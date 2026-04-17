@@ -1,4 +1,4 @@
-import { fetchCreatureById, getCreatureSpellcasting, getCreatureItems } from '@/shared/api'
+import { fetchCreatureById, getCreatureSpellcasting, getCreatureItems, getCustomCreatureById } from '@/shared/api'
 import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
 import { toCreatureStatBlockData } from './mappers'
 import type { CreatureStatBlockData } from './types'
@@ -6,8 +6,17 @@ import type { CreatureStatBlockData } from './types'
 /**
  * Async stat block loader — fetches creature row + spellcasting from DB
  * and returns a fully populated CreatureStatBlockData with spellcasting sections.
+ *
+ * D-24: ids with the `custom-` prefix are routed to custom_creatures first;
+ * bestiary lookup is skipped in that case (no extra DB round-trip).
  */
 export async function fetchCreatureStatBlockData(id: string): Promise<CreatureStatBlockData | null> {
+  // D-24: prefix-aware routing. Custom IDs are `custom-<uuid>` (see shared/api/custom-creatures.ts).
+  if (id.startsWith('custom-')) {
+    const custom = await getCustomCreatureById(id)
+    return custom?.statBlock ?? null
+  }
+
   const row = await fetchCreatureById(id)
   if (!row) return null
 
