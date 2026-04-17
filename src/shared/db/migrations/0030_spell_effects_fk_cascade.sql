@@ -1,23 +1,39 @@
 -- Phase 59 / live-fix: make spell_effects FKs cascade-safe.
 --
--- PRAGMA foreign_keys=ON (enabled in shared/api/db.ts at init) now actually
--- enforces the FKs declared in 0025_spell_effects.sql. Two constraints broke
--- Foundry sync:
---   spell_effects.spell_id           -> spells(id)         (no ON DELETE)
---   encounter_combatant_effects.effect_id -> spell_effects(id) (no ON DELETE)
+-- Previous failed run left orphan encounter_combatant_effects_new or
+-- spell_effects_new tables behind (CREATE succeeded, later DROP failed).
+-- The DROP IF EXISTS block at the top is idempotent — harmless on a fresh DB,
+-- cleans up stuck state on retry.
 --
--- Sync's DELETE FROM spells (extractAndInsertSpells) tripped the first FK
--- whenever any spell_effects row referenced a spell being deleted:
---   error: FOREIGN KEY constraint failed (SQLITE_CONSTRAINT, code 787)
+-- Rebuild both tables (SQLite cannot ALTER a column's FK policy). Order
+-- matters: child (encounter_combatant_effects) must be dropped BEFORE parent
+-- (spell_effects), otherwise the child's FK to spell_effects blocks the parent
+-- drop under PRAGMA foreign_keys=ON (enabled at init in shared/api/db.ts).
 --
--- Rebuild both tables with sensible cascade policies:
---   spell_id -> NULL on parent delete (effect persists, parent reference lost)
---   effect_id -> CASCADE (encounter combatant_effect rows get removed with
---                         their source effect — user can re-apply from the
---                         rebuilt effects table)
+-- Final FK policy:
+--   spell_effects.spell_id           -> spells(id)         ON DELETE SET NULL
+--   encounter_combatant_effects.effect_id -> spell_effects(id)  ON DELETE CASCADE
 --
--- SQLite cannot ALTER a column's FK policy, hence the rebuild-via-swap pattern.
--- All existing rows are preserved byte-for-byte; only the FK behavior changes.
+-- All existing rows are preserved byte-for-byte; only FK behavior changes.
+
+DROP TABLE IF EXISTS encounter_combatant_effects_new;
+DROP TABLE IF EXISTS spell_effects_new;
+
+CREATE TABLE encounter_combatant_effects_new (
+  id TEXT PRIMARY KEY,
+  encounter_id TEXT NOT NULL,
+  combatant_id TEXT NOT NULL,
+  effect_id TEXT NOT NULL,
+  applied_at INTEGER NOT NULL,
+  remaining_turns INTEGER NOT NULL
+);
+
+INSERT INTO encounter_combatant_effects_new
+  (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns)
+  SELECT id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns
+  FROM encounter_combatant_effects;
+
+DROP TABLE encounter_combatant_effects;
 
 CREATE TABLE spell_effects_new (
   id TEXT PRIMARY KEY,
@@ -38,7 +54,8 @@ ALTER TABLE spell_effects_new RENAME TO spell_effects;
 CREATE INDEX IF NOT EXISTS idx_spell_effects_name ON spell_effects(name);
 CREATE INDEX IF NOT EXISTS idx_spell_effects_spell ON spell_effects(spell_id);
 
-CREATE TABLE encounter_combatant_effects_new (
+DROP TABLE IF EXISTS encounter_combatant_effects_final;
+CREATE TABLE encounter_combatant_effects_final (
   id TEXT PRIMARY KEY,
   encounter_id TEXT NOT NULL,
   combatant_id TEXT NOT NULL,
@@ -47,14 +64,14 @@ CREATE TABLE encounter_combatant_effects_new (
   remaining_turns INTEGER NOT NULL
 );
 
-INSERT INTO encounter_combatant_effects_new
+INSERT INTO encounter_combatant_effects_final
   (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns)
   SELECT id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns
-  FROM encounter_combatant_effects;
+  FROM encounter_combatant_effects_new;
 
-DROP TABLE encounter_combatant_effects;
+DROP TABLE encounter_combatant_effects_new;
 
-ALTER TABLE encounter_combatant_effects_new RENAME TO encounter_combatant_effects;
+ALTER TABLE encounter_combatant_effects_final RENAME TO encounter_combatant_effects;
 
 CREATE INDEX IF NOT EXISTS idx_ece_encounter_combatant
   ON encounter_combatant_effects(encounter_id, combatant_id);
