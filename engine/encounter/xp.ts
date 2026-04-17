@@ -23,21 +23,31 @@ const SIMPLE_HAZARD_XP: Record<number, number> = {
 // ─── Functions ───────────────────────────────────────────────────────────────
 
 /**
+ * Extrapolates creature XP for delta > 4 using the table's alternating ×1.5 / ×(4/3) pattern.
+ * Every 2 steps beyond +4, XP doubles (1.5 × 4/3 = 2).
+ * Examples: +5 → 240, +6 → 320, +7 → 480, +9 → 960, +13 → 3840.
+ */
+function extrapolateCreatureXP(delta: number): number {
+  const n = delta - 4
+  const pairs = Math.floor(n / 2)
+  return 160 * Math.pow(2, pairs) * (n % 2 === 1 ? 1.5 : 1)
+}
+
+/**
  * Returns the XP value for a single creature relative to the party level.
  *
- * - Negative creature levels produce a negative delta (range is [-4, +4] from table).
- * - Delta below table minimum returns { xp: 0 } (trivially weak).
- * - Delta above table maximum returns { xp: null, outOfRange: true }.
+ * - Delta below -4 returns { xp: 0 } (trivially weak, per PF2e rules).
+ * - Delta -4..+4 uses the official GM Core Table 10-2 lookup.
+ * - Delta above +4 extrapolates the table's alternating ×1.5 / ×(4/3) progression.
  */
 export function calculateCreatureXP(
   creatureLevel: number,
   partyLevel: number,
 ): XpResult {
-  const level = creatureLevel
-  const delta = level - partyLevel
+  const delta = creatureLevel - partyLevel
 
   if (delta < -4) return { xp: 0 }
-  if (delta > 4) return { xp: null, outOfRange: true }
+  if (delta > 4) return { xp: extrapolateCreatureXP(delta) }
   return { xp: CREATURE_XP[delta]! }
 }
 
@@ -46,7 +56,8 @@ export function calculateCreatureXP(
  *
  * - Complex hazard XP equals creature XP at the same delta.
  * - Simple hazard XP equals 1/5 of complex hazard XP.
- * - Out-of-range behavior matches creatures: 0 below min, null+flag above max.
+ * - Delta below table minimum returns { xp: 0 } (trivially weak).
+ * - Delta above table maximum is capped at the table maximum (delta +4).
  */
 export function getHazardXp(
   hazardLevel: number,
@@ -57,13 +68,13 @@ export function getHazardXp(
   const delta = level - partyLevel
 
   if (delta < -4) return { xp: 0 }
-  if (delta > 4) return { xp: null, outOfRange: true }
+  const clampedDelta = Math.min(delta, 4)
 
   if (type === 'complex') {
-    return { xp: CREATURE_XP[delta]! }
+    return { xp: CREATURE_XP[clampedDelta]! }
   }
 
-  return { xp: SIMPLE_HAZARD_XP[delta]! }
+  return { xp: SIMPLE_HAZARD_XP[clampedDelta]! }
 }
 
 // ─── Encounter Budget & Rating ──────────────────────────────────────────────

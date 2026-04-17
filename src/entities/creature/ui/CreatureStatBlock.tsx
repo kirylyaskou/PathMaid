@@ -422,7 +422,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     </AbilityCard>
                   ) : (
                     <div
-                      className="grid gap-2"
+                      className="grid gap-2 items-start"
                       style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
                     >
                       {classifiedAbilities[actionTab].map((ability, i) => (
@@ -445,7 +445,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                     <div className="pt-2 border-t border-border/30">
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Reactions</p>
                       <div
-                        className="grid gap-2"
+                        className="grid gap-2 items-start"
                         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
                       >
                         {classifiedAbilities.reactions.map((ability, i) => (

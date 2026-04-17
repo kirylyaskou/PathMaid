@@ -9,6 +9,8 @@ import { BestiarySearchPanel } from '@/widgets/bestiary-search'
 import { CombatantDetail } from '@/widgets/combatant-detail'
 import { PersistentDamageDialog } from '@/widgets/combatant-detail/ui/PersistentDamageDialog'
 import { DyingCascadeDialog } from '@/widgets/combatant-detail/ui/DyingCascadeDialog'
+import { SickenedFortitudeSaveDialog } from '@/widgets/combatant-detail/ui/SickenedFortitudeSaveDialog'
+import { StagingDeployDialog } from '@/widgets/initiative-list/ui/StagingDeployDialog'
 import {
   CombatControls, AddPCDialog, QuickAddCombatantForm, createCombatantFromCreature,
   useEncounterTabsStore, snapshotFromGlobalStores, useCombatTrackerStore,
@@ -17,6 +19,7 @@ import {
 } from '@/features/combat-tracker'
 import type { EncounterTab } from '@/features/combat-tracker'
 import { useCombatantStore } from '@/entities/combatant'
+import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { useEncounterStore } from '@/entities/encounter'
 import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
@@ -24,9 +27,30 @@ import { getHpAdjustment } from '@engine'
 import { PCCombatCard } from '@/features/characters'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
+import { saveEncounterStagingCombatants } from '@/shared/api'
+import type { EncounterStagingRow } from '@/shared/api'
+import { StagingTable } from '@/features/encounter-builder/ui/StagingTable'
+import { logErrorWithToast } from '@/shared/lib/error'
 import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
+
+function toRowsInline(encounterId: string, staging: StagingCombatant[]): EncounterStagingRow[] {
+  return staging.map((sc, i) => ({
+    id: sc.combatant.id,
+    encounterId,
+    kind: sc.combatant.kind,
+    creatureRef: 'creatureRef' in sc.combatant ? (sc.combatant as NpcCombatant).creatureRef : '',
+    displayName: sc.combatant.displayName,
+    hp: sc.combatant.hp,
+    maxHp: sc.combatant.maxHp,
+    tempHp: sc.combatant.tempHp,
+    creatureLevel: sc.combatant.level ?? 0,
+    weakEliteTier: 'normal' as const,
+    round: sc.round ?? null,
+    sortOrder: i,
+  }))
+}
 
 // ---------------------------------------------------------------------------
 // CombatColumn — renders one encounter's initiative list + detail + controls
@@ -223,9 +247,47 @@ export function CombatPage() {
   const setPendingPersistentDamage = useCombatTrackerStore((s) => s.setPendingPersistentDamage)
   const pendingRecoveryCheck = useCombatTrackerStore((s) => s.pendingRecoveryCheck)
   const setPendingRecoveryCheck = useCombatTrackerStore((s) => s.setPendingRecoveryCheck)
-  const { combatId, isEncounterBacked } = useCombatTrackerStore(
-    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked }))
+  const pendingSickenedSave = useCombatTrackerStore((s) => s.pendingSickenedSave)
+  const setPendingSickenedSave = useCombatTrackerStore((s) => s.setPendingSickenedSave)
+  const { combatId, isEncounterBacked, currentRound } = useCombatTrackerStore(
+    useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked, currentRound: s.round }))
   )
+
+  // Auto-deploy state for staging creatures scheduled by round
+  const [autoDeployTarget, setAutoDeployTarget] = useState<{
+    combatantId: string
+    creatureRef: string
+    displayName: string
+  } | null>(null)
+  const [autoDialogOpen, setAutoDialogOpen] = useState(false)
+  const prevRoundRef = useRef<number>(currentRound)
+
+  // Auto-trigger: when round advances, release staging creatures scheduled for that round
+  useEffect(() => {
+    if (currentRound <= 1 && prevRoundRef.current <= 1) {
+      prevRoundRef.current = currentRound
+      return
+    }
+    if (currentRound !== prevRoundRef.current) {
+      prevRoundRef.current = currentRound
+      const staging = useCombatantStore.getState().stagingCombatants
+      const due = staging.filter((s) => s.round === currentRound)
+      if (due.length > 0 && combatId) {
+        const first = due[0]
+        const released = useCombatantStore.getState().releaseFromStaging(first.combatant.id)
+        if (released) {
+          const updated = useCombatantStore.getState().stagingCombatants
+          saveEncounterStagingCombatants(combatId, toRowsInline(combatId, updated)).catch(logErrorWithToast('staging-save'))
+          setAutoDeployTarget({
+            combatantId: released.id,
+            creatureRef: 'creatureRef' in released ? (released as NpcCombatant).creatureRef : '',
+            displayName: released.displayName,
+          })
+          setAutoDialogOpen(true)
+        }
+      }
+    }
+  }, [currentRound, combatId])
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const { reorderInitiative } = useCombatantStore()
@@ -357,12 +419,25 @@ export function CombatPage() {
         pending={pendingPersistentDamage}
         onClose={() => setPendingPersistentDamage(null)}
       />
+      <SickenedFortitudeSaveDialog
+        pending={pendingSickenedSave}
+        onClose={() => setPendingSickenedSave(null)}
+      />
       <DyingCascadeDialog
         open={!!pendingRecoveryCheck}
         onClose={() => setPendingRecoveryCheck(null)}
         combatantId={pendingRecoveryCheck?.combatantId ?? ''}
         combatantName={pendingRecoveryCheck?.combatantName ?? ''}
       />
+      {autoDeployTarget && (
+        <StagingDeployDialog
+          open={autoDialogOpen}
+          onOpenChange={setAutoDialogOpen}
+          combatantId={autoDeployTarget.combatantId}
+          creatureRef={autoDeployTarget.creatureRef}
+          displayName={autoDeployTarget.displayName}
+        />
+      )}
       {openTabs.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
           <Shield className="w-12 h-12 opacity-30" />
@@ -421,7 +496,14 @@ export function CombatPage() {
                   {/* Nested vertical split: initiative list (top) + combatant detail (bottom) */}
                   <ResizablePanelGroup direction="vertical" id="combat-center-vertical" className="flex-1">
                     <ResizablePanel defaultSize={35} minSize={20}>
-                      <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
+                      <div className="flex flex-col h-full overflow-y-auto">
+                        <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
+                        {isEncounterBacked && combatId && (
+                          <div className="px-2 py-2 shrink-0">
+                            <StagingTable encounterId={combatId} combatMode={true} />
+                          </div>
+                        )}
+                      </div>
                     </ResizablePanel>
 
                     <ResizableHandle withHandle />

@@ -1,8 +1,9 @@
-import { useCallback, useState, useMemo } from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
-import { useCombatTrackerStore, clearCombatantManager, rollInitiative } from '@/features/combat-tracker'
+import { useCombatTrackerStore, clearCombatantManager, rollInitiative, useEncounterTabsStore } from '@/features/combat-tracker'
+import { fetchCreatureById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 import { StatBlockModal } from '@/entities/creature'
 import { InitiativeRow } from './InitiativeRow'
@@ -19,16 +20,36 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
     useShallow((s) => s.activeCombatantId)
   )
   const { removeCombatant, setInitiative } = useCombatantStore()
+  const activeTabId = useEncounterTabsStore((s) => s.activeTabId)
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [modalCreatureId, setModalCreatureId] = useState<string | null>(null)
   const allZeroInit = combatants.length > 0 && combatants.every((c) => c.initiative === 0)
   const showBanner = allZeroInit && !bannerDismissed
 
-  function handleRollAll() {
-    combatants.forEach((c) => {
-      setInitiative(c.id, rollInitiative(0))
-    })
-    setBannerDismissed(true)
+  // Reset banner when switching tabs so each tab independently shows the
+  // "Initiative not set" prompt. Without this, an async handleRollAll that
+  // completes after a tab switch would call setBannerDismissed(true) on the
+  // wrong tab, permanently hiding the banner on the original tab.
+  useEffect(() => {
+    setBannerDismissed(false)
+  }, [activeTabId])
+
+  async function handleRollAll() {
+    const tabAtStart = activeTabId
+    await Promise.all(combatants.map(async (c) => {
+      let perception = 0
+      if (c.creatureRef) {
+        const row = await fetchCreatureById(c.creatureRef)
+        perception = row?.perception ?? 0
+      }
+      setInitiative(c.id, rollInitiative(perception))
+    }))
+    // Only dismiss the banner if the user is still on the same tab.
+    // If they switched tabs during the async fetch, the useEffect above
+    // already reset bannerDismissed, so we must not override that.
+    if (useEncounterTabsStore.getState().activeTabId === tabAtStart) {
+      setBannerDismissed(true)
+    }
   }
 
   const handleRemove = useCallback(

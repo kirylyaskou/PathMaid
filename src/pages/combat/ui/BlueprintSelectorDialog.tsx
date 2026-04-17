@@ -37,6 +37,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
       }))
       const snapshot: TabSnapshot = {
         combatants,
+        stagingCombatants: [],
         combatId: encounterId,
         activeCombatantId: null,
         round: 1,

@@ -28,7 +28,11 @@ export async function runMigrations(db: Database): Promise<void> {
     if (applied.length > 0) continue
 
     console.log(`[migrate] Applying: ${name}`)
+    // Strip SQL line comments before splitting so that any `;` inside a comment
+    // does not corrupt the statement stream. Assumes our migrations do not
+    // contain `--` inside string literals (true for every migration to date).
     const statements = sql
+      .replace(/--[^\n]*/g, '')
       .split(';')
       .map((s) => s.trim())
       .filter((s) => s.length > 0)

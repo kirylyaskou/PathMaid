@@ -5,10 +5,30 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { CreatureCard, StatBlockModal, toCreature } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
-import { searchCreatures, fetchCreatures, searchHazards, getAllHazards } from '@/shared/api'
-import type { CreatureRow, HazardRow } from '@/shared/api'
+import { searchCreatures, fetchCreatures, searchHazards, getAllHazards, saveEncounterStagingCombatants } from '@/shared/api'
+import type { CreatureRow, HazardRow, EncounterStagingRow } from '@/shared/api'
 import { useEncounterBuilderStore } from '../model/store'
+import { useCombatantStore } from '@/entities/combatant'
+import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { getHpAdjustment, getStatAdjustment } from '@engine'
+import { logErrorWithToast } from '@/shared/lib/error'
+
+function stagingToRows(encounterId: string, staging: StagingCombatant[]): EncounterStagingRow[] {
+  return staging.map((sc, i) => ({
+    id: sc.combatant.id,
+    encounterId,
+    kind: sc.combatant.kind,
+    creatureRef: 'creatureRef' in sc.combatant ? (sc.combatant as NpcCombatant).creatureRef : '',
+    displayName: sc.combatant.displayName,
+    hp: sc.combatant.hp,
+    maxHp: sc.combatant.maxHp,
+    tempHp: sc.combatant.tempHp,
+    creatureLevel: sc.combatant.level ?? 0,
+    weakEliteTier: 'normal' as const,
+    round: sc.round ?? null,
+    sortOrder: i,
+  }))
+}
 
 type SidebarTab = 'creatures' | 'hazards'
 
@@ -21,6 +41,7 @@ const TIERS: { value: WeakEliteTier; label: string }[] = [
 interface CreatureSearchSidebarProps {
   onAddCreature?: (row: CreatureRow, tier: WeakEliteTier) => void
   onAddHazard?: (hazard: HazardRow) => void
+  encounterId?: string | null
 }
 
 function DraggableCreatureRow({
@@ -61,7 +82,7 @@ function DraggableHazardRow({
   )
 }
 
-export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSearchSidebarProps = {}) {
+export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId }: CreatureSearchSidebarProps = {}) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('creatures')
   const [query, setQuery] = useState('')
 
@@ -239,12 +260,31 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard }: CreatureSe
                 const statDelta = getStatAdjustment(selectedTier)
                 return (
                   <DraggableCreatureRow key={row.id} row={row} tier={selectedTier}>
-                    <CreatureCard
-                      creature={creature}
-                      compact
-                      onAdd={() => handleAddCreature(row)}
-                      onClick={() => setStatBlockCreatureId(row.id)}
-                    />
+                    <div>
+                      <CreatureCard
+                        creature={creature}
+                        compact
+                        onAdd={() => handleAddCreature(row)}
+                        onAddToStaging={encounterId ? () => {
+                          const combatant: NpcCombatant = {
+                            id: crypto.randomUUID(),
+                            kind: 'npc',
+                            creatureRef: row.id,
+                            displayName: creature.name,
+                            initiative: 0,
+                            hp: Math.max(1, creature.hp + getHpAdjustment(selectedTier, creature.level)),
+                            maxHp: Math.max(1, creature.hp + getHpAdjustment(selectedTier, creature.level)),
+                            tempHp: 0,
+                            level: creature.level,
+                          }
+                          useCombatantStore.getState().addStagingCombatant(combatant)
+                          const staging = useCombatantStore.getState().stagingCombatants
+                          saveEncounterStagingCombatants(encounterId, stagingToRows(encounterId, staging))
+                            .catch(logErrorWithToast('staging-save'))
+                        } : undefined}
+                        onClick={() => setStatBlockCreatureId(row.id)}
+                      />
+                    </div>
                     {hpDelta !== 0 && (
                       <p className="text-[10px] text-muted-foreground px-2 -mt-0.5 mb-1">
                         HP: {creature.hp} → {Math.max(1, creature.hp + hpDelta)}{' '}

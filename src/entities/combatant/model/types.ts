@@ -62,6 +62,16 @@ export function kindFromLegacy(isNPC: boolean, isHazard: boolean): 'npc' | 'pc' 
   return 'pc'
 }
 
+// ─── Staging Pool ─────────────────────────────────────────────────────────────
+
+/** A combatant waiting in the staging pool (reinforcements / summons).
+ *  Uses the same Combatant union type — lives in a separate array, never in turn-manager. */
+export interface StagingCombatant {
+  combatant: Combatant    // same union type (D-02)
+  round?: number          // combat round on which this creature auto-enters (triggers deploy dialog)
+  sortOrder: number
+}
+
 // ─── Patch Type ───────────────────────────────────────────────────────────────
 
 /** Allowed fields for updateCombatant. Excludes id, kind, and HP fields that have dedicated setters

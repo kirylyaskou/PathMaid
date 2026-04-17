@@ -1,5 +1,5 @@
 import { useCombatantStore } from '@/entities/combatant'
-import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, type ActiveCondition } from '@/entities/condition'
+import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, getManagerState, type ActiveCondition } from '@/entities/condition'
 import { useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
 import { decrementEffectTurns as decrementEffectTurnsApi } from '@/shared/api/effects'
@@ -69,6 +69,21 @@ export function advanceTurn(): void {
         const names = removed.map((r) => r.effectName).join(', ')
         toast(`${combatant?.displayName ?? 'Combatant'}: ${names} expired`)
       }
+    }
+
+    // Sickened Fortitude save — set pending state for dialog (PF2e: DC 15, not auto-decrement)
+    const allManagerStates = getManagerState(endingCombatantId)
+    const sickenedState = allManagerStates.find((c) => c.slug === 'sickened')
+    if (sickenedState) {
+      const combatant = combatants.find((cb) => cb.id === endingCombatantId)
+      const creatureRef = combatant && 'creatureRef' in combatant ? (combatant.creatureRef as string) : ''
+
+      tracker.setPendingSickenedSave({
+        combatantId: endingCombatantId,
+        combatantName: combatant?.displayName ?? 'Combatant',
+        sickenedValue: sickenedState.value,
+        creatureRef,
+      })
     }
 
     // Persistent damage flat-checks — set pending state for dialog

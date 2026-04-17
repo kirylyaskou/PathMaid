@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { Combatant } from '@/entities/combatant'
+import type { Combatant, StagingCombatant } from '@/entities/combatant'
 import { useCombatantStore, kindFromLegacy } from '@/entities/combatant'
 import { useCombatTrackerStore } from './store'
 
 export interface TabSnapshot {
   combatants: Combatant[]
+  stagingCombatants: StagingCombatant[]
   combatId: string | null
   activeCombatantId: string | null
   round: number
@@ -46,6 +47,7 @@ export interface EncounterTabsState {
 export function createEmptySnapshot(): TabSnapshot {
   return {
     combatants: [],
+    stagingCombatants: [],
     combatId: null,
     activeCombatantId: null,
     round: 0,
@@ -57,9 +59,10 @@ export function createEmptySnapshot(): TabSnapshot {
 
 export function snapshotFromGlobalStores(): TabSnapshot {
   const tracker = useCombatTrackerStore.getState()
-  const { combatants } = useCombatantStore.getState()
+  const { combatants, stagingCombatants } = useCombatantStore.getState()
   return {
     combatants: [...combatants],
+    stagingCombatants: [...stagingCombatants],
     combatId: tracker.combatId,
     activeCombatantId: tracker.activeCombatantId,
     round: tracker.round,
@@ -71,6 +74,7 @@ export function snapshotFromGlobalStores(): TabSnapshot {
 
 export function restoreSnapshotToGlobalStores(snapshot: TabSnapshot): void {
   useCombatantStore.getState().setCombatants(snapshot.combatants)
+  useCombatantStore.getState().setStagingCombatants(snapshot.stagingCombatants ?? [])
   useCombatTrackerStore.getState().restoreState({
     combatId: snapshot.combatId,
     activeCombatantId: snapshot.activeCombatantId,
@@ -125,6 +129,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           })
           // Clear global stores when no tabs remain
           useCombatantStore.getState().setCombatants([])
+          useCombatantStore.getState().setStagingCombatants([])
           useCombatTrackerStore.getState().restoreState(createEmptySnapshot())
         }
       }
@@ -186,6 +191,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           }))
           freshSnapshot = {
             combatants,
+            stagingCombatants: [],
             combatId: tab.encounterId,
             activeCombatantId: null,
             round: 1,

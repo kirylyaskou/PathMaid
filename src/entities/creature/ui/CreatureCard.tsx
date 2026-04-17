@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { Plus, Inbox } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent } from "@/shared/ui/card"
 import { Button } from "@/shared/ui/button"
@@ -11,11 +11,12 @@ interface CreatureCardProps {
   creature: Creature
   compact?: boolean
   onAdd?: () => void
+  onAddToStaging?: () => void
   onClick?: () => void
   className?: string
 }
 
-export function CreatureCard({ creature, compact, onAdd, onClick, className }: CreatureCardProps) {
+export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick, className }: CreatureCardProps) {
   if (compact) {
     return (
       <Card
@@ -31,23 +32,36 @@ export function CreatureCard({ creature, compact, onAdd, onClick, className }: C
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="font-medium text-sm truncate">{creature.name}</h4>
-                {onAdd && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    // BUG-03 (52-08): previously opacity-0 group-hover:opacity-100,
-                    // making the Add button invisible at rest. Always visible now,
-                    // with a subtle background to cue affordance.
-                    className="h-6 px-2 gap-1 text-xs bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onAdd()
-                    }}
-                  >
-                    <Plus className="w-3 h-3" />
-                    Add
-                  </Button>
-                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  {onAddToStaging && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 gap-1 text-xs bg-secondary/40 text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                      title="Add to staging pool"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAddToStaging()
+                      }}
+                    >
+                      <Inbox className="w-3 h-3" />
+                    </Button>
+                  )}
+                  {onAdd && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 gap-1 text-xs bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onAdd()
+                      }}
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <StatBlock

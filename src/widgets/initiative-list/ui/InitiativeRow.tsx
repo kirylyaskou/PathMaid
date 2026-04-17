@@ -1,10 +1,22 @@
+import { useState, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, X, User, Skull, Info } from 'lucide-react'
+import { GripVertical, X, User, Skull, Info, Dices } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { useCombatantStore } from '@/entities/combatant'
+import { toCreatureStatBlockData } from '@/entities/creature'
+import { fetchCreatureById } from '@/shared/api/creatures'
 import type { Combatant } from '@/entities/combatant'
 import type { ActiveCondition } from '@/entities/condition'
+
+interface SkillOption {
+  name: string
+  modifier: number
+}
 
 interface InitiativeRowProps {
   combatant: Combatant
@@ -27,6 +39,46 @@ export function InitiativeRow({
 }: InitiativeRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: combatant.id, data: { combatant } })
+  const { setInitiative } = useCombatantStore()
+
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [manualValue, setManualValue] = useState(String(combatant.initiative))
+  const [skills, setSkills] = useState<SkillOption[]>([])
+  const [selectedSkill, setSelectedSkill] = useState('Perception')
+
+  useEffect(() => {
+    if (!popoverOpen) return
+    setManualValue(String(combatant.initiative))
+    const ref = combatant.creatureRef
+    if (!ref) { setSkills([]); return }
+    fetchCreatureById(ref).then((row) => {
+      if (!row) return
+      const creature = toCreatureStatBlockData(row)
+      const opts: SkillOption[] = [
+        { name: 'Perception', modifier: creature.perception },
+        ...creature.skills
+          .filter((s) => !s.name.toLowerCase().includes('lore'))
+          .map((s) => ({ name: s.name, modifier: s.modifier })),
+      ]
+      setSkills(opts)
+      // Keep selected skill if still present, else reset to Perception
+      setSelectedSkill((prev) => opts.some((o) => o.name === prev) ? prev : 'Perception')
+    })
+  }, [popoverOpen, combatant.creatureRef, combatant.initiative])
+
+  function handleManualSet() {
+    const val = parseInt(manualValue, 10)
+    if (!isNaN(val)) setInitiative(combatant.id, val)
+    setPopoverOpen(false)
+  }
+
+  function handleRoll() {
+    const entry = skills.find((s) => s.name === selectedSkill)
+    const mod = entry?.modifier ?? 0
+    const d20 = Math.ceil(Math.random() * 20)
+    setInitiative(combatant.id, d20 + mod)
+    setPopoverOpen(false)
+  }
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -35,6 +87,7 @@ export function InitiativeRow({
 
   const hpPercent = combatant.maxHp > 0 ? (combatant.hp / combatant.maxHp) * 100 : 0
   const stunnedCondition = conditions.find((c) => c.slug === 'stunned' && (c.value ?? 0) > 0) ?? null
+  const selectedMod = skills.find((s) => s.name === selectedSkill)?.modifier ?? 0
 
   return (
     <div
@@ -58,9 +111,70 @@ export function InitiativeRow({
         <GripVertical className="w-3.5 h-3.5" />
       </button>
 
-      <span className="text-xs font-mono text-muted-foreground w-6 text-right shrink-0">
-        {combatant.initiative}
-      </span>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <span
+            className="text-xs font-mono text-muted-foreground w-8 text-right shrink-0 cursor-pointer hover:text-foreground hover:underline"
+            title="Click to set initiative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {combatant.initiative}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-64 p-3 space-y-3"
+          onClick={(e) => e.stopPropagation()}
+          side="right"
+          align="start"
+        >
+          {/* Manual input */}
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Set manually</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                value={manualValue}
+                onChange={(e) => setManualValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleManualSet() }}
+                className="h-8 w-20 text-center font-mono text-sm"
+                autoFocus
+              />
+              <Button size="sm" className="h-8" onClick={handleManualSet}>
+                Set
+              </Button>
+            </div>
+          </div>
+
+          {/* Skill roll — only for creatures with a ref */}
+          {combatant.creatureRef && skills.length > 0 && (
+            <div className="space-y-1 border-t pt-3">
+              <p className="text-xs text-muted-foreground">Roll initiative</p>
+              <div className="flex items-center gap-2">
+                <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+                  <SelectTrigger className="h-8 flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {skills.map((s) => (
+                      <SelectItem key={s.name} value={s.name} className="text-xs">
+                        {s.name} ({s.modifier >= 0 ? `+${s.modifier}` : s.modifier})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" className="h-8 gap-1" onClick={handleRoll}>
+                  <Dices className="w-3.5 h-3.5" />
+                  d20{selectedMod !== 0 && (
+                    <span className="font-mono text-xs">
+                      {selectedMod >= 0 ? `+${selectedMod}` : selectedMod}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">

@@ -1,6 +1,6 @@
-import { saveEncounterCombatState, loadEncounterState, fetchCreatureById } from '@/shared/api'
+import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingCombatants, fetchCreatureById } from '@/shared/api'
 import type { EncounterConditionRow } from '@/shared/api'
-import { useCombatantStore, kindFromLegacy, type Combatant } from '@/entities/combatant'
+import { useCombatantStore, kindFromLegacy, type Combatant, type StagingCombatant } from '@/entities/combatant'
 import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
 import { extractIwr } from '@/entities/creature'
 import { useCombatTrackerStore } from '../model/store'
@@ -150,6 +150,25 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
     })
 
     useCombatantStore.getState().setCombatants(combatants)
+
+    // Restore staging pool from DB
+    const stagingRows = await loadEncounterStagingCombatants(encounterId)
+    const stagingCombatants: StagingCombatant[] = stagingRows.map((row) => ({
+      combatant: {
+        kind: row.kind,
+        id: row.id,
+        creatureRef: row.creatureRef,
+        displayName: row.displayName,
+        initiative: 0,
+        hp: row.hp,
+        maxHp: row.maxHp,
+        tempHp: row.tempHp,
+        ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
+      } as Combatant,
+      round: row.round ?? undefined,
+      sortOrder: row.sortOrder,
+    }))
+    useCombatantStore.getState().setStagingCombatants(stagingCombatants)
 
     // Hydrate conditions
     clearAllManagers()

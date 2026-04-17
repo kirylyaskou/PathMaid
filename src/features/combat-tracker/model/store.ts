@@ -14,6 +14,14 @@ export interface PendingRecoveryCheck {
   combatantName: string
 }
 
+export interface PendingSickenedSave {
+  combatantId: string
+  combatantName: string
+  sickenedValue: number
+  /** creatureRef from the combatant — used by dialog to async-fetch fort modifier. */
+  creatureRef: string
+}
+
 export interface CombatTrackerState {
   combatId: string | null
   activeCombatantId: string | null
@@ -23,6 +31,7 @@ export interface CombatTrackerState {
   isEncounterBacked: boolean
   pendingPersistentDamage: PendingPersistentDamage | null
   pendingRecoveryCheck: PendingRecoveryCheck | null
+  pendingSickenedSave: PendingSickenedSave | null
   /** Incremented after each data sync to invalidate stat block caches. */
   entityDataVersion: number
   bumpEntityDataVersion: () => void
@@ -43,6 +52,7 @@ export interface CombatTrackerState {
   setCombatId: (id: string | null) => void
   setPendingPersistentDamage: (p: PendingPersistentDamage | null) => void
   setPendingRecoveryCheck: (p: PendingRecoveryCheck | null) => void
+  setPendingSickenedSave: (p: PendingSickenedSave | null) => void
   restoreState: (s: {
     combatId: string | null
     activeCombatantId: string | null
@@ -63,6 +73,7 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
     isEncounterBacked: false,
     pendingPersistentDamage: null,
     pendingRecoveryCheck: null,
+    pendingSickenedSave: null,
     entityDataVersion: 0,
     bumpEntityDataVersion: () => set((state) => { state.entityDataVersion += 1 }),
     lastSaveError: null,
@@ -116,6 +127,10 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
       set((state) => {
         state.pendingRecoveryCheck = p
       }),
+    setPendingSickenedSave: (p) =>
+      set((state) => {
+        state.pendingSickenedSave = p
+      }),
     restoreState: (s) =>
       set((state) => {
         state.combatId = s.combatId
@@ -126,6 +141,7 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
         state.isEncounterBacked = s.isEncounterBacked
         state.pendingPersistentDamage = null
         state.pendingRecoveryCheck = null
+        state.pendingSickenedSave = null
       }),
   }))
 )

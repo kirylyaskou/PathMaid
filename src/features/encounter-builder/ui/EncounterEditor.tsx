@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, AlertTriangle, Skull, Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
@@ -18,8 +18,9 @@ import {
 } from '@/shared/ui/alert-dialog'
 import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
-import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName } from '@/shared/api'
+import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName, loadEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
+import { logErrorWithToast } from '@/shared/lib/error'
 import {
   loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave,
   teardownAutoSave, useCombatTrackerStore,
@@ -28,6 +29,9 @@ import {
 import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import { calculateCreatureXP, getHazardXp } from '@engine'
+import { useCombatantStore } from '@/entities/combatant'
+import type { StagingCombatant, Combatant } from '@/entities/combatant'
+import { StagingTable } from './StagingTable'
 
 interface Props {
   encounterId: string
@@ -48,6 +52,35 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
+
+  // Load staging pool from DB when encounter selection changes so StagingTable reflects this encounter's staged creatures.
+  useEffect(() => {
+    let cancelled = false
+    loadEncounterStagingCombatants(encounterId)
+      .then((rows) => {
+        if (cancelled) return
+        const staging: StagingCombatant[] = rows.map((row) => ({
+          combatant: {
+            kind: row.kind,
+            id: row.id,
+            creatureRef: row.creatureRef,
+            displayName: row.displayName,
+            initiative: 0,
+            hp: row.hp,
+            maxHp: row.maxHp,
+            tempHp: row.tempHp,
+            ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
+          } as Combatant,
+          round: row.round ?? undefined,
+          sortOrder: row.sortOrder,
+        }))
+        useCombatantStore.getState().setStagingCombatants(staging)
+      })
+      .catch(logErrorWithToast('staging-load'))
+    return () => {
+      cancelled = true
+    }
+  }, [encounterId])
 
   if (!encounter) return null
 
@@ -117,6 +150,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       hazardType: r.hazardType,
     }))
     setEncounterCombatants(encounterId, updated)
+    useCombatantStore.getState().setStagingCombatants([])
     if (encounter) {
       upsertEncounter({ ...encounter, round: 0, turn: 0, activeCombatantId: null, isRunning: false, combatants: updated })
     }
@@ -301,6 +335,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
           })}
         </div>
       </ScrollArea>
+
+      {/* Staging pool — creatures queued to enter combat later */}
+      <div className="px-3 pb-3 shrink-0">
+        <StagingTable encounterId={encounterId} combatMode={false} />
+      </div>
 
       {/* Load into Combat — confirm when combat is active */}
       <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>

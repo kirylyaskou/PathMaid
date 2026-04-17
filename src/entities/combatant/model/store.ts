@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { Combatant, CombatantPatch } from './types'
+import type { Combatant, CombatantPatch, StagingCombatant } from './types'
 
 export interface CombatantState {
   combatants: Combatant[]
@@ -14,6 +14,14 @@ export interface CombatantState {
   reorderInitiative: (orderedIds: string[]) => void
   setCombatants: (combatants: Combatant[]) => void
   clearAll: () => void
+  // ── Staging pool ──────────────────────────────────────────────────────────
+  stagingCombatants: StagingCombatant[]
+  addStagingCombatant: (combatant: Combatant, round?: number) => void
+  removeStagingCombatant: (id: string) => void
+  setStagingCombatants: (staging: StagingCombatant[]) => void
+  releaseFromStaging: (id: string) => Combatant | undefined
+  reorderStaging: (orderedIds: string[]) => void
+  updateStagingRound: (id: string, round: number | undefined) => void
 }
 
 export const useCombatantStore = create<CombatantState>()(
@@ -70,6 +78,52 @@ export const useCombatantStore = create<CombatantState>()(
     clearAll: () =>
       set((state) => {
         state.combatants = []
+        state.stagingCombatants = []
+      }),
+    // ── Staging pool ──────────────────────────────────────────────────────────
+    stagingCombatants: [],
+    addStagingCombatant: (combatant, round) =>
+      set((state) => {
+        state.stagingCombatants.push({
+          combatant,
+          round,
+          sortOrder: state.stagingCombatants.length,
+        })
+      }),
+    removeStagingCombatant: (id) =>
+      set((state) => {
+        state.stagingCombatants = state.stagingCombatants.filter(
+          (s) => s.combatant.id !== id
+        )
+      }),
+    setStagingCombatants: (staging) =>
+      set((state) => {
+        state.stagingCombatants = staging
+      }),
+    releaseFromStaging: (id) => {
+      let released: Combatant | undefined
+      set((state) => {
+        const idx = state.stagingCombatants.findIndex((s) => s.combatant.id === id)
+        if (idx === -1) return
+        released = { ...state.stagingCombatants[idx].combatant, initiative: 0 }
+        state.stagingCombatants.splice(idx, 1)
+        state.combatants.push(released)
+      })
+      return released
+    },
+    reorderStaging: (orderedIds) =>
+      set((state) => {
+        state.stagingCombatants.sort(
+          (a, b) => orderedIds.indexOf(a.combatant.id) - orderedIds.indexOf(b.combatant.id)
+        )
+        state.stagingCombatants.forEach((s, i) => {
+          s.sortOrder = i
+        })
+      }),
+    updateStagingRound: (id, round) =>
+      set((state) => {
+        const s = state.stagingCombatants.find((s) => s.combatant.id === id)
+        if (s) s.round = round
       }),
   }))
 )
