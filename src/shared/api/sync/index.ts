@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { batchInsertEntities, getLocalizeValue } from './sync-core'
 import { extractAndInsertSpells, extractCreatureSpellcasting } from './sync-spells'
+import { extractAndInsertSpellEffects } from './sync-effects'
 import { extractAndInsertItems, extractCreatureItems } from './sync-items'
 import { extractAndInsertConditions } from './sync-conditions'
 import { extractAndInsertHazards } from './sync-hazards'
@@ -62,6 +63,9 @@ export async function syncFoundryData(
     onProgress?.('Importing spellcasting data...', 0, 0)
     await extractCreatureSpellcasting(entities)
 
+    onProgress?.('Importing spell effects...', 0, 0)
+    await extractAndInsertSpellEffects(entities)
+
     onProgress?.('Importing items...', 0, 0)
     await extractAndInsertItems(entities)
 
@@ -108,6 +112,9 @@ export async function importLocalPacks(
 
     onProgress?.('Importing spellcasting data...', 0, 0)
     await extractCreatureSpellcasting(entities)
+
+    onProgress?.('Importing spell effects...', 0, 0)
+    await extractAndInsertSpellEffects(entities)
 
     onProgress?.('Importing items...', 0, 0)
     await extractAndInsertItems(entities)

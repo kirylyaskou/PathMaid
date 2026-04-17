@@ -164,6 +164,13 @@ export { CreatureStatistics, buildAttackModifierSets } from './statistics/creatu
 export { computeStatModifier } from './statistics/compute-stat-modifiers'
 export type { ConditionInput, StatModifierResult } from './statistics/compute-stat-modifiers'
 
+// ── Spell Effects ──────────────────────────────────────────────────────────
+export {
+  parseSpellEffectModifiers,
+  parseSpellEffectResistances,
+} from './effects/spell-effect-modifiers'
+export type { SpellEffectModifierInput } from './effects/spell-effect-modifiers'
+
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'
 export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'

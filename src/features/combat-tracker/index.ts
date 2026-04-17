@@ -23,6 +23,7 @@ export type { EncounterTabsState } from './model/encounter-tabs-store'
 export type { EncounterTab, TabSnapshot } from './model/encounter-tabs-store'
 export type { PendingPersistentDamage, PendingSickenedSave } from './model/store'
 export { ConditionCombobox } from './ui/ConditionCombobox'
+export { EffectPickerDialog } from './ui/EffectPickerDialog'
 export {
   setupEncounterAutoSave,
   teardownEncounterAutoSave,
