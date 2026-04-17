@@ -111,7 +111,9 @@ function resolveSingleSelector(selector: string, statisticKeys: string[]): strin
 
     // ── PF2e canonical: save groups ──────────────────────────────────────
     case 'all-saves':
-      // D-04: All saving throws.
+    case 'saving-throw':
+      // D-04 + 60-02 fix: 'all-saves' (our original audit) and 'saving-throw'
+      // (PF2e canonical, used by Heroism, Bless, etc.) are aliases for the same thing.
       return statisticKeys.filter(
         k => k === 'fortitude' || k === 'reflex' || k === 'will',
       )

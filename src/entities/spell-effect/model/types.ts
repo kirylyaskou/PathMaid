@@ -5,6 +5,7 @@ export interface SpellEffectRow {
   duration_json: string
   description: string | null
   spell_id: string | null
+  level: number  // 60-02: COALESCE(spells.rank, 1) — used for @item.level eval
 }
 
 export interface ActiveEffect {
@@ -16,4 +17,5 @@ export interface ActiveEffect {
   rulesJson: string       // raw from spell_effects for engine processing
   durationJson: string
   description: string | null
+  level: number           // 60-02: @item.level for FlatModifier expression eval (Heroism etc.)
 }

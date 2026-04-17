@@ -69,11 +69,12 @@ export function useModifiedStats(
     ),
   )
 
-  // Parse FlatModifier inputs from effect rules_json — OUTSIDE selector to avoid .map() in useShallow
+  // Parse FlatModifier inputs from effect rules_json — OUTSIDE selector to avoid .map() in useShallow.
+  // 60-02: pass e.level for @item.level expression eval (Heroism scales bonus by spell rank).
   const spellEffectModifiers = useMemo(
     () =>
       rawEffects.flatMap((e) =>
-        parseSpellEffectModifiers(e.rulesJson, e.effectId, e.effectName),
+        parseSpellEffectModifiers(e.rulesJson, e.effectId, e.effectName, e.level),
       ),
     [rawEffects],
   )

@@ -65,6 +65,7 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
           rulesJson: r.rules_json,
           durationJson: r.duration_json,
           description: r.description,
+          level: r.level,
         }))
       )
     })

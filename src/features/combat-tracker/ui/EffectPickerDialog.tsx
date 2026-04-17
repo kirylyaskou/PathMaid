@@ -49,6 +49,7 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
           rulesJson: effect.rules_json,
           durationJson: effect.duration_json,
           description: effect.description,
+          level: effect.level,
         })
         toast(`Applied ${effect.name}`)
         onOpenChange(false)
