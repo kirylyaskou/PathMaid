@@ -45,6 +45,9 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const navigate = useNavigate()
   const [showLoadConfirm, setShowLoadConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  // 63-03: dedup — when loading an encounter that already has an open tab,
+  // offer Open / Refresh / Cancel rather than silently opening a duplicate.
+  const [dedupTargetTabId, setDedupTargetTabId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
@@ -110,6 +113,9 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         encounterId,
         name: encounter?.name ?? 'Encounter',
         snapshot,
+        // 63-03: pass the load-time snapshot as the template so Refresh reverts
+        // to pristine pre-start state; isStarted defaults to false via the store.
+        templateSnapshot: snapshot,
       })
 
       navigate(PATHS.COMBAT)
@@ -119,6 +125,15 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   }
 
   function handleLoadClick() {
+    // 63-03: dedup — if a tab is already open for this encounter, offer
+    // Open-existing / Refresh-existing / Cancel instead of silently duplicating.
+    const existing = useEncounterTabsStore
+      .getState()
+      .openTabs.find((t) => t.encounterId === encounterId)
+    if (existing) {
+      setDedupTargetTabId(existing.id)
+      return
+    }
     const { isRunning } = useCombatTrackerStore.getState()
     if (isRunning) {
       // Any active combat (ad-hoc or encounter-backed): confirm before loading
@@ -127,6 +142,23 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     } else {
       doLoadIntoCombat()
     }
+  }
+
+  // 63-03: dedup actions
+  function handleDedupOpen() {
+    if (!dedupTargetTabId) return
+    useEncounterTabsStore.getState().setActiveTab(dedupTargetTabId)
+    setDedupTargetTabId(null)
+    navigate(PATHS.COMBAT)
+  }
+
+  async function handleDedupRefresh() {
+    if (!dedupTargetTabId) return
+    const tabId = dedupTargetTabId
+    setDedupTargetTabId(null)
+    await useEncounterTabsStore.getState().resetTab(tabId)
+    useEncounterTabsStore.getState().setActiveTab(tabId)
+    navigate(PATHS.COMBAT)
   }
 
   async function handleReset() {
@@ -356,6 +388,33 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
               onClick={() => { setShowLoadConfirm(false); doLoadIntoCombat() }}
             >
               Open New Tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 63-03: Duplicate tab — offer Open / Refresh / Cancel */}
+      <AlertDialog
+        open={dedupTargetTabId !== null}
+        onOpenChange={(o) => !o && setDedupTargetTabId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tab Already Open</AlertDialogTitle>
+            <AlertDialogDescription>
+              A combat tab for this encounter is already open. Choose what to do.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-muted text-foreground hover:bg-muted/80"
+              onClick={handleDedupOpen}
+            >
+              Open Existing Tab
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDedupRefresh}>
+              Refresh + Focus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
