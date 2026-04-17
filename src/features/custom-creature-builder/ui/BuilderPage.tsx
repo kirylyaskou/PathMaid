@@ -147,10 +147,10 @@ export function BuilderPage({ creatureId }: Props) {
         level={state.form.level}
         dirty={dirty}
         saving={saving}
+        creatureId={creatureId}
         onSave={() => void handleSave()}
         onApplyRole={handleApplyRole}
         onClone={() => setCloneOpen(true)}
-        onExport={() => toast.info('Export JSON ships in plan 59-09')}
       />
       {/* Two-pane layout — D-17. Stacks vertically below xl (Tauri window resize). */}
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 p-6 min-h-0 overflow-hidden">

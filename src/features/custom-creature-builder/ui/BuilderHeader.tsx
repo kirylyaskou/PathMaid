@@ -1,21 +1,22 @@
 import { Link } from 'react-router-dom'
-import { ChevronLeft, Save, Copy, Download } from 'lucide-react'
+import { ChevronLeft, Save, Copy } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Spinner } from '@/shared/ui/spinner'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { PATHS } from '@/shared/routes'
 import type { AppliedRoleValues } from '@engine'
 import { ApplyRoleButton } from './ApplyRoleButton'
+import { ExportJsonButton } from './ExportJsonButton'
 
 interface Props {
   name: string
   level: number
   dirty: boolean
   saving: boolean
+  creatureId: string
   onSave: () => void
   onApplyRole: (values: AppliedRoleValues) => void
-  onClone: () => void // placeholder — real modal lands in 59-09
-  onExport: () => void // placeholder — real export lands in 59-09
+  onClone: () => void
 }
 
 export function BuilderHeader({
@@ -23,10 +24,10 @@ export function BuilderHeader({
   level,
   dirty,
   saving,
+  creatureId,
   onSave,
   onApplyRole,
   onClone,
-  onExport,
 }: Props) {
   return (
     <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border/40 bg-sidebar/30">
@@ -53,10 +54,7 @@ export function BuilderHeader({
           <Copy className="w-3.5 h-3.5 mr-1.5" />
           Clone from Bestiary
         </Button>
-        <Button variant="outline" size="sm" onClick={onExport}>
-          <Download className="w-3.5 h-3.5 mr-1.5" />
-          Export JSON
-        </Button>
+        <ExportJsonButton creatureId={creatureId} disabled={saving} />
         <Button size="sm" onClick={onSave} disabled={!dirty || saving}>
           {saving ? (
             <>
