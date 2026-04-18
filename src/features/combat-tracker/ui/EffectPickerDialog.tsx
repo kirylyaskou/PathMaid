@@ -222,7 +222,7 @@ function WelcomeState() {
       <img
         src="/mascot/placeholder_maid.png"
         alt="Pathmaid greeter"
-        className="h-44 w-auto drop-shadow-lg"
+        className="h-44 min-h-full w-auto drop-shadow-lg"
       />
       <div className="space-y-1">
         <p className="text-sm font-semibold">Pick a category or search</p>
@@ -240,7 +240,7 @@ function EmptyState({ isSearching, tabLabel }: { isSearching: boolean; tabLabel:
       <img
         src="/mascot/placeholder_maid.png"
         alt="No effects here"
-        className="h-40 w-auto opacity-90 drop-shadow-lg"
+        className="h-40  min-h-full w-auto opacity-90 drop-shadow-lg"
       />
       <div className="space-y-1">
         <p className="text-sm font-semibold">
