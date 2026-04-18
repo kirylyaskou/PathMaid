@@ -10,6 +10,7 @@ interface RawEffect {
   duration_json: string
   description: string | null
   spell_id: null
+  source_pack: string | null
 }
 
 export async function extractAndInsertSpellEffects(entities: RawEntity[]): Promise<void> {
@@ -33,6 +34,9 @@ export async function extractAndInsertSpellEffects(entities: RawEntity[]): Promi
         duration_json: JSON.stringify(sys.duration ?? {}),
         description: sanitizeFoundryText(sys.description?.value) || null,
         spell_id: null,
+        // 61-fix: originating Foundry pack drives category detection
+        // (spell-effects / equipment-effects / other-effects).
+        source_pack: entity.source_pack,
       })
     } catch {
       // skip malformed effect JSON
@@ -42,13 +46,13 @@ export async function extractAndInsertSpellEffects(entities: RawEntity[]): Promi
   for (let i = 0; i < effects.length; i += BATCH_SIZE) {
     const batch = effects.slice(i, i + BATCH_SIZE)
     const placeholders = batch
-      .map(() => '(?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const values = batch.flatMap((e) => [
-      e.id, e.name, e.rules_json, e.duration_json, e.description, e.spell_id,
+      e.id, e.name, e.rules_json, e.duration_json, e.description, e.spell_id, e.source_pack,
     ])
     await db.execute(
-      `INSERT OR REPLACE INTO spell_effects (id, name, rules_json, duration_json, description, spell_id) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO spell_effects (id, name, rules_json, duration_json, description, spell_id, source_pack) VALUES ${placeholders}`,
       values
     )
   }

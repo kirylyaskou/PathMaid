@@ -5,14 +5,17 @@ import type { SpellEffectRow } from '@/entities/spell-effect'
 // evaluate @item.level in scaling FlatModifier expressions (Heroism etc.).
 // Effects without a linked spell (spell_id IS NULL) fall back to level=1.
 //
-// 61-01: category derived at query time for picker grouping. spell_effects has
-// no source_pack column, so we infer: spell_id non-null → 'spell'; alchemical
-// name patterns → 'alchemical'; else → 'other'.
-// 61-03 fix: tightened alchemical patterns — 'bomb' and 'potion' dropped
-// (too many false positives — most PF2e bombs are instant, don't spawn
-// effect rows; potion matched non-alchemical spell effects).
+// 61-06 fix: category now keyed off Foundry source_pack first (added via
+// migration 0033), then spell_id for spells that matched post-sync,
+// finally name patterns as a last resort for rows with NULL source_pack.
+// Pack IDs: 'pf2e.spell-effects', 'pf2e.equipment-effects', 'pf2e.other-effects',
+// 'pf2e.feat-effects', 'pf2e.campaign-effects'. Match on LIKE to tolerate
+// minor pack-id variations across PF2e releases.
 const CATEGORY_EXPR = `
   CASE
+    WHEN se.source_pack LIKE '%spell-effects%' THEN 'spell'
+    WHEN se.source_pack LIKE '%equipment-effects%' THEN 'alchemical'
+    WHEN se.source_pack IS NOT NULL THEN 'other'
     WHEN se.spell_id IS NOT NULL THEN 'spell'
     WHEN LOWER(se.name) LIKE '%elixir%'
       OR LOWER(se.name) LIKE '%mutagen%' THEN 'alchemical'
