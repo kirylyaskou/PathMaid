@@ -141,7 +141,7 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
           />
           {showFallbackHint && (
             <p className="mt-1 text-[10px] text-muted-foreground">
-              No encounter context found — showing all effects.
+              No spell context in this encounter — browsing full library ({allEffects.length} effects).
             </p>
           )}
         </div>
@@ -182,23 +182,23 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
                       </span>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="space-y-0.5 pb-1">
+                      <div className="grid grid-cols-2 gap-1 pb-1">
                         {rows.map((effect) => {
                           const desc = effect.description
-                            ? effect.description.slice(0, 140)
+                            ? effect.description.slice(0, 90)
                             : null
                           return (
                             <div
                               key={effect.id}
                               role="button"
                               tabIndex={0}
-                              className="flex flex-col px-3 py-2 rounded-md cursor-pointer hover:bg-accent/30 transition-colors"
+                              className="flex flex-col px-2.5 py-1.5 rounded-md cursor-pointer hover:bg-accent/30 transition-colors border border-border/20 bg-card/30 min-w-0"
                               onClick={() => handleSelect(effect)}
                               onKeyDown={(e) => e.key === 'Enter' && handleSelect(effect)}
                             >
-                              <span className="text-sm font-semibold">{effect.name}</span>
+                              <span className="text-sm font-semibold truncate">{effect.name}</span>
                               {desc && (
-                                <span className="text-xs text-muted-foreground truncate">{desc}</span>
+                                <span className="text-[11px] text-muted-foreground line-clamp-2">{desc}</span>
                               )}
                             </div>
                           )

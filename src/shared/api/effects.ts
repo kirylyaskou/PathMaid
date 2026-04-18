@@ -8,13 +8,14 @@ import type { SpellEffectRow } from '@/entities/spell-effect'
 // 61-01: category derived at query time for picker grouping. spell_effects has
 // no source_pack column, so we infer: spell_id non-null → 'spell'; alchemical
 // name patterns → 'alchemical'; else → 'other'.
+// 61-03 fix: tightened alchemical patterns — 'bomb' and 'potion' dropped
+// (too many false positives — most PF2e bombs are instant, don't spawn
+// effect rows; potion matched non-alchemical spell effects).
 const CATEGORY_EXPR = `
   CASE
     WHEN se.spell_id IS NOT NULL THEN 'spell'
     WHEN LOWER(se.name) LIKE '%elixir%'
-      OR LOWER(se.name) LIKE '%bomb%'
-      OR LOWER(se.name) LIKE '%mutagen%'
-      OR LOWER(se.name) LIKE '%potion%' THEN 'alchemical'
+      OR LOWER(se.name) LIKE '%mutagen%' THEN 'alchemical'
     ELSE 'other'
   END
 `
