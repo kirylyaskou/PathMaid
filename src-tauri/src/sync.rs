@@ -312,10 +312,24 @@ pub async fn sync_foundry_data(
 }
 
 fn extract_pack_name(zip_path: &str) -> String {
+    // 61-fix: return the pack sub-directory (e.g. "equipment-effects",
+    // "spell-effects", "bestiary") not the umbrella "pf2e" segment.
+    // Layout: systems/pf2e/packs/pf2e/<pack-id>/<file>.json
+    // We skip the "pf2e" umbrella dir and return the real pack id.
     let parts: Vec<&str> = zip_path.split('/').collect();
     for (i, part) in parts.iter().enumerate() {
         if *part == "packs" {
-            if let Some(pack) = parts.get(i + 1) {
+            let mut next_idx = i + 1;
+            // Skip the "pf2e" umbrella if present so we land on the real pack id.
+            if parts.get(next_idx).copied() == Some("pf2e") {
+                next_idx += 1;
+            }
+            if let Some(pack) = parts.get(next_idx) {
+                // Guard against the json file itself being the next segment
+                // (pack layout without subfolder) — fall back to the umbrella.
+                if pack.ends_with(".json") {
+                    return parts.get(i + 1).unwrap_or(&"pf2e").to_string();
+                }
                 return pack.to_string();
             }
         }

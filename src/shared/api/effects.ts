@@ -15,7 +15,6 @@ const CATEGORY_EXPR = `
   CASE
     WHEN se.source_pack LIKE '%spell-effects%' THEN 'spell'
     WHEN se.source_pack LIKE '%equipment-effects%' THEN 'alchemical'
-    WHEN se.source_pack IS NOT NULL THEN 'other'
     WHEN se.spell_id IS NOT NULL THEN 'spell'
     WHEN LOWER(se.name) LIKE '%elixir%'
       OR LOWER(se.name) LIKE '%mutagen%' THEN 'alchemical'
