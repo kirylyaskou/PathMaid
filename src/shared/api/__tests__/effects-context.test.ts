@@ -47,7 +47,13 @@ CREATE TABLE creature_items (
   creature_id TEXT NOT NULL,
   item_name TEXT NOT NULL,
   item_type TEXT NOT NULL,
+  foundry_item_id TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE items (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT
 );
 CREATE TABLE encounter_combatants (
   id TEXT PRIMARY KEY,
@@ -104,16 +110,47 @@ WHERE se.spell_id IS NOT NULL
   )`
 
 // Path 3 — item names for the encounter (raw + prefix-stripped).
+// Mirror of effects.ts collectItemNamesForEncounter — joins through items by
+// foundry_item_id so we can also mine @UUID references out of
+// items.description (authoritative item→effect link).
 const ITEM_NAMES_SQL = `
-SELECT ci.item_name FROM creature_items ci
+SELECT ci.item_name AS item_name, i.description AS description FROM creature_items ci
 JOIN encounter_combatants ec ON ec.creature_ref = ci.creature_id
+LEFT JOIN items i ON i.id = ci.foundry_item_id
 WHERE ec.encounter_id = ?
 UNION
-SELECT eci.item_name FROM encounter_combatant_items eci
+SELECT eci.item_name AS item_name, i.description AS description FROM encounter_combatant_items eci
 JOIN encounter_combatants ec ON ec.id = eci.combatant_id
+LEFT JOIN items i ON i.id = eci.item_foundry_id
 WHERE ec.encounter_id = ?
   AND eci.is_removed = 0
 `
+
+// Mirror of effects.ts EFFECT_UUID_RE + extractEffectNamesFromDescription.
+const EFFECT_UUID_RE_TEST =
+  /@UUID\[Compendium\.pf2e\.equipment-effects\.Item\.([^\]]+?)\]/g
+const LEGACY_BARE_EFFECT_RE_TEST =
+  /<p[^>]*>\s*Effect:\s*([^<]+?)\s*<\/p>/gi
+
+function extractEffectNamesFromDescription(description: string | null): string[] {
+  if (!description) return []
+  const names: string[] = []
+  let m: RegExpExecArray | null
+  EFFECT_UUID_RE_TEST.lastIndex = 0
+  while ((m = EFFECT_UUID_RE_TEST.exec(description)) !== null) {
+    const raw = m[1].trim()
+    if (!raw) continue
+    const stripped = stripEffectPrefix(raw)
+    if (stripped) names.push(stripped)
+  }
+  LEGACY_BARE_EFFECT_RE_TEST.lastIndex = 0
+  while ((m = LEGACY_BARE_EFFECT_RE_TEST.exec(description)) !== null) {
+    const raw = m[1].trim()
+    if (!raw) continue
+    names.push(raw)
+  }
+  return names
+}
 
 // Path 3 — match prefix-stripped names against spell_effects.name.
 function buildItemMatchedSql(nameCount: number): string {
@@ -226,14 +263,20 @@ describe('getContextEffectsForEncounter — integration against sql.js', () => {
         ('spell-bane',       'Bane',                 1);
     `)
 
-    // spell_effects — spell-effects pack + equipment-effects pack
+    // spell_effects — spell-effects pack + equipment-effects pack.
+    // IMPORTANT: real PF2e packs use ONE Elixir of Life effect for ALL six
+    // item tiers (Minor..True) — the effect name has no tier suffix. Items
+    // however are named "Elixir of Life (Moderate)" etc. Direct name-equality
+    // never matches; only the description's @UUID[...Effect: Elixir of Life]
+    // link connects them.
     db.exec(`
       INSERT INTO spell_effects (id, name, spell_id, source_pack) VALUES
         ('se-thundering', 'Thundering Dominance Heightened (+2)', 'spell-thundering', 'spell-effects'),
         ('se-heroism',    'Heroism',                              'spell-heroism',    'spell-effects'),
         ('se-bane',       'Bane',                                 'spell-bane',       'spell-effects'),
         ('se-drakeheart', 'Drakeheart Mutagen (Greater)',         NULL,               'equipment-effects'),
-        ('se-elixir',     'Elixir of Life (Minor)',               NULL,               'equipment-effects'),
+        ('se-elixir',     'Elixir of Life',                       NULL,               'equipment-effects'),
+        ('se-goggles',    'Alchemist Goggles',                    NULL,               'equipment-effects'),
         ('se-unused',     'Unused Spell Effect',                  NULL,               'spell-effects');
     `)
 
@@ -248,21 +291,52 @@ describe('getContextEffectsForEncounter — integration against sql.js', () => {
         ('csl-1', 'goblin-001', 'entry-A', 'spell-bane', 'Bane', 1, 0);
     `)
 
-    // Bestiary creature inventory item that also grants an equipment effect
+    // items table — catalog rows with the Foundry-embedded description HTML
+    // that carries the authoritative @UUID[...equipment-effects...Effect: X]
+    // link to the effect row. These are what the context query LEFT JOINs
+    // against via foundry_item_id to mine effect names from descriptions.
+    db.exec(`
+      INSERT INTO items (id, name, description) VALUES
+        ('item-elixir-minor',
+         'Elixir of Life (Minor)',
+         '<p>Heals stuff.</p><p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Elixir of Life]</p>'),
+        ('item-goggles',
+         'Alchemist Goggles',
+         '<p>Brass goggles.</p><p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Alchemist Goggles]</p>'),
+        ('item-drakeheart-major',
+         'Drakeheart Mutagen (Major)',
+         '<p>Mutagen.</p><p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Drakeheart Mutagen (Major)]</p>'),
+        ('item-drakeheart-greater',
+         'Drakeheart Mutagen (Greater)',
+         '<p>Mutagen.</p><p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Drakeheart Mutagen (Greater)]</p>'),
+        ('item-rapier',
+         'Rapier',
+         '<p>A sword.</p>'),
+        ('item-effect-drakeheart-greater',
+         'Effect: Drakeheart Mutagen (Greater)',
+         '<p>Granted by @UUID[Compendium.pf2e.equipment-srd.Item.Drakeheart Mutagen (Greater)]</p>');
+    `)
+
+    // Bestiary creature inventory — Elixir linked via foundry_item_id.
+    // creature_items.item_name = "Elixir of Life (Minor)" does NOT match
+    // spell_effects.name = "Elixir of Life" directly. Only the items.description
+    // @UUID path surfaces it.
     db.exec(`
       INSERT INTO creature_items
-        (id, creature_id, item_name, item_type, sort_order)
+        (id, creature_id, item_name, item_type, foundry_item_id, sort_order)
       VALUES
-        ('ci-1', 'goblin-001', 'Elixir of Life (Minor)', 'consumable', 0);
+        ('ci-1', 'goblin-001', 'Elixir of Life (Minor)', 'consumable', 'item-elixir-minor', 0),
+        ('ci-2', 'goblin-001', 'Alchemist Goggles', 'equipment', 'item-goggles', 1),
+        ('ci-3', 'goblin-001', 'Rapier', 'weapon', 'item-rapier', 2);
     `)
 
     // Goblin also carries a Foundry-style "Effect: ..."-prefixed item — the
     // common case where the inventory references the effect entity directly.
     db.exec(`
       INSERT INTO encounter_combatant_items
-        (id, encounter_id, combatant_id, item_name, item_type, is_removed)
+        (id, encounter_id, combatant_id, item_name, item_foundry_id, item_type, is_removed)
       VALUES
-        ('eci-prefix', 'enc-1', 'combatant-gob', 'Effect: Drakeheart Mutagen (Greater)', 'effect', 0);
+        ('eci-prefix', 'enc-1', 'combatant-gob', 'Effect: Drakeheart Mutagen (Greater)', 'item-effect-drakeheart-greater', 'effect', 0);
     `)
 
     // Custom creature — Abobus — with Thundering Dominance in data_json
@@ -294,12 +368,15 @@ describe('getContextEffectsForEncounter — integration against sql.js', () => {
         ('combatant-abo', 'enc-1', 'abobus-001',  'Abobus',  1);
     `)
 
-    // Abobus carries a Drakeheart Mutagen via encounter-item override
+    // Abobus carries a Drakeheart Mutagen via encounter-item override —
+    // name-match path would surface the (Greater) effect here directly. We
+    // also add a Major in items table to cover the description-path for a
+    // tier that happens to collide with the item name.
     db.exec(`
       INSERT INTO encounter_combatant_items
-        (id, encounter_id, combatant_id, item_name, item_type, is_removed)
+        (id, encounter_id, combatant_id, item_name, item_foundry_id, item_type, is_removed)
       VALUES
-        ('eci-1', 'enc-1', 'combatant-abo', 'Drakeheart Mutagen (Greater)', 'consumable', 0);
+        ('eci-1', 'enc-1', 'combatant-abo', 'Drakeheart Mutagen (Greater)', 'item-drakeheart-greater', 'consumable', 0);
     `)
   })
 
@@ -308,23 +385,31 @@ describe('getContextEffectsForEncounter — integration against sql.js', () => {
     // Path 1
     const bestiary = execQuery(db, BESTIARY_SQL, [ENCOUNTER_ID])
 
-    // Path 3 — collect raw item names + add prefix-stripped variants
-    const rawNames = (() => {
+    // Path 3 — collect raw item names + add prefix-stripped variants AND
+    // harvest effect names from items.description @UUID references (the
+    // authoritative item↔effect link for consumables/equipment where direct
+    // name-equality fails — e.g. tier-suffixed items vs single shared effect).
+    const rawRows = (() => {
       const stmt = db.prepare(ITEM_NAMES_SQL)
       stmt.bind([ENCOUNTER_ID, ENCOUNTER_ID])
-      const out: string[] = []
+      const out: Array<{ item_name: string; description: string | null }> = []
       while (stmt.step()) {
-        const r = stmt.getAsObject() as { item_name: string }
-        if (r.item_name) out.push(r.item_name)
+        const r = stmt.getAsObject() as { item_name: string; description: string | null }
+        out.push({ item_name: r.item_name, description: r.description ?? null })
       }
       stmt.free()
       return out
     })()
     const itemNames = new Set<string>()
-    for (const n of rawNames) {
-      itemNames.add(n)
-      const s = stripEffectPrefix(n)
-      if (s && s !== n) itemNames.add(s)
+    for (const r of rawRows) {
+      if (r.item_name) {
+        itemNames.add(r.item_name)
+        const s = stripEffectPrefix(r.item_name)
+        if (s && s !== r.item_name) itemNames.add(s)
+      }
+      for (const n of extractEffectNamesFromDescription(r.description)) {
+        itemNames.add(n)
+      }
     }
     let items: EffectRow[] = []
     if (itemNames.size > 0) {
@@ -411,5 +496,94 @@ describe('getContextEffectsForEncounter — integration against sql.js', () => {
     const drakeheart = rows.find((r) => r.id === 'se-drakeheart')!
     expect(bane.category).toBe('spell')
     expect(drakeheart.category).toBe('alchemical')
+  })
+
+  it('surfaces tier-shared effect via description @UUID when item and effect names diverge (regression: Elixir of Life)', () => {
+    // Real-world case from Alchemist Aspirant bestiary entry:
+    //  - creature_items.item_name = "Elixir of Life (Minor)"  [has tier]
+    //  - spell_effects.name       = "Elixir of Life"          [no tier]
+    // Pure name-equality (what the pre-fix code did) never matches.
+    // items.description carries @UUID[...Effect: Elixir of Life] which IS the
+    // authoritative linkage. This test locks in the description-path fix.
+    const rows = runFullContextQuery()
+    expect(rows.map((r) => r.id)).toContain('se-elixir')
+  })
+
+  it('surfaces effect from bestiary base inventory via description @UUID (Alchemist Goggles)', () => {
+    // Alchemist Goggles item.name matches effect.name after strip — but
+    // this regression also exercises the description path from the base
+    // creature_items inventory (not just encounter overrides).
+    const rows = runFullContextQuery()
+    expect(rows.map((r) => r.id)).toContain('se-goggles')
+  })
+
+  it('does not surface effects whose items are NOT in any combatant inventory', () => {
+    // item-drakeheart-major exists in the items table with a description
+    // @UUID pointing at "Effect: Drakeheart Mutagen (Major)" — but nobody
+    // carries it. The context query MUST filter that out (description paths
+    // only trigger for items actually joined through an inventory).
+    db.exec(`
+      INSERT INTO spell_effects (id, name, spell_id, source_pack) VALUES
+        ('se-drakeheart-major', 'Drakeheart Mutagen (Major)', NULL, 'equipment-effects');
+    `)
+    const rows = runFullContextQuery()
+    expect(rows.map((r) => r.id)).not.toContain('se-drakeheart-major')
+    db.exec(`DELETE FROM spell_effects WHERE id = 'se-drakeheart-major';`)
+  })
+
+  it('tolerates items without foundry_item_id (no LEFT JOIN match, falls back to name-only path)', () => {
+    // Legacy creature_items rows may lack foundry_item_id. The LEFT JOIN
+    // returns description=NULL, extractEffectNames returns []. Name-path
+    // still functions independently. Insert a stand-alone legacy row and
+    // confirm it does not break the pipeline.
+    db.exec(`
+      INSERT INTO creature_items
+        (id, creature_id, item_name, item_type, foundry_item_id, sort_order)
+      VALUES
+        ('ci-legacy', 'goblin-001', 'Mystery Potion', 'consumable', NULL, 99);
+    `)
+    expect(() => runFullContextQuery()).not.toThrow()
+    db.exec(`DELETE FROM creature_items WHERE id = 'ci-legacy';`)
+  })
+
+  it('legacy fallback: finds bare "<p>Effect: X</p>" paragraphs (pre-fix sync mangled @UUID wrappers)', () => {
+    // Earlier sync versions had a resolveUUIDTokensInDescriptions bug that
+    // unwrapped @UUID[...equipment-effects...] into bare "Effect: NAME"
+    // paragraphs, losing the @UUID marker. Users with such DBs should still
+    // see the picker work without a forced resync.
+    db.exec(`
+      INSERT INTO items (id, name, description) VALUES
+        ('item-legacy-elixir',
+         'Elixir of Life (Lesser)',
+         '<p>Old buggy-resolved form.</p><p>Effect: Elixir of Life</p>');
+      INSERT INTO creature_items
+        (id, creature_id, item_name, item_type, foundry_item_id, sort_order)
+      VALUES
+        ('ci-legacy-e', 'goblin-001', 'Elixir of Life (Lesser)', 'consumable', 'item-legacy-elixir', 77);
+    `)
+    const rows = runFullContextQuery()
+    expect(rows.map((r) => r.id)).toContain('se-elixir')
+    db.exec(`DELETE FROM creature_items WHERE id = 'ci-legacy-e'; DELETE FROM items WHERE id = 'item-legacy-elixir';`)
+  })
+
+  it('extracts multiple effect @UUIDs from one description (rapier + wyvern poison style)', () => {
+    // Some items list several effect UUIDs (armor with rune effects,
+    // poisons applied to weapons, etc). The regex is global so each one
+    // should be captured.
+    db.exec(`
+      INSERT INTO items (id, name, description) VALUES
+        ('item-multi',
+         'Multi-Effect Gear',
+         '<p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Alchemist Goggles]</p><p>@UUID[Compendium.pf2e.equipment-effects.Item.Effect: Elixir of Life]</p>');
+      INSERT INTO creature_items
+        (id, creature_id, item_name, item_type, foundry_item_id, sort_order)
+      VALUES
+        ('ci-multi', 'goblin-001', 'Multi-Effect Gear', 'equipment', 'item-multi', 50);
+    `)
+    const rows = runFullContextQuery()
+    const ids = rows.map((r) => r.id)
+    expect(ids).toContain('se-goggles')
+    expect(ids).toContain('se-elixir')
+    db.exec(`DELETE FROM creature_items WHERE id = 'ci-multi'; DELETE FROM items WHERE id = 'item-multi';`)
   })
 })

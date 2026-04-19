@@ -140,31 +140,91 @@ export async function getContextEffectsForEncounter(
   return out
 }
 
+// 61-fix: authoritative item→effect link is Foundry's @UUID reference embedded
+// in the item's description HTML. Every equipment item that grants an effect
+// spells it out as:
+//   @UUID[Compendium.pf2e.equipment-effects.Item.Effect: <Effect Name>]
+// Extract the <Effect Name> portion (may include parentheses/punctuation),
+// strip the "Effect:" display-prefix, and we have the canonical
+// spell_effects.name form. Handles the two failure modes name-matching can't:
+//   1) One effect covers multiple item tiers (Elixir of Life has one effect
+//      file, six item tiers — name-equality never matches).
+//   2) Item / effect name drift ("+1 Studded Leather Armor" vs a cleaner
+//      effect name would never line up, but the description link always does).
+const EFFECT_UUID_RE =
+  /@UUID\[Compendium\.pf2e\.equipment-effects\.Item\.([^\]]+?)\]/g
+
+// Legacy fallback: older sync versions had a resolveUUID bug that unwrapped
+// equipment-effects UUIDs into bare "<p>Effect: NAME</p>" paragraphs, losing
+// the @UUID[...] form. Users who ran that sync have descriptions with the
+// bare-paragraph shape. Match that too so the picker surfaces effects for
+// them without forcing a full resync. Safe because the specific
+// "<p>Effect: ...</p>" (paragraph containing ONLY the effect label) is the
+// exact shape the bug produced; normal prose paragraphs don't look like this.
+const LEGACY_BARE_EFFECT_RE =
+  /<p[^>]*>\s*Effect:\s*([^<]+?)\s*<\/p>/gi
+
+function extractEffectNamesFromDescription(description: string | null): string[] {
+  if (!description) return []
+  const names: string[] = []
+
+  EFFECT_UUID_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = EFFECT_UUID_RE.exec(description)) !== null) {
+    const raw = m[1].trim()
+    if (!raw) continue
+    // Foundry uses the "Display Name" form (not the 16-char _id) after the
+    // "Item." segment. The canonical spell_effects.name strips the
+    // "Effect:"/"Spell Effect:"/etc. prefix at sync time, so mirror that here.
+    const stripped = stripEffectPrefix(raw)
+    if (stripped) names.push(stripped)
+  }
+
+  LEGACY_BARE_EFFECT_RE.lastIndex = 0
+  while ((m = LEGACY_BARE_EFFECT_RE.exec(description)) !== null) {
+    const raw = m[1].trim()
+    if (!raw) continue
+    names.push(raw)
+  }
+
+  return names
+}
+
 // Internal — pulls item names for every combatant in the encounter,
 // from both the base creature_items inventory and per-encounter overrides
 // (excluding removed). Names are prefix-stripped so they line up with
 // the canonicalized spell_effects.name format.
+//
+// 61-fix: also joins through items.description to pull @UUID[...equipment-effects...]
+// names — the authoritative item↔effect link when item and effect names
+// diverge (Elixir of Life, tier-suffixed items, etc).
 async function collectItemNamesForEncounter(encounterId: string): Promise<string[]> {
   const db = await getDb()
-  const rows = await db.select<Array<{ item_name: string }>>(
-    `SELECT ci.item_name
+  const rows = await db.select<Array<{ item_name: string; description: string | null }>>(
+    `SELECT ci.item_name AS item_name, i.description AS description
      FROM creature_items ci
      JOIN encounter_combatants ec ON ec.creature_ref = ci.creature_id
+     LEFT JOIN items i ON i.id = ci.foundry_item_id
      WHERE ec.encounter_id = ?
      UNION
-     SELECT eci.item_name
+     SELECT eci.item_name AS item_name, i.description AS description
      FROM encounter_combatant_items eci
      JOIN encounter_combatants ec ON ec.id = eci.combatant_id
+     LEFT JOIN items i ON i.id = eci.item_foundry_id
      WHERE ec.encounter_id = ?
        AND eci.is_removed = 0`,
     [encounterId, encounterId],
   )
   const names = new Set<string>()
   for (const r of rows) {
-    if (!r.item_name) continue
-    names.add(r.item_name)
-    const stripped = stripEffectPrefix(r.item_name)
-    if (stripped && stripped !== r.item_name) names.add(stripped)
+    if (r.item_name) {
+      names.add(r.item_name)
+      const stripped = stripEffectPrefix(r.item_name)
+      if (stripped && stripped !== r.item_name) names.add(stripped)
+    }
+    for (const effectName of extractEffectNamesFromDescription(r.description)) {
+      names.add(effectName)
+    }
   }
   return Array.from(names)
 }
