@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer'
 import {
   calculateXP,
   generateEncounterBudgets,
+  getAdjustedLevel,
   type EncounterResult,
   type ThreatRating,
   type WeakEliteTier,
@@ -56,10 +57,9 @@ export const useEncounterBuilderStore = create<EncounterBuilderState>()(
     addCreatureToDraft: (creature) =>
       set((state) => {
         const tier = creature.tier ?? 'normal'
-        const adjustedLevel =
-          tier === 'elite' ? creature.level + 1
-          : tier === 'weak' ? creature.level - 1
-          : creature.level
+        // Use shared engine helper so XP-budget math stays consistent with
+        // the post-mount display label (handles level -1/0/1 clamps).
+        const adjustedLevel = getAdjustedLevel(tier, creature.level)
         state.draftCreatures.push({
           instanceId: `draft-${++instanceCounter}`,
           creatureId: creature.creatureId,

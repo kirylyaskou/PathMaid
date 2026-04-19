@@ -16,7 +16,7 @@ import {
 import { loadEncounterCombatants, saveEncounterCombatants } from '@/shared/api'
 import type { CreatureRow, HazardRow, EncounterCombatantRow } from '@/shared/api'
 import type { WeakEliteTier } from '@/entities/creature'
-import { calculateXP, getHpAdjustment } from '@engine'
+import { calculateXP, getHpAdjustment, getAdjustedLevel } from '@engine'
 import type { HazardType } from '@engine'
 import { CreatureCard, toCreature } from '@/entities/creature'
 
@@ -84,13 +84,12 @@ export function EncountersPage() {
 
   // XP Budget: compute from selected encounter's combatants
   const selectedEncounter = encounters.find((e) => e.id === selectedId)
+  // PF2e Monster Core pg. 6-7: weak/elite adjust creature level by ±1 for
+  // the XP budget. Use getAdjustedLevel from the engine (also applies the
+  // display clamp for level -1/0/1) rather than the ad-hoc ternary.
   const creatureLevels = selectedEncounter?.combatants
     .filter((c) => !c.isHazard)
-    .map((c) =>
-      c.weakEliteTier === 'elite' ? c.creatureLevel + 1
-      : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
-      : c.creatureLevel
-    ) ?? []
+    .map((c) => getAdjustedLevel(c.weakEliteTier, c.creatureLevel)) ?? []
   const hazardEntries = selectedEncounter?.combatants
     .filter((c) => c.isHazard === true)
     .map((c) => ({ level: c.creatureLevel, type: (c.hazardType ?? 'simple') as HazardType })) ?? []

@@ -28,7 +28,7 @@ import {
 } from '@/features/combat-tracker'
 import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
-import { calculateCreatureXP, getHazardXp } from '@engine'
+import { calculateCreatureXP, getHazardXp, getAdjustedLevel } from '@engine'
 import { useCombatantStore } from '@/entities/combatant'
 import type { StagingCombatant, Combatant } from '@/entities/combatant'
 import { StagingTable } from './StagingTable'
@@ -301,10 +301,10 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
 
           {combatants.map((c) => {
             const effectivePartyLevel = partyLevel
-            const adjustedLevel =
-              c.weakEliteTier === 'elite' ? c.creatureLevel + 1
-              : c.weakEliteTier === 'weak' ? c.creatureLevel - 1
-              : c.creatureLevel
+            // PF2e Monster Core pg. 6-7: elite/weak shift creature level by
+            // ±1 for XP budget. getAdjustedLevel also applies the display
+            // clamps for level -1/0/1 so the badge label stays sensible.
+            const adjustedLevel = getAdjustedLevel(c.weakEliteTier, c.creatureLevel)
             const isHazard = c.isHazard === true
             const xpResult = isHazard
               ? getHazardXp(c.creatureLevel, effectivePartyLevel, c.hazardType ?? 'simple')
