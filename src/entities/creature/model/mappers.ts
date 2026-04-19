@@ -15,16 +15,54 @@ import type {
 import type { FoundrySystem, FoundryItem, FoundryIwrEntry, FoundrySenseEntry, FoundryDamageRoll } from './foundry-types'
 
 export function toCreature(row: CreatureRow): Creature {
+  // v1.4.1 UAT BUG-2: iconic-as-NPC rows (Foundry `type: "character"`
+  // re-routed to `type='npc'` by the Rust sync). Character docs ship without
+  // `attributes.hp.max` / `attributes.ac.value` / saves (those paths only
+  // exist on true NPCs) so every numeric stat the Rust extractor reached
+  // for is null, and add-to-combat wrote HP 1/1. Overlay with the shared
+  // parser so combat-tracker receives the computed values.
+  let derivedHp: number | null = null
+  let derivedAc: number | null = null
+  let derivedFort: number | null = null
+  let derivedRef: number | null = null
+  let derivedWill: number | null = null
+  let derivedPerception: number | null = null
+  let derivedLevel: number | null = null
+  // Fast-path: real NPC bestiary rows always have hp/ac populated by Rust
+  // sync; skip the raw_json parse entirely. Only character docs (iconic
+  // iconic/pregen imports) arrive with null numeric columns and need the
+  // overlay.
+  if (row.hp == null || row.ac == null) {
+    try {
+      const raw = JSON.parse(row.raw_json) as { type?: string } | null
+      if (raw && raw.type === 'character') {
+        const pc = parseFoundryCharacterDoc(raw)
+        if (pc) {
+          derivedHp = pc.hp
+          derivedAc = pc.ac
+          derivedFort = pc.fortitude
+          derivedRef = pc.reflex
+          derivedWill = pc.will
+          derivedPerception = pc.perception
+          derivedLevel = pc.level
+        }
+      }
+    } catch {
+      // raw_json may be absent or malformed on legacy rows — fall back to
+      // whatever the DB column captured.
+    }
+  }
+
   return {
     id: row.id,
     name: row.name,
-    level: row.level ?? 0,
-    hp: row.hp ?? 0,
-    ac: row.ac ?? 0,
-    fort: row.fort ?? 0,
-    ref: row.ref ?? 0,
-    will: row.will ?? 0,
-    perception: row.perception ?? 0,
+    level: derivedLevel ?? row.level ?? 0,
+    hp: derivedHp ?? row.hp ?? 0,
+    ac: derivedAc ?? row.ac ?? 0,
+    fort: derivedFort ?? row.fort ?? 0,
+    ref: derivedRef ?? row.ref ?? 0,
+    will: derivedWill ?? row.will ?? 0,
+    perception: derivedPerception ?? row.perception ?? 0,
     traits: parseJsonArray(row.traits),
     rarity: (row.rarity ?? 'common') as Rarity,
     size: mapSize(row.size),

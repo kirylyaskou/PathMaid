@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import type { CreatureRow } from '@/shared/api'
-import { toCreatureStatBlockData } from '../mappers'
+import { toCreature, toCreatureStatBlockData } from '../mappers'
 
 const AMIRI_L1_PATH = 'D:/parse_data/PAKS/pf2e/packs/pf2e/iconics/amiri/amiri-level-1.json'
 
@@ -123,5 +123,58 @@ describe('toCreatureStatBlockData — iconic-as-NPC derivation (BUG-B)', () => {
     expect(sb.will).toBe(3)
     expect(sb.perception).toBe(4)
     expect(sb.abilityMods.dex).toBe(3)
+  })
+})
+
+// v1.4.1 UAT BUG-2 regression — toCreature (used by combat add-path) must
+// surface computed HP / AC / saves for iconic character docs rather than
+// falling through to the null DB columns.
+describe('toCreature — iconic-as-NPC combat add-path (BUG-2)', () => {
+  it('derives HP > 1 and AC > 10 for a character doc with null numeric columns', () => {
+    if (!existsSync(AMIRI_L1_PATH)) {
+      console.warn('[bug-2] PAKS fixture missing, skipping.')
+      return
+    }
+    const rawJson = readFileSync(AMIRI_L1_PATH, 'utf-8')
+    const row = makeRow(rawJson)
+    const c = toCreature(row)
+    // Before fix: hp === 0 (row.hp null, no overlay) → combat wrote 1/1.
+    expect(c.hp).toBeGreaterThan(10)
+    expect(c.ac).toBeGreaterThan(10)
+    expect(c.perception).toBeGreaterThan(0)
+    expect(c.fort + c.ref + c.will).toBeGreaterThan(0)
+    expect(c.level).toBe(1)
+  })
+
+  it('leaves an NPC-type row unchanged (fast-path avoids raw_json parse)', () => {
+    const npcDoc = {
+      type: 'npc',
+      name: 'Test Goblin',
+      system: { details: { level: { value: 1 } } },
+      items: [],
+    }
+    const row: CreatureRow = {
+      id: 'gob',
+      name: 'Test Goblin',
+      type: 'npc',
+      level: 1,
+      hp: 20,
+      ac: 16,
+      fort: 5,
+      ref: 7,
+      will: 3,
+      perception: 4,
+      traits: '[]',
+      rarity: 'common',
+      size: 'sm',
+      source_pack: 'pathfinder-bestiary',
+      raw_json: JSON.stringify(npcDoc),
+      source_name: null,
+      source_adventure: null,
+    }
+    const c = toCreature(row)
+    expect(c.hp).toBe(20)
+    expect(c.ac).toBe(16)
+    expect(c.fort).toBe(5)
   })
 })
