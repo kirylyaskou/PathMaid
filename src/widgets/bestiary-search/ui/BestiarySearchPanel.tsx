@@ -9,8 +9,8 @@ import {
 } from '@/shared/ui/select'
 import { CreatureCard, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
-import { searchCreaturesFiltered } from '@/shared/api'
-import type { CreatureRow } from '@/shared/api'
+import { searchCreaturesFiltered, fetchDistinctLibrarySources } from '@/shared/api'
+import type { CreatureRow, LibrarySourceOption } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
 import { createCombatantFromCreature } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
@@ -52,9 +52,29 @@ export function BestiarySearchPanel() {
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTier, setSelectedTier] = useState<WeakEliteTier>('normal')
+  // 70-04: library source filter. `null` = All sources (default).
+  // Otherwise a token returned by fetchDistinctLibrarySources — either the
+  // `__iconics__` sentinel or an adventure slug.
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null)
+  const [librarySources, setLibrarySources] = useState<LibrarySourceOption[]>([])
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const addCombatant = useCombatantStore((s) => s.addCombatant)
+
+  // 70-04: load the list of Paizo-library chips once — the set only changes
+  // on sync and regenerating it per-search would be wasteful.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const opts = await fetchDistinctLibrarySources()
+        if (!cancelled) setLibrarySources(opts)
+      } catch {
+        // Silent — absence of iconic/pregens must not break the bestiary.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (activeTab !== 'bestiary') return
@@ -66,6 +86,7 @@ export function BestiarySearchPanel() {
           {
             query: query.trim() || undefined,
             traits: creatureType !== '__all__' ? [creatureType] : undefined,
+            sourceAdventure: sourceFilter,
           },
           50
         )
@@ -76,7 +97,7 @@ export function BestiarySearchPanel() {
     }
     const timer = setTimeout(search, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [query, creatureType, activeTab])
+  }, [query, creatureType, activeTab, sourceFilter])
 
   useEffect(() => {
     setSelectedTier('normal')
@@ -183,6 +204,44 @@ export function BestiarySearchPanel() {
                 </button>
               ))}
             </div>
+            {/* 70-04: Paizo library scope — horizontally scrolling chip row.
+                Hidden when no iconic/pregen rows were synced (empty array). */}
+            {librarySources.length > 0 && (
+              <div
+                role="tablist"
+                aria-label="Source library filter"
+                className="flex items-center gap-1.5 overflow-x-auto"
+              >
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1 shrink-0">Source</span>
+                <button
+                  role="tab"
+                  aria-selected={sourceFilter === null}
+                  onClick={() => setSourceFilter(null)}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors shrink-0 ${
+                    sourceFilter === null
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-accent/30'
+                  }`}
+                >
+                  All
+                </button>
+                {librarySources.map((opt) => (
+                  <button
+                    key={opt.value}
+                    role="tab"
+                    aria-selected={sourceFilter === opt.value}
+                    onClick={() => setSourceFilter(opt.value)}
+                    className={`px-2 py-0.5 text-xs rounded transition-colors shrink-0 ${
+                      sourceFilter === opt.value
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-accent/30'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {/* Results */}
           <div className="flex-1 overflow-y-auto">

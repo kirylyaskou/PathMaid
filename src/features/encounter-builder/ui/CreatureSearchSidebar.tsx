@@ -8,8 +8,8 @@ import type { WeakEliteTier } from '@/entities/creature'
 import { fetchCreatureStatBlockData } from '@/entities/creature/model/fetchStatBlock'
 import type { CreatureStatBlockData } from '@/entities/creature/model/types'
 import type { CustomCreatureRow } from '@/entities/creature/model/custom-creature-types'
-import { searchCreatures, fetchCreatures, searchHazards, getAllHazards, saveEncounterStagingCombatants, getAllCustomCreatures } from '@/shared/api'
-import type { CreatureRow, HazardRow, EncounterStagingRow } from '@/shared/api'
+import { searchCreaturesFiltered, searchHazards, getAllHazards, saveEncounterStagingCombatants, getAllCustomCreatures, fetchDistinctLibrarySources } from '@/shared/api'
+import type { CreatureRow, HazardRow, EncounterStagingRow, LibrarySourceOption } from '@/shared/api'
 import { useEncounterBuilderStore } from '../model/store'
 import { useCombatantStore } from '@/entities/combatant'
 import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
@@ -133,8 +133,25 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
   // FEAT-12: clicking a creature card opens its stat block for preview (no add)
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
+  // 70-04: Paizo library scope filter — parity with BestiarySearchPanel.
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null)
+  const [librarySources, setLibrarySources] = useState<LibrarySourceOption[]>([])
+
   const addCreatureToDraft = useEncounterBuilderStore((s) => s.addCreatureToDraft)
   const addHazardToDraft = useEncounterBuilderStore((s) => s.addHazardToDraft)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const opts = await fetchDistinctLibrarySources()
+        if (!cancelled) setLibrarySources(opts)
+      } catch {
+        // Silent — absence of iconic/pregens must not break the sidebar.
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   // Creature search
   useEffect(() => {
@@ -143,9 +160,13 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
     const search = async () => {
       setCreatureLoading(true)
       try {
-        const rows = query.trim()
-          ? await searchCreatures(query, 50)
-          : await fetchCreatures(50, 0)
+        const rows = await searchCreaturesFiltered(
+          {
+            query: query.trim() || undefined,
+            sourceAdventure: sourceFilter,
+          },
+          50
+        )
         if (!cancelled) setCreatureResults(rows)
       } finally {
         if (!cancelled) setCreatureLoading(false)
@@ -153,7 +174,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
     }
     const timer = setTimeout(search, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [query, activeTab])
+  }, [query, activeTab, sourceFilter])
 
   // Hazard search
   useEffect(() => {
@@ -317,6 +338,43 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                 }`}
               >
                 {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* 70-04: Paizo library scope — parity with BestiarySearchPanel. */}
+        {activeTab === 'creatures' && librarySources.length > 0 && (
+          <div
+            role="tablist"
+            aria-label="Source library filter"
+            className="flex items-center gap-1.5 overflow-x-auto"
+          >
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1 shrink-0">Source</span>
+            <button
+              role="tab"
+              aria-selected={sourceFilter === null}
+              onClick={() => setSourceFilter(null)}
+              className={`px-2 py-0.5 text-xs rounded transition-colors shrink-0 ${
+                sourceFilter === null
+                  ? 'bg-accent text-accent-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-accent/30'
+              }`}
+            >
+              All
+            </button>
+            {librarySources.map((opt) => (
+              <button
+                key={opt.value}
+                role="tab"
+                aria-selected={sourceFilter === opt.value}
+                onClick={() => setSourceFilter(opt.value)}
+                className={`px-2 py-0.5 text-xs rounded transition-colors shrink-0 ${
+                  sourceFilter === opt.value
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-accent/30'
+                }`}
+              >
+                {opt.label}
               </button>
             ))}
           </div>
