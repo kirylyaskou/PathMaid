@@ -57,7 +57,6 @@ interface TierSpellcastingAttack {
   entryId: string
   attack?: number | null
   dc?: number | null
-  [k: string]: unknown
 }
 
 export interface TierAdjustableStatBlock {
@@ -71,7 +70,6 @@ export interface TierAdjustableStatBlock {
   spellDC?: number | undefined
   classDC?: number | undefined
   spellcasting?: TierSpellcastingAttack[] | undefined
-  [k: string]: unknown
 }
 
 /**

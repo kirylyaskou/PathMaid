@@ -1,4 +1,5 @@
 import type { Combatant, NpcCombatant, PcCombatant } from '@/entities/combatant'
+import type { WeakEliteTier } from '@engine'
 
 export function rollInitiative(perception: number): number {
   return perception + Math.floor(Math.random() * 20) + 1
@@ -31,6 +32,7 @@ export function createCombatantFromCreature(
   hp: number,
   existingCombatants: Combatant[],
   level?: number,
+  tier?: WeakEliteTier,
 ): NpcCombatant {
   return {
     kind: 'npc',
@@ -42,6 +44,7 @@ export function createCombatantFromCreature(
     maxHp: hp,
     tempHp: 0,
     ...(level !== undefined ? { level } : {}),
+    ...(tier && tier !== 'normal' ? { weakEliteTier: tier } : {}),
   }
 }
 

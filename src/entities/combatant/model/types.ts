@@ -1,6 +1,8 @@
 // Combatant is a runtime concept: creature in an active combat slot.
 // Conditions are managed by ConditionManager (module-level) and stored in useConditionStore.
 
+import type { WeakEliteTier } from '@engine'
+
 interface CombatantBase {
   id: string           // uuid — unique per combat slot
   displayName: string
@@ -28,6 +30,10 @@ export interface NpcCombatant extends CombatantBase {
   shieldAcBonus?: number | null
   // Multiple Attack Penalty index for the current turn (0 = first attack, 1/2 = subsequent).
   mapIndex?: number
+  // Weak/Elite tier — drives runtime stat-block adjustment in the combat view
+  // (applyTierToStatBlock). HP is already baked in at add-time via
+  // getHpAdjustment, so this field is purely for display / lookup.
+  weakEliteTier?: WeakEliteTier
   iwrImmunities?: string[]
   iwrWeaknesses?: { type: string; value: number }[]
   iwrResistances?: { type: string; value: number }[]

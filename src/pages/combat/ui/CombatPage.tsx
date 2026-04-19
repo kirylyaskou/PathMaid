@@ -23,7 +23,7 @@ import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { useEncounterStore } from '@/entities/encounter'
 import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
-import { getHpAdjustment } from '@engine'
+import { getHpAdjustment, applyTierToStatBlock } from '@engine'
 import { PCCombatCard } from '@/features/characters'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
@@ -357,6 +357,7 @@ export function CombatPage() {
         adjustedHp,
         useCombatantStore.getState().combatants,
         creature.level,
+        tier,
       )
       c.maxHp = adjustedHp
       c.iwrImmunities = iwr.immunities
@@ -540,10 +541,16 @@ export function CombatPage() {
                   <PCCombatCard build={selectedPcBuild} combatant={selectedCombatant} encounterId={isEncounterBacked && combatId ? combatId : undefined} />
                 )}
 
-                {/* NPC selected */}
+                {/* NPC selected — apply Weak/Elite tier adjustment to displayed
+                    stat values per Monster Core pg. 6-7. HP is already baked
+                    in at add-time via getHpAdjustment so applyTierToStatBlock
+                    deliberately skips it. */}
                 {!selectedPcBuild && lastNpcStatBlock && (
                   <CreatureStatBlock
-                    creature={lastNpcStatBlock}
+                    creature={applyTierToStatBlock(
+                      lastNpcStatBlock,
+                      (selectedCombatant && selectedCombatant.kind === 'npc' && selectedCombatant.weakEliteTier) || 'normal',
+                    )}
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={
                       isEncounterBacked && combatId && selectedId

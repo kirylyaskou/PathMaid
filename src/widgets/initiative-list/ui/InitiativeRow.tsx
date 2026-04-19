@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { useCombatantStore } from '@/entities/combatant'
+import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { toCreatureStatBlockData } from '@/entities/creature'
 import { fetchCreatureById } from '@/shared/api/creatures'
 import type { Combatant } from '@/entities/combatant'
@@ -186,6 +186,19 @@ export function InitiativeRow({
           {stunnedCondition && (
             <span className="px-1 py-0.5 text-[10px] rounded font-mono font-semibold bg-amber-900/60 text-amber-200 border border-amber-600/50 shrink-0">
               ⚡{stunnedCondition.value}
+            </span>
+          )}
+          {isNpc(combatant) && combatant.weakEliteTier && combatant.weakEliteTier !== 'normal' && (
+            <span
+              className={cn(
+                'px-1 py-0 text-[10px] rounded font-semibold shrink-0',
+                combatant.weakEliteTier === 'elite'
+                  ? 'bg-primary/20 text-primary border border-primary/30'
+                  : 'bg-muted text-muted-foreground border border-border/50',
+              )}
+              title={combatant.weakEliteTier === 'elite' ? 'Elite' : 'Weak'}
+            >
+              {combatant.weakEliteTier === 'elite' ? 'E' : 'W'}
             </span>
           )}
           <span className="text-sm font-medium truncate">{combatant.displayName}</span>
