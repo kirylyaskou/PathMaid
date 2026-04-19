@@ -1,5 +1,6 @@
 import { getDb } from '@/shared/db'
 import type { PathbuilderBuild } from '@engine'
+import { buildPathbuilderFromFoundryPC } from './sync/sync-iconics-pc'
 
 export interface CharacterRecord {
   id: string
@@ -25,16 +26,32 @@ type CharacterRow = {
   notes: string
   created_at: string
   source_adventure: string | null
+  raw_foundry_json: string | null
 }
 
 function rowToRecord(r: CharacterRow): CharacterRecord {
+  // v1.4.1 UAT fix: when the row carries the raw Foundry character JSON
+  // (iconics + pregens), re-derive the PathbuilderBuild at load time so
+  // parser improvements apply retroactively without forcing a re-sync.
+  // Falls back to the stored raw_json on any derivation error.
+  let rawJson = r.raw_json
+  if (r.raw_foundry_json) {
+    try {
+      const doc = JSON.parse(r.raw_foundry_json)
+      const build = buildPathbuilderFromFoundryPC(doc)
+      if (build) rawJson = JSON.stringify(build)
+    } catch {
+      // Leave rawJson as-is on parse failure — the stored one is the
+      // last-known good build, which is still better than a crash.
+    }
+  }
   return {
     id: r.id,
     name: r.name,
     class: r.class,
     level: r.level,
     ancestry: r.ancestry,
-    rawJson: r.raw_json,
+    rawJson,
     notes: r.notes,
     createdAt: r.created_at,
     sourceAdventure: r.source_adventure,
@@ -44,7 +61,7 @@ function rowToRecord(r: CharacterRow): CharacterRecord {
 export async function getAllCharacters(): Promise<CharacterRecord[]> {
   const db = await getDb()
   const rows = await db.select<CharacterRow[]>(
-    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure
+    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure, raw_foundry_json
      FROM characters ORDER BY name ASC`,
     []
   )
@@ -54,7 +71,7 @@ export async function getAllCharacters(): Promise<CharacterRecord[]> {
 export async function getCharacterById(id: string): Promise<CharacterRecord | null> {
   const db = await getDb()
   const rows = await db.select<CharacterRow[]>(
-    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure
+    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure, raw_foundry_json
      FROM characters WHERE id = ?`,
     [id]
   )
@@ -106,13 +123,15 @@ export async function upsertCharacter(build: PathbuilderBuild): Promise<string> 
  */
 export async function insertIconicCharacter(
   build: PathbuilderBuild,
-  sourceAdventure: string
+  sourceAdventure: string,
+  rawFoundryJson?: string
 ): Promise<string | null> {
   const db = await getDb()
   const existing = await db.select<{ id: string; source_adventure: string | null }[]>(
     `SELECT id, source_adventure FROM characters WHERE name = ?`,
     [build.name]
   )
+  const foundryJson = rawFoundryJson ?? null
   if (existing.length > 0) {
     if (existing[0].source_adventure === null) {
       console.warn(
@@ -120,10 +139,12 @@ export async function insertIconicCharacter(
       )
       return existing[0].id
     }
-    // Previous iconic sync — refresh it.
+    // Previous iconic sync — refresh it. Always overwrite raw_foundry_json
+    // so a fresh sync repopulates the column even for rows created before
+    // migration 0037.
     await db.execute(
       `UPDATE characters
-         SET class = ?, level = ?, ancestry = ?, raw_json = ?, source_adventure = ?
+         SET class = ?, level = ?, ancestry = ?, raw_json = ?, source_adventure = ?, raw_foundry_json = ?
        WHERE id = ?`,
       [
         build.class ?? null,
@@ -131,6 +152,7 @@ export async function insertIconicCharacter(
         build.ancestry ?? null,
         JSON.stringify(build),
         sourceAdventure,
+        foundryJson,
         existing[0].id,
       ]
     )
@@ -139,8 +161,8 @@ export async function insertIconicCharacter(
   const id = crypto.randomUUID()
   try {
     await db.execute(
-      `INSERT INTO characters (id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure)
-       VALUES (?, ?, ?, ?, ?, ?, '', datetime('now'), ?)`,
+      `INSERT INTO characters (id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure, raw_foundry_json)
+       VALUES (?, ?, ?, ?, ?, ?, '', datetime('now'), ?, ?)`,
       [
         id,
         build.name,
@@ -149,6 +171,7 @@ export async function insertIconicCharacter(
         build.ancestry ?? null,
         JSON.stringify(build),
         sourceAdventure,
+        foundryJson,
       ]
     )
     return id
