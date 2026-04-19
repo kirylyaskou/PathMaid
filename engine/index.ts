@@ -168,8 +168,21 @@ export type { ConditionInput, StatModifierResult } from './statistics/compute-st
 export {
   parseSpellEffectModifiers,
   parseSpellEffectResistances,
+  parseSpellEffectRollOptions,
+  parseSpellEffectRollTwice,
 } from './effects/spell-effect-modifiers'
-export type { SpellEffectModifierInput } from './effects/spell-effect-modifiers'
+export type {
+  SpellEffectModifierInput,
+  SpellEffectRollOption,
+  SpellEffectRollTwice,
+} from './effects/spell-effect-modifiers'
+
+export { applyFortuneToRoll } from './effects/fortune'
+export type {
+  RollContext,
+  FortuneInputs,
+  FortuneResult,
+} from './effects/fortune'
 
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'

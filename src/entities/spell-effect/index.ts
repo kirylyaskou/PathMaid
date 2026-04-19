@@ -1,5 +1,7 @@
 export { useEffectStore } from './model/store'
 export type { SpellEffectState } from './model/store'
 export type { ActiveEffect, SpellEffectRow, SpellEffectCategory } from './model/types'
+export { useRollOptionsStore } from './model/roll-options-store'
+export type { RollOptionsState, RollOptionEntry } from './model/roll-options-store'
 export { durationToRounds, formatRemainingTurns } from './lib/duration-to-rounds'
 export { mergeResistances } from './lib/merge-resistances'

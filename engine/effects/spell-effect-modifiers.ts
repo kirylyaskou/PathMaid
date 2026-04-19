@@ -244,3 +244,88 @@ export function parseSpellEffectResistances(
     })
     .filter((r) => r.type && r.value > 0)
 }
+
+// ─── RollOption + RollTwice Parsers (Phase 65, D-65-01 / D-65-02) ─────────────
+// RollOption: the effect posts a named "flag" (e.g. "bit-of-luck") into the
+// combatant's current-roll-context. It has no direct numeric effect; it gates
+// a sibling rule (typically a RollTwice). We surface it so the apply-path can
+// seed useRollOptionsStore; remove-path tears it down.
+//
+// RollTwice: this IS the fortune/misfortune rule — `keep: "higher"` = fortune,
+// `keep: "lower"` = misfortune. `selector` narrows which rolls it applies to
+// ("attack-roll", "saving-throw", etc.). A predicate referencing a sibling
+// RollOption means "only active while that flag is set" (Bit of Luck gates
+// its RollTwice on the "bit-of-luck" RollOption so users can toggle it).
+
+export interface SpellEffectRollOption {
+  /** Slug posted to the combatant's option bag, e.g. "sure-strike". */
+  option: string
+  /** Initial value; false-by-default options are rare but supported. */
+  value: boolean
+  /** Whether the Foundry UI exposes a user toggle for this option. */
+  toggleable: boolean
+}
+
+export interface SpellEffectRollTwice {
+  /** Foundry selector(s) the rule targets, e.g. "attack-roll". */
+  selector: string | string[]
+  /** "higher" → fortune, "lower" → misfortune. */
+  keep: 'higher' | 'lower'
+  /**
+   * Optional predicate (stored verbatim; not evaluated here). When present,
+   * the rule only fires if the combatant's current option-bag satisfies it.
+   * Phase 66 will plug in the predicate evaluator; Phase 65 treats any entry
+   * whose predicate references a RollOption slug as "gated by that option".
+   */
+  predicate?: unknown[]
+}
+
+export function parseSpellEffectRollOptions(rulesJson: string): SpellEffectRollOption[] {
+  let rules: unknown[]
+  try {
+    rules = JSON.parse(rulesJson)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(rules)) return []
+
+  const out: SpellEffectRollOption[] = []
+  for (const rule of rules) {
+    const r = rule as Record<string, unknown>
+    if (r.key !== 'RollOption') continue
+    const option = typeof r.option === 'string' ? r.option : null
+    if (!option) continue
+    out.push({
+      option,
+      // Foundry defaults value to true when omitted.
+      value: typeof r.value === 'boolean' ? r.value : true,
+      toggleable: r.toggleable === true,
+    })
+  }
+  return out
+}
+
+export function parseSpellEffectRollTwice(rulesJson: string): SpellEffectRollTwice[] {
+  let rules: unknown[]
+  try {
+    rules = JSON.parse(rulesJson)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(rules)) return []
+
+  const out: SpellEffectRollTwice[] = []
+  for (const rule of rules) {
+    const r = rule as Record<string, unknown>
+    if (r.key !== 'RollTwice') continue
+    const selector = r.selector as string | string[] | undefined
+    if (!selector) continue
+    const keep = r.keep === 'lower' ? 'lower' : 'higher'
+    out.push({
+      selector,
+      keep,
+      predicate: Array.isArray(r.predicate) ? r.predicate : undefined,
+    })
+  }
+  return out
+}
