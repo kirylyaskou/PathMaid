@@ -56,10 +56,14 @@ interface PathmaidenExport {
     partySize?: number
     combatants: Array<{
       name: string
+      /** 69-03: canonical bestiary/custom/hazard name used by the matcher.
+       *  Falls back to `name` when absent (legacy pre-69 exports). */
+      lookupName?: string
       level?: number
       isHazard?: boolean
       weakEliteTier?: 'normal' | 'weak' | 'elite'
       hp?: number
+      hpMax?: number
       initiative?: number
     }>
   }
@@ -138,13 +142,19 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
   const combatants: ParsedCombatant[] = []
   for (const c of enc.combatants ?? []) {
     if (!c?.name || typeof c.name !== 'string') continue
+    // 69-03: pathmaiden-v1 exports since Phase 69 carry a separate lookupName
+    // (canonical bestiary name) so GM-renamed combatants still match on
+    // re-import. Legacy exports omitted it; fall back to the display name.
+    const lookupName =
+      typeof c.lookupName === 'string' && c.lookupName.trim() ? c.lookupName : c.name
     combatants.push({
       displayName: c.name,
-      lookupName: c.name,
+      lookupName,
       level: c.level,
       isHazard: c.isHazard === true,
       weakEliteTier: c.weakEliteTier,
       hp: c.hp,
+      hpMax: c.hpMax,
       initiative: c.initiative,
     })
   }

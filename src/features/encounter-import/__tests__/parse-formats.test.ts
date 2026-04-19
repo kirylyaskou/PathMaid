@@ -164,4 +164,39 @@ describe('parsePathmaiden — own export format', () => {
     expect(out[0].isHazard).toBe(false)
     expect(out[1].isHazard).toBe(true)
   })
+
+  // 69-03: pathmaiden-v1 exports since Phase 69 carry a separate `lookupName`
+  // so GM-renamed combatants still match canonical bestiary rows on re-import.
+  it('honors a separate lookupName field when present (Phase 69 exports)', () => {
+    const fixture = {
+      version: 'pathmaiden-v1' as const,
+      encounter: {
+        name: 'Renamed',
+        combatants: [
+          { name: 'Огрек', lookupName: 'Urnak Lostwind', isHazard: false, hp: 280, hpMax: 290 },
+        ],
+      },
+    }
+    const c = parsePathmaiden(fixture)[0].combatants[0]
+    expect(c.displayName).toBe('Огрек')
+    expect(c.lookupName).toBe('Urnak Lostwind')
+    expect(c.hp).toBe(280)
+    expect(c.hpMax).toBe(290)
+  })
+
+  it('falls back to name when lookupName is empty/missing (legacy pre-69 exports)', () => {
+    const fixture = {
+      version: 'pathmaiden-v1' as const,
+      encounter: {
+        name: 'Legacy',
+        combatants: [
+          { name: 'Goblin Warrior', isHazard: false },
+          { name: 'Zombie Brute', lookupName: '', isHazard: false },
+        ],
+      },
+    }
+    const out = parsePathmaiden(fixture)[0].combatants
+    expect(out[0].lookupName).toBe('Goblin Warrior')
+    expect(out[1].lookupName).toBe('Zombie Brute')
+  })
 })
