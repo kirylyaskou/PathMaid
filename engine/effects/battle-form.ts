@@ -20,9 +20,15 @@
 // whose choices are `[{predicate:[{gte:[parent:level,4]}], value:{size:huge,damage:4,reach:15}}, {predicate:[{or:[{lte:parent:level,3},{gte:parent:level,6}]}], value:{size:large,damage:2,reach:10}}]`.
 // Given the caller-supplied effect level we pick the matching choice and
 // surface (a) the resolved size, (b) the resolved melee-strike-damage status
-// bonus. Combined with the native creature size at render time, this yields
-// the `resizeEquipment` semantic (melee strike die steps up one step per
-// size-step above the creature's native size).
+// bonus, (c) a `resizeEquipment` flag mirroring Foundry's encoding.
+//
+// RULES NOTE (PF2e Player Core pg. 329): Enlarge does NOT step weapon damage
+// dice. Its only melee effect is a +2/+4 status bonus to damage (plus reach
+// and the clumsy 1 condition). Foundry's `resizeEquipment: true` flag is a
+// Foundry-internal detail for item size display — consumers should apply the
+// returned `meleeDamageBonus` as a flat constant and leave dice untouched.
+// Legitimate die-step-up effects (Giant Instinct, etc.) emit AdjustStrike
+// rules and are handled by `parseSpellEffectAdjustStrikes`, not this helper.
 
 import type { CreatureSize } from '../types'
 import type { BattleFormStrikeOverride } from './battle-form-types'
@@ -202,7 +208,12 @@ export interface SpellEffectSizeShift {
   size: CreatureSize
   /** Status bonus to `melee-strike-damage` selector (0 when none). */
   meleeDamageBonus: number
-  /** Whether resizeEquipment applied — callers use this to gate the die step. */
+  /**
+   * Mirrors Foundry's `resizeEquipment` flag. Retained for contract fidelity;
+   * PF2e Enlarge does NOT step weapon damage dice, so the CreatureStatBlock
+   * consumer ignores this. Future consumers may use it for equipment-size
+   * display concerns.
+   */
   resizeEquipment: boolean
 }
 

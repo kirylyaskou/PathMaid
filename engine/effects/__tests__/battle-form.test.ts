@@ -104,6 +104,16 @@ describe('parseSpellEffectBattleForm', () => {
 })
 
 describe('parseSpellEffectSizeShift — Enlarge-class (v1.4 UAT BUG-A)', () => {
+  // Parser contract: surface the Foundry-encoded values `{size, meleeDamageBonus,
+  // resizeEquipment}`. Consumers decide how to interpret them.
+  //
+  // Important consumer note (per PF2e Player Core pg. 329): Enlarge does NOT
+  // step weapon damage dice even though Foundry sets `resizeEquipment: true`.
+  // Enlarge's only melee effect is a +2/+4 status bonus to damage. The
+  // CreatureStatBlock consumer intentionally ignores `resizeEquipment` for the
+  // Enlarge pattern. Legitimate die-step-up effects (Giant Instinct, etc.)
+  // emit AdjustStrike rules and are handled by parseSpellEffectAdjustStrikes.
+  //
   // Real-world Foundry rules block from spell-effect-enlarge.json.
   const enlargeRules = JSON.stringify([
     {
