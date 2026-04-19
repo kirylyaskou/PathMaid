@@ -219,6 +219,29 @@ export type {
   SamePackEffectPack,
 } from './effects/grant-item'
 
+export {
+  evaluatePredicate,
+  __resetPredicateWarnCache,
+} from './effects/predicate-evaluator'
+export type {
+  PredicateTerm,
+  PredicateNode,
+} from './effects/predicate-evaluator'
+
+export {
+  buildPredicateContext,
+  buildActorFacts,
+  emptyPredicateContext,
+  slugifyEffectName,
+} from './effects/predicate-context'
+export type {
+  PredicateContext,
+  PredicateActorFacts,
+  RawActorSnapshot,
+  RawConditionInput,
+  RawEffectInput,
+} from './effects/predicate-context'
+
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'
 export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'
