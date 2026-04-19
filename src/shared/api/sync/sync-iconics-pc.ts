@@ -31,6 +31,8 @@ import type {
   PathbuilderWeapon,
   PathbuilderArmor,
 } from '@engine'
+import { insertIconicCharacter } from '../characters'
+import type { RawEntity } from './types'
 
 interface FoundryItem {
   _id?: string
@@ -267,4 +269,48 @@ export function buildPathbuilderFromFoundryPC(
     },
     pets: [],
   }
+}
+
+/**
+ * Phase 70 / D-70-05 — orchestration entry point. Walks every synced
+ * `RawEntity` of type `character` (shipped only by `iconics` and
+ * `paizo-pregens`), builds a Pathbuilder-shaped record from the stashed
+ * `raw_json`, and routes it through `insertIconicCharacter` which handles
+ * the skip-user-imports collision rule.
+ *
+ * `source_adventure` provenance token stored on the character:
+ *   - `__iconics__` for the `iconics` pack.
+ *   - the adventure slug (e.g. `beginner-box`) for paizo-pregens entries.
+ * Rows missing both signals are skipped defensively (shouldn't happen in
+ * practice — Rust side gates these packs before handing the entity over).
+ */
+export async function extractAndInsertIconicPCs(
+  entities: RawEntity[]
+): Promise<number> {
+  let inserted = 0
+  for (const e of entities) {
+    if (e.entity_type !== 'character') continue
+    let doc: unknown
+    try {
+      doc = JSON.parse(e.raw_json)
+    } catch {
+      continue
+    }
+    const build = buildPathbuilderFromFoundryPC(doc)
+    if (!build) continue
+
+    const sourceToken: string | null =
+      e.source_pack === 'iconics'
+        ? '__iconics__'
+        : e.source_adventure ?? null
+    if (sourceToken === null) {
+      // Defensive: character-shaped records should always arrive with a
+      // Paizo library provenance. Skip rather than pollute user imports.
+      continue
+    }
+
+    const id = await insertIconicCharacter(build, sourceToken)
+    if (id) inserted++
+  }
+  return inserted
 }

@@ -10,6 +10,9 @@ export interface CharacterRecord {
   rawJson: string
   notes: string
   createdAt: string
+  // 70-06: Paizo provenance. NULL = user-imported (Pathbuilder export).
+  // `__iconics__` sentinel = from iconics pack. Otherwise an adventure slug.
+  sourceAdventure: string | null
 }
 
 type CharacterRow = {
@@ -21,6 +24,7 @@ type CharacterRow = {
   raw_json: string
   notes: string
   created_at: string
+  source_adventure: string | null
 }
 
 function rowToRecord(r: CharacterRow): CharacterRecord {
@@ -33,13 +37,14 @@ function rowToRecord(r: CharacterRow): CharacterRecord {
     rawJson: r.raw_json,
     notes: r.notes,
     createdAt: r.created_at,
+    sourceAdventure: r.source_adventure,
   }
 }
 
 export async function getAllCharacters(): Promise<CharacterRecord[]> {
   const db = await getDb()
   const rows = await db.select<CharacterRow[]>(
-    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at
+    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure
      FROM characters ORDER BY name ASC`,
     []
   )
@@ -49,7 +54,7 @@ export async function getAllCharacters(): Promise<CharacterRecord[]> {
 export async function getCharacterById(id: string): Promise<CharacterRecord | null> {
   const db = await getDb()
   const rows = await db.select<CharacterRow[]>(
-    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at
+    `SELECT id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure
      FROM characters WHERE id = ?`,
     [id]
   )
@@ -88,6 +93,69 @@ export async function upsertCharacter(build: PathbuilderBuild): Promise<string> 
     [build.name]
   )
   return rows[0].id
+}
+
+/**
+ * Phase 70 / D-70-05 — insert an iconic/pregen-sourced character.
+ * Iconics ship with the same names GMs' own imports might use (Amiri, Ezren,
+ * Kyra, …) — per the locked decision, the user's import always wins:
+ * if a character with the same name already exists AND that record is not
+ * itself a prior iconic sync (`source_adventure IS NULL`) we SKIP and log.
+ * Prior iconic syncs are overwritten (re-sync should refresh Paizo data).
+ * Returns the character id that ended up in the DB, or `null` on error.
+ */
+export async function insertIconicCharacter(
+  build: PathbuilderBuild,
+  sourceAdventure: string
+): Promise<string | null> {
+  const db = await getDb()
+  const existing = await db.select<{ id: string; source_adventure: string | null }[]>(
+    `SELECT id, source_adventure FROM characters WHERE name = ?`,
+    [build.name]
+  )
+  if (existing.length > 0) {
+    if (existing[0].source_adventure === null) {
+      console.warn(
+        `[sync-iconics] Skipping iconic "${build.name}" — user-imported character with same name already exists`
+      )
+      return existing[0].id
+    }
+    // Previous iconic sync — refresh it.
+    await db.execute(
+      `UPDATE characters
+         SET class = ?, level = ?, ancestry = ?, raw_json = ?, source_adventure = ?
+       WHERE id = ?`,
+      [
+        build.class ?? null,
+        build.level ?? null,
+        build.ancestry ?? null,
+        JSON.stringify(build),
+        sourceAdventure,
+        existing[0].id,
+      ]
+    )
+    return existing[0].id
+  }
+  const id = crypto.randomUUID()
+  try {
+    await db.execute(
+      `INSERT INTO characters (id, name, class, level, ancestry, raw_json, notes, created_at, source_adventure)
+       VALUES (?, ?, ?, ?, ?, ?, '', datetime('now'), ?)`,
+      [
+        id,
+        build.name,
+        build.class ?? null,
+        build.level ?? null,
+        build.ancestry ?? null,
+        JSON.stringify(build),
+        sourceAdventure,
+      ]
+    )
+    return id
+  } catch (err) {
+    console.warn(`[sync-iconics] Failed to insert iconic "${build.name}":`, err)
+    return null
+  }
 }
 
 export async function deleteCharacter(id: string): Promise<void> {

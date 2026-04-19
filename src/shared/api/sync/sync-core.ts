@@ -127,7 +127,11 @@ export async function batchInsertEntities(
     const values = batch.flatMap((e) => [
       e.id,
       e.name,
-      e.entity_type,
+      // 70-02: iconic/pregen records ship with type='character'; the bestiary
+      // indexes by type='npc' and the Characters page consumes the separate
+      // `characters` table, so reroute on insert. Keep non-character types
+      // (npc, hazard, …) untouched.
+      e.entity_type === 'character' ? 'npc' : e.entity_type,
       e.level,
       e.hp,
       e.ac,

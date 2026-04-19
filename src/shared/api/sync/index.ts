@@ -8,6 +8,7 @@ import { extractAndInsertConditions } from './sync-conditions'
 import { extractAndInsertHazards } from './sync-hazards'
 import { extractAndInsertActions } from './sync-actions'
 import { resolveUUIDTokensInDescriptions } from './sync-resolve'
+import { extractAndInsertIconicPCs } from './sync-iconics-pc'
 import type { RawEntity, SyncProgress } from './types'
 
 export type { SyncProgressCallback } from './types'
@@ -84,6 +85,9 @@ export async function syncFoundryData(
     onProgress?.('Resolving item links...', 0, 0)
     await resolveUUIDTokensInDescriptions()
 
+    onProgress?.('Importing Paizo iconics + pregens as PCs...', 0, 0)
+    await extractAndInsertIconicPCs(entities)
+
     return entities.length
   } finally {
     unlisten()
@@ -133,6 +137,9 @@ export async function importLocalPacks(
 
     onProgress?.('Resolving item links...', 0, 0)
     await resolveUUIDTokensInDescriptions()
+
+    onProgress?.('Importing Paizo iconics + pregens as PCs...', 0, 0)
+    await extractAndInsertIconicPCs(entities)
 
     return entities.length
   } finally {
