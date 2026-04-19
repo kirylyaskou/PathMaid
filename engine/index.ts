@@ -203,6 +203,13 @@ export type {
 } from './effects/battle-form'
 export type { BattleFormStrikeOverride } from './effects/battle-form-types'
 
+export {
+  parseSpellEffectNotes,
+  getActiveRollNotes,
+  collectActiveNotesForCombatant,
+} from './effects/notes'
+export type { NoteInput } from './effects/notes'
+
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'
 export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'

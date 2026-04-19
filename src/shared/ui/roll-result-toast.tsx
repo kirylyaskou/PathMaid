@@ -78,6 +78,19 @@ export function RollResultToast({ roll }: RollResultToastProps) {
       >
         = {roll.total}
       </span>
+
+      {/* Row 6: 65-05 active Note bodies — rendered when an effect's Note
+          rule attached a body to this roll's selector. Plain text only for
+          now; future phases may render @UUID refs / PF2E localizations. */}
+      {roll.notes && roll.notes.length > 0 && (
+        <div className="mt-1 space-y-0.5 border-t border-border/40 pt-1.5">
+          {roll.notes.map((note, i) => (
+            <p key={i} className="text-[11px] text-muted-foreground leading-snug">
+              {note}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

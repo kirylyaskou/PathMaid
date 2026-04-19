@@ -22,6 +22,12 @@ export interface SpellEffectModifierInput {
   modifierType: ModifierType  // 'status' | 'circumstance' | 'item' | 'untyped'
   value: number               // numeric value only
   predicate?: unknown[]       // stored but NOT evaluated (D-07)
+  /**
+   * 65-05: optional note attached to the rule. When the source rule is a bare
+   * `Note` (no FlatModifier sibling), the entry carries `value: 0` and the
+   * note body here — consumers render it beneath the roll without summing it.
+   */
+  note?: string
 }
 
 // ─── FlatModifier Parser ──────────────────────────────────────────────────────

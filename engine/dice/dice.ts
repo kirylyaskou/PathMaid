@@ -16,6 +16,8 @@ export interface Roll {
   source?: string             // who made the roll, e.g. creature/combatant name
   combatId?: string           // which combat session (encounter tab id)
   timestamp: number           // Date.now()
+  /** 65-05: optional roll-time notes attached by Note rule elements. */
+  notes?: string[]
 }
 
 export interface ParsedFormula {
@@ -63,7 +65,7 @@ export function parseFormula(formula: string): ParsedFormula {
 export function rollDice(
   formula: string,
   label?: string,
-  context?: { source?: string; combatId?: string },
+  context?: { source?: string; combatId?: string; notes?: string[] },
 ): Roll {
   const parsed = parseFormula(formula)
   const diceEntries: DiceEntry[] = []
@@ -89,6 +91,7 @@ export function rollDice(
     source: context?.source,
     combatId: context?.combatId,
     timestamp: Date.now(),
+    notes: context?.notes,
   }
 }
 
