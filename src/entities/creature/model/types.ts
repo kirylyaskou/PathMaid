@@ -60,6 +60,11 @@ export interface CreatureStatBlockData extends Creature {
     traits: string[]
     group?: string
     additionalDamage?: { formula: string; type: string; label?: string }[]
+    // v1.4.1 UAT BUG-Z: reach (feet) for melee strikes; `range` (feet) for
+    // ranged strikes. Both optional; when absent the UI falls back to the
+    // creature's base reach.
+    reach?: number
+    range?: number
   }[]
   abilities: { name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] }[]
   skills: { name: string; modifier: number; calculated?: boolean }[]

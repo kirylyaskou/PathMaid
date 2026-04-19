@@ -373,6 +373,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                       group: undefined as string | undefined,
                       additionalDamage: undefined as { formula: string; type: string; label?: string }[] | undefined,
                       damage: [{ formula: `${bfs.diceNumber ?? 1}${bfs.dieSize}`, type: bfs.damageType ?? '' }],
+                      reach: undefined as number | undefined,
+                      range: undefined as number | undefined,
                     }))
                   : creature.strikes
                 ).map((strike, i) => {
@@ -537,12 +539,24 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                           ))}
                         </div>
                       )}
-                      {/* Weapon group badge */}
-                      {strike.group && (
-                        <div className="mt-1">
-                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                            Group: {strike.group}
-                          </span>
+                      {/* Weapon group + reach/range badges */}
+                      {(strike.group || typeof strike.reach === 'number' || typeof strike.range === 'number') && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {strike.group && (
+                            <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                              Group: {strike.group}
+                            </span>
+                          )}
+                          {typeof strike.range === 'number' && strike.range > 0 && (
+                            <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                              Range {strike.range} ft
+                            </span>
+                          )}
+                          {typeof strike.reach === 'number' && strike.reach > 0 && !isRanged && (
+                            <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                              Reach {strike.reach} ft
+                            </span>
+                          )}
                         </div>
                       )}
                       {strike.traits.length > 0 && (
