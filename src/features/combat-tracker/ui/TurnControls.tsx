@@ -2,12 +2,19 @@ import { useState, useCallback } from 'react'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { useCombatTrackerStore } from '../model/store'
+import { useEncounterTabsStore } from '../model/encounter-tabs-store'
 import { advanceTurn, reverseTurn, canReverseTurn } from '../lib/turn-manager'
 import { useShallow } from 'zustand/react/shallow'
 
 export function TurnControls() {
   const { isRunning } = useCombatTrackerStore(
     useShallow((s) => ({ isRunning: s.isRunning }))
+  )
+  // 63-fix: turn controls disabled until the active tab is explicitly started.
+  // Loading an encounter sets isRunning=true but keeps the tab isStarted=false
+  // so the GM can arrange conditions / effects before clicking Start.
+  const activeTabIsStarted = useEncounterTabsStore(
+    (s) => s.openTabs.find((t) => t.id === s.activeTabId)?.isStarted ?? true
   )
   const [, setTick] = useState(0)
 
@@ -30,7 +37,7 @@ export function TurnControls() {
         size="sm"
         className="h-7 text-xs gap-1 flex-1"
         onClick={handlePrevious}
-        disabled={!canReverseTurn()}
+        disabled={!activeTabIsStarted || !canReverseTurn()}
       >
         <ChevronLeft className="w-3.5 h-3.5" />
         Previous
@@ -39,6 +46,8 @@ export function TurnControls() {
         size="sm"
         className="h-7 text-xs gap-1 flex-1"
         onClick={handleNext}
+        disabled={!activeTabIsStarted}
+        title={!activeTabIsStarted ? 'Press Start to begin combat' : undefined}
       >
         Next Turn
         <ChevronRight className="w-3.5 h-3.5" />

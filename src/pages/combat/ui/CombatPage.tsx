@@ -16,7 +16,6 @@ import {
   useEncounterTabsStore, snapshotFromGlobalStores, useCombatTrackerStore,
   TurnControls, setupAutoSave, teardownAutoSave,
   setupEncounterAutoSave, teardownEncounterAutoSave,
-  StartGateOverlay,
 } from '@/features/combat-tracker'
 import type { EncounterTab } from '@/features/combat-tracker'
 import { useCombatantStore } from '@/entities/combatant'
@@ -144,7 +143,6 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
   if (isActive) {
     // Active column — full interactive widgets backed by global stores.
     // SnapshotSyncEffect keeps the tab snapshot in sync with live mutations.
-    const showStartGate = tab.isStarted === false
     return (
       <div
         className={cn('flex flex-col h-full border-t-2 border-t-primary', className)}
@@ -161,17 +159,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
         </div>
         <ResizablePanelGroup direction="vertical" className="flex-1">
           <ResizablePanel defaultSize={35} minSize={20}>
-            <div className="relative h-full">
-              <div
-                className={cn(
-                  'h-full transition-all',
-                  showStartGate && 'opacity-60 blur-[2px] pointer-events-none select-none'
-                )}
-              >
-                <InitiativeList selectedId={columnSelectedId} onSelect={handleColumnSelect} />
-              </div>
-              {showStartGate && <StartGateOverlay tabId={tab.id} />}
-            </div>
+            <InitiativeList selectedId={columnSelectedId} onSelect={handleColumnSelect} />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={65} minSize={30}>
@@ -335,11 +323,8 @@ export function CombatPage() {
     }
   }, [activeTabId, isEncounterBacked])
 
-  // 63-02: pre-start gate status for the active tab
-  const activeTabIsStarted = useEncounterTabsStore(
-    (s) => s.openTabs.find((t) => t.id === s.activeTabId)?.isStarted ?? true
-  )
-  const showStartGate = !activeTabIsStarted && !!activeTabId
+  // 63-fix: pre-start gate reduced to disabling turn controls; blur overlay
+  // removed (see TurnControls + CombatControls for the disabled-state logic).
 
   const handleSelect = useCallback(async (id: string) => {
     setSelectedId(id)
@@ -514,21 +499,13 @@ export function CombatPage() {
                   {/* Nested vertical split: initiative list (top) + combatant detail (bottom) */}
                   <ResizablePanelGroup direction="vertical" id="combat-center-vertical" className="flex-1">
                     <ResizablePanel defaultSize={35} minSize={20}>
-                      <div className="relative flex flex-col h-full overflow-y-auto">
-                        <div
-                          className={cn(
-                            'transition-all',
-                            showStartGate && 'opacity-60 blur-[2px] pointer-events-none select-none'
-                          )}
-                        >
-                          <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
-                        </div>
+                      <div className="flex flex-col h-full overflow-y-auto">
+                        <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
                         {isEncounterBacked && combatId && (
                           <div className="px-2 py-2 shrink-0">
                             <StagingTable encounterId={combatId} combatMode={true} />
                           </div>
                         )}
-                        {showStartGate && activeTabId && <StartGateOverlay tabId={activeTabId} />}
                       </div>
                     </ResizablePanel>
 

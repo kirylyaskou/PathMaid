@@ -24,8 +24,6 @@ export type { EncounterTab, TabSnapshot } from './model/encounter-tabs-store'
 export type { PendingPersistentDamage, PendingSickenedSave } from './model/store'
 export { ConditionCombobox } from './ui/ConditionCombobox'
 export { EffectPickerDialog } from './ui/EffectPickerDialog'
-export { PreCombatSetupSheet } from './ui/PreCombatSetupSheet'
-export { StartGateOverlay } from './ui/StartGateOverlay'
 export {
   setupEncounterAutoSave,
   teardownEncounterAutoSave,
