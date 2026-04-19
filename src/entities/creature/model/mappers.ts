@@ -2,6 +2,7 @@ import type { Rarity } from '@engine'
 import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
 import { parseJsonArray } from '@/shared/lib/json'
+import { parseFoundryCharacterDoc } from '@/shared/api/sync/foundry-pc-parser'
 import type {
   Creature,
   CreatureStatBlockData,
@@ -95,18 +96,51 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const weaponsById = new Map<string, FoundryItem>(
     items.filter((item) => item.type === 'weapon').map((item) => [item._id, item])
   )
-  const strikes = items
+  // v1.4.1 UAT BUG-Z: compute a creature's base reach (feet) from its
+  // Foundry size. `"reach"` / `"reach-N"` traits on a strike layer on top
+  // of this base.
+  const creatureSize: string = (typeof (system as { traits?: { size?: { value?: string } } }).traits?.size?.value === 'string')
+    ? ((system as { traits: { size: { value: string } } }).traits.size.value)
+    : 'med'
+  const baseCreatureReach =
+    creatureSize === 'tiny' ? 0
+    : creatureSize === 'sm' || creatureSize === 'med' ? 5
+    : creatureSize === 'lg' ? 10
+    : creatureSize === 'huge' ? 15
+    : creatureSize === 'grg' ? 20
+    : 5
+  const strikes: CreatureStatBlockData['strikes'] = items
     .filter((item) => item.type === 'melee' || item.type === 'ranged')
-    .map((item) => {
+    .map((item): CreatureStatBlockData['strikes'][number] => {
       const linkedWeaponId = item.flags?.pf2e?.linkedWeapon
       const linkedWeapon = linkedWeaponId ? weaponsById.get(linkedWeaponId) : undefined
       const group = linkedWeapon?.system?.group || undefined
+      const traits = asArray(item.system?.traits?.value) as string[]
+      // Extract reach from trait list.
+      let reach: number | undefined
+      let range: number | undefined
+      for (const t of traits) {
+        const m = /^reach-(\d+)$/.exec(t)
+        if (m) {
+          reach = parseInt(m[1], 10)
+          break
+        }
+        const r = /^range(?:-increment)?-(\d+)$/.exec(t)
+        if (r) range = parseInt(r[1], 10)
+      }
+      if (reach === undefined && traits.includes('reach')) {
+        reach = baseCreatureReach + 5
+      }
+      const isMelee = item.type === 'melee'
+      if (reach === undefined && isMelee) reach = baseCreatureReach
       return {
         name: item.name || 'Strike',
         modifier: item.system?.bonus?.value ?? 0,
         damage: formatDamage(item.system?.damageRolls),
-        traits: asArray(item.system?.traits?.value) as string[],
-        group,
+        traits,
+        group: group as string | undefined,
+        reach,
+        range,
       }
     })
 
@@ -133,23 +167,23 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   )
 
   // All 17 standard skills — use Foundry value if present, else derive from level
-  const standardSkills = STANDARD_SKILLS.map((key) => ({
+  const standardSkills: CreatureStatBlockData['skills'] = STANDARD_SKILLS.map((key) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     modifier: foundrySkills.has(key) ? foundrySkills.get(key)! : base.level,
     calculated: !foundrySkills.has(key),
   }))
 
   // Lore skills — any Foundry skill keys not in STANDARD_SKILLS
-  const loreSkills = Object.entries(skillsObj)
+  const loreSkills: CreatureStatBlockData['skills'] = Object.entries(skillsObj)
     .filter(([k, v]) => !STANDARD_SKILLS.includes(k) && v && typeof v.base === 'number')
     .map(([k, v]) => ({
       name: k.charAt(0).toUpperCase() + k.slice(1),
       modifier: v.base as number,
-      calculated: false as const,
+      calculated: false,
     }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
-  const skills = [...standardSkills, ...loreSkills]
+  const skills: CreatureStatBlockData['skills'] = [...standardSkills, ...loreSkills]
 
   const languages: string[] = asArray(details.languages?.value ?? system.traits?.languages?.value) as string[]
   const senseData = system.perception?.senses || system.traits?.senses || []
@@ -183,39 +217,45 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     cha: foundryAbilities.cha?.mod ?? 0,
   }
 
-  // v1.4 UAT BUG-B: iconic-as-NPC (Foundry `type: "character"` synced into the
-  // bestiary as `type: "npc"`). Character documents store declarative data
-  // only — numeric stats live on nested items (class/ancestry/armor/weapon)
-  // and have to be reconstructed here. The Rust sync path reads NPC paths
+  // v1.4 UAT BUG-B + v1.4.1 UAT fix: iconic-as-NPC (Foundry `type: "character"`
+  // synced into the bestiary as `type: "npc"`). Character documents store
+  // declarative data only — numeric stats live on nested items
+  // (class/ancestry/armor/weapon) and have to be reconstructed via the
+  // shared Foundry-PC parser. The Rust sync path reads NPC paths
   // (attributes.hp.max, saves.fortitude.value, …) which are all absent on a
-  // character document, so the row ships with hp/ac/saves = null. We detect
-  // the character shape via raw.type and overlay derived numbers + strikes.
+  // character document, so the row ships with hp/ac/saves = null. The parser
+  // overlay fills them plus strikes, skills, languages, speed, and reach.
   let derivedStrikes: typeof strikes | null = null
   let derivedBase: Partial<Creature> | null = null
+  let derivedSkills: typeof skills | null = null
+  let derivedSpeeds: Record<string, number | null> | null = null
+  let derivedLanguages: string[] | null = null
+  let derivedSize: CreatureStatBlockData['size'] | null = null
   if (raw.type === 'character') {
     const derived = derivePcStats(raw, abilityMods)
-    abilityMods = derived.abilityMods
-    derivedBase = derived.base
-    derivedStrikes = derived.strikes.map((s) => ({
-      name: s.name,
-      modifier: s.modifier,
-      damage: s.damage,
-      traits: s.traits,
-      group: s.group,
-    }))
+    if (derived) {
+      abilityMods = derived.abilityMods
+      derivedBase = derived.base
+      derivedStrikes = derived.strikes
+      derivedSkills = derived.skills
+      derivedSpeeds = derived.speeds
+      derivedLanguages = derived.languages
+      derivedSize = derived.size
+    }
   }
 
   return {
     ...base,
     ...(derivedBase ?? {}),
+    ...(derivedSize ? { size: derivedSize } : {}),
     immunities,
     weaknesses,
     resistances,
-    speeds,
+    speeds: derivedSpeeds ?? speeds,
     strikes: derivedStrikes ?? strikes,
     abilities,
-    skills,
-    languages,
+    skills: derivedSkills ?? skills,
+    languages: derivedLanguages ?? languages,
     senses,
     description: description || undefined,
     source,
@@ -225,195 +265,129 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   }
 }
 
-// ─── v1.4 UAT BUG-B: character-as-NPC derivation ────────────────────────────
-// Foundry character documents don't carry computed numeric stats on disk. We
-// reconstruct the minimum set the statblock needs:
-//   - HP: system.attributes.hp.value (authored max per iconic)
-//   - abilityMods: replay ancestry + background + build.attributes.boosts on
-//     the PF2e boost ladder (+2 if <18 else +1). Flaws subtract 2.
-//   - AC: 10 + dex_mod (capped by armor.dexCap) + armor.acBonus + prof_bonus
-//   - Fort/Ref/Will: level + ability_mod + prof_bonus_from_class
-//   - Perception: level + wis_mod + prof_bonus_from_class
-//   - Strikes: synthesized from items[].type === 'weapon' using weapon traits
-//     + ability mod (STR for melee, DEX for ranged/finesse/thrown).
-//
-// PF2e proficiency rank → bonus mapping: 0 = untrained (0), 1 = trained
-// (level + 2), 2 = expert (level + 4), 3 = master (level + 6), 4 = legendary
-// (level + 8). Same across saves / perception / armor / weapons.
+// ─── v1.4.1 UAT: character-as-NPC derivation via shared parser ────────────
+// Foundry character documents don't carry computed numeric stats on disk.
+// `derivePcStats` delegates to the shared `parseFoundryCharacterDoc` so the
+// iconic-as-NPC overlay (this file) and the PC-library row (sync-iconics-pc)
+// stay in lockstep. Every PF2e formula and boost-replay rule lives in the
+// parser; this function only translates `ParsedPc` into the
+// `CreatureStatBlockData` overlay shape the bestiary renderer expects.
 interface DerivedPcStats {
   base: Partial<Creature>
   abilityMods: AbilityMods
   strikes: CreatureStatBlockData['strikes']
+  skills: CreatureStatBlockData['skills']
+  speeds: Record<string, number | null>
+  languages: string[]
+  reach: number
+  size: CreatureStatBlockData['size']
 }
 
-function profBonus(rank: number | null | undefined, level: number): number {
-  if (typeof rank !== 'number' || rank <= 0) return 0
-  return level + rank * 2
-}
+function derivePcStats(raw: unknown, baseAbilityMods: AbilityMods): DerivedPcStats | null {
+  const pc = parseFoundryCharacterDoc(raw)
+  if (!pc) return null
 
-function getBoosted(obj: unknown): string[] {
-  // Collect `selected` strings from a Foundry boost-map shape, falling back to
-  // treating array values as already-selected lists (as the build.attributes
-  // block does).
-  if (!obj || typeof obj !== 'object') return []
-  const out: string[] = []
-  for (const v of Object.values(obj as Record<string, unknown>)) {
-    if (Array.isArray(v)) {
-      for (const s of v) if (typeof s === 'string') out.push(s)
-    } else if (v && typeof v === 'object') {
-      const sel = (v as Record<string, unknown>).selected
-      if (typeof sel === 'string' && sel) out.push(sel)
-    }
-  }
-  return out
-}
-
-function applyBoost(mods: Record<keyof AbilityMods, number>, stat: string): void {
-  // Mod starts at 0 (score 10). Boost adds +2 score (+1 mod) until 18 (mod=4),
-  // then +1 score (no full mod step). We approximate by tracking score.
-  // Caller passes mods; we internally reconstruct scores.
-  const key = stat as keyof AbilityMods
-  if (!(key in mods)) return
-  // Convert mod → score, apply boost, convert back.
-  const score = 10 + mods[key] * 2
-  const nextScore = score < 18 ? score + 2 : score + 1
-  mods[key] = Math.floor((nextScore - 10) / 2)
-}
-
-function applyFlaw(mods: Record<keyof AbilityMods, number>, stat: string): void {
-  const key = stat as keyof AbilityMods
-  if (!(key in mods)) return
-  const score = 10 + mods[key] * 2
-  const nextScore = score - 2
-  mods[key] = Math.floor((nextScore - 10) / 2)
-}
-
-function buildAbilityModsFromBoosts(raw: unknown): AbilityMods {
-  const mods: AbilityMods = { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 }
-  if (!raw || typeof raw !== 'object') return mods
-  const doc = raw as Record<string, unknown>
-  const items = Array.isArray(doc.items) ? (doc.items as Array<Record<string, unknown>>) : []
-
-  const ancestry = items.find((it) => it?.type === 'ancestry')
-  const background = items.find((it) => it?.type === 'background')
-  const anSys = (ancestry?.system ?? {}) as Record<string, unknown>
-  const bgSys = (background?.system ?? {}) as Record<string, unknown>
-
-  for (const b of getBoosted(anSys.boosts)) applyBoost(mods, b)
-  for (const f of getBoosted(anSys.flaws)) applyFlaw(mods, f)
-  for (const b of getBoosted(bgSys.boosts)) applyBoost(mods, b)
-
-  const buildBoosts = (doc.system as Record<string, unknown> | undefined)
-    ?.build as Record<string, unknown> | undefined
-  const attrBoosts = (buildBoosts?.attributes as Record<string, unknown> | undefined)?.boosts
-  for (const b of getBoosted(attrBoosts)) applyBoost(mods, b)
-  return mods
-}
-
-function derivePcStats(raw: unknown, baseAbilityMods: AbilityMods): DerivedPcStats {
-  const doc = (raw ?? {}) as Record<string, unknown>
-  const system = (doc.system ?? {}) as Record<string, unknown>
-  const items = Array.isArray(doc.items) ? (doc.items as Array<Record<string, unknown>>) : []
-
-  const levelRaw = (system.details as Record<string, unknown> | undefined)?.level as
-    | Record<string, unknown>
-    | undefined
-  const level = typeof levelRaw?.value === 'number' ? levelRaw.value : 1
-
-  // Ability mods: replay boosts (character docs ship system.abilities=null).
+  // Prefer baseAbilityMods only when they're non-zero (i.e. Rust sync
+  // captured numbers from an already-expanded character). Otherwise use
+  // the parser's replayed scores.
   const haveBaseMods = Object.values(baseAbilityMods).some((v) => v !== 0)
-  const abilityMods = haveBaseMods ? baseAbilityMods : buildAbilityModsFromBoosts(raw)
-
-  // HP — use the authored max on the character document.
-  const attrs = (system.attributes ?? {}) as Record<string, unknown>
-  const hpBlock = (attrs.hp ?? {}) as Record<string, unknown>
-  const hp =
-    typeof hpBlock.max === 'number'
-      ? hpBlock.max
-      : typeof hpBlock.value === 'number'
-        ? hpBlock.value
-        : 0
-
-  // Class item carries the proficiency ranks for saves/perception/defenses/attacks.
-  const classItem = items.find((it) => it?.type === 'class')
-  const clsSystem = (classItem?.system ?? {}) as Record<string, unknown>
-  const saves = (clsSystem.savingThrows ?? {}) as Record<string, unknown>
-  const defenses = (clsSystem.defenses ?? {}) as Record<string, unknown>
-  const attacks = (clsSystem.attacks ?? {}) as Record<string, unknown>
-  const perceptionRank =
-    typeof clsSystem.perception === 'number' ? (clsSystem.perception as number) : 0
-
-  const fortRank = typeof saves.fortitude === 'number' ? (saves.fortitude as number) : 0
-  const refRank = typeof saves.reflex === 'number' ? (saves.reflex as number) : 0
-  const willRank = typeof saves.will === 'number' ? (saves.will as number) : 0
-
-  // AC: pick the equipped armor (if any) for category + dexCap + acBonus.
-  // Fall back to unarmored when absent.
-  const armorItem = items.find((it) => it?.type === 'armor')
-  const armorSystem = (armorItem?.system ?? {}) as Record<string, unknown>
-  const armorCategory =
-    typeof armorSystem.category === 'string' ? (armorSystem.category as string) : 'unarmored'
-  const acBonus = typeof armorSystem.acBonus === 'number' ? (armorSystem.acBonus as number) : 0
-  const dexCap =
-    typeof armorSystem.dexCap === 'number' ? (armorSystem.dexCap as number) : Infinity
-  const armorRank = typeof defenses[armorCategory] === 'number' ? (defenses[armorCategory] as number) : 0
-  const dexForAc = Math.min(abilityMods.dex, dexCap)
-  const ac = 10 + dexForAc + acBonus + profBonus(armorRank, level)
-
-  const fort = level + abilityMods.con + profBonus(fortRank, level)
-  const ref = level + abilityMods.dex + profBonus(refRank, level)
-  const will = level + abilityMods.wis + profBonus(willRank, level)
-  const perception = level + abilityMods.wis + profBonus(perceptionRank, level)
-
-  // Strikes: synthesize one per weapon item. Use the weapon's category rank
-  // from class.attacks (simple/martial/advanced/unarmed). Ability: STR for
-  // melee, DEX for ranged or finesse/thrown traits.
-  const strikes: CreatureStatBlockData['strikes'] = items
-    .filter((it) => it?.type === 'weapon')
-    .map((it) => {
-      const wSys = (it.system ?? {}) as Record<string, unknown>
-      const damage = (wSys.damage ?? {}) as Record<string, unknown>
-      const die = typeof damage.die === 'string' ? (damage.die as string) : 'd4'
-      const dice = typeof damage.dice === 'number' ? (damage.dice as number) : 1
-      const damageType =
-        typeof damage.damageType === 'string' ? (damage.damageType as string) : ''
-      const runes = (wSys.runes ?? {}) as Record<string, unknown>
-      const potency = typeof runes.potency === 'number' ? (runes.potency as number) : 0
-      const striking = typeof runes.striking === 'number' ? (runes.striking as number) : 0
-      const weaponCategory =
-        typeof wSys.category === 'string' ? (wSys.category as string) : 'simple'
-      const weaponRank =
-        typeof attacks[weaponCategory] === 'number' ? (attacks[weaponCategory] as number) : 0
-      const traits = Array.isArray((wSys.traits as Record<string, unknown> | undefined)?.value)
-        ? ((wSys.traits as Record<string, unknown>).value as string[])
-        : []
-      const isRanged = typeof wSys.range === 'number' || traits.some((t) => /^range-/.test(t))
-      const usesDex =
-        isRanged || traits.includes('finesse') || traits.includes('thrown')
-      const abilityMod = usesDex ? abilityMods.dex : abilityMods.str
-      const attackMod = level + abilityMod + profBonus(weaponRank, level) + potency
-      const diceCount = dice + striking
-      const strDmgBonus = usesDex ? 0 : abilityMods.str
-      const formula =
-        strDmgBonus > 0
-          ? `${diceCount}${die}+${strDmgBonus}`
-          : strDmgBonus < 0
-            ? `${diceCount}${die}${strDmgBonus}`
-            : `${diceCount}${die}`
-      const group = typeof wSys.group === 'string' ? (wSys.group as string) : undefined
-      return {
-        name: typeof it.name === 'string' ? (it.name as string) : 'Weapon',
-        modifier: attackMod,
-        damage: [{ formula, type: damageType }],
-        traits,
-        ...(group ? { group } : {}),
+  const abilityMods: AbilityMods = haveBaseMods
+    ? baseAbilityMods
+    : {
+        str: Math.floor((pc.abilities.str - 10) / 2),
+        dex: Math.floor((pc.abilities.dex - 10) / 2),
+        con: Math.floor((pc.abilities.con - 10) / 2),
+        int: Math.floor((pc.abilities.int - 10) / 2),
+        wis: Math.floor((pc.abilities.wis - 10) / 2),
+        cha: Math.floor((pc.abilities.cha - 10) / 2),
       }
+
+  const strikes: CreatureStatBlockData['strikes'] = pc.strikes.map((s) => ({
+    name: s.name,
+    modifier: s.attackMod,
+    damage: [{ formula: s.damageFormula, type: s.damageType }],
+    traits: s.traits,
+    group: s.group,
+    reach: s.reach,
+    range: s.range ?? undefined,
+  }))
+
+  // PF2e skill → governing ability. Keep local to avoid reaching into
+  // engine internals from a bestiary mapper.
+  const SKILL_ABILITY: Record<string, keyof AbilityMods> = {
+    acrobatics: 'dex',
+    arcana: 'int',
+    athletics: 'str',
+    crafting: 'int',
+    deception: 'cha',
+    diplomacy: 'cha',
+    intimidation: 'cha',
+    medicine: 'wis',
+    nature: 'wis',
+    occultism: 'int',
+    performance: 'cha',
+    religion: 'wis',
+    society: 'int',
+    stealth: 'dex',
+    survival: 'wis',
+    thievery: 'dex',
+  }
+  const skills: CreatureStatBlockData['skills'] = Object.entries(SKILL_ABILITY).map(
+    ([slug, ability]): CreatureStatBlockData['skills'][number] => {
+      const rank = pc.skills[slug] ?? 0
+      const profBonus = rank > 0 ? pc.level + rank * 2 : 0
+      const modifier = abilityMods[ability] + profBonus
+      return {
+        name: slug.charAt(0).toUpperCase() + slug.slice(1),
+        modifier,
+        calculated: rank === 0,
+      }
+    }
+  )
+  // Append background lore skills (trained = rank 1, INT-based).
+  for (const lore of pc.backgroundLoreSkills) {
+    skills.push({
+      name: `${lore}`,
+      modifier: abilityMods.int + (pc.level + 2),
+      calculated: false,
     })
+  }
+
+  const speeds: Record<string, number | null> = { land: pc.speed }
+
+  const size = (
+    pc.size === 'tiny'
+      ? 'tiny'
+      : pc.size === 'sm'
+        ? 'small'
+        : pc.size === 'med'
+          ? 'medium'
+          : pc.size === 'lg'
+            ? 'large'
+            : pc.size === 'huge'
+              ? 'huge'
+              : pc.size === 'grg'
+                ? 'gargantuan'
+                : 'medium'
+  ) as CreatureStatBlockData['size']
 
   return {
     abilityMods,
     strikes,
-    base: { level, hp, ac, fort, ref, will, perception },
+    skills,
+    speeds,
+    languages: pc.languages,
+    reach: pc.reach,
+    size,
+    base: {
+      level: pc.level,
+      hp: pc.hp,
+      ac: pc.ac,
+      fort: pc.fortitude,
+      ref: pc.reflex,
+      will: pc.will,
+      perception: pc.perception,
+    },
   }
 }
 
