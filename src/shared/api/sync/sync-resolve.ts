@@ -30,11 +30,24 @@ export async function resolveUUIDTokensInDescriptions(): Promise<void> {
   // Regex: @UUID[...] WITHOUT a following {alias} block
   const UUID_RE = /@UUID\[([^\]]+)\](?!\{)/g
 
-  function resolveUUID(path: string): string {
-    // "Compendium.pf2e.equipment.Item.AbCdEfGhI" → extract Item ID segment
+  // 16-char Foundry entity id pattern. Paths that end in a non-id segment
+  // (e.g. "Effect: Drakeheart Mutagen (Greater)") use the display-name form
+  // and should be left intact — downstream effect-picker logic relies on
+  // detecting @UUID[...equipment-effects...] references verbatim.
+  const FOUNDRY_ID_RE = /^[A-Za-z0-9]{16}$/
+
+  function resolveUUID(match: string, path: string): string {
+    // "Compendium.pf2e.equipment.Item.AbCdEfGhI" → extract Item ID segment.
     const parts = path.split('.')
     const maybeId = parts[parts.length - 1]
-    return idNameMap.get(maybeId) ?? maybeId
+    // If the trailing segment is a real 16-char Foundry id and we have a
+    // name for it, swap in the human-readable name. Otherwise keep the
+    // original @UUID[...] intact so other code paths can still parse it.
+    if (FOUNDRY_ID_RE.test(maybeId)) {
+      const resolved = idNameMap.get(maybeId)
+      if (resolved) return resolved
+    }
+    return match
   }
 
   // Update items.description in batches (SELECT rows with unresolved @UUID)
@@ -45,7 +58,7 @@ export async function resolveUUIDTokensInDescriptions(): Promise<void> {
   for (let i = 0; i < itemsToFix.length; i += BATCH_SIZE) {
     const batch = itemsToFix.slice(i, i + BATCH_SIZE)
     for (const row of batch) {
-      const fixed = row.description.replace(UUID_RE, (_, path: string) => resolveUUID(path))
+      const fixed = row.description.replace(UUID_RE, (match: string, path: string) => resolveUUID(match, path))
       if (fixed !== row.description) {
         await db.execute('UPDATE items SET description=? WHERE id=?', [fixed, row.id])
       }
@@ -60,7 +73,7 @@ export async function resolveUUIDTokensInDescriptions(): Promise<void> {
   for (let i = 0; i < spellsToFix.length; i += BATCH_SIZE) {
     const batch = spellsToFix.slice(i, i + BATCH_SIZE)
     for (const row of batch) {
-      const fixed = row.description.replace(UUID_RE, (_, path: string) => resolveUUID(path))
+      const fixed = row.description.replace(UUID_RE, (match: string, path: string) => resolveUUID(match, path))
       if (fixed !== row.description) {
         await db.execute('UPDATE spells SET description=? WHERE id=?', [fixed, row.id])
       }
