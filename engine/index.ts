@@ -151,7 +151,13 @@ export type {
   OutOfRangeWarning,
 } from './encounter/xp'
 
-export { getHpAdjustment, getStatAdjustment } from './encounter/weak-elite'
+export {
+  getHpAdjustment,
+  getStatAdjustment,
+  getAdjustedLevel,
+  getDamageAdjustment,
+  getXpLevelDelta,
+} from './encounter/weak-elite'
 
 // ── Spellcasting ────────────────────────────────────────────────────────────
 export { detectCasterProgression, getMaxRecommendedRank } from './spellcasting/caster-progression'

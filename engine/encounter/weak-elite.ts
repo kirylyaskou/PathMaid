@@ -47,8 +47,10 @@ export function getHpAdjustment(tier: WeakEliteTier, level: number): number {
  * - elite on level -1 or 0: +2 instead of +1 (rule: minimum displayed level is 1)
  * - weak on level 1: -2 instead of -1 (rule: minimum displayed level is -1)
  * - weak on level <= 0: undefined in rules — no change applied
+ *
+ * Also used for encounter XP budget calculations (tier-shifted level).
  */
-function getAdjustedLevel(tier: WeakEliteTier, level: number): number {
+export function getAdjustedLevel(tier: WeakEliteTier, level: number): number {
   if (tier === 'normal') return level
 
   if (tier === 'elite') {
@@ -73,5 +75,34 @@ export function getStatAdjustment(tier: WeakEliteTier): number {
   return 0
 }
 
-// Test-only export — not part of public API
-export const __testing = { getAdjustedLevel }
+/**
+ * Returns the damage adjustment for Weak/Elite creatures (Monster Core pg. 6-7).
+ *
+ * - Elite: +2 damage on Strikes and offensive abilities (+4 on limited-use abilities).
+ * - Weak:  -2 damage on Strikes and offensive abilities (-4 on limited-use abilities).
+ * - Normal: 0.
+ *
+ * "Limited-use" = abilities with a Frequency entry (e.g. "once per encounter",
+ * "once per day"). Automatic detection of limited-use is not yet implemented
+ * (v1.5 follow-up) — callers currently always pass `isLimitedUse=false`.
+ */
+export function getDamageAdjustment(tier: WeakEliteTier, isLimitedUse: boolean = false): number {
+  if (tier === 'normal') return 0
+  const magnitude = isLimitedUse ? 4 : 2
+  return tier === 'elite' ? magnitude : -magnitude
+}
+
+/**
+ * Returns the level shift used by encounter XP budget calculations.
+ *
+ * Elite +1, Weak -1, Normal 0. Does NOT apply the display-level clamps
+ * `getAdjustedLevel` uses for level -1/0/1 (those exist so the stat block
+ * never shows a nonsense level). For XP purposes the raw delta is always
+ * applied — see Monster Core pg. 6-7 ("Increase/Decrease its level by 1
+ * when using its level to calculate DCs and for determining its XP").
+ */
+export function getXpLevelDelta(tier: WeakEliteTier): number {
+  if (tier === 'elite') return 1
+  if (tier === 'weak') return -1
+  return 0
+}
