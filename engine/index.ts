@@ -184,6 +184,15 @@ export type {
   FortuneResult,
 } from './effects/fortune'
 
+export {
+  parseSpellEffectAdjustStrikes,
+  applyAdjustStrikes,
+} from './effects/adjust-strike'
+export type {
+  AdjustStrikeInput,
+  StrikeDamage,
+} from './effects/adjust-strike'
+
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'
 export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'
