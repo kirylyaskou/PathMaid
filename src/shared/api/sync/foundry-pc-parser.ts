@@ -260,20 +260,34 @@ function baseReachForSize(size: string): number {
  * - Melee weapons with "reach-N" trait: absolute N feet.
  * - Melee weapons with bare "reach" trait: base + 5.
  * - Plain melee: base reach for creature size.
+ * - Optional `reachBonus` adds an active-buff delta (e.g. Enlarge +5/+10) on
+ *   top of the resolved reach. Passing 0 or omitting leaves the formula
+ *   unchanged. Bonus is additive per ground truth even for reach-N absolute
+ *   overrides (user's umbral-dragon claw + Enlarge case).
  */
 export function getStrikeReach(
   traits: string[],
   isRanged: boolean,
-  baseReach: number
+  baseReach: number,
+  reachBonus = 0,
 ): number {
   if (isRanged) return 0
-  // "reach-10", "reach-15", "reach-20" — absolute.
+  let reach = baseReach
+  // "reach-10", "reach-15", "reach-20" — absolute (ignores creature base).
+  let absolute: number | null = null
   for (const t of traits) {
     const m = /^reach-(\d+)$/.exec(t)
-    if (m) return parseInt(m[1], 10)
+    if (m) {
+      absolute = parseInt(m[1], 10)
+      break
+    }
   }
-  if (traits.includes('reach')) return baseReach + 5
-  return baseReach
+  if (absolute !== null) {
+    reach = absolute
+  } else if (traits.includes('reach')) {
+    reach = baseReach + 5
+  }
+  return reach + reachBonus
 }
 
 // ─── Extraction (per item) ─────────────────────────────────────────────────

@@ -168,15 +168,23 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
   const sizeShift = useMemo(() => {
     let topSize: EngineSize | null = null
     let topDamage = 0
+    let topReach = 0
     for (const eff of combatantEffects) {
       const shift = parseSpellEffectSizeShift(eff.rulesJson, eff.level)
       if (!shift) continue
       if (!topSize || SIZE_ORDER.indexOf(shift.size) > SIZE_ORDER.indexOf(topSize)) {
         topSize = shift.size
       }
+      // Status bonuses don't stack in PF2e — take the max across all sources.
       if (shift.meleeDamageBonus > topDamage) topDamage = shift.meleeDamageBonus
+      if (shift.reachBonus > topReach) topReach = shift.reachBonus
     }
-    return topSize ? { size: topSize, meleeDamageBonus: topDamage } : null
+    if (!topSize && topDamage === 0 && topReach === 0) return null
+    return {
+      size: topSize ?? ('med' as EngineSize),
+      meleeDamageBonus: topDamage,
+      reachBonus: topReach,
+    }
   }, [combatantEffects])
 
   // FEAT-04: detect troops/swarms from traits — they use a specialized layout
@@ -552,11 +560,20 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                               Range {strike.range} ft
                             </span>
                           )}
-                          {typeof strike.reach === 'number' && strike.reach > 0 && !isRanged && (
-                            <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                              Reach {strike.reach} ft
-                            </span>
-                          )}
+                          {typeof strike.reach === 'number' && strike.reach > 0 && !isRanged && (() => {
+                            // Apply Enlarge-class reach buff additively (per PF2e Player
+                            // Core pg. 329 + ground-truth spec). BattleForm strike
+                            // overrides already declare full strike shapes, so we skip
+                            // the buff when battleFormStrikes are in effect.
+                            const reachBuff =
+                              sizeShift && !battleFormStrikes ? sizeShift.reachBonus : 0
+                            const displayReach = strike.reach + reachBuff
+                            return (
+                              <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                                Reach {displayReach} ft
+                              </span>
+                            )
+                          })()}
                         </div>
                       )}
                       {strike.traits.length > 0 && (

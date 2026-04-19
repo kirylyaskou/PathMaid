@@ -150,20 +150,22 @@ describe('parseSpellEffectSizeShift — Enlarge-class (v1.4 UAT BUG-A)', () => {
     },
   ])
 
-  it('level 2 → size large, +2 damage, resizeEquipment', () => {
+  it('level 2 → size large, +2 damage, +5 reach, resizeEquipment', () => {
     const shift = parseSpellEffectSizeShift(enlargeRules, 2)
     expect(shift).toEqual({
       size: 'lg',
       meleeDamageBonus: 2,
+      reachBonus: 5,
       resizeEquipment: true,
     })
   })
 
-  it('level 4 → size huge, +4 damage (heightened branch)', () => {
+  it('level 4 → size huge, +4 damage, +10 reach (heightened branch)', () => {
     const shift = parseSpellEffectSizeShift(enlargeRules, 4)
     expect(shift).toEqual({
       size: 'huge',
       meleeDamageBonus: 4,
+      reachBonus: 10,
       resizeEquipment: true,
     })
   })
@@ -174,6 +176,7 @@ describe('parseSpellEffectSizeShift — Enlarge-class (v1.4 UAT BUG-A)', () => {
     expect(shift).toEqual({
       size: 'huge',
       meleeDamageBonus: 4,
+      reachBonus: 10,
       resizeEquipment: true,
     })
   })
@@ -186,6 +189,7 @@ describe('parseSpellEffectSizeShift — Enlarge-class (v1.4 UAT BUG-A)', () => {
     expect(shift).toEqual({
       size: 'lg',
       meleeDamageBonus: 0,
+      reachBonus: 0,
       resizeEquipment: true,
     })
   })
@@ -198,6 +202,37 @@ describe('parseSpellEffectSizeShift — Enlarge-class (v1.4 UAT BUG-A)', () => {
     expect(shift).toEqual({
       size: 'med',
       meleeDamageBonus: 3,
+      reachBonus: 0,
+      resizeEquipment: false,
+    })
+  })
+
+  it('FlatModifier damage +2 → reachBonus 5 via fallback mapping', () => {
+    // No ChoiceSet, no CreatureSize.reach override — derive reach from
+    // Enlarge's damage→reach table (damage 2 ⇒ reach +5).
+    const json = JSON.stringify([
+      { key: 'CreatureSize', value: 'large' },
+      { key: 'FlatModifier', selector: ['melee-strike-damage'], value: 2 },
+    ])
+    const shift = parseSpellEffectSizeShift(json, 1)
+    expect(shift).toEqual({
+      size: 'lg',
+      meleeDamageBonus: 2,
+      reachBonus: 5,
+      resizeEquipment: false,
+    })
+  })
+
+  it('FlatModifier damage +4 → reachBonus 10 via fallback mapping', () => {
+    const json = JSON.stringify([
+      { key: 'CreatureSize', value: 'huge' },
+      { key: 'FlatModifier', selector: ['melee-strike-damage'], value: 4 },
+    ])
+    const shift = parseSpellEffectSizeShift(json, 1)
+    expect(shift).toEqual({
+      size: 'huge',
+      meleeDamageBonus: 4,
+      reachBonus: 10,
       resizeEquipment: false,
     })
   })

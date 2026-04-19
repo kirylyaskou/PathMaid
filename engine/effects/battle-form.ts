@@ -209,6 +209,14 @@ export interface SpellEffectSizeShift {
   /** Status bonus to `melee-strike-damage` selector (0 when none). */
   meleeDamageBonus: number
   /**
+   * Additive reach bonus applied on top of the strike's resolved reach
+   * (Enlarge rank 2 = +5, rank 4 = +10). 0 when the effect doesn't shift
+   * reach. Per PF2e Player Core pg. 329 and ground-truth spec: Enlarge adds
+   * a +5/+10 reach buff on top of weapon reach — this is additive even for
+   * weapons carrying `reach-N` absolute traits.
+   */
+  reachBonus: number
+  /**
    * Mirrors Foundry's `resizeEquipment` flag. Retained for contract fidelity;
    * PF2e Enlarge does NOT step weapon damage dice, so the CreatureStatBlock
    * consumer ignores this. Future consumers may use it for equipment-size
@@ -238,7 +246,10 @@ export function parseSpellEffectSizeShift(
   if (!Array.isArray(rules)) return null
 
   // --- Pass 1: collect ChoiceSet selections keyed by flag.
-  const selections: Record<string, { size?: CreatureSize; damage?: number }> = {}
+  const selections: Record<
+    string,
+    { size?: CreatureSize; damage?: number; reach?: number }
+  > = {}
   for (const rule of rules) {
     const r = rule as Record<string, unknown>
     if (r.key !== 'ChoiceSet') continue
@@ -251,15 +262,18 @@ export function parseSpellEffectSizeShift(
     if (!val || typeof val !== 'object') continue
     const size = coerceSize(val.size)
     const damage = typeof val.damage === 'number' ? val.damage : undefined
+    const reach = typeof val.reach === 'number' ? val.reach : undefined
     selections[flag] = {
       ...(size ? { size } : {}),
       ...(damage !== undefined ? { damage } : {}),
+      ...(reach !== undefined ? { reach } : {}),
     }
   }
 
   // --- Pass 2: find the CreatureSize rule (literal or dynamic-ref).
   let resolvedSize: CreatureSize | null = null
   let resize = false
+  let creatureReachOverride: number | null = null
   for (const rule of rules) {
     const r = rule as Record<string, unknown>
     if (r.key !== 'CreatureSize') continue
@@ -273,6 +287,23 @@ export function parseSpellEffectSizeShift(
         const flag = extractSelectionFlag(raw, 'size')
         if (flag && selections[flag]?.size) {
           resolvedSize = selections[flag].size ?? null
+        }
+      }
+    }
+    // Foundry's Enlarge shape also carries a reach override:
+    //   { key: 'CreatureSize', reach: { override: '{item|flags…enlarge.reach}' } }
+    // We don't need to resolve the ChoiceSet reference here — Pass 1 already
+    // collected the numeric `reach` value into selections[flag].reach. But if
+    // a literal numeric reach override is present, honor it.
+    const reachBlock = r.reach as Record<string, unknown> | undefined
+    if (reachBlock && typeof reachBlock === 'object') {
+      const ovr = reachBlock.override
+      if (typeof ovr === 'number') {
+        creatureReachOverride = ovr
+      } else if (typeof ovr === 'string') {
+        const flag = extractSelectionFlag(ovr, 'reach')
+        if (flag && typeof selections[flag]?.reach === 'number') {
+          creatureReachOverride = selections[flag].reach!
         }
       }
     }
@@ -303,12 +334,44 @@ export function parseSpellEffectSizeShift(
     break
   }
 
-  if (!resolvedSize && meleeDamageBonus === 0) return null
+  // --- Pass 4: derive reachBonus.
+  // Priority:
+  //   1. Explicit creature-reach override from CreatureSize.reach.override
+  //      (Foundry Enlarge shape). reachBonus = override − baseMediumReach(5).
+  //   2. Reach field on the ChoiceSet selection value (Enlarge rules_json
+  //      carries `reach: 10|15` in each choice). Same formula.
+  //   3. Fallback: map meleeDamageBonus → reachBonus (+2 damage → +5 reach;
+  //      +4 damage → +10 reach). Consistent with PF2e Enlarge table.
+  //
+  // Ground-truth spec treats Enlarge reach as additive (+5 / +10) on top of
+  // weapon reach, even for `reach-N` absolute trait. So we surface the raw
+  // delta; the CreatureStatBlock consumer adds it to each melee strike.
+  const BASE_MEDIUM_REACH = 5
+  let reachBonus = 0
+  if (creatureReachOverride !== null) {
+    reachBonus = Math.max(0, creatureReachOverride - BASE_MEDIUM_REACH)
+  } else {
+    // Scan selections[*] for a reach field (ChoiceSet value.reach).
+    for (const sel of Object.values(selections)) {
+      if (typeof sel.reach === 'number') {
+        reachBonus = Math.max(0, sel.reach - BASE_MEDIUM_REACH)
+        break
+      }
+    }
+    if (reachBonus === 0) {
+      // Fallback map — damage → reach per PF2e Enlarge.
+      if (meleeDamageBonus === 2) reachBonus = 5
+      else if (meleeDamageBonus === 4) reachBonus = 10
+    }
+  }
+
+  if (!resolvedSize && meleeDamageBonus === 0 && reachBonus === 0) return null
   // Without a resolved size we still surface a damage bonus, but default the
   // size to medium so the caller can still apply the flat bonus.
   return {
     size: resolvedSize ?? 'med',
     meleeDamageBonus,
+    reachBonus,
     resizeEquipment: resize,
   }
 }
@@ -358,7 +421,10 @@ function evaluateNode(node: unknown, level: number): boolean {
 }
 
 // Match `{item|flags.system.rulesSelections.<flag>.<field>}` — return flag or null.
-function extractSelectionFlag(value: string, field: 'size' | 'damage'): string | null {
+function extractSelectionFlag(
+  value: string,
+  field: 'size' | 'damage' | 'reach',
+): string | null {
   const re = new RegExp(
     `\\{item\\|flags\\.system\\.rulesSelections\\.([^.}]+)\\.${field}\\}`,
   )

@@ -42,6 +42,36 @@ describe('foundry-pc-parser — math helpers', () => {
     expect(getStrikeReach(['reach'], false, 10)).toBe(15)
     expect(getStrikeReach([], false, 5)).toBe(5)
   })
+
+  it('getStrikeReach: ground-truth scenarios (whip / claw / bastard sword, Enlarge)', () => {
+    // Whip (martial, medium wielder, traits=["disarm","finesse","nonlethal","reach","trip"])
+    const whip = ['disarm', 'finesse', 'nonlethal', 'reach', 'trip']
+    // Medium base reach = 5, whip "reach" trait +5 → 10 ft
+    expect(getStrikeReach(whip, false, 5)).toBe(10)
+    // Whip + Enlarge rank 2 (reachBonus +5) → 15 ft
+    expect(getStrikeReach(whip, false, 5, 5)).toBe(15)
+    // Whip + Enlarge rank 4 (reachBonus +10) → 20 ft
+    expect(getStrikeReach(whip, false, 5, 10)).toBe(20)
+
+    // Umbral dragon claw (huge, traits=["agile","magical","reach-10"])
+    // "reach-10" is absolute — 10 ft regardless of creature size default
+    const claw = ['agile', 'magical', 'reach-10']
+    expect(getStrikeReach(claw, false, 15)).toBe(10)
+    // Claw + Enlarge rank 2 → 10 + 5 = 15 ft (per ground-truth spec: additive)
+    expect(getStrikeReach(claw, false, 15, 5)).toBe(15)
+    // Claw + Enlarge rank 4 → 10 + 10 = 20 ft
+    expect(getStrikeReach(claw, false, 15, 10)).toBe(20)
+
+    // Bastard sword (martial, traits=["two-hand-d12"]) — no reach trait,
+    // falls back to creature default.
+    const bastard = ['two-hand-d12']
+    expect(getStrikeReach(bastard, false, 5)).toBe(5) // medium wielder
+    expect(getStrikeReach(bastard, false, 5, 5)).toBe(10) // +Enlarge r2
+    expect(getStrikeReach(bastard, false, 10, 10)).toBe(20) // large wielder + r4
+
+    // Ranged weapons ignore reachBonus (always 0)
+    expect(getStrikeReach(['thrown-30'], true, 5, 5)).toBe(0)
+  })
 })
 
 describe('parseFoundryCharacterDoc — Amiri Level 1 ground truth', () => {
