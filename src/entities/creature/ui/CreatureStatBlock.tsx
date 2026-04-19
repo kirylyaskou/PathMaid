@@ -448,6 +448,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
                       netModifier={net}
                       finalDisplay={String(final)}
                       inactiveModifiers={modResult.inactiveModifiers}
+                      showInactive
                     >
                       <span className={net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : ''}>{text}</span>
                     </ModifierTooltip>
