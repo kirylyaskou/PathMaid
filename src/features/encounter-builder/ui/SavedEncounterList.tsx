@@ -3,6 +3,14 @@ import { Download, Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Checkbox } from '@/shared/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/shared/ui/dialog'
 import { useEncounterStore } from '@/entities/encounter'
 import { ImportEncounterDialog, exportEncounter } from '@/features/encounter-import'
 
@@ -16,6 +24,9 @@ export function SavedEncounterList() {
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportSelected, setExportSelected] = useState<Set<string>>(new Set())
+  const [exporting, setExporting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -55,6 +66,34 @@ export function SavedEncounterList() {
     }
   }
 
+  // BUG-6: open export dialog — pre-select all encounters.
+  function handleOpenExportDialog() {
+    setExportSelected(new Set(encounters.map((e) => e.id)))
+    setExportOpen(true)
+  }
+
+  // BUG-6: export all selected encounters as individual .pathmaiden files.
+  async function handleExportSelected() {
+    setExporting(true)
+    try {
+      for (const id of exportSelected) {
+        await handleExport(id)
+      }
+    } finally {
+      setExporting(false)
+      setExportOpen(false)
+    }
+  }
+
+  function toggleExportSelect(id: string) {
+    setExportSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -77,6 +116,17 @@ export function SavedEncounterList() {
             variant="outline"
             size="sm"
             className="h-7 text-xs gap-1.5"
+            onClick={handleOpenExportDialog}
+            title="Export encounters"
+            disabled={encounters.length === 0}
+          >
+            <Download className="w-3 h-3" />
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
             onClick={() => setIsCreating(true)}
           >
             <Plus className="w-3 h-3" />
@@ -85,6 +135,41 @@ export function SavedEncounterList() {
         </div>
       </div>
       <ImportEncounterDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      {/* BUG-6: Export selection dialog */}
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Export Encounters</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-64 overflow-y-auto py-1">
+            {encounters.map((enc) => (
+              <label
+                key={enc.id}
+                className="flex items-center gap-2 text-sm cursor-pointer select-none px-1 py-0.5 rounded hover:bg-accent/30 transition-colors"
+              >
+                <Checkbox
+                  checked={exportSelected.has(enc.id)}
+                  onCheckedChange={() => toggleExportSelect(enc.id)}
+                />
+                <span className="truncate">{enc.name}</span>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => void handleExportSelected()}
+              disabled={exportSelected.size === 0 || exporting}
+            >
+              {exporting ? 'Exporting…' : `Export ${exportSelected.size}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Inline create input */}
       {isCreating && (
