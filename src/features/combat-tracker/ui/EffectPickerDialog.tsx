@@ -8,6 +8,7 @@ import {
   listSpellEffects,
   getContextEffectsForEncounter,
   applyEffectToCombatant,
+  applyGrantedEffects,
 } from '@/shared/api/effects'
 import type { SpellEffectRow, SpellEffectCategory } from '@/entities/spell-effect'
 import { useEffectStore, durationToRounds } from '@/entities/spell-effect'
@@ -112,7 +113,33 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
           description: effect.description,
           level: effect.level,
         })
-        toast(`Applied ${effect.name}`)
+
+        // 65-06: auto-apply any same-pack GrantItem children the parent declares.
+        // Cascade-delete is handled by the 0034 FK, so no teardown bookkeeping
+        // is needed here.
+        const granted = await applyGrantedEffects(
+          encounterId,
+          combatantId,
+          newId,
+          effect.rules_json,
+          remainingTurns,
+        )
+        for (const g of granted) {
+          useEffectStore.getState().addEffect({
+            id: g.id,
+            combatantId,
+            effectId: g.effectId,
+            effectName: g.name,
+            remainingTurns: g.remainingTurns,
+            rulesJson: g.rulesJson,
+            durationJson: g.durationJson,
+            description: g.description,
+            level: g.level,
+          })
+        }
+        const suffix =
+          granted.length > 0 ? ` (+${granted.length} granted)` : ''
+        toast(`Applied ${effect.name}${suffix}`)
         onOpenChange(false)
       } catch {
         toast(`Failed to apply ${effect.name}`)

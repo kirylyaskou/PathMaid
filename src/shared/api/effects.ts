@@ -1,5 +1,6 @@
 import { getDb } from '@/shared/db'
 import type { SpellEffectRow } from '@/entities/spell-effect'
+import { parseSpellEffectGrantItems, type GrantItemInput } from '@engine'
 
 // 60-02: level = COALESCE(spells.rank, 1). Used by parseSpellEffectModifiers to
 // evaluate @item.level in scaling FlatModifier expressions (Heroism etc.).
@@ -272,6 +273,7 @@ export interface ActiveEffectRow {
   duration_json: string
   description: string | null
   level: number  // 60-02: @item.level for expression eval; COALESCE(spells.rank, 1)
+  granted_by: string | null  // 65-06: parent encounter_combatant_effects.id (cascade)
 }
 
 export async function getActiveEffectsForCombatant(
@@ -282,7 +284,8 @@ export async function getActiveEffectsForCombatant(
   return db.select<ActiveEffectRow[]>(
     `SELECT ece.id, ece.effect_id, ece.applied_at, ece.remaining_turns,
             se.name, se.rules_json, se.duration_json, se.description,
-            COALESCE(s.rank, 1) AS level
+            COALESCE(s.rank, 1) AS level,
+            ece.granted_by
      FROM encounter_combatant_effects ece
      JOIN spell_effects se ON ece.effect_id = se.id
      LEFT JOIN spells s ON se.spell_id = s.id
@@ -295,16 +298,84 @@ export async function applyEffectToCombatant(
   encounterId: string,
   combatantId: string,
   effectId: string,
-  remainingTurns: number
+  remainingTurns: number,
+  grantedBy?: string | null,
 ): Promise<string> {
   const db = await getDb()
   const id = crypto.randomUUID()
   const appliedAt = Math.floor(Date.now() / 1000)
   await db.execute(
-    'INSERT INTO encounter_combatant_effects (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, encounterId, combatantId, effectId, appliedAt, remainingTurns]
+    'INSERT INTO encounter_combatant_effects (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns, granted_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, encounterId, combatantId, effectId, appliedAt, remainingTurns, grantedBy ?? null]
   )
   return id
+}
+
+// 65-06: parse the effect's rules_json, resolve same-pack GrantItem targets
+// against spell_effects.name, and auto-apply each grantee to the same
+// combatant. Returns the freshly-created encounter_combatant_effects rows
+// so the caller can seed useEffectStore with the complete chain.
+//
+// Cascading removal is handled by the FK (`granted_by ON DELETE CASCADE`)
+// on migration 0034; callers don't need to explicitly tear down children.
+export interface ResolvedGrantedEffect {
+  id: string                 // encounter_combatant_effects.id
+  effectId: string           // spell_effects.id
+  name: string
+  rulesJson: string
+  durationJson: string
+  description: string | null
+  level: number
+  remainingTurns: number
+}
+
+export async function applyGrantedEffects(
+  encounterId: string,
+  combatantId: string,
+  parentEceId: string,
+  parentRulesJson: string,
+  parentRemainingTurns: number,
+): Promise<ResolvedGrantedEffect[]> {
+  const grants: GrantItemInput[] = parseSpellEffectGrantItems(parentRulesJson)
+  if (grants.length === 0) return []
+
+  const db = await getDb()
+  const resolved: ResolvedGrantedEffect[] = []
+
+  for (const grant of grants) {
+    // Resolve grantee by (source_pack LIKE pack, name match). Foundry stores
+    // source_pack as "pf2e.<packId>"; we keep the LIKE to tolerate pack-id
+    // drift introduced by minor PF2e releases.
+    const rows = await db.select<SpellEffectRow[]>(
+      `${SELECT_WITH_LEVEL}
+       WHERE LOWER(TRIM(se.name)) = LOWER(TRIM(?))
+         AND se.source_pack LIKE ?
+       LIMIT 1`,
+      [grant.granteeName, `%${grant.pack}%`],
+    )
+    const grantee = rows[0]
+    if (!grantee) continue
+
+    const ceId = await applyEffectToCombatant(
+      encounterId,
+      combatantId,
+      grantee.id,
+      parentRemainingTurns,
+      parentEceId,
+    )
+    resolved.push({
+      id: ceId,
+      effectId: grantee.id,
+      name: grantee.name,
+      rulesJson: grantee.rules_json,
+      durationJson: grantee.duration_json,
+      description: grantee.description,
+      level: grantee.level,
+      remainingTurns: parentRemainingTurns,
+    })
+  }
+
+  return resolved
 }
 
 export async function removeEffectFromCombatant(id: string): Promise<void> {

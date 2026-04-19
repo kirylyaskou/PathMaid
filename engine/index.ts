@@ -210,6 +210,15 @@ export {
 } from './effects/notes'
 export type { NoteInput } from './effects/notes'
 
+export {
+  parseSpellEffectGrantItems,
+  SAME_PACK_EFFECT_PACKS,
+} from './effects/grant-item'
+export type {
+  GrantItemInput,
+  SamePackEffectPack,
+} from './effects/grant-item'
+
 // -- Dice ────────────────────────────────────────────────────────────────────
 export { parseFormula, rollDice, heightenFormula } from './dice/dice'
 export type { Roll, DiceEntry, ParsedFormula } from './dice/dice'
