@@ -256,6 +256,8 @@ export type {
   PathbuilderAttributes,
   PathbuilderProficiencies,
   PathbuilderSpellEntry,
+  PathbuilderWeapon,
+  PathbuilderArmor,
   PathbuilderBuild,
   PathbuilderExport,
 } from './pc/types'
