@@ -21,6 +21,7 @@
 - ✅ **v1.2.1 — Spell Effects + Custom Creatures** — Phases 56-59 (shipped 2026-04-17)
 - ✅ **v1.3.0 — Encounter Import + Combat UX Refinement** — Phases 60-64 (shipped 2026-04-19)
 - ✅ **v1.4.0 — Effects Deep Dive + PC Library + UX Unification** — Phases 65-70 (shipped 2026-04-20)
+- U0001f6a7 **v1.5.0 — In-App Updater** — Phases 71-76 (in progress)
 
 ## Phases
 
@@ -992,5 +993,106 @@ Archived — see `.planning/milestones/v1.4.0-ROADMAP.md`
 | 70. Paizo Library Import | 1/1 | Complete | 2026-04-19 |
 
 ---
+
+### v1.5.0 — In-App Updater (In Progress)
+
+**Milestone Goal:** Добавить в PathMaid механизм самообновления через официальный `tauri-plugin-updater` + GitHub Releases. Desktop-only (Windows + Linux). Android вырезан из CI.
+
+- [x] **Phase 71: CI Signing Setup** — ed25519 keypair, GitHub Secrets, tauri-action signing, Android job removed (completed 2026-04-20)
+- [x] **Phase 72: Rust Plugin + Config** — tauri-plugin-updater/process registered, capabilities, tauri.conf.json wired (completed 2026-04-20)
+- [x] **Phase 73: Shared API + Store** — shared/api/updater.ts IPC wrapper, shared/model/updater-store.ts Zustand state machine (completed 2026-04-20)
+- [ ] **Phase 74: Update Dialog + Settings UI** — UpdateDialog widget, Settings Updates section, darwin gate (parallel-safe with Phase 75)
+- [ ] **Phase 75: Startup Auto-Check** — useStartupUpdateCheck hook, toast/badge on update found (parallel-safe with Phase 74)
+- [ ] **Phase 76: Version Bump + Release** — v1.5.0 bump in all three sources, SQLite graceful shutdown before install, release notes
+
+## Phase Details
+
+### Phase 71: CI Signing Setup
+**Goal**: ed25519 ключи сгенерированы, GitHub Secrets настроены, Android job удалён, CI продуцирует подписанные .sig файлы и корректный latest.json
+**Depends on**: Phase 70 (previous milestone complete)
+**Requirements**: SIGN-01, SIGN-02, SIGN-03
+**Success Criteria** (what must be TRUE):
+  1. Публичный ключ прописан в tauri.conf.json plugins.updater.pubkey; .key файл в .gitignore, нет в git
+  2. GitHub Secrets TAURI_SIGNING_PRIVATE_KEY и TAURI_SIGNING_PRIVATE_KEY_PASSWORD выставлены; CI-сборка не падает с "no private key"
+  3. Релизные ассеты содержат .sig файлы рядом с каждым инсталлятором; latest.json имеет непустое signature для Windows и Linux
+  4. main.yml не содержит build-android job; updaterJsonPreferNsis: true выставлен; latest.json.platforms для Windows указывает на NSIS-инсталлятор
+  5. bundle.createUpdaterArtifacts: true прописан под bundle, не под plugins.updater
+**Plans**: 3 plans
+  - [x] 71-01-PLAN.md — Generate ed25519 keypair locally + backup to password manager (manual, wave 1)
+  - [x] 71-02-PLAN.md — Wire pubkey into tauri.conf.json + update main.yml (signing env + NSIS prefer + remove Android) + add .key to .gitignore (auto, wave 2)
+  - [x] 71-03-PLAN.md — Configure GitHub Secrets TAURI_SIGNING_PRIVATE_KEY + TAURI_SIGNING_PRIVATE_KEY_PASSWORD via GitHub UI + final phase verify (manual, wave 3)
+
+### Phase 72: Rust Plugin + Config
+**Goal**: tauri-plugin-updater и tauri-plugin-process зарегистрированы, capabilities выданы, tauri.conf.json полностью настроен, pnpm tauri dev запускается чисто
+**Depends on**: Phase 71 (pubkey must be in tauri.conf.json before plugin can build against it)
+**Requirements**: PLUGIN-01, PLUGIN-02, PLUGIN-03, PLUGIN-04
+**Success Criteria** (what must be TRUE):
+  1. pnpm tauri dev запускается без паники и без HTTP-запросов к GitHub endpoint (dev-guard via #[cfg(not(debug_assertions))])
+  2. pnpm tauri build проходит без Rust-ошибок; Cargo target cfg исключает плагин из Android-сборки
+  3. capabilities/default.json содержит updater:default и process:allow-restart
+  4. plugins.updater.endpoints[0] = https://github.com/kirylyaskou/PathMaid/releases/latest/download/latest.json — без version literal; pubkey присутствует (из Phase 71); поле `dialog` отсутствует (удалено в Tauri v2 — custom UI mandatory)
+**Plans**: 2 plans
+  - [x] 72-01-PLAN.md — Add target-gated Rust deps + exact-pin JS deps + updater endpoints in tauri.conf.json (auto, wave 1)
+  - [x] 72-02-PLAN.md — Register plugins in lib.rs setup hook with dev-guard + capability permissions + manual smoke test (mixed auto+checkpoint, wave 2)
+
+### Phase 73: Shared API + Store
+**Goal**: IPC граница и стор существуют и проходят typecheck; shared/api/updater.ts и shared/model/updater-store.ts готовы к потреблению всеми UI-слоями
+**Depends on**: Phase 72 (Rust plugin registered before JS wrapper compiles in Tauri context)
+**Requirements**: API-01, API-02, API-03
+**Success Criteria** (what must be TRUE):
+  1. shared/api/updater.ts экспортирует checkForUpdate(), downloadAndInstallUpdate(onEvent), relaunchApp() с тремя typed ошибками (UpdateNetworkError, UpdateSignatureError, UpdateInstallError)
+  2. shared/model/updater-store.ts экспортирует useUpdaterStore со статусами idle|checking|available|downloading|installing|error|uptodate, полями update, progress, error
+  3. tsc --noEmit = 0; единственный импорт @tauri-apps/plugin-updater и @tauri-apps/plugin-process — src/shared/api/updater.ts
+  4. FSD не нарушен: shared/model/ не импортирует из features/ или widgets/; pnpm lint:arch = 0 нарушений
+**Plans**: 1 plan
+  - [x] 73-01-PLAN.md — shared/api/updater.ts IPC wrapper + shared/model/updater-store.ts Zustand store + barrel update (auto, wave 1, completed 2026-04-20 — commits 16588b65, 2169d216, 844b68fb)
+
+### Phase 74: Update Dialog + Settings UI
+**Goal**: Пользователь может вручную проверить обновления через Settings, увидеть диалог с release notes и progress bar, запустить установку и перезапуск; darwin-gate на macOS
+**Depends on**: Phase 73 (shared/api + store must exist)
+**Requirements**: UI-01, UI-02, UI-03, UI-04
+**Success Criteria** (what must be TRUE):
+  1. Settings page содержит секцию Updates: текущая версия, кнопка Проверить обновления, статус-строка отражает updater-store.status
+  2. При status === 'available' открывается UpdateDialog с версией, release notes (plain-text), кнопками [Скачать и установить] / [Позже]
+  3. Во время status === 'downloading' — progress bar (или indeterminate если total null); кнопки заблокированы; ошибка os error 18 (Linux cross-device) отображается понятным сообщением
+  4. После status === 'installing' диалог показывает Перезапуск...; приложение перезапускается с новой версией
+  5. На macOS: кнопка Проверить заменена на Открыть страницу релиза (shell.open); UpdateDialog не открывается на darwin
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 75: Startup Auto-Check
+**Goal**: Приложение silent-проверяет обновления при каждом запуске (production, Windows/Linux); при наличии обновления — non-intrusive toast
+**Depends on**: Phase 73 (store and API must exist; parallel-safe with Phase 74 in separate worktree)
+**Requirements**: AUTO-01
+**Success Criteria** (what must be TRUE):
+  1. pnpm tauri dev не делает HTTP-запросов к GitHub endpoint — import.meta.env.PROD guard работает
+  2. В production: при наличии обновления — non-intrusive toast/badge (dismissible, один раз за сессию); клик открывает UpdateDialog
+  3. hook дедуплицирован: повторная навигация по роутам не запускает повторный check в пределах одной сессии
+  4. На macOS: platform() === 'darwin' guard блокирует check; hook возвращается без действий
+**Plans**: TBD
+
+### Phase 76: Version Bump + Release
+**Goal**: v1.5.0 готов к релизу: версия во всех трёх источниках, SQLite graceful shutdown, release notes с сообщением об однократном ручном обновлении
+**Depends on**: Phase 74, Phase 75 (all UI and auto-check complete)
+**Requirements**: REL-01, REL-02
+**Success Criteria** (what must be TRUE):
+  1. package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml — все три содержат версию 1.5.0
+  2. downloadAndInstallUpdate флоу — db.close() вызывается до install(); Windows UAT: инсталлятор не падает с "Failed to kill"
+  3. Release notes в main.yml содержат сообщение об однократном ручном обновлении с v1.4.1; endpoints[0] без version literal
+  4. tsc --noEmit = 0; pnpm lint = 0; pnpm lint:arch = 0 FSD-нарушений
+**Plans**: TBD
+
+### v1.5.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 71. CI Signing Setup | 3/3 | Complete    | 2026-04-20 |
+| 72. Rust Plugin + Config | 2/2 | Complete    | 2026-04-20 |
+| 73. Shared API + Store | 0/TBD | Not started | - |
+| 74. Update Dialog + Settings UI | 0/TBD | Not started | - |
+| 75. Startup Auto-Check | 0/TBD | Not started | - |
+| 76. Version Bump + Release | 0/TBD | Not started | - |
+
+---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-20 — v1.4.0 shipped, archived to milestones/v1.4.0-ROADMAP.md*
+*Last updated: 2026-04-20 — v1.5.0 In-App Updater roadmap added (Phases 71-76)*
