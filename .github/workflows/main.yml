@@ -56,7 +56,17 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: pathmaid ${{ github.ref_name }}
           args: ${{ matrix.args }}
-          releaseBody: ''
+          releaseBody: |
+            ## Downloads
+
+            Platform binaries are listed under **Assets** below:
+
+            - `PathMaid_*_x64-setup.exe` / `PathMaid_*_x64_en-US.msi` — Windows
+            - `PathMaid_*_aarch64.dmg` — macOS (Apple Silicon)
+            - `PathMaid_*_amd64.AppImage` / `PathMaid_*_amd64.deb` — Linux
+            - `app-universal-debug.apk` — Android
+
+            > `Source code (zip)` and `Source code (tar.gz)` are GitHub's auto-generated tarballs from the git tag — **not the intended downloads**. Use a platform binary above.
           releaseDraft: true
 
   build-android:

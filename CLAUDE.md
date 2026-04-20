@@ -109,6 +109,28 @@ node "C:/Users/kiryl/.claude/get-shit-done/bin/gsd-tools.cjs" <command>
 - `src/shared/api/sync.ts` — Foundry VTT data extraction
 - `src/app/styles/globals.css` — design tokens (Golden Parchment theme)
 
+## Releasing
+
+**Before tagging — bump the version in all three source files:**
+
+- `package.json` → `"version"`
+- `src-tauri/tauri.conf.json` → `"version"` (Tauri-bundler reads this for artifact filenames — `PathMaid_<version>_*`)
+- `src-tauri/Cargo.toml` → `version` (Rust side)
+
+`Cargo.lock` auto-updates on next `cargo build`. Commit all three as one `chore: bump version to X.Y.Z` BEFORE tagging — otherwise bundled artifacts keep the old version in their filenames regardless of the git tag.
+
+**Then push a git tag — CI handles the rest:**
+
+    git tag v<version>
+    git push origin v<version>
+
+GitHub Actions (`main.yml`) will build Windows/macOS/Linux/Android and create a draft release automatically.
+After all jobs finish — go to GitHub Releases and click **Publish release**.
+
+Version must follow semver. Current release: `v1.4.1`.
+
+**Known trap:** tag without version bump = release header says `v1.4.1` but files say `PathMaid_1.2.1_*`. Always bump first.
+
 ## Known Issues
 - **Superpowers broken**: v5.0.4 `"type": "module"` + `require()` conflict. Text-only brainstorming.
 - **`$HOME` in bash**: intermittently empty on Windows. Use explicit `C:/Users/kiryl/` paths.
