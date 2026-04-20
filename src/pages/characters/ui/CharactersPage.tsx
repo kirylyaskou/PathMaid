@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users } from 'lucide-react'
+import { Users, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/shared/ui/button'
 import {
@@ -10,13 +10,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import { getAllCharacters, deleteCharacter } from '@/shared/api/characters'
+import {
+  getAllCharacters,
+  deleteCharacter,
+  duplicatePregenAsUserCharacter,
+} from '@/shared/api/characters'
 import type { CharacterRecord } from '@/shared/api/characters'
 import { useCombatantStore } from '@/entities/combatant/model/store'
 import { calculatePCMaxHP } from '@engine'
 import type { PathbuilderExport } from '@engine'
 import type { Combatant } from '@/entities/combatant/model/types'
 import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel } from '@/features/characters'
+import { PregenPickerDialog } from '@/features/pregen-picker'
 
 // 70-04/06: filter chip values for the Characters page. `__user__` is the
 // default and matches records with NULL source_adventure (Pathbuilder
@@ -42,6 +47,7 @@ export function CharactersPage() {
 
   const [characters, setCharacters] = useState<CharacterRecord[]>([])
   const [importOpen, setImportOpen] = useState(false)
+  const [pregenOpen, setPregenOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null)
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterRecord | null>(null)
   // 70-04: active chip filter. Defaults to user imports per UI-SPEC.
@@ -90,6 +96,24 @@ export function CharactersPage() {
     toast(`${name} imported`)
   }
 
+  async function handlePregenPick(pregen: CharacterRecord) {
+    try {
+      const { name } = await duplicatePregenAsUserCharacter(pregen)
+      await loadCharacters()
+      // Switch the chip filter back to user imports so the new copy is
+      // immediately visible after picking (pregens still show behind the
+      // Iconics / adventure chips).
+      setSourceFilter(USER_FILTER)
+      toast(
+        name === pregen.name
+          ? `Added ${name} as a new character`
+          : `Added ${name} (copy of ${pregen.name}) as a new character`,
+      )
+    } catch (e) {
+      toast.error(`Failed to add pregen: ${(e as Error).message}`)
+    }
+  }
+
   async function handleDelete(id: string) {
     await deleteCharacter(id)
     setDeleteTarget(null)
@@ -126,7 +150,17 @@ export function CharactersPage() {
     <div className="flex flex-col h-full overflow-hidden">
       <header className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
         <h1 className="text-base font-semibold">Characters</h1>
-        <Button size="sm" onClick={() => setImportOpen(true)}>Import Character</Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPregenOpen(true)}
+          >
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+            Use Pregen
+          </Button>
+          <Button size="sm" onClick={() => setImportOpen(true)}>Import Character</Button>
+        </div>
       </header>
 
       {chipOptions.length > 1 && (
@@ -189,6 +223,13 @@ export function CharactersPage() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onSuccess={handleImportSuccess}
+      />
+
+      <PregenPickerDialog
+        open={pregenOpen}
+        onOpenChange={setPregenOpen}
+        mode="pc"
+        onPick={handlePregenPick}
       />
 
       <DeleteCharacterDialog

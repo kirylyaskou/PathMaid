@@ -17,8 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import { getPregenCharacters } from '@/shared/api/characters'
-import type { CharacterRecord } from '@/shared/api/characters'
+import { getPregenCharacters, type CharacterRecord } from '@/shared/api'
 import { filterPregens, derivePregenSources, sourceLabel } from '../model/filter'
 
 // Phase 71 — shared picker consumed by:

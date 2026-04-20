@@ -3,7 +3,7 @@
 // behavior can be verified without mounting React.
 
 import { describe, it, expect } from 'vitest'
-import type { CharacterRecord } from '@/shared/api/characters'
+import type { CharacterRecord } from '@/shared/api'
 import {
   derivePregenSources,
   filterPregens,

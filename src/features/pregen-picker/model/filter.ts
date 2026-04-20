@@ -2,7 +2,7 @@
 // Extracted from the dialog component so the search + source-scope logic
 // is unit-testable without mounting React.
 
-import type { CharacterRecord } from '@/shared/api/characters'
+import type { CharacterRecord } from '@/shared/api'
 
 export const ICONICS_TOKEN = '__iconics__'
 
