@@ -52,6 +52,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: pathmaid ${{ github.ref_name }}
@@ -62,78 +64,15 @@ jobs:
             Platform binaries are listed under **Assets** below:
 
             - `PathMaid_*_x64-setup.exe` / `PathMaid_*_x64_en-US.msi` — Windows
-            - `PathMaid_*_aarch64.dmg` — macOS (Apple Silicon)
+            - `PathMaid_*_aarch64.dmg` — macOS (Apple Silicon, manual install only — auto-update disabled on macOS until notarization is configured)
             - `PathMaid_*_amd64.AppImage` / `PathMaid_*_amd64.deb` — Linux
-            - `app-universal-debug.apk` — Android
+
+            ## Auto-update
+
+            Starting from **v1.5.0**, PathMaid updates itself automatically on Windows and Linux. If you're on **v1.4.1 or earlier**, you'll need to download and install this version manually **one last time** — all future updates will be delivered through the app's built-in updater.
+
+            Installer signatures (`.sig`) are attached alongside each installer — the updater verifies them cryptographically before applying an update.
 
             > `Source code (zip)` and `Source code (tar.gz)` are GitHub's auto-generated tarballs from the git tag — **not the intended downloads**. Use a platform binary above.
           releaseDraft: true
-
-  build-android:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: temurin
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Add Android Rust targets
-        run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - run: pnpm install
-
-      - name: Initialize Tauri Android project
-        run: |
-          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
-          pnpm tauri android init
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          OPENSSL_VENDORED: "1"
-
-      - name: Build Android APK
-        run: |
-          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
-          pnpm tauri android build --debug
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          OPENSSL_VENDORED: "1"
-
-      - name: Locate APK artifacts
-        run: find src-tauri/gen/android -name "*.apk" -type f
-
-      - name: Upload APK as workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PathMaid-android-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
-          if-no-files-found: error
-
-      - name: Upload APK to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
-          draft: true
-          tag_name: ${{ github.ref_name }}
-          update_only: true
-          fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          updaterJsonPreferNsis: true

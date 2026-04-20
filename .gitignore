@@ -10,3 +10,8 @@ package-lock.json
 # Tauri build artifacts
 src-tauri/target/
 src-tauri/gen/
+
+# Tauri updater signing keys (ed25519) — never commit
+# Key lives in ~/.tauri/ outside the repo by default; this pattern is defense-in-depth
+*.key
+*.key.pub
