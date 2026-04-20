@@ -7,6 +7,8 @@ import {
 
 function makeBlock(overrides: Partial<TierAdjustableStatBlock> = {}): TierAdjustableStatBlock {
   return {
+    hp: 56,
+    level: 5,
     ac: 20,
     fort: 8,
     ref: 6,
@@ -207,5 +209,47 @@ describe('applyTierToStatBlock', () => {
     const original = JSON.parse(JSON.stringify(block))
     applyTierToStatBlock(block, 'elite')
     expect(block).toEqual(original)
+  })
+
+  // v1.4.1 tier polish: HP is now tier-adjusted so the right-pane
+  // CreatureStatBlock matches the combatant pane's baked-in hpMax.
+  // Table from Monster Core pg. 6-7 via getHpAdjustment:
+  //   Elite: L≤1 +10, L2–4 +15, L5–19 +20, L20+ +30
+  //   Weak:  L≤0  0,  L1–2 -10, L3–5 -15,  L6–20 -20, L21+ -30
+  describe('HP tier adjustment', () => {
+    it('elite L5: hp +20 (Fumbus regression — base 56 → 76)', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 56, level: 5 }), 'elite')
+      expect(out.hp).toBe(76)
+    })
+
+    it('weak L5: hp -15 (Fumbus Weak — base 56 → 41)', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 56, level: 5 }), 'weak')
+      expect(out.hp).toBe(41)
+    })
+
+    it('elite L1: hp +10', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 20, level: 1 }), 'elite')
+      expect(out.hp).toBe(30)
+    })
+
+    it('elite L3: hp +15', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 40, level: 3 }), 'elite')
+      expect(out.hp).toBe(55)
+    })
+
+    it('weak L0: hp unchanged (weak floor for L≤0)', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 8, level: 0 }), 'weak')
+      expect(out.hp).toBe(8)
+    })
+
+    it('weak: hp clamped to 1 when delta would drive it to 0 or below', () => {
+      const out = applyTierToStatBlock(makeBlock({ hp: 5, level: 2 }), 'weak')
+      expect(out.hp).toBe(1)
+    })
+
+    it('normal tier does not touch hp', () => {
+      const block = makeBlock({ hp: 56, level: 5 })
+      expect(applyTierToStatBlock(block, 'normal').hp).toBe(56)
+    })
   })
 })

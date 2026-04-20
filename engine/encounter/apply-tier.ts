@@ -1,5 +1,5 @@
 import type { WeakEliteTier } from '../types'
-import { getStatAdjustment, getDamageAdjustment } from './weak-elite'
+import { getStatAdjustment, getDamageAdjustment, getHpAdjustment } from './weak-elite'
 
 // ─── Damage formula adjustment ────────────────────────────────────────────────
 
@@ -66,6 +66,8 @@ interface TierSpellcastingAttack {
 }
 
 export interface TierAdjustableStatBlock {
+  hp: number
+  level: number
   ac: number
   fort: number
   ref: number
@@ -92,9 +94,11 @@ export interface TierAdjustableStatBlock {
  *   v1.5 follow-up will inspect `abilities[].description` for
  *   "Frequency: once per ...". For now Strike/ability damage always uses
  *   the ±2 variant.
- * - HP is deliberately skipped — the combat pipeline already bakes the
- *   HP delta into the combatant at add-time via `getHpAdjustment`.
- *   Double-application would compound the adjustment.
+ * - HP is adjusted by `getHpAdjustment(tier, level)` with a min-1 floor so
+ *   the right-pane CreatureStatBlock reflects the tier. The combat pipeline
+ *   bakes the same delta into `combatant.hpMax` at add-time on a separate
+ *   field that HpControls reads; the two paths are independent (creature.hp
+ *   is never mutated), so adjusting HP here does not double-apply.
  */
 export function applyTierToStatBlock<T extends TierAdjustableStatBlock>(
   sb: T,
@@ -103,6 +107,7 @@ export function applyTierToStatBlock<T extends TierAdjustableStatBlock>(
   if (tier === 'normal') return sb
   const statDelta = getStatAdjustment(tier)
   const damageDelta = getDamageAdjustment(tier, false)
+  const hpDelta = getHpAdjustment(tier, sb.level)
 
   const adjustedStrikes: TierStrike[] = sb.strikes.map((s) => ({
     ...s,
@@ -126,6 +131,7 @@ export function applyTierToStatBlock<T extends TierAdjustableStatBlock>(
 
   return {
     ...sb,
+    hp: Math.max(1, sb.hp + hpDelta),
     ac: sb.ac + statDelta,
     fort: sb.fort + statDelta,
     ref: sb.ref + statDelta,
