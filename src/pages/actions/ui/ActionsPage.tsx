@@ -5,6 +5,8 @@ import { getAllActions } from '@/shared/api'
 import type { ActionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { useContentTranslation } from '@/shared/i18n'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
 
@@ -44,6 +46,9 @@ function ActionCard({ action, expanded, onToggle }: {
   const traits = parseJsonArray(action.traits)
   const costDisplay = actionCostDisplay(action)
   const badgeClass = CATEGORY_BADGE[action.action_category] ?? CATEGORY_BADGE.basic
+  // Phase 80: actions have no level — pass null
+  const { data: translation } = useContentTranslation('action', action.name, null)
+  const displayName = translation?.nameLoc ?? action.name
 
   return (
     <div
@@ -62,7 +67,7 @@ function ActionCard({ action, expanded, onToggle }: {
           {costDisplay}
         </span>
 
-        <span className="font-semibold text-sm flex-1">{action.name}</span>
+        <span className="font-semibold text-sm flex-1">{displayName}</span>
 
         {/* Category badge */}
         <span className={cn(
@@ -87,13 +92,17 @@ function ActionCard({ action, expanded, onToggle }: {
         </div>
       )}
 
-      {/* Expanded detail */}
+      {/* Expanded detail — RU translation overrides EN when available */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/30 pt-2 space-y-2">
-          {action.description && (
-            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">
-              {sanitize(action.description)}
-            </p>
+          {translation ? (
+            <SafeHtml html={translation.textLoc} className="text-xs" />
+          ) : (
+            action.description && (
+              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">
+                {sanitize(action.description)}
+              </p>
+            )
           )}
           {action.source_book && (
             <p className="text-[10px] text-muted-foreground/60 italic">{action.source_book}</p>

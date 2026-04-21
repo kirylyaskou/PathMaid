@@ -5,6 +5,8 @@ import { getSpellById } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { stripHtml } from '@/shared/lib/html'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { useContentTranslation } from '@/shared/i18n'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
 
@@ -29,13 +31,19 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
   const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 
+  // Phase 80: spell translation lookup — `rank` is the level disambiguator
+  // for spells (different-rank spells can share a base name).
+  const { data: translation } = useContentTranslation('spell', spell?.name, spell?.rank ?? null)
+
   return (
     <Sheet open={!!spellId} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto flex flex-col gap-0 p-0">
         {spell && (
           <>
             <SheetHeader className="p-4 pb-3 border-b border-border/30">
-              <SheetTitle className="text-base font-semibold leading-tight">{spell.name}</SheetTitle>
+              <SheetTitle className="text-base font-semibold leading-tight">
+                {translation?.nameLoc ?? spell.name}
+              </SheetTitle>
               <div className="flex items-center flex-wrap gap-2 mt-1">
                 <span className="text-xs text-muted-foreground">{rankLabel(spell.rank)}</span>
                 {traditions.map((t) => (
@@ -107,11 +115,15 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 </div>
               )}
 
-              {/* Description */}
-              {spell.description && (
-                <p className="text-[13px] text-foreground/80 leading-relaxed">
-                  {stripHtml(spell.description)}
-                </p>
+              {/* Description — RU translation overrides EN when available */}
+              {translation ? (
+                <SafeHtml html={translation.textLoc} className="text-[13px]" />
+              ) : (
+                spell.description && (
+                  <p className="text-[13px] text-foreground/80 leading-relaxed">
+                    {stripHtml(spell.description)}
+                  </p>
+                )
               )}
 
               {/* Source */}
