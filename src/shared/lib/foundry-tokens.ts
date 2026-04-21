@@ -17,21 +17,48 @@ export function resolveFoundryTokens(text: string): string {
   text = text.replace(/@Condition\[([^\]]+)\]/g, (_, slug: string) =>
     slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   )
-  // @Damage[2d6[fire], 1d4[bleed]] → "2d6 fire plus 1d4 bleed"
-  // @Damage[(@item.rank+1)d8[acid]|options:area-damage] → "(rank+1)d8 acid"
-  // Handles ONE level of nested brackets in the damage-type tag. The outer
-  // regex is balanced for `[type]` inside the content.
+  // @Damage[2d6[fire], 1d4[bleed]]                                   → "2d6 fire plus 1d4 bleed"
+  // @Damage[(@item.rank+1)d8[acid]|options:area-damage]               → "(rank+1)d8 acid"
+  // @Damage[(ceil(@item.level/2))[persistent,acid]|options:…]         → "(ceil(level/2)) persistent acid"
+  // Handles ONE level of nested brackets in the damage-type tag. Uses a
+  // split-by-TOP-level-comma helper so damage types like `[persistent,acid]`
+  // don't get shredded.
   text = text.replace(/@Damage\[((?:[^[\]]|\[[^\]]*\])*)\]/g, (_, inner: string) => {
-    // Strip Foundry option flags like `|options:area-damage` — they're
-    // metadata, not human text.
-    const cleaned = inner.replace(/\|options?:[^|]+/g, '')
-    return cleaned.split(/,\s*/).map((p: string) => {
-      const m = p.trim().match(/^(.+?)\[(.+?)\]$/)
-      if (!m) return p.trim()
-      // Clean up Foundry formula scaffolding: @item.rank+1 → rank+1 etc.
-      const formula = m[1].replace(/@item\./g, '')
-      return `${formula} ${m[2]}`
-    }).join(' plus ')
+    // Strip Foundry option flags (e.g. `|options:area-damage`) + clean the
+    // `@item.` scaffolding so the formula reads as plain math.
+    const cleaned = inner
+      .replace(/\|options?:[^|]+/g, '')
+      .replace(/@item\./g, '')
+    // Split on top-level comma only — don't break commas nested inside [...]
+    const parts: string[] = []
+    let buf = ''
+    let depth = 0
+    for (const ch of cleaned) {
+      if (ch === '[') depth++
+      else if (ch === ']') depth = Math.max(0, depth - 1)
+      if (ch === ',' && depth === 0) {
+        parts.push(buf)
+        buf = ''
+      } else {
+        buf += ch
+      }
+    }
+    if (buf) parts.push(buf)
+    return parts
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .map((p) => {
+        // Pipe-separated damage alternatives: take the first (primary) and
+        // treat the rest as append-text (common: formula|damage-type-kind).
+        const primary = p.split('|')[0].trim()
+        const m = primary.match(/^(.+?)\[([^\]]+)\]$/)
+        if (!m) return primary
+        // Inner damage-type tag: split commas ONLY inside `[persistent,acid]`
+        // into a space-joined list ("persistent acid").
+        const types = m[2].split(/,\s*/).join(' ')
+        return `${m[1]} ${types}`
+      })
+      .join(' plus ')
   })
   // @Check[type:perception|dc:20] → "DC 20 Perception check"
   // @Check[will|dc:17]             → "DC 17 Will check" (Foundry positional)
@@ -86,10 +113,30 @@ export function resolveFoundryTokens(text: string): string {
   text = text.replace(/\[\[\/br\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
   // [[/br expr]] → expr
   text = text.replace(/\[\[\/br\s+([^#\s\]]+)[^\]]*\]\]/g, '$1')
+  // [[/r 1d8 #Prismatic Spray]]{display} → display text
+  text = text.replace(/\[\[\/r\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
+  // [[/r 1d8 #Prismatic Spray]]     → 1d8  (drop hash label, keep formula)
+  text = text.replace(/\[\[\/r\s+([^#\]]+?)(?:\s+#[^\]]*)?\]\]/g, (_, formula: string) => formula.trim())
+  // Generic fallback for any other [[/cmd ...]]{alias} → alias
+  text = text.replace(/\[\[\/\w+\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
+  // Generic fallback for any other [[/cmd ...]] with no alias → stripped
+  text = text.replace(/\[\[\/\w+\s+[^\]]*\]\]/g, '')
   // {Nfeet} → "N feet"
   text = text.replace(/\{(\d+)feet?\}/gi, '$1 feet')
   // Strip remaining unresolved @ tokens
   text = text.replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, '')
+  // Orphaned alias braces after @UUID resolution: Foundry source sometimes
+  // emits `Word{Word}` or `Word{Word}{Word}` when an alias is doubled;
+  // the first `{alias}` was already consumed, drop the remainder.
+  //   - `Grapple{Grapple}`             → `Grapple`
+  //   - `...the Grapple{Grapple} action` → `...the Grapple action`
+  text = text.replace(/(\b\w[\w\s-]*?)\s*\{\1\}/g, '$1')
+  // Fallback: strip any standalone `{Alias}` where Alias is simple
+  // identifier text (letters, spaces, hyphens). Preserves legitimate
+  // braces only if content contains non-text (numbers, operators).
+  text = text.replace(/\s*\{([A-Za-z][A-Za-z\s-]{0,40})\}/g, ' $1')
+  // Final whitespace sweep after all token substitutions.
+  text = text.replace(/[ \t]{2,}/g, ' ').replace(/ +\n/g, '\n')
   return text
 }
 
