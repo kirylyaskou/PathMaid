@@ -43,6 +43,8 @@ import { highlightGameText } from '../lib/foundry-text'
 import { StatItem } from './StatItem'
 import { SpellcastingBlock } from './SpellcastingBlock'
 import { EquipmentBlock } from './EquipmentBlock'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { useContentTranslation } from '@/shared/i18n'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
@@ -121,6 +123,45 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
+  // v1.5.1: RU content translation override. When a bundled pf2.ru
+  // translation exists for this monster, render the Russian HTML stat
+  // block in place of the structured EN one. Early-return here so the
+  // rest of the component (hooks, memoized classifiers) is skipped on
+  // the RU branch — saves a lot of work since the SafeHtml body is the
+  // full stat block rendered as HTML.
+  //
+  // Rules of hooks: useContentTranslation MUST be called unconditionally
+  // before any early-return. Subsequent hooks only run on the EN branch,
+  // which is fine because the RU branch renders a completely different
+  // subtree and the function reference changes per locale.
+  const { data: translation } = useContentTranslation(
+    'monster',
+    creature.name,
+    creature.level,
+  )
+  if (translation) {
+    return (
+      <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
+        <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
+          <div className="flex items-start gap-4">
+            <LevelBadge level={creature.level} size="lg" />
+            <div className="flex-1">
+              <h2 className="text-xl font-bold tracking-tight">{translation.nameLoc}</h2>
+              {translation.traitsLoc && (
+                <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
+                  {translation.traitsLoc}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-3 text-sm">
+          <SafeHtml html={translation.textLoc} />
+        </CardContent>
+      </Card>
+    )
+  }
+
   // v1.4.1 UAT BUG-7: tag this hook as an "attack" roll site so Sure Strike
   // (RollTwice selector: attack-roll) surfaces a label+fortune formula in
   // the toast. Non-attack rolls on the stat-block (saves, perception) run
