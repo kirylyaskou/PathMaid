@@ -540,7 +540,7 @@ console.log(creature)
                       traits: [] as string[],
                       group: undefined as string | undefined,
                       additionalDamage: undefined as { formula: string; type: string; label?: string }[] | undefined,
-                      damage: [{ formula: `${bfs.diceNumber ?? 1}${bfs.dieSize}`, type: bfs.damageType ?? '' }],
+                      damage: [{ formula: `${bfs.diceNumber ?? 1}${bfs.dieSize}`, type: bfs.damageType ?? '', persistent: undefined as boolean | undefined }],
                       reach: undefined as number | undefined,
                       range: undefined as number | undefined,
                     }))
@@ -616,9 +616,29 @@ console.log(creature)
                         return { ...d, formula: newFormula }
                       })
                     : strike.damage
+                  const effectiveBaseReach = baseReachFromDisplaySize(effectiveSize)
+                  const traitReach = reachFromTraits(strike.traits, effectiveBaseReach)
+                  const resolvedReach =
+                    typeof strike.reach === 'number'
+                      ? strike.reach
+                      : !isRanged
+                        ? (traitReach ?? effectiveBaseReach)
+                        : undefined
+                  const hasRange = typeof strike.range === 'number' && strike.range > 0
+                  // Only surface Reach when there's no Range and the reach differs from
+                  // the creature's default (e.g. Whip's base+5). Default 5/10/15 ft
+                  // reach is implicit from size and not worth rendering.
+                  const reachBuff = sizeShift && !battleFormStrikes ? sizeShift.reachBonus : 0
+                  const displayReach =
+                    typeof resolvedReach === 'number' ? resolvedReach + reachBuff : 0
+                  const hasNonDefaultReach =
+                    !hasRange &&
+                    !isRanged &&
+                    typeof resolvedReach === 'number' &&
+                    resolvedReach > effectiveBaseReach
                   return (
                     <div key={i} className="p-3 rounded-md bg-secondary/50">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <ActionIcon cost={1} className="text-lg" />
                         <span className="font-semibold">{strike.name}</span>
                         {/* FEAT-11: MAP buttons — click to roll at that MAP and set the combatant's mapIndex */}
@@ -669,6 +689,16 @@ console.log(creature)
                             return btn
                           })}
                         </div>
+                        {hasRange && (
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                            Range {strike.range} ft
+                          </span>
+                        )}
+                        {hasNonDefaultReach && (
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                            Reach {displayReach} ft
+                          </span>
+                        )}
                       </div>
                       {/* Main damage — uses effectiveDamage which has AdjustStrike applied */}
                       {effectiveDamage.length > 0 && (
@@ -680,6 +710,9 @@ console.log(creature)
                               <ClickableFormula formula={d.formula} label={`${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
                               {d.type && (
                                 <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
+                              )}
+                              {d.persistent && (
+                                <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">persistent</span>
                               )}
                             </span>
                           ))}
@@ -707,52 +740,18 @@ console.log(creature)
                           ))}
                         </div>
                       )}
-                      {/* Weapon group + reach/range badges.
+                      {/* Weapon group badge (reach/range moved inline into strike header).
                           v1.4.1 UAT BUG-4: custom-creature strikes don't carry
                           a `reach` field; fall back to reach derived from
                           traits+creature size so the badge still shows for
                           melee weapons like the Whip. */}
-                      {(() => {
-                        const effectiveBaseReach = baseReachFromDisplaySize(effectiveSize)
-                        const traitReach = reachFromTraits(strike.traits, effectiveBaseReach)
-                        const resolvedReach =
-                          typeof strike.reach === 'number'
-                            ? strike.reach
-                            : !isRanged
-                              ? (traitReach ?? effectiveBaseReach)
-                              : undefined
-                        const hasReach = typeof resolvedReach === 'number' && resolvedReach > 0 && !isRanged
-                        const hasRange = typeof strike.range === 'number' && strike.range > 0
-                        if (!strike.group && !hasReach && !hasRange) return null
-                        return (
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {strike.group && (
-                              <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                                Group: {strike.group}
-                              </span>
-                            )}
-                            {hasRange && (
-                              <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                                Range {strike.range} ft
-                              </span>
-                            )}
-                            {hasReach && (() => {
-                              // Apply Enlarge-class reach buff additively (per PF2e
-                              // Player Core pg. 329). BattleForm strike overrides
-                              // already declare full strike shapes, so skip the
-                              // buff when battleFormStrikes are in effect.
-                              const reachBuff =
-                                sizeShift && !battleFormStrikes ? sizeShift.reachBonus : 0
-                              const displayReach = (resolvedReach as number) + reachBuff
-                              return (
-                                <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                                  Reach {displayReach} ft
-                                </span>
-                              )
-                            })()}
-                          </div>
-                        )
-                      })()}
+                      {strike.group && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
+                            Group: {strike.group}
+                          </span>
+                        </div>
+                      )}
                       {strike.traits.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {strike.traits.map((trait) => (
