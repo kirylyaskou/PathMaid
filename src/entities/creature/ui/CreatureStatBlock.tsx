@@ -330,7 +330,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
       else if (classifiedAbilities.other.length > 0) setActionTab('other')
     }
   }, [classifiedAbilities.offensive.length, classifiedAbilities.defensive.length, classifiedAbilities.other.length])
-
+console.log(creature)
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
       {/* Header - Grimdark */}
@@ -364,7 +364,9 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
             {creature.type.length > 0 && (
               <>{' • '}{capitalize(creature.type)}</>
             )}
-            {' '}({capitalize(recallKnowledge.skill)})
+            {recallKnowledge.skills.length > 0 && (
+              <>{' '}({recallKnowledge.skills.map(capitalize).join(', ')})</>
+            )}
           </p>
         </div>
 

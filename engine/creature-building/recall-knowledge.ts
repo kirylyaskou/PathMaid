@@ -49,33 +49,34 @@ export const RARITY_DC_ADJUSTMENT: Record<Rarity, number> = {
   unique:   10,
 }
 
-// ── Creature type → primary Recall Knowledge skill ────────────────────────────
-// Lowercase keys and lowercase values, matching engine/pc/skills.ts convention.
-// Ambiguous types resolved per AoN stat block majority usage:
-//   beast → nature  (vs arcana — nature is more common on AoN)
-//   elemental → arcana  (vs nature — arcana is more common on AoN)
-//   construct → arcana  (vs crafting — arcana is more common on AoN)
-export const CREATURE_TYPE_TO_SKILL: Record<string, string> = {
-  aberration:  'occultism',
-  animal:      'nature',
-  astral:      'occultism',
-  beast:       'nature',
-  celestial:   'religion',
-  construct:   'arcana',
-  dragon:      'arcana',
-  dream:       'occultism',
-  elemental:   'arcana',
-  ethereal:    'occultism',
-  fey:         'nature',
-  fiend:       'religion',
-  fungus:      'nature',
-  humanoid:    'society',
-  monitor:     'religion',
-  ooze:        'occultism',
-  plant:       'nature',
-  spirit:      'occultism',
-  time:        'occultism',
-  undead:      'religion',
+// ── Creature type → Recall Knowledge skills ──────────────────────────────────
+// Source: AoN Skills.aspx?ID=24 (Recall Knowledge general skill rules).
+// Some creature types map to multiple skills — different skills reveal different
+// aspects (e.g. Construct: Arcana for magical nature, Crafting for construction).
+// Additional types not listed on the general skill page (Humanoid, Dragon, Monitor,
+// Astral, Ethereal, Dream, Fungus, Spirit, Time) are derived from Monster Core /
+// NPC Core stat block conventions.
+export const CREATURE_TYPE_TO_SKILLS: Record<string, readonly string[]> = {
+  aberration:  ['occultism'],
+  animal:      ['nature'],
+  astral:      ['occultism'],
+  beast:       ['arcana', 'nature'],
+  celestial:   ['religion'],
+  construct:   ['arcana', 'crafting'],
+  dragon:      ['arcana'],
+  dream:       ['occultism'],
+  elemental:   ['arcana', 'nature'],
+  ethereal:    ['occultism'],
+  fey:         ['nature'],
+  fiend:       ['religion'],
+  fungus:      ['nature'],
+  humanoid:    ['society'],
+  monitor:     ['religion'],
+  ooze:        ['occultism'],
+  plant:       ['nature'],
+  spirit:      ['occultism'],
+  time:        ['occultism'],
+  undead:      ['religion'],
 }
 
 // ── Functions ─────────────────────────────────────────────────────────────────
@@ -91,40 +92,47 @@ export function computeRecallKnowledgeDC(level: number, rarity: Rarity): number 
 }
 
 /**
- * Determine the primary Recall Knowledge skill for a creature.
- * Looks up `creatureType` (case-insensitive) in CREATURE_TYPE_TO_SKILL first.
- * Falls back to scanning `traits` (expected lowercase) for the first match.
- * Returns 'arcana' as the catch-all if nothing matches.
+ * Determine the Recall Knowledge skills for a creature.
+ * Returns every skill that matches the creature's type or any of its traits.
+ * A Gold Defender with traits ["construct", "golem", "mindless"] returns
+ * ["arcana", "crafting"] (from "construct"); "golem"/"mindless" don't add skills.
+ * Returns [] if no type/trait matches.
  */
-export function getRecallKnowledgeSkill(
+export function getRecallKnowledgeSkills(
   creatureType: string,
   traits: readonly string[],
-): string {
+): string[] {
+  const matches = new Set<string>()
+
   const normalizedType = creatureType.toLowerCase().trim()
-  if (normalizedType && normalizedType in CREATURE_TYPE_TO_SKILL) {
-    return CREATURE_TYPE_TO_SKILL[normalizedType]!
+  if (normalizedType && normalizedType in CREATURE_TYPE_TO_SKILLS) {
+    for (const skill of CREATURE_TYPE_TO_SKILLS[normalizedType]!) matches.add(skill)
   }
+
   for (const trait of traits) {
-    if (trait in CREATURE_TYPE_TO_SKILL) {
-      return CREATURE_TYPE_TO_SKILL[trait]!
+    const normalized = trait.toLowerCase().trim()
+    if (normalized in CREATURE_TYPE_TO_SKILLS) {
+      for (const skill of CREATURE_TYPE_TO_SKILLS[normalized]!) matches.add(skill)
     }
   }
-  return 'arcana'
+
+  return [...matches]
 }
 
 /**
  * Aggregate Recall Knowledge info for a creature.
- * Returns `{ dc, type, skill }` — all inputs are already on CreatureStatBlockData.
+ * Returns `{ dc, type, skills }` — skills is an array (possibly empty) of lowercase
+ * skill names. UI is responsible for capitalization and formatting.
  */
 export function getRecallKnowledgeInfo(creature: {
   level: number
   rarity: Rarity
   type: string
   traits: readonly string[]
-}): { dc: number; type: string; skill: string } {
+}): { dc: number; type: string; skills: string[] } {
   return {
-    dc:    computeRecallKnowledgeDC(creature.level, creature.rarity),
-    type:  creature.type,
-    skill: getRecallKnowledgeSkill(creature.type, creature.traits),
+    dc:     computeRecallKnowledgeDC(creature.level, creature.rarity),
+    type:   creature.type,
+    skills: getRecallKnowledgeSkills(creature.type, creature.traits),
   }
 }
