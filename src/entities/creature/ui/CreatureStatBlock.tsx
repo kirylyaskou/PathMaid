@@ -355,8 +355,8 @@ console.log(creature)
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Recall Knowledge — displayed between trait list and core stats, matching AoN header-area placement */}
-        <div className="px-4 pt-2 pb-1">
+        {/* Recall Knowledge + Senses — displayed between trait list and core stats, matching AoN header-area placement */}
+        <div className="px-4 pt-2 pb-1 space-y-0.5">
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground/80">
               Recall Knowledge DC {recallKnowledge.dc}
@@ -368,6 +368,12 @@ console.log(creature)
               <>{' '}({recallKnowledge.skills.map(capitalize).join(', ')})</>
             )}
           </p>
+          {creature.senses.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground/80">Senses</span>
+              {' '}{creature.senses.join(', ')}
+            </p>
+          )}
         </div>
 
         {/* Core Stats */}
@@ -930,15 +936,12 @@ console.log(creature)
         </Collapsible>
         <Separator />
 
-        {/* Languages & Senses */}
-        <div className="p-4 space-y-2">
-          {creature.languages.length > 0 && (
+        {/* Languages (Senses moved to header area under Recall Knowledge) */}
+        {creature.languages.length > 0 && (
+          <div className="p-4 space-y-2">
             <StatRow label="Languages">{creature.languages.join(", ")}</StatRow>
-          )}
-          {creature.senses.length > 0 && (
-            <StatRow label="Senses">{creature.senses.join(", ")}</StatRow>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Description */}
         {creature.description && (
