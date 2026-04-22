@@ -169,7 +169,14 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
       if (reach === undefined && traits.includes('reach')) {
         reach = baseCreatureReach + 5
       }
-      const isMelee = item.type === 'melee'
+      // Read system.range.max as the canonical range for ranged strikes.
+      // PF2e uses item.type="melee" for ALL strike items (melee and ranged),
+      // so we cannot rely on item.type to detect ranged — system.range.max is
+      // the ground truth (non-null → ranged attack with that range in feet).
+      if (range === undefined && (item.system?.range?.max ?? null) !== null) {
+        range = item.system!.range!.max as number
+      }
+      const isMelee = item.type === 'melee' && range === undefined
       if (reach === undefined && isMelee) reach = baseCreatureReach
       return {
         name: item.name || 'Strike',
@@ -449,12 +456,16 @@ export function extractIwr(row: CreatureRow): {
   }
 }
 
-function formatDamage(damageRolls: Record<string, FoundryDamageRoll> | undefined | null): { formula: string; type: string }[] {
+function formatDamage(damageRolls: Record<string, FoundryDamageRoll> | undefined | null): { formula: string; type: string; persistent?: boolean }[] {
   if (!damageRolls) return []
-  return Object.values(damageRolls).map((d) => ({
-    formula: (d.damage || d.formula || '?').trim(),
-    type: (d.damageType || d.type || '').trim(),
-  }))
+  return Object.values(damageRolls).map((d) => {
+    const entry: { formula: string; type: string; persistent?: boolean } = {
+      formula: (d.damage || d.formula || '?').trim(),
+      type: (d.damageType || d.type || '').trim(),
+    }
+    if (d.category === 'persistent') entry.persistent = true
+    return entry
+  })
 }
 
 function parseActionCost(actionType?: string, actions?: number | null): DisplayActionCost | undefined {

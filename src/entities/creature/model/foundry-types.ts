@@ -15,6 +15,7 @@ export interface FoundryDamageRoll {
   formula?: string
   damageType?: string
   type?: string
+  category?: string
 }
 
 export interface FoundryItemSystem {
@@ -25,6 +26,7 @@ export interface FoundryItemSystem {
   actionType?: { value?: string }
   actions?: { value?: number | null }
   group?: string
+  range?: { increment?: number | null; max?: number | null }
 }
 
 export interface FoundryItem {

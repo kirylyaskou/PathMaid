@@ -56,7 +56,7 @@ export interface CreatureStatBlockData extends Creature {
   strikes: {
     name: string
     modifier: number
-    damage: { formula: string; type: string }[]
+    damage: { formula: string; type: string; persistent?: boolean }[]
     traits: string[]
     group?: string
     additionalDamage?: { formula: string; type: string; label?: string }[]
