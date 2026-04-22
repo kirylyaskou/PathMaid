@@ -16,7 +16,7 @@ interface ModifierTooltipProps {
   inactiveModifiers?: InactiveModifier[]
   /**
    * Opt-in flag for the inactive block. Defaulting to `false` keeps every
-   * existing call-site visually unchanged — only the new Phase 66 paths
+   * existing call-site visually unchanged — only the paths
    * that want the "gated by predicate" readout pass `showInactive`.
    */
   showInactive?: boolean

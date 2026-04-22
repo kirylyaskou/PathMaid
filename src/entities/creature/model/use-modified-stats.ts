@@ -27,7 +27,7 @@ import type {
   PredicateTerm,
 } from '@engine'
 
-// Re-export so Plan 02 only needs one import for both
+// Re-export so callers need only one import for both
 export type { StatModifierResult, InactiveModifier }
 
 // ─── useModifiedStats ─────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export function useModifiedStats(
 
   // Build the predicate-evaluation context from the same store
   // snapshots. Target-aware atoms fall out of scope here (target-aware flow
-  // is driven by the Cast→Apply pipeline in Phase 68) so only `self:*` atoms
+  // is driven by the Cast→Apply pipeline) so only `self:*` atoms
   // resolve for now; `target:*` atoms evaluate to `false` without warning.
   const predicateContext = useMemo<PredicateContext>(
     () =>

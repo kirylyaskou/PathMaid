@@ -278,7 +278,7 @@ export function BestiarySearchPanel() {
                 </button>
               ))}
             </div>
-            {/* 70-04 / v1.4.1 UAT BUG-8: Paizo library scope.
+            {/* Paizo library scope.
                 Previously a horizontally-scrolling chip row — the scroll
                 was ugly on narrow sidebars. Replaced with a shadcn Select
                 dropdown that uses the same values ('__all__' sentinel +
@@ -313,7 +313,7 @@ export function BestiarySearchPanel() {
                   {query.trim() ? `No creatures found for "${query}"` : 'No creatures found'}
                 </p>
               )}
-              {/* v1.4.1 UAT BUG-1: custom creatures rendered first with a gold
+              {/* Custom creatures rendered first with a gold
                   accent + "custom" pill so they stand out. Same pipeline as
                   bestiary entries. */}
               {customFiltered.map((row) => {

@@ -27,7 +27,7 @@ export function getPlatform(): Platform {
  * True on macOS. Drives the darwin-gate across UI :
  * - Settings: button swapped to "Открыть страницу релиза"
  * - UpdateDialog: component returns null
- * - Phase 75 hook: auto-check skipped
+ * - Startup hook: auto-check skipped
  *
  * Platform literal from plugin-os is 'macos' (Rust-style), NOT 'darwin' (Node-style).
  */
@@ -41,7 +41,7 @@ export function isDarwin(): boolean {
  * Uses @tauri-apps/plugin-opener — Tauri WebView blocks/proxies native
  * window.open() in release builds. Plugin-opener goes through native OS API.
  *
- * Requires capability `opener:default` (already granted in Phase 1).
+ * Requires capability `opener:default` (already granted).
  */
 export async function openReleasesPage(): Promise<void> {
   await openUrl(RELEASES_LATEST_URL)

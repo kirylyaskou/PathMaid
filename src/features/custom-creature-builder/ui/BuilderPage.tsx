@@ -152,7 +152,7 @@ export function BuilderPage({ creatureId }: Props) {
         onApplyRole={handleApplyRole}
         onClone={() => setCloneOpen(true)}
       />
-      {/* Two-pane layout — D-17. Stacks vertically below xl (Tauri window resize). */}
+      {/* Two-pane layout; stacks vertically below xl (Tauri window resize). */}
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 p-6 min-h-0 overflow-hidden">
         <div className="flex flex-col min-h-0 bg-card border border-border/40 rounded-md overflow-hidden">
           <BuilderTabs state={state} dispatch={dispatch} />

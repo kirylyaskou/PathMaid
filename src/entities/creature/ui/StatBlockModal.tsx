@@ -26,7 +26,7 @@ export function StatBlockModal({ creatureId, open, onOpenChange }: StatBlockModa
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-5xl w-[90vw] max-h-[90vh] overflow-y-auto p-0">
-        {/* BUG-04 (52-08): Radix Dialog requires a DialogTitle for a11y; a
+        {/* Radix Dialog requires a DialogTitle for a11y; a
             missing title surfaces as a console error in dev and can break
             focus trap timing. Visually hidden since the stat block has its
             own heading. */}

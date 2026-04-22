@@ -18,7 +18,7 @@ export interface CreatureRow {
   raw_json: string
   source_name: string | null
   // Paizo adventure of origin (beginner-box, sundered-waves, ...).
-  // NULL for iconics and pre-Phase 70 bestiary entries.
+  // NULL for iconics and pre-library-tag bestiary entries.
   source_adventure: string | null
 }
 

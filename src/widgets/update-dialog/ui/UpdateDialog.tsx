@@ -28,8 +28,8 @@ import {
  * the four selected fields change (not on unrelated store writes).
  */
 export function UpdateDialog() {
-  // D-14 darwin guard — return null BEFORE any hook calls (hook order stability).
-  // isDarwin() is sync (Plan 01 — platform() reads from window.__TAURI_OS_PLUGIN_INTERNALS__
+  // darwin guard — return null BEFORE any hook calls (hook order stability).
+  // isDarwin() is sync (platform() reads from window.__TAURI_OS_PLUGIN_INTERNALS__
   // synchronously) — safe in render.
   if (isDarwin()) return null
 
