@@ -15,10 +15,6 @@ import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import type { CreatureStatBlockData } from '../model/types'
-import {
-  normalizeImmunities,
-  formatImmunityWithExceptions,
-} from '../model/iwr-normalize'
 import { stripHtml } from '@/shared/lib/html'
 import { useModifiedStats } from '../model/use-modified-stats'
 import { useEffectiveSpeeds } from '../model/use-effective-speeds'
@@ -42,14 +38,13 @@ import { CreatureSpeedLine } from './CreatureSpeedLine'
 import { CreatureStrikesSection } from './CreatureStrikesSection'
 import { CreatureAbilitiesSection } from './CreatureAbilitiesSection'
 import { CreatureSkillsLine } from './CreatureSkillsLine'
+import { CreatureDefensesBlock } from './CreatureDefensesBlock'
 import { useEffectiveStrikes, type EffectiveStrike } from '../model/use-effective-strikes'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
-// Module-level stable empty array — used as fallback in the useEffectStore selector
-// so that "no combatant id" / "no active effects" never produces a fresh [] per
-// render. useShallow only checks referential/shallow equality; a new [] every
-// render would still be a new ref and re-trigger the render loop.
+// Module-level stable empty array. useShallow only checks referential equality,
+// so a fresh [] each render would retrigger selectors and loop the component.
 const EMPTY_ACTIVE_EFFECTS: readonly ActiveEffect[] = []
 
 // Ordered PF2e sizes — used to pick the largest resulting size when multiple
@@ -57,7 +52,6 @@ const EMPTY_ACTIVE_EFFECTS: readonly ActiveEffect[] = []
 const SIZE_ORDER = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'] as const
 type EngineSize = (typeof SIZE_ORDER)[number]
 
-// Capitalize the first character of a string; returns empty string unchanged.
 const capitalize = (s: string): string =>
   s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1)
 
@@ -98,10 +92,9 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
-  // v1.4.1 UAT BUG-7: tag this hook as an "attack" roll site so Sure Strike
-  // (RollTwice selector: attack-roll) surfaces a label+fortune formula in
-  // the toast. Non-attack rolls on the stat-block (saves, perception) run
-  // via separate useRoll calls in CombatantSavesBar / PCCombatCard.
+  // Tag this hook as an "attack" roll site so Sure Strike (RollTwice
+  // selector: attack-roll) produces a fortune-aware formula in the toast.
+  // Saves and perception use separate useRoll calls in CombatantSavesBar.
   const handleRoll = useRoll(
     creature.name,
     encounterContext?.encounterId,
@@ -109,13 +102,10 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     'attack',
   )
 
-  // Phase 39: build stat slug list for condition modifier computation.
-  // v1.4.1 UAT BUG-6: append speed slugs the creature actually declares so
-  // effects with selector:'all-speeds' / 'land-speed' (Acid Grip, etc.) can
-  // resolve against them. Acid Grip's -10 status to all-speeds is predicate-
-  // gated on self:condition:persistent-damage:acid — use-modified-stats
-  // already splits active/inactive, so struck-out entries show in the
-  // tooltip until the persistent acid condition fires.
+  // Stat slug list for the condition/spell-effect modifier engine. Speed
+  // slugs are appended per declared speed type so effects with
+  // selector: 'all-speeds' / 'land-speed' (Acid Grip's gated -10, etc.)
+  // resolve against real stats rather than disappearing silently.
   const allStatSlugs = useMemo(
     () => {
       const declaredSpeeds = Object.entries(creature.speeds)
@@ -123,10 +113,10 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         .map(([type]) => `${type}-speed`)
       return [
         'ac', 'fortitude', 'reflex', 'will', 'perception',
-        'strike-attack',        // virtual: ranged + 'all'-selector conditions (frightened, sickened)
-        'melee-strike-attack',  // virtual: melee strikes — also receives enfeebled (str-based)
-        'spell-attack',         // virtual: spell attack roll — receives 'attack' selector effects (D-03)
-        'spell-dc',             // virtual: 'all'-selector conditions for core DC display
+        'strike-attack',        // virtual: ranged + 'all'-selector conditions
+        'melee-strike-attack',  // virtual: melee strikes + enfeebled (str-based)
+        'spell-attack',         // virtual: spell attack roll
+        'spell-dc',             // virtual: 'all'-selector conditions for DC display
         ...declaredSpeeds,
         ...creature.skills.map((s) => s.name.toLowerCase()),
       ]
@@ -135,10 +125,10 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
   )
   const modStats = useModifiedStats(encounterContext?.combatantId, allStatSlugs)
 
-  // FEAT-11: per-strike MAP counter — clickable MAP numbers drive the mapIndex
-  // on the selected combatant, so strikes from the stat block roll at the correct
-  // Multiple Attack Penalty. Lives here (not in CombatantDetail) so it sits next
-  // to the attack numbers it controls.
+  // Per-strike MAP counter — clickable MAP numbers drive mapIndex on the
+  // selected combatant so strike rolls from the stat block land at the
+  // correct Multiple Attack Penalty. Owned here so it sits next to the
+  // attack numbers it controls.
   const mapCombatantId = encounterContext?.combatantId
   const mapCombatant = useCombatantStore((s) =>
     mapCombatantId ? s.combatants.find((c) => c.id === mapCombatantId) : undefined,
@@ -146,27 +136,24 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
   const updateCombatantAction = useCombatantStore((s) => s.updateCombatant)
   const currentMapIndex = mapCombatant && isNpc(mapCombatant) ? mapCombatant.mapIndex ?? 0 : 0
 
-  // 65-04: BattleForm / CreatureSize overrides. Read-only — effect apply/remove
+  // BattleForm / CreatureSize overrides. Read-only — effect apply/remove
   // mutates the store; this is the single display-side consumer. Engine size
-  // tokens ('lg', 'huge', …) are mapped into the UI's DisplaySize form before
-  // the render tree sees them, keeping TraitList's Size contract intact.
+  // tokens ('lg', 'huge', …) map into the UI's DisplaySize before render so
+  // the TraitList Size contract stays intact.
   const sizeOverride = useBattleFormOverridesStore((s) =>
     mapCombatantId ? s.creatureSizeOverrides[mapCombatantId]?.size : undefined,
   )
   const battleFormAcOverride = useBattleFormOverridesStore((s) =>
     mapCombatantId ? s.battleFormOverrides[mapCombatantId]?.ac : undefined,
   )
-  // BUG-1: BattleForm strike overrides — replaces creature.strikes when present.
   const battleFormStrikes = useBattleFormOverridesStore((s) =>
     mapCombatantId ? s.battleFormOverrides[mapCombatantId]?.strikes : undefined,
   )
   const effectiveSize = sizeOverride ? mapSize(sizeOverride) : creature.size
 
-  // BUG-1: AdjustStrike — collect inputs from active effects for this combatant.
-  // Select only the raw effects for this combatant; use useShallow so equal-content
-  // arrays share referential identity and don't retrigger the render. Derivation
-  // (parseSpellEffectAdjustStrikes) happens in a useMemo below, so the returned
-  // inputs array is also stable across renders.
+  // AdjustStrike inputs from active effects. useShallow on the raw filter
+  // keeps referential identity stable when effect content hasn't changed —
+  // parsing happens in the useMemo below, so the final array is stable too.
   const combatantEffects = useEffectStore(
     useShallow((s) =>
       mapCombatantId
@@ -182,21 +169,15 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     [combatantEffects],
   )
 
-  // v1.4 UAT BUG-A (corrected per PF2e Player Core pg. 329): Enlarge-class size
-  // shift contributes ONLY a +2/+4 status bonus to melee damage — it does NOT
-  // step weapon damage dice. Walk active effects, resolve each CreatureSize-rule
-  // (with ChoiceSet-fed dynamic values) against the effect's level, take the
-  // largest resulting size token and the highest status bonus. Status bonuses
-  // don't stack in PF2e; taking the max is safe for the common single-source
-  // case (Enlarge).
-  // TODO: wire `size` into `useBattleFormOverridesStore` so the Size badge
-  // reflects the shift. Currently no runtime writer to that store exists —
-  // tracked as a follow-up to this fix (see .planning/debug/v140-uat-failures).
-  // v1.4.1 UAT BUG-5: aggregate BaseSpeed rules from active effects. Each
-  // rule contributes a speed type (fly / swim / climb / burrow / land);
-  // when the same type is declared multiple times we take the max so
-  // Elemental Motion → air (landSpeed) + another fly source stays
-  // consistent with PF2e's status-bonus stacking rules.
+  // Enlarge-class size shift (PF2e Player Core pg. 329): contributes a
+  // +2/+4 status bonus to melee damage, NOT a dice step-up. Dice are fixed
+  // by the weapon; legitimate dice step-up comes from AdjustStrike (Giant
+  // Instinct et al). Status bonuses don't stack — take the max.
+  //
+  // Aggregate BaseSpeed rules from active effects — each contributes a
+  // speed type (fly/swim/climb/burrow/land). When the same type is declared
+  // multiple times take the max so Elemental Motion → air(landSpeed) +
+  // another fly source stays consistent with PF2e status-bonus stacking.
   const effectSpeeds = useMemo(() => {
     const landSpeedFeet =
       typeof creature.speeds.land === 'number' ? (creature.speeds.land as number) : 0
@@ -205,9 +186,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
       const rules = parseBaseSpeedRules(eff.rulesJson)
       for (const r of rules) {
         // Predicate-gated BaseSpeed (Elemental Motion) is intentionally
-        // skipped here — evaluating @choice options from ChoiceSet is a
-        // separate concern. Unconditional rules (Fly, Angelic Wings) still
-        // surface the extra movement type in the speed list.
+        // skipped — evaluating @choice options from ChoiceSet is a separate
+        // concern. Unconditional rules (Fly, Angelic Wings) still surface.
         if (r.predicate && r.predicate.length > 0) continue
         const resolved =
           resolveBaseSpeedValue(r.rawValue, landSpeedFeet) ?? landSpeedFeet
@@ -231,7 +211,7 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
       if (!topSize || SIZE_ORDER.indexOf(shift.size) > SIZE_ORDER.indexOf(topSize)) {
         topSize = shift.size
       }
-      // Status bonuses don't stack in PF2e — take the max across all sources.
+      // Status bonuses don't stack — take the max across all sources.
       if (shift.meleeDamageBonus > topDamage) topDamage = shift.meleeDamageBonus
       if (shift.reachBonus > topReach) topReach = shift.reachBonus
     }
@@ -243,8 +223,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     }
   }, [combatantEffects])
 
-  // FEAT-04: detect troops/swarms from traits — they use a specialized layout
-  // (no Strikes, collective damage in Actions, troop HP segments rendered inline).
+  // Troops/swarms use a specialized layout — no Strikes, collective damage
+  // in Actions, troop HP segments rendered inline.
   const traitsLower = useMemo(
     () => creature.traits.map((t) => t.toLowerCase()),
     [creature.traits],
@@ -265,7 +245,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
   )
   const isSpecialFormation = isTroop || isSwarm
 
-  // FEAT-03a: hide Strikes section when the creature has none (troops/swarms also skip)
   const hasStrikes = creature.strikes.length > 0 && !isSpecialFormation
 
   const effectiveStrikes = useEffectiveStrikes(
@@ -288,7 +267,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     [handleRoll, mapCombatantId, updateCombatantAction],
   )
 
-  // FEAT-09: derive shield AC bonus from creature equipment data
   const derivedShieldAcBonus = useMemo(() => {
     if (!creature.equipment) return 0
     const shield = creature.equipment.find(
@@ -297,7 +275,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     return shield?.ac_bonus ?? 0
   }, [creature.equipment])
 
-  // FEAT-04: extract "Troop Defenses" ability for inline HP segment display
+  // "Troop Defenses" ability — surfaced inline next to troop HP segments
+  // rather than buried in the abilities list.
   const troopDefenses = useMemo(() => {
     if (!isTroop) return null
     return (
@@ -305,8 +284,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     )
   }, [isTroop, creature.abilities])
 
-  // FEAT-03b: classify abilities into Offensive / Defensive / Reactions / Other.
-  // No Foundry 'category' field exists on the current data model — use trait/name heuristics.
+  // Classify abilities into Offensive / Defensive / Reactions / Other via
+  // trait+name heuristics — no 'category' field on the Foundry data model.
   const classifiedAbilities = useMemo(
     () => classifyAbilities(creature.abilities, {
       isSpecialFormation,
@@ -317,7 +296,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
-      {/* Header - Grimdark */}
       <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
         <div className="flex items-start gap-4">
           <LevelBadge level={creature.level} size="lg" />
@@ -339,7 +317,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Recall Knowledge + Senses — displayed between trait list and core stats, matching AoN header-area placement */}
+        {/* Recall Knowledge + Senses sit between trait list and core stats,
+            matching the AoN header-area placement. */}
         <div className="px-4 pt-2 pb-1 space-y-0.5">
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground/80">
@@ -360,7 +339,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           )}
         </div>
 
-        {/* Core Stats */}
         <div className="pb-4 bg-card [@container-type:inline-size]">
           <div className="flex flex-nowrap overflow-hidden">
             <StatItem label="HP" value={creature.hp} highlight />
@@ -389,42 +367,13 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         <Separator />
 
-        {/* Immunities, Weaknesses, Resistances */}
         {(creature.immunities.length > 0 || creature.weaknesses.length > 0 || creature.resistances.length > 0) && (
           <>
-            <div className="p-4 space-y-2">
-              {creature.immunities.length > 0 && (
-                <StatRow label="Immunities">
-                  {normalizeImmunities(creature.immunities)
-                    .map((i) => formatImmunityWithExceptions(i))
-                    .join(", ")}
-                </StatRow>
-              )}
-              {creature.resistances.length > 0 && (
-                <StatRow label="Resistances">
-                  {creature.resistances
-                    .map((r) => {
-                      const base = `${r.type} ${r.value}`
-                      return r.exceptions && r.exceptions.length > 0
-                        ? `${base} (except ${r.exceptions.join(', ')})`
-                        : base
-                    })
-                    .join(", ")}
-                </StatRow>
-              )}
-              {creature.weaknesses.length > 0 && (
-                <StatRow label="Weaknesses">
-                  {creature.weaknesses
-                    .map((w) => {
-                      const base = `${w.type} ${w.value}`
-                      return w.exceptions && w.exceptions.length > 0
-                        ? `${base} (except ${w.exceptions.join(', ')})`
-                        : base
-                    })
-                    .join(", ")}
-                </StatRow>
-              )}
-            </div>
+            <CreatureDefensesBlock
+              immunities={creature.immunities}
+              resistances={creature.resistances}
+              weaknesses={creature.weaknesses}
+            />
             <Separator />
           </>
         )}
@@ -435,7 +384,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           </StatRow>
         </div>
 
-        {/* FEAT-04: Troop/Swarm formation badge + troop HP segments */}
         {isSpecialFormation && (
           <>
             <Separator />
@@ -480,7 +428,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           </>
         )}
 
-        {/* Spellcasting */}
         {creature.spellcasting && creature.spellcasting.length > 0 && (
           <>
             {creature.spellcasting.map((section) => (
@@ -496,7 +443,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           </>
         )}
 
-        {/* Equipment */}
         {(creature.equipment && creature.equipment.length > 0 || encounterContext) && (
           <>
             <EquipmentBlock
@@ -517,14 +463,12 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
         </Collapsible>
         <Separator />
 
-        {/* Languages (Senses moved to header area under Recall Knowledge) */}
         {creature.languages.length > 0 && (
           <div className="p-4 space-y-2">
             <StatRow label="Languages">{creature.languages.join(", ")}</StatRow>
           </div>
         )}
 
-        {/* Description */}
         {creature.description && (
           <>
             <Separator />
@@ -536,7 +480,6 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
           </>
         )}
 
-        {/* Source */}
         <div className="px-4 pb-4">
           <p className="text-xs text-muted-foreground">
             Source: {creature.source}
@@ -546,4 +489,3 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     </Card>
   )
 }
-
