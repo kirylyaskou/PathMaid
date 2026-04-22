@@ -4,8 +4,8 @@ milestone: v1.5.0
 milestone_name: — In-App Updater
 status: executing
 stopped_at: Phase 73 Plan 01 complete — shared/api/updater + updater-store shipped
-last_updated: "2026-04-20T14:55:54Z"
-last_activity: 2026-04-20 -- Phase 73 Plan 01 executed
+last_updated: "2026-04-22T16:55:00Z"
+last_activity: 2026-04-22 -- Completed quick task 260422-rh9: Add Recall Knowledge DC display to CreatureStatBlock
 progress:
   total_phases: 46
   completed_phases: 0
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-20)
 Phase: 73 (complete) → 74 (next)
 Plan: 73-01 complete
 Status: Ready to execute Phase 74
-Last activity: 2026-04-20 -- Phase 73 Plan 01 executed
+Last activity: 2026-04-22 -- Completed quick task 260422-rh9: Add Recall Knowledge DC display to CreatureStatBlock
 
 Progress: [░░░░░░░░░░] 0% (phase-level progress — Phase 73 is 1 of 46)
 
@@ -62,9 +62,15 @@ None.
 - TAURI_SIGNING_PRIVATE_KEY требует однократной ручной настройки в GitHub repo Settings — без него Phase 71 не завершится.
 - Надо проверить exact API для db.close() в shared/api/ перед Phase 76 (не исследовалось в research).
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260422-rh9 | Add Recall Knowledge DC display to CreatureStatBlock | 2026-04-22 | 168e89f0 | [260422-rh9-add-recall-knowledge-dc-display-to-creat](./quick/260422-rh9-add-recall-knowledge-dc-display-to-creat/) |
+
 ## Session Continuity
 
-Last session: 2026-04-20T14:55:54Z
+Last session: 2026-04-22
 Stopped at: Phase 73 Plan 01 complete — shared/api/updater.ts + updater-store.ts + barrel update
 Next step: /gsd-execute-phase 74 (Settings Updater UI + UpdateDialog)
 Resume file: .planning/phases/73-shared-api-store/73-01-SUMMARY.md
