@@ -92,6 +92,33 @@ export function computeRecallKnowledgeDC(level: number, rarity: Rarity): number 
 }
 
 /**
+ * Resolve the primary creature-type identifier for display.
+ * The `type` field on creature data is often a generic catalog label ("npc",
+ * "monster") — the real creature-type trait lives in `traits`. This helper
+ * returns the first trait that matches a known creature type, falling back
+ * to `type` (or '' if both are blank) when no trait matches.
+ *
+ * Gold Defender (type="npc", traits=["construct","golem","mindless"]) → "construct"
+ * Ancient Red Dragon (type="dragon", traits=["dragon","fire"]) → "dragon"
+ */
+export function getPrimaryCreatureType(
+  creatureType: string,
+  traits: readonly string[],
+): string {
+  const normalizedType = creatureType.toLowerCase().trim()
+  if (normalizedType && normalizedType in CREATURE_TYPE_TO_SKILLS) {
+    return normalizedType
+  }
+  for (const trait of traits) {
+    const normalized = trait.toLowerCase().trim()
+    if (normalized in CREATURE_TYPE_TO_SKILLS) {
+      return normalized
+    }
+  }
+  return normalizedType
+}
+
+/**
  * Determine the Recall Knowledge skills for a creature.
  * Returns every skill that matches the creature's type or any of its traits.
  * A Gold Defender with traits ["construct", "golem", "mindless"] returns
@@ -121,8 +148,10 @@ export function getRecallKnowledgeSkills(
 
 /**
  * Aggregate Recall Knowledge info for a creature.
- * Returns `{ dc, type, skills }` — skills is an array (possibly empty) of lowercase
- * skill names. UI is responsible for capitalization and formatting.
+ * Returns `{ dc, type, skills }` — `type` is the resolved primary creature-type
+ * (e.g. "construct" for a Gold Defender even if raw `type` is "npc"). `skills`
+ * is an array (possibly empty) of lowercase skill names. UI is responsible for
+ * capitalization and formatting.
  */
 export function getRecallKnowledgeInfo(creature: {
   level: number
@@ -132,7 +161,7 @@ export function getRecallKnowledgeInfo(creature: {
 }): { dc: number; type: string; skills: string[] } {
   return {
     dc:     computeRecallKnowledgeDC(creature.level, creature.rarity),
-    type:   creature.type,
+    type:   getPrimaryCreatureType(creature.type, creature.traits),
     skills: getRecallKnowledgeSkills(creature.type, creature.traits),
   }
 }

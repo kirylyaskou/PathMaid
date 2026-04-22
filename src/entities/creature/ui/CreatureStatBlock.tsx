@@ -342,7 +342,7 @@ console.log(creature)
               <h2 className="text-xl font-bold tracking-tight">{creature.name}</h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
-              {effectiveSize} {creature.type}
+              {effectiveSize} {recallKnowledge.type || creature.type}
             </p>
             <TraitList
               traits={creature.traits}
@@ -361,8 +361,8 @@ console.log(creature)
             <span className="font-semibold text-foreground/80">
               Recall Knowledge DC {recallKnowledge.dc}
             </span>
-            {creature.type.length > 0 && (
-              <>{' • '}{capitalize(creature.type)}</>
+            {recallKnowledge.type.length > 0 && (
+              <>{' • '}{capitalize(recallKnowledge.type)}</>
             )}
             {recallKnowledge.skills.length > 0 && (
               <>{' '}({recallKnowledge.skills.map(capitalize).join(', ')})</>

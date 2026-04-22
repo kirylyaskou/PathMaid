@@ -304,6 +304,7 @@ export {
   computeRecallKnowledgeDC,
   getRecallKnowledgeSkills,
   getRecallKnowledgeInfo,
+  getPrimaryCreatureType,
 } from './creature-building/recall-knowledge'
 export type {
   Tier,
