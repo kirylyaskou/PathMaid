@@ -297,6 +297,14 @@ export { ROLE_PRESETS, applyRole } from './creature-building/roles'
 export type { AppliedRoleValues } from './creature-building/roles'
 export { runSanityChecks } from './creature-building/sanity'
 export type { CreatureStatsForSanity } from './creature-building/sanity'
+export {
+  RECALL_KNOWLEDGE_DC_TABLE,
+  RARITY_DC_ADJUSTMENT,
+  CREATURE_TYPE_TO_SKILL,
+  computeRecallKnowledgeDC,
+  getRecallKnowledgeSkill,
+  getRecallKnowledgeInfo,
+} from './creature-building/recall-knowledge'
 export type {
   Tier,
   StatKind,
