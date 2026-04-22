@@ -1,10 +1,8 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useShallow } from 'zustand/react/shallow'
 import { useRoll } from '@/shared/hooks'
 import { formatModifier, formatRollFormula } from '@/shared/lib/format'
-import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
-import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
 import { Separator } from "@/shared/ui/separator"
@@ -17,7 +15,6 @@ import { SectionHeader } from "@/shared/ui/section-header"
 import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
-import { ActionIcon } from "@/shared/ui/action-icon"
 import { AbilityCard } from "@/shared/ui/ability-card"
 import type { CreatureStatBlockData } from '../model/types'
 import {
@@ -32,13 +29,12 @@ import { useBattleFormOverridesStore, useEffectStore } from '@/entities/spell-ef
 import type { ActiveEffect } from '@/entities/spell-effect'
 import {
   parseSpellEffectAdjustStrikes,
-  applyAdjustStrikes,
   parseSpellEffectSizeShift,
   parseBaseSpeedRules,
   resolveBaseSpeedValue,
   getRecallKnowledgeInfo,
 } from '@engine'
-import type { DieFace, SpeedType } from '@engine'
+import type { SpeedType } from '@engine'
 import { mapSize } from '@/shared/lib/size-map'
 import { classifyAbilities } from '../model/classify-abilities'
 import { highlightGameText } from '../lib/foundry-text'
@@ -46,6 +42,8 @@ import { StatItem } from './StatItem'
 import { SpellcastingBlock } from './SpellcastingBlock'
 import { EquipmentBlock } from './EquipmentBlock'
 import { CreatureSpeedLine } from './CreatureSpeedLine'
+import { CreatureStrikesSection } from './CreatureStrikesSection'
+import { useEffectiveStrikes, type EffectiveStrike } from '../model/use-effective-strikes'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
@@ -59,33 +57,6 @@ const EMPTY_ACTIVE_EFFECTS: readonly ActiveEffect[] = []
 // size-shifting effects overlap. Must match engine/types.ts ordering.
 const SIZE_ORDER = ['tiny', 'sm', 'med', 'lg', 'huge', 'grg'] as const
 type EngineSize = (typeof SIZE_ORDER)[number]
-
-// v1.4.1 UAT BUG-4: compute a creature's base melee reach (feet) from its
-// display size so custom-creature strikes (which never populate strike.reach
-// at build time) still render the "Reach N ft" badge correctly. Mirrors the
-// size→reach mapping used by toCreatureStatBlockData for Foundry docs.
-function baseReachFromDisplaySize(size: string): number {
-  switch (size) {
-    case 'Tiny': return 0
-    case 'Small':
-    case 'Medium': return 5
-    case 'Large': return 10
-    case 'Huge': return 15
-    case 'Gargantuan': return 20
-    default: return 5
-  }
-}
-
-// Extract reach (feet) declared by weapon traits. Returns undefined when
-// traits carry no reach information — caller falls back to baseReach.
-function reachFromTraits(traits: string[], baseReach: number): number | undefined {
-  for (const t of traits) {
-    const m = /^reach-(\d+)$/.exec(t)
-    if (m) return parseInt(m[1], 10)
-  }
-  if (traits.includes('reach')) return baseReach + 5
-  return undefined
-}
 
 // Capitalize the first character of a string; returns empty string unchanged.
 const capitalize = (s: string): string =>
@@ -298,6 +269,26 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
   // FEAT-03a: hide Strikes section when the creature has none (troops/swarms also skip)
   const hasStrikes = creature.strikes.length > 0 && !isSpecialFormation
 
+  const effectiveStrikes = useEffectiveStrikes(
+    creature.strikes,
+    battleFormStrikes,
+    adjustStrikeInputs,
+    sizeShift,
+    effectiveSize,
+    modStats,
+  )
+
+  const handleStrikeAttack = useCallback(
+    (strike: EffectiveStrike, mapIdx: number) => {
+      const mod =
+        mapIdx === 0 ? strike.modifiedMod : mapIdx === 1 ? strike.map1 : strike.map2
+      const suffix = mapIdx > 0 ? ` (MAP ${mapIdx + 1})` : ''
+      handleRoll(formatRollFormula(mod), `${strike.name} attack${suffix}`)
+      if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: mapIdx })
+    },
+    [handleRoll, mapCombatantId, updateCombatantAction],
+  )
+
   // FEAT-09: derive shield AC bonus from creature equipment data
   const derivedShieldAcBonus = useMemo(() => {
     if (!creature.equipment) return 0
@@ -480,251 +471,15 @@ console.log(creature)
 
         {hasStrikes && <Separator />}
 
-        {/* Strikes — hidden when creature has no melee/ranged attacks or is a troop/swarm */}
         {hasStrikes && (
-          <Collapsible defaultOpen>
-            <SectionHeader>Strikes</SectionHeader>
-            <CollapsibleContent>
-              <div className="px-4 py-3 space-y-3">
-                {/* BUG-1: use BattleForm strike overrides when present, otherwise
-                    fall back to creature.strikes with AdjustStrike applied. */}
-                {(battleFormStrikes
-                  ? battleFormStrikes.map((bfs) => ({
-                      name: bfs.name,
-                      modifier: 0,
-                      traits: [] as string[],
-                      group: undefined as string | undefined,
-                      additionalDamage: undefined as { formula: string; type: string; label?: string }[] | undefined,
-                      damage: [{ formula: `${bfs.diceNumber ?? 1}${bfs.dieSize}`, type: bfs.damageType ?? '', persistent: undefined as boolean | undefined }],
-                      reach: undefined as number | undefined,
-                      range: undefined as number | undefined,
-                    }))
-                  : creature.strikes
-                ).map((strike, i) => {
-                  const isAgile = strike.traits.includes('agile')
-                  const isRanged = strike.traits.includes('ranged') || strike.traits.some((t) => /^range\s/i.test(t))
-                  // Melee strikes pick up str-based condition penalties (enfeebled) via virtual slug.
-                  const strikeSlug = isRanged ? 'strike-attack' : 'melee-strike-attack'
-                  const strikeNet = modStats.get(strikeSlug)?.netModifier ?? 0
-                  const modifiedMod = strike.modifier + strikeNet
-                  const map1 = modifiedMod - (isAgile ? 4 : 5)
-                  const map2 = modifiedMod - (isAgile ? 8 : 10)
-                  const strikeModResult = modStats.get(strikeSlug)
-                  const enfeebledPenalty = !isRanged
-                    ? (strikeModResult?.modifiers
-                        .filter((m) => m.slug.startsWith('enfeebled:'))
-                        .reduce((s, m) => s + m.modifier, 0) ?? 0)
-                    : 0
-
-                  // BUG-1: apply AdjustStrike to the first damage formula when
-                  // active effects carry AdjustStrike / DamageDice rules.
-                  // v1.4 UAT BUG-A (corrected per PF2e Player Core pg. 329):
-                  // Enlarge does NOT step weapon damage dice — it only grants a
-                  // +2/+4 status bonus to melee damage. Dice are fixed by the
-                  // weapon; only the constant term changes for Enlarge-class
-                  // effects. Legitimate die step-up comes from AdjustStrike
-                  // rules (e.g. Giant Instinct) and is still honored below.
-                  const meleeStatusBonus =
-                    sizeShift && !isRanged && !battleFormStrikes ? sizeShift.meleeDamageBonus : 0
-                  const hasAdjustOrSize =
-                    (adjustStrikeInputs.length > 0 || meleeStatusBonus !== 0) &&
-                    !battleFormStrikes
-                  const effectiveDamage = hasAdjustOrSize
-                    ? strike.damage.map((d, di) => {
-                        if (di !== 0) return d
-                        const dieMatch = /^(\d+)(d\d+)([+\-]\d+)?/.exec(d.formula)
-                        if (!dieMatch) return d
-                        let dieSize = dieMatch[2] as DieFace
-                        const strikeSlug = strike.name.toLowerCase().replace(/\s+/g, '-') + '-damage'
-                        // 1. AdjustStrike / DamageDice step-up/down/override.
-                        if (adjustStrikeInputs.length > 0) {
-                          const adjusted = applyAdjustStrikes(
-                            { selectors: ['strike-damage', strikeSlug], dieSize },
-                            adjustStrikeInputs,
-                          )
-                          dieSize = adjusted.dieSize
-                        }
-                        // 2. Apply melee status bonus (Enlarge +2/+4) to the
-                        //    constant term of the formula.
-                        let newFormula = d.formula
-                        if (dieSize !== (dieMatch[2] as DieFace)) {
-                          newFormula = newFormula.replace(/d\d+/, dieSize)
-                        }
-                        if (meleeStatusBonus !== 0) {
-                          const existingConst = dieMatch[3] ? parseInt(dieMatch[3], 10) : 0
-                          const total = existingConst + meleeStatusBonus
-                          const constRe = /([+\-]\d+)(?=\s|$|\s*\w)/
-                          if (dieMatch[3] && constRe.test(newFormula)) {
-                            newFormula = newFormula.replace(
-                              constRe,
-                              total >= 0 ? `+${total}` : `${total}`,
-                            )
-                          } else {
-                            // No existing constant — append one.
-                            newFormula = newFormula.replace(
-                              /^(\d+d\d+)/,
-                              `$1${total >= 0 ? '+' : ''}${total}`,
-                            )
-                          }
-                        }
-                        if (newFormula === d.formula) return d
-                        return { ...d, formula: newFormula }
-                      })
-                    : strike.damage
-                  const effectiveBaseReach = baseReachFromDisplaySize(effectiveSize)
-                  const traitReach = reachFromTraits(strike.traits, effectiveBaseReach)
-                  const resolvedReach =
-                    typeof strike.reach === 'number'
-                      ? strike.reach
-                      : !isRanged
-                        ? (traitReach ?? effectiveBaseReach)
-                        : undefined
-                  const hasRange = typeof strike.range === 'number' && strike.range > 0
-                  // Only surface Reach when there's no Range and the reach differs from
-                  // the creature's default (e.g. Whip's base+5). Default 5/10/15 ft
-                  // reach is implicit from size and not worth rendering.
-                  const reachBuff = sizeShift && !battleFormStrikes ? sizeShift.reachBonus : 0
-                  const displayReach =
-                    typeof resolvedReach === 'number' ? resolvedReach + reachBuff : 0
-                  const hasNonDefaultReach =
-                    !hasRange &&
-                    !isRanged &&
-                    typeof resolvedReach === 'number' &&
-                    resolvedReach > effectiveBaseReach
-                  return (
-                    <div key={i} className="p-3 rounded-md bg-secondary/50">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <ActionIcon cost={1} className="text-lg" />
-                        <span className="font-semibold">{strike.name}</span>
-                        {/* FEAT-11: MAP buttons — click to roll at that MAP and set the combatant's mapIndex */}
-                        <div className="mt-1 flex items-center gap-1.5 text-xs">
-                          {[0, 1, 2].map((mapIdx) => {
-                            const mod = mapIdx === 0 ? modifiedMod : mapIdx === 1 ? map1 : map2
-                            const title = mapIdx === 0
-                              ? `1st attack — Roll 1d20${formatModifier(mod)}`
-                              : mapIdx === 1
-                                ? `2nd attack (${isAgile ? '-4' : '-5'} agile/normal) — Roll 1d20${formatModifier(mod)}`
-                                : `3rd attack (${isAgile ? '-8' : '-10'} agile/normal) — Roll 1d20${formatModifier(mod)}`
-                            const active = Boolean(mapCombatantId) && currentMapIndex === mapIdx
-                            const btn = (
-                              <button
-                                key={mapIdx}
-                                type="button"
-                                title={title}
-                                onClick={() => {
-                                  handleRoll(formatRollFormula(mod), `${strike.name} attack${mapIdx > 0 ? ` (MAP ${mapIdx + 1})` : ''}`)
-                                  if (mapCombatantId) updateCombatantAction(mapCombatantId, { mapIndex: mapIdx })
-                                }}
-                                className={cn(
-                                  'px-1.5 py-0.5 rounded font-mono transition-colors border',
-                                  active
-                                    ? 'bg-primary/20 text-primary border-primary/30 font-semibold'
-                                    : 'bg-muted/30 border-border/30 text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                                )}
-                              >
-                                {formatModifier(mod)}
-                              </button>
-                            )
-                            // BUG-3: wrap 1st MAP button in ModifierTooltip to show
-                            // active/inactive spell-effect modifier breakdown.
-                            if (mapIdx === 0 && strikeModResult) {
-                              return (
-                                <ModifierTooltip
-                                  key={mapIdx}
-                                  modifiers={strikeModResult.modifiers}
-                                  netModifier={strikeNet}
-                                  finalDisplay={formatModifier(mod)}
-                                  inactiveModifiers={strikeModResult.inactiveModifiers}
-                                  showInactive
-                                >
-                                  {btn}
-                                </ModifierTooltip>
-                              )
-                            }
-                            return btn
-                          })}
-                        </div>
-                        {hasRange && (
-                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                            Range {strike.range} ft
-                          </span>
-                        )}
-                        {hasNonDefaultReach && (
-                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                            Reach {displayReach} ft
-                          </span>
-                        )}
-                      </div>
-                      {/* Main damage — uses effectiveDamage which has AdjustStrike applied */}
-                      {effectiveDamage.length > 0 && (
-                        <div className="mt-1 text-sm">
-                          <span className="font-semibold">Damage </span>
-                          {effectiveDamage.map((d, di) => (
-                            <span key={di}>
-                              {di > 0 && <span className="text-muted-foreground"> plus </span>}
-                              <ClickableFormula formula={d.formula} label={`${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
-                              {d.type && (
-                                <span className={cn("font-mono", damageTypeColor(d.type))}> {d.type}</span>
-                              )}
-                              {d.persistent && (
-                                <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">persistent</span>
-                              )}
-                            </span>
-                          ))}
-                          {/* Enfeebled penalty on Strength-based damage (melee only) */}
-                          {enfeebledPenalty < 0 && (
-                            <span className="ml-1 font-mono text-xs text-pf-blood">
-                              {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {/* Additional damage */}
-                      {strike.additionalDamage && strike.additionalDamage.length > 0 && (
-                        <div className="mt-1 text-sm space-y-0.5">
-                          {strike.additionalDamage.map((ad, adi) => (
-                            <div key={adi}>
-                              {ad.label && (
-                                <span className="text-muted-foreground text-xs">{ad.label}: </span>
-                              )}
-                              <ClickableFormula formula={ad.formula} label={ad.label ?? `${strike.name} damage`} source={creature.name} combatId={encounterContext?.encounterId} />
-                              {ad.type && (
-                                <span className={cn("font-mono", damageTypeColor(ad.type))}> {ad.type}</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Weapon group badge (reach/range moved inline into strike header).
-                          v1.4.1 UAT BUG-4: custom-creature strikes don't carry
-                          a `reach` field; fall back to reach derived from
-                          traits+creature size so the badge still shows for
-                          melee weapons like the Whip. */}
-                      {strike.group && (
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-                            Group: {strike.group}
-                          </span>
-                        </div>
-                      )}
-                      {strike.traits.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {strike.traits.map((trait) => (
-                            <span
-                              key={trait}
-                              className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground"
-                            >
-                              {trait}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          <CreatureStrikesSection
+            strikes={effectiveStrikes}
+            creatureName={creature.name}
+            encounterId={encounterContext?.encounterId}
+            currentMapIndex={currentMapIndex}
+            isMapTracked={Boolean(mapCombatantId)}
+            onAttackClick={handleStrikeAttack}
+          />
         )}
 
         <Separator />
