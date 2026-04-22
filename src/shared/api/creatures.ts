@@ -17,7 +17,7 @@ export interface CreatureRow {
   source_pack: string | null
   raw_json: string
   source_name: string | null
-  // 70-02: Paizo adventure of origin (beginner-box, sundered-waves, ...).
+  // Paizo adventure of origin (beginner-box, sundered-waves, ...).
   // NULL for iconics and pre-Phase 70 bestiary entries.
   source_adventure: string | null
 }
@@ -45,7 +45,7 @@ export async function fetchCreatureById(
 }
 
 /**
- * Phase 71 — Use Pregen (NPC mode). Finds the entities-row twin of a
+ * Use Pregen (NPC mode). Finds the entities-row twin of a
  * characters-table pregen so the custom-creature builder can reuse
  * `toCreatureStatBlockData` on it. Scoped to the Paizo library packs so a
  * user-created NPC with the same name never leaks into the picker flow.
@@ -91,7 +91,7 @@ export interface CreatureFilters {
   rarity?: string | null
   traits?: string[]
   source?: string | null
-  // 70-04: adventure-scoped library filter. Special value `__iconics__` matches
+  // adventure-scoped library filter. Special value `__iconics__` matches
   // rows where `source_pack = 'iconics'`; otherwise matches by source_adventure.
   sourceAdventure?: string | null
 }
@@ -131,7 +131,7 @@ export async function searchCreaturesFiltered(
     conditions.push('COALESCE(e.source_name, e.source_pack) = ?')
     params.push(filters.source)
   }
-  // 70-04: Paizo library scope filter.
+  // Paizo library scope filter.
   //   __iconics__ → rows whose source_pack = 'iconics'
   //   <adventure> → rows whose source_adventure matches literally (pregens).
   if (filters.sourceAdventure === '__iconics__') {
@@ -166,7 +166,7 @@ export async function fetchDistinctSources(): Promise<{ pack: string; name: stri
   }))
 }
 
-// 70-04: returns the set of library-scope filter values distilled from
+// returns the set of library-scope filter values distilled from
 // currently-synced entities. Shape: { value, label } so the UI can emit
 // the stable token on click while showing a humanised label.
 //   - `__iconics__` chip when any iconics row exists.

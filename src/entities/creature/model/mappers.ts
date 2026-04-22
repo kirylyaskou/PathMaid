@@ -493,8 +493,8 @@ function resolveFoundryTokens(text: string): string {
     return parts.join(' plus ')
   })
   // @Check: @Check[type:perception|dc:20] → "DC 20 Perception check"
-  //         @Check[will|dc:25]            → "DC 25 Will check"  (Foundry positional)
-  //         @Check[dc:25]                 → "DC 25"             (no type at all)
+  //         @Check[will|dc:25] → "DC 25 Will check" (Foundry positional)
+  //         @Check[dc:25] → "DC 25" (no type at all)
   text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
     const segments = inner.split('|')
     const params: Record<string, string> = {}

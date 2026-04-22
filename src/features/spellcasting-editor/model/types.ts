@@ -34,7 +34,7 @@ export interface SpellcastingEditorProps {
   onAddRank?: (rank: number) => void
   onAddSpell?: (name: string, rank: number, foundryId?: string | null) => void
   onRemoveSpell?: (name: string, rank: number, isDefault: boolean) => void
-  // Phase 68: callbacks receive the spell identity so the combat-side caller
+  // callbacks receive the spell identity so the combat-side caller
   // can open the TargetPickerDialog keyed to the right spell_effects row.
   // Builder callers never pass these — irrelevant.
   onCastPrepared?: (
@@ -51,7 +51,7 @@ export interface SpellcastingEditorProps {
     total: number,
   ) => void
 
-  // Phase 68: lookup a "cast flame" visibility for an added-by-rank spell
+  // lookup a "cast flame" visibility for an added-by-rank spell
   // whose link is not known at entry-load time. Default `undefined` = treat
   // as "has link" (same backward-compat convention as hasLinkedEffect).
   hasLinkedEffectForAdded?: (name: string) => boolean | undefined

@@ -20,11 +20,11 @@ export interface EncounterTab {
   encounterId: string | null     // null = blank/ad-hoc encounter
   name: string
   snapshot: TabSnapshot          // last saved state for this tab
-  // 63-01: pre-start gate. false = combatants loaded but combat not started yet
+  // pre-start gate. false = combatants loaded but combat not started yet
   // (blur overlay + Start button gate in UI). Default true for ad-hoc/migrated
   // running combats; false for tabs opened via builder Load-into-combat.
   isStarted: boolean
-  // 63-01: deep-ish clone of the snapshot taken at load time, used by Refresh
+  // deep-ish clone of the snapshot taken at load time, used by Refresh
   // to restore the encounter to pristine pre-start state. Null for migrated
   // tabs without a captured template; resetTab falls back to DB blueprint reload.
   templateSnapshot: TabSnapshot | null
@@ -207,7 +207,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
 
       let freshSnapshot: TabSnapshot
 
-      // 63-01: templateSnapshot (captured at load time) wins over DB blueprint
+      // templateSnapshot (captured at load time) wins over DB blueprint
       // reload. Falls back to legacy path for migrated tabs with no template.
       if (tab.templateSnapshot) {
         freshSnapshot = {

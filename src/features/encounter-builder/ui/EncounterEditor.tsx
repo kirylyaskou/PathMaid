@@ -45,13 +45,13 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const navigate = useNavigate()
   const [showLoadConfirm, setShowLoadConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  // 63-03: dedup — when loading an encounter that already has an open tab,
+  // dedup — when loading an encounter that already has an open tab,
   // offer Open / Refresh / Cancel rather than silently opening a duplicate.
   const [dedupTargetTabId, setDedupTargetTabId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
-  // FEAT-12 (52-03 follow-up): clicking a creature name opens its stat block.
+  // clicking a creature name opens its stat block.
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
@@ -113,7 +113,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         encounterId,
         name: encounter?.name ?? 'Encounter',
         snapshot,
-        // 63-03: pass the load-time snapshot as the template so Refresh reverts
+        // pass the load-time snapshot as the template so Refresh reverts
         // to pristine pre-start state; isStarted defaults to false via the store.
         templateSnapshot: snapshot,
       })
@@ -125,7 +125,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   }
 
   function handleLoadClick() {
-    // 63-03: dedup — if a tab is already open for this encounter, offer
+    // dedup — if a tab is already open for this encounter, offer
     // Open-existing / Refresh-existing / Cancel instead of silently duplicating.
     const existing = useEncounterTabsStore
       .getState()
@@ -144,7 +144,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     }
   }
 
-  // 63-03: dedup actions
+  // dedup actions
   function handleDedupOpen() {
     if (!dedupTargetTabId) return
     useEncounterTabsStore.getState().setActiveTab(dedupTargetTabId)
@@ -393,7 +393,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 63-03: Duplicate tab — offer Open / Refresh / Cancel */}
+      {/* Duplicate tab — offer Open / Refresh / Cancel */}
       <AlertDialog
         open={dedupTargetTabId !== null}
         onOpenChange={(o) => !o && setDedupTargetTabId(null)}

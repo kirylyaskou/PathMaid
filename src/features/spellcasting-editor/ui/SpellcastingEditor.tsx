@@ -20,7 +20,7 @@ import type { SpellcastingEditorProps } from '../model/types'
  *   - SpellSearchDialog — caller owns open state; trigger via `onOpenSpellSearch`
  *
  * Zero persistence surface: no DB calls, no Zustand imports, no store writes —
- * all state & actions arrive via props/callbacks (D-67-05).
+ * all state & actions arrive via props/callbacks .
  */
 export function SpellcastingEditor(props: SpellcastingEditorProps) {
   const {
@@ -207,7 +207,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
               {visibleSpells.map((spell, i) => {
                 const slotKey = takeSlotKey(spell.name)
                 const cast = isPrepared && preparedCasts.has(`${rank}:${slotKey}`)
-                // BUG-4 fix: Flame always visible in combat (rank > 0). If no
+                // Flame always visible in combat (rank > 0). If no
                 // linked effect exists, openPicker falls back to slot-only consume.
                 const showCastButton = !isEdit && rank > 0 && (!!onCastPrepared || !!onCastSpontaneous)
                 const canSpontCast = isSpontaneous && used < totalSlots
@@ -267,7 +267,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
               {added.map((name, i) => {
                 const slotKey = takeSlotKey(name)
                 const cast = isPrepared && preparedCasts.has(`${rank}:${slotKey}`)
-                // BUG-4 fix: Flame always visible in combat (rank > 0). If no
+                // Flame always visible in combat (rank > 0). If no
                 // linked effect exists, openPicker falls back to slot-only consume.
                 const showCastButton = !isEdit && rank > 0 && (!!onCastPrepared || !!onCastSpontaneous)
                 const canSpontCast = isSpontaneous && used < totalSlots

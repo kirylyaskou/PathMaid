@@ -8,7 +8,7 @@ import { DiceCubeAnimation } from './dice-cube-animation'
 import type { Roll } from '@engine'
 
 function RollBreakdown({ roll }: { roll: Roll }) {
-  // v1.4.1 UAT BUG-B: fortune / misfortune rolls render a dedicated two-row
+  // fortune / misfortune rolls render a dedicated two-row
   // breakdown (one line per independent d20 roll) so the drawer mirrors the
   // toast layout.
   if (roll.fortune) {

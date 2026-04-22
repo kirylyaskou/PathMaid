@@ -1,4 +1,4 @@
-// Phase 71 — pure filter helpers for the shared pregen picker.
+// pure filter helpers for the shared pregen picker.
 // Extracted from the dialog component so the search + source-scope logic
 // is unit-testable without mounting React.
 
@@ -8,10 +8,10 @@ export const ICONICS_TOKEN = '__iconics__'
 
 /**
  * Turn a stored source_adventure token into a user-facing label.
- *   NULL     — treated as user import; picker should never hand this in,
+ *   NULL — treated as user import; picker should never hand this in,
  *              but label falls back to the sentinel anyway.
  *   __iconics__ → "Iconics"
- *   <slug>   → "PF <Slug Words>"
+ *   <slug> → "PF <Slug Words>"
  */
 export function sourceLabel(token: string): string {
   if (token === ICONICS_TOKEN) return 'Iconics'

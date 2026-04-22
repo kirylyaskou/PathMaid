@@ -32,11 +32,11 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
   const [contextEffects, setContextEffects] = useState<SpellEffectRow[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  // 61-05: no default tab — initial state renders the mascot + help text.
+  // no default tab — initial state renders the mascot + help text.
   // User picks a tab (or starts typing in search) to populate the list.
   const [activeTab, setActiveTab] = useState<SpellEffectCategory | null>(null)
 
-  // 61-02: refetch context when data version bumps (sync, overrides).
+  // refetch context when data version bumps (sync, overrides).
   const entityDataVersion = useCombatTrackerStore((s) => s.entityDataVersion)
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
     return contextEffects.length > 0 ? contextEffects : allEffects
   }, [isSearching, searchQuery, allEffects, contextEffects])
 
-  // 61-04: pre-compute per-tab buckets so counts on tab strip and the rendered
+  // pre-compute per-tab buckets so counts on tab strip and the rendered
   // list are always consistent with the same source set.
   const byCategory = useMemo(() => {
     const acc: Record<SpellEffectCategory, SpellEffectRow[]> = {
@@ -84,7 +84,7 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
     return acc
   }, [displayed])
 
-  // 61-05: no default tab. Welcome mascot shows until user acts.
+  // no default tab. Welcome mascot shows until user acts.
   // When searching with no tab selected we show results flat across all
   // categories so the user isn't forced to click a tab to see hits.
   const rows: SpellEffectRow[] =
@@ -114,7 +114,7 @@ export function EffectPickerDialog({ combatantId, open, onOpenChange }: EffectPi
           level: effect.level,
         })
 
-        // 65-06: auto-apply any same-pack GrantItem children the parent declares.
+        // auto-apply any same-pack GrantItem children the parent declares.
         // Cascade-delete is handled by the 0034 FK, so no teardown bookkeeping
         // is needed here.
         const granted = await applyGrantedEffects(

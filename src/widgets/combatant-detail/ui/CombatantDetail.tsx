@@ -32,7 +32,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
     return () => { cancelled = true }
   }, [combatant?.creatureRef, combatant?.kind])
 
-  // v1.4.1 UAT BUG-A: CombatantDetail's bottom pane (HpControls → CombatantSavesBar,
+  // CombatantDetail's bottom pane (HpControls → CombatantSavesBar,
   // useHideAction) read `creature.ac / .fort / .ref / .will / .perception / .skills`
   // directly and ignored the combatant's Weak/Elite tier. CombatPage applies
   // applyTierToStatBlock only to the right-pane CreatureStatBlock, so the two

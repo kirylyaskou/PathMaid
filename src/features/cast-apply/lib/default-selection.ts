@@ -1,15 +1,15 @@
-// Phase 68 D-68-04: classify a spell effect as buff/debuff/neutral so the
+// classify a spell effect as buff/debuff/neutral so the
 // picker can default-select a sensible allegiance bucket.
 //
 // Heuristic over the spell_effects.rules_json payload (the same rule set
 // parsed by the engine's FlatModifier reader):
 //
-//   buff   — at least one FlatModifier with positive value and NO `target:*`
+//   buff — at least one FlatModifier with positive value and NO `target:*`
 //            predicate atom. Default selection = caster's allies.
 //   debuff — at least one FlatModifier with negative value, OR any predicate
 //            atom starting with `target:`. Default selection = caster's
 //            enemies.
-//   self   — otherwise (no FlatModifier signal; cantrip-style utility).
+//   self — otherwise (no FlatModifier signal; cantrip-style utility).
 //            Default selection = caster.
 //
 // The predicate DSL is walked shallowly; nested {and/or/not} nodes are traversed

@@ -1,6 +1,6 @@
 import type { Tier } from '@engine'
 
-// Single source of truth for tier colors — UI-SPEC Tier Color Contract (D-19).
+// Single source of truth for tier colors — UI-SPEC Tier Color Contract .
 // Dark-mode tokens; light-mode is inherited via Tailwind's dark:/light: auto behavior
 // since we use color-500/xx opacity tokens that work in both modes visually.
 

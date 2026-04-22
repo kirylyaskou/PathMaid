@@ -504,14 +504,14 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
     `DELETE FROM encounter_staging_combatants WHERE encounter_id=?`,
     [encounterId]
   )
-  // 62-01: clear prepared-spell cast marks on refresh
+  // clear prepared-spell cast marks on refresh
   await db.execute(
     `DELETE FROM encounter_prepared_casts WHERE encounter_id=?`,
     [encounterId]
   )
 }
 
-// ── Prepared spell cast marks (62-01) ─────────────────────────────────────────
+// ── Prepared spell cast marks ─────────────────────────────────────────
 
 export interface PreparedCastRow {
   encounterId: string

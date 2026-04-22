@@ -24,9 +24,9 @@ interface RawSpell {
 /**
  * Extract heighten spec from Foundry system.heightening.
  * Returns:
- *   { type: 'interval', perRanks, damage }  — fireball / lightning bolt
- *   { type: 'fixed', levels }               — magic missile at ranks 3,5,7…
- *   null                                    — spell doesn't heighten, or spec missing
+ *   { type: 'interval', perRanks, damage } — fireball / lightning bolt
+ *   { type: 'fixed', levels } — magic missile at ranks 3,5,7…
+ *   null — spell doesn't heighten, or spec missing
  */
 function extractHeightening(sys: Record<string, unknown>): string | null {
   const h = sys.heightening as Record<string, unknown> | undefined
@@ -35,8 +35,8 @@ function extractHeightening(sys: Record<string, unknown>): string | null {
   if (h.type === 'interval') {
     const interval = typeof h.interval === 'number' ? h.interval : 1
     // Foundry pf2e has two coexisting shapes for heightening.damage entries:
-    //   fireball-style:   damage["0"] = "2d6"                (bare string)
-    //   some older specs: damage["0"] = { formula: "2d6" }   (object)
+    //   fireball-style: damage["0"] = "2d6" (bare string)
+    //   some older specs: damage["0"] = { formula: "2d6" } (object)
     // Accept both. Any entry that yields no formula is skipped.
     const damage = h.damage as Record<string, { formula?: string } | string> | undefined
     if (!damage || Object.keys(damage).length === 0) return null

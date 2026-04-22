@@ -8,7 +8,7 @@ interface ModifierTooltipProps {
   finalDisplay: string
   children: ReactElement
   /**
-   * 66-06: Predicate-gated modifiers that target this stat but are currently
+   * Predicate-gated modifiers that target this stat but are currently
    * inactive (predicate evaluated to false). Rendered beneath the active
    * block with `line-through opacity-50` and a `requires: <atom>` subtitle
    * so the GM can see which buff/debuff would fire once the trigger is met.

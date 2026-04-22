@@ -36,7 +36,7 @@ export interface SpellListEntry {
   name: string
   foundryId: string | null  // references spells(id) if resolvable
   entryId: string
-  // Phase 68 D-68-01: precomputed at load time (or patched by the combat-side
+  // precomputed at load time (or patched by the combat-side
   // loader). `true` gates the Cast flame button on the row. `undefined` means
   // "unknown" and the editor treats it as "show the flame" — backward-compat
   // for existing callers (builder) that never populate it.

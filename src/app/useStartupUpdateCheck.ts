@@ -3,16 +3,16 @@ import { checkForUpdate, isDarwin } from '@/shared/api'
 import { useUpdaterStore } from '@/shared/model'
 
 // Module-scope session flag — survives Strict Mode double-mount and re-mounts of AppProviders.
-// Reset only on full process restart (D-02). Not in Zustand (explicit out-of-React dedup) and not in useRef (per-instance).
+// Reset only on full process restart . Not in Zustand (explicit out-of-React dedup) and not in useRef (per-instance).
 let hasChecked = false
 
 /**
  * Silent startup update check (AUTO-01).
  *
- * Guard order (D-04): PROD → dedup → darwin → check → setAvailable.
+ * Guard order : PROD → dedup → darwin → check → setAvailable.
  * Calling `setAvailable(update)` triggers the already-mounted UpdateDialog to open
- * automatically (Phase 74 D-09 state-driven dialog). No toast is surfaced here.
- * Errors from `checkForUpdate()` are silenced via `console.error` (D-07).
+ * automatically. No toast is surfaced here.
+ * Errors from `checkForUpdate()` are silenced via `console.error` .
  */
 export function useStartupUpdateCheck(): void {
   useEffect(() => {
@@ -28,7 +28,7 @@ export function useStartupUpdateCheck(): void {
         if (!update) return
         useUpdaterStore.getState().setAvailable(update)
       } catch (err) {
-        // D-07: silent fail — user may retry via Settings "Проверить обновления".
+        // silent fail — user may retry via Settings "Проверить обновления".
         console.error('[useStartupUpdateCheck] update check failed:', err)
       }
     })()

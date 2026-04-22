@@ -87,7 +87,7 @@ export function PersistentDamageDialog({ pending, onClose }: PersistentDamageDia
   const [results, setResults] = useState<RollResult[]>([])
   // manual step: index of the condition currently being rolled
   const [manualStep, setManualStep] = useState(0)
-  // FEAT-08 D-23: configurable flat-check DC (default 15 per PF2e rules)
+  // configurable flat-check DC (default 15 per PF2e rules)
   const [flatCheckDC, setFlatCheckDC] = useState(15)
 
   if (!pending) return null
@@ -97,7 +97,7 @@ export function PersistentDamageDialog({ pending, onClose }: PersistentDamageDia
 
   const rollFn = pending.dealDamage ? applyResult : applyFlatCheckOnly
 
-  // FEAT-08: Roll Save — rolls a single flat check for the current condition
+  // Roll Save — rolls a single flat check for the current condition
   // using the configurable DC. Shared by the Auto and Manual flows below.
   const handleRollSave = () => {
     const d20 = Math.ceil(Math.random() * 20)

@@ -11,7 +11,7 @@ export interface CharacterRecord {
   rawJson: string
   notes: string
   createdAt: string
-  // 70-06: Paizo provenance. NULL = user-imported (Pathbuilder export).
+  // Paizo provenance. NULL = user-imported (Pathbuilder export).
   // `__iconics__` sentinel = from iconics pack. Otherwise an adventure slug.
   sourceAdventure: string | null
 }
@@ -30,7 +30,7 @@ type CharacterRow = {
 }
 
 function rowToRecord(r: CharacterRow): CharacterRecord {
-  // v1.4.1 UAT fix: when the row carries the raw Foundry character JSON
+  // when the row carries the raw Foundry character JSON
   // (iconics + pregens), re-derive the PathbuilderBuild at load time so
   // parser improvements apply retroactively without forcing a re-sync.
   // Falls back to the stored raw_json on any derivation error.
@@ -113,7 +113,7 @@ export async function upsertCharacter(build: PathbuilderBuild): Promise<string> 
 }
 
 /**
- * Phase 70 / D-70-05 — insert an iconic/pregen-sourced character.
+ * insert an iconic/pregen-sourced character.
  * Iconics ship with the same names GMs' own imports might use (Amiri, Ezren,
  * Kyra, …) — per the locked decision, the user's import always wins:
  * if a character with the same name already exists AND that record is not
@@ -192,7 +192,7 @@ export async function updateCharacterNotes(id: string, notes: string): Promise<v
 }
 
 /**
- * Phase 71 — Use Pregen. Returns every character row sourced from a Paizo
+ * Use Pregen. Returns every character row sourced from a Paizo
  * library pack (iconics or a pregen adventure). User-imported rows
  * (`source_adventure IS NULL`) are excluded so the picker only shows the
  * catalogue, never the GM's own imports.
@@ -210,7 +210,7 @@ export async function getPregenCharacters(): Promise<CharacterRecord[]> {
 }
 
 /**
- * Phase 71 — Use Pregen. Duplicates a pregen character row into a new
+ * Use Pregen. Duplicates a pregen character row into a new
  * user-owned PC. The original pregen stays untouched so re-running sync
  * does not stomp the user's copy.
  *

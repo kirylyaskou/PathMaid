@@ -1,4 +1,4 @@
-// ─── useModifiedStats + resolveSpellModifiers (Phase 39, extended Phase 56) ───
+// ─── useModifiedStats + resolveSpellModifiers ───
 // React hook layer on top of engine computeStatModifier.
 // Subscribes to useConditionStore and useEffectStore, computes modified values
 // reactively from both condition and spell effect sources.
@@ -41,7 +41,7 @@ export type { StatModifierResult, InactiveModifier }
  * Returns empty Map when combatantId is undefined (bestiary view, no combat).
  *
  * @param combatantId - From encounterContext.combatantId; undefined = no modifications
- * @param statSlugs   - Stat slugs to compute modifiers for. Include virtual slugs
+ * @param statSlugs - Stat slugs to compute modifiers for. Include virtual slugs
  *   like 'strike-attack' and 'spell-dc' to receive 'all'-selector condition effects.
  *   Pass stable reference (useMemo in caller) to avoid unnecessary recomputation.
  */
@@ -81,7 +81,7 @@ export function useModifiedStats(
   )
 
   // Parse FlatModifier inputs from effect rules_json — OUTSIDE selector to avoid .map() in useShallow.
-  // 60-02: pass e.level for @item.level expression eval (Heroism scales bonus by spell rank).
+  // pass e.level for @item.level expression eval (Heroism scales bonus by spell rank).
   const spellEffectModifiers = useMemo(
     () =>
       rawEffects.flatMap((e) =>
@@ -90,7 +90,7 @@ export function useModifiedStats(
     [rawEffects],
   )
 
-  // 66-03: Build the predicate-evaluation context from the same store
+  // Build the predicate-evaluation context from the same store
   // snapshots. Target-aware atoms fall out of scope here (target-aware flow
   // is driven by the Cast→Apply pipeline in Phase 68) so only `self:*` atoms
   // resolve for now; `target:*` atoms evaluate to `false` without warning.
@@ -103,7 +103,7 @@ export function useModifiedStats(
     [rawConditions, rawEffects],
   )
 
-  // 66-03: Split spell-effect modifiers into active (predicate passed) and
+  // Split spell-effect modifiers into active (predicate passed) and
   // inactive (predicate failed) buckets. Only active ones feed into the
   // stacking-rule engine; inactive entries are surfaced separately so the
   // tooltip can render them struck-out with a `requires: <atom>` hint.
@@ -220,10 +220,10 @@ function firstAtom(terms: PredicateTerm[] | undefined): string | null {
 // selectors against the tradition's applicable ability selectors.
 //
 // Tradition → ability selector mapping (PF2e rules):
-//   arcane  → int-based (Intelligence governs arcane spellcasting)
-//   occult  → int-based + cha-based (Intelligence primary, Charisma secondary)
-//   divine  → wis-based (Wisdom governs divine spellcasting)
-//   primal  → wis-based (Wisdom governs primal spellcasting)
+//   arcane → int-based (Intelligence governs arcane spellcasting)
+//   occult → int-based + cha-based (Intelligence primary, Charisma secondary)
+//   divine → wis-based (Wisdom governs divine spellcasting)
+//   primal → wis-based (Wisdom governs primal spellcasting)
 //
 // Since stupefied covers ['cha-based','int-based','wis-based'], it applies
 // to ALL traditions. Frightened/sickened use 'all' — also always apply.
@@ -243,7 +243,7 @@ const TRADITION_SELECTORS: Record<string, string[]> = {
  * Uses the same stacking rules as computeStatModifier (StatisticModifier internally).
  *
  * @param conditions - Active conditions for the combatant
- * @param tradition  - 'arcane' | 'divine' | 'occult' | 'primal' | other
+ * @param tradition - 'arcane' | 'divine' | 'occult' | 'primal' | other
  * @returns StatModifierResult — { 0, [] } if no applicable modifiers
  */
 export function resolveSpellModifiers(

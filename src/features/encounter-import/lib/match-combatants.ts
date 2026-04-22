@@ -7,9 +7,9 @@ import type {
   MatchedEncounter,
 } from './types'
 
-// 64-02: case-insensitive name matching against bestiary → custom → hazards.
+// case-insensitive name matching against bestiary → custom → hazards.
 // Priority:
-//  - isHazard=true  → hazards table only
+//  - isHazard=true → hazards table only
 //  - isHazard=false → entities (type='npc'), fallback custom_creatures
 // Unmatched → skipped.
 

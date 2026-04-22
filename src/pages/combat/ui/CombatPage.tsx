@@ -237,7 +237,7 @@ export function CombatPage() {
   const { lastNpcStatBlock, statBlockLoading, selectedPcBuild, pcBuildLoading, loadForCombatant, refreshShieldBonus } =
     useCombatDetailLoader()
 
-  // BUG-02 (52-08 follow-up): require 8px of movement before dnd-kit starts a
+  // require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
   // not swallowed as drag-starts. Previously the first creature add appeared
   // to "do nothing" because dnd-kit ate the click as a zero-distance drag.

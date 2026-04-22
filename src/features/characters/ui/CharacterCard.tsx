@@ -10,10 +10,10 @@ interface CharacterCardProps {
   onView?: (character: CharacterRecord) => void
 }
 
-// 70-06: badge label for the PC's Paizo origin.
-//   null          → user import; no badge.
+// badge label for the PC's Paizo origin.
+//   null → user import; no badge.
 //   `__iconics__` → "Iconic".
-//   <slug>        → humanised adventure name ("Beginner Box", "Sundered Waves").
+//   <slug> → humanised adventure name ("Beginner Box", "Sundered Waves").
 function sourceLabel(src: string | null): string | null {
   if (!src) return null
   if (src === '__iconics__') return 'Iconic'

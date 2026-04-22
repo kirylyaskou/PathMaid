@@ -17,7 +17,7 @@ export interface BuilderTabsProps {
   dispatch: Dispatch<BuilderAction>
 }
 
-// D-18: 10 tabs in this exact order. Tab values are stable kebab-case ids.
+// 10 tabs in this exact order. Tab values are stable kebab-case ids.
 const TAB_DEFS = [
   { id: 'concept', label: 'Concept' },
   { id: 'ability-mods', label: 'Ability Mods' },

@@ -47,7 +47,7 @@ const MATERIAL_TYPE_SET = new Set(MATERIAL_EFFECTS as readonly string[])
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
   const combatantId = combatant.id
 
-  // Get active effects for IWR resistance overlay (D-06)
+  // Get active effects for IWR resistance overlay
   const rawEffects = useEffectStore(
     useShallow((s) => s.activeEffects.filter((e) => e.combatantId === combatantId))
   )

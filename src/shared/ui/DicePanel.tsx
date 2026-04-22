@@ -4,7 +4,7 @@ import type { Roll } from '@engine'
 import { useRoll } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
 
-// FEAT-15: full die set — d100, d20, d12, d10, d8, d6, d4
+// full die set — d100, d20, d12, d10, d8, d6, d4
 export const DICE = [
   { sides: 100, label: 'd100' },
   { sides: 20, label: 'd20' },

@@ -53,7 +53,7 @@ export function createCombatantFromCreature(
  * Source: PF2e CRB — second attack costs -5 (-4 with agile), third attack -10 (-8 with agile).
  *
  * @param mapIndex 0 = first attack (no penalty), 1 = second, 2 = third+
- * @param isAgile  whether the weapon has the Agile trait
+ * @param isAgile whether the weapon has the Agile trait
  */
 export function getMAPPenalty(mapIndex: number, isAgile: boolean): number {
   if (mapIndex <= 0) return 0

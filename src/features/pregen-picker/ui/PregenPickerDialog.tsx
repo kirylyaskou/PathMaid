@@ -20,7 +20,7 @@ import {
 import { getPregenCharacters, type CharacterRecord } from '@/shared/api'
 import { filterPregens, derivePregenSources, sourceLabel } from '../model/filter'
 
-// Phase 71 — shared picker consumed by:
+// shared picker consumed by:
 //   - Characters page (mode='pc') → instantiates a user-owned PC.
 //   - Custom Creature Builder (mode='npc') → clones into custom_creatures.
 // Mode is informational only (affects copy + icon language). The row shape

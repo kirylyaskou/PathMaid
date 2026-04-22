@@ -1,4 +1,4 @@
-// ─── Roll-Option Store (Phase 65, D-65-01) ────────────────────────────────────
+// ─── Roll-Option Store ────────────────────────────────────
 // Module-level Zustand store mirroring the ConditionManager pattern. Session-only
 // state — NOT persisted to SQLite. Used to track `RollOption` rule-element flags
 // set by active effects (e.g. Sure Strike's "sure-strike" option) and consumed

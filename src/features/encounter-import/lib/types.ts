@@ -1,4 +1,4 @@
-// 64-01: shared types for the import pipeline.
+// shared types for the import pipeline.
 
 export type ImportFormat = 'dashboard' | 'pathmaiden' | 'unknown'
 

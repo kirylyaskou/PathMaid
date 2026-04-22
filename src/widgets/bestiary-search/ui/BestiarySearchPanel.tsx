@@ -22,7 +22,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { HazardSearchPanel } from './HazardSearchPanel'
 import { CharactersTab } from './CharactersTab'
 
-// v1.4.1 UAT BUG-1: custom creatures live in a separate table and have no
+// custom creatures live in a separate table and have no
 // source_pack, so the bestiary search query misses them entirely. Adapt the
 // loaded stat block into the CreatureRow shape the existing add-to-combat
 // pipeline consumes — same approach as CreatureSearchSidebar.
@@ -81,13 +81,13 @@ export function BestiarySearchPanel() {
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTier, setSelectedTier] = useState<WeakEliteTier>('normal')
-  // 70-04: library source filter. `null` = All sources (default).
+  // library source filter. `null` = All sources (default).
   // Otherwise a token returned by fetchDistinctLibrarySources — either the
   // `__iconics__` sentinel or an adventure slug.
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
   const [librarySources, setLibrarySources] = useState<LibrarySourceOption[]>([])
 
-  // v1.4.1 UAT BUG-1: custom creatures resolved to CreatureRow shape once so
+  // custom creatures resolved to CreatureRow shape once so
   // the same CreatureCard + drag/add pipeline works uniformly. Only shown when
   // `sourceFilter === null` (All) — source chips filter Paizo-library scope
   // and customs don't belong to any such scope.
@@ -96,7 +96,7 @@ export function BestiarySearchPanel() {
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const addCombatant = useCombatantStore((s) => s.addCombatant)
 
-  // 70-04: load the list of Paizo-library chips once — the set only changes
+  // load the list of Paizo-library chips once — the set only changes
   // on sync and regenerating it per-search would be wasteful.
   useEffect(() => {
     let cancelled = false
@@ -134,7 +134,7 @@ export function BestiarySearchPanel() {
     return () => { cancelled = true; clearTimeout(timer) }
   }, [query, creatureType, activeTab, sourceFilter])
 
-  // v1.4.1 UAT BUG-1: eager-fetch custom creatures and resolve each to a
+  // eager-fetch custom creatures and resolve each to a
   // CreatureRow. Cheap in practice (tens of entries at most).
   useEffect(() => {
     let cancelled = false

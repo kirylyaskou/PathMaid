@@ -37,9 +37,9 @@ export function useSpellcasting(
   const [spellDialogOpen, setSpellDialogOpen] = useState(false)
   const [spellDialogRank, setSpellDialogRank] = useState(0)
   const [selectedSlotLevel, setSelectedSlotLevel] = useState<number | null>(null)
-  // 62-02: set of `${rank}:${spell_slot_key}` for this entry — prepared spells marked cast
+  // set of `${rank}:${spell_slot_key}` for this entry — prepared spells marked cast
   const [preparedCasts, setPreparedCasts] = useState<Set<string>>(new Set())
-  // Phase 68 D-68-01: precomputed effect-link lookup keyed by lowercase name.
+  // precomputed effect-link lookup keyed by lowercase name.
   // Populated once at section-load time so the Cast flame can render without
   // per-row async lookups. `null` values mean "checked, no link found".
   const [effectByName, setEffectByName] = useState<Map<string, SpellEffectRow>>(new Map())
@@ -120,7 +120,7 @@ export function useSpellcasting(
     loadPreparedCastsState()
   }, [loadSlotState, loadOverrideState, loadSlotOverrideState, loadPreparedCastsState])
 
-  // Phase 68 D-68-01: batch-resolve spell_effects links for every spell in this
+  // batch-resolve spell_effects links for every spell in this
   // entry. Runs whenever the entry's spell list changes (including overrides).
   // Result feeds the Flame-button gate + the TargetPickerDialog's effect prop.
   useEffect(() => {
@@ -187,7 +187,7 @@ export function useSpellcasting(
     setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
   }
 
-  // 62-02: toggle cast mark on a specific prepared spell instance and bump
+  // toggle cast mark on a specific prepared spell instance and bump
   // used_count for the rank so slot pip dims. Unmarking reverses both.
   async function handleCastPreparedSpell(rank: number, spellSlotKey: string, totalSlots: number) {
     if (!encounterId || !combatantId) return
@@ -217,7 +217,7 @@ export function useSpellcasting(
     }
   }
 
-  // 62-02: spontaneous cast = bump used_count by one (no strike-through).
+  // spontaneous cast = bump used_count by one (no strike-through).
   async function handleCastSpontaneousSpell(rank: number, totalSlots: number) {
     if (!encounterId || !combatantId) return
     const currentUsed = usedSlots[rank] ?? 0
@@ -256,7 +256,7 @@ export function useSpellcasting(
       return acc
     }, {})
 
-  // Phase 68 D-68-01: patched section where every listed spell carries a
+  // patched section where every listed spell carries a
   // concrete `hasLinkedEffect` flag based on the precomputed effectByName map.
   // Runs cheaply — one shallow copy per render when effects map updates.
   const sectionWithLinkFlags = useMemo<SpellcastingSection>(() => {
@@ -283,7 +283,7 @@ export function useSpellcasting(
     [effectByName],
   )
 
-  // Phase 68 D-68-05 support: load the spell row lazily on demand so
+  // load the spell row lazily on demand so
   // getMaxTargets can read action_cost + description. Memoised per name.
   const ensureSpellRow = useCallback(
     async (name: string): Promise<SpellRow | null> => {
@@ -373,7 +373,7 @@ export function useSpellcasting(
     preparedCasts,
     handleCastPreparedSpell,
     handleCastSpontaneousSpell,
-    // Phase 68: cast-apply helpers
+    // cast-apply helpers
     sectionWithLinkFlags,
     hasLinkedEffectForAdded,
     getCastEffect,

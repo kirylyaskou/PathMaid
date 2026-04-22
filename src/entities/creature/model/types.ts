@@ -9,7 +9,7 @@ export type { DisplaySize } from '@/shared/lib/size-map'
 // UI action cost — includes reaction/free/0 for display (engine ActionCost is 1|2|3|null)
 export type DisplayActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
 
-// Phase 59 (D-08): ability modifiers block for creatures built with the builder.
+// ability modifiers block for creatures built with the builder.
 // Foundry bestiary stat blocks populate this from `system.abilities.{ability}.mod`.
 export interface AbilityMods {
   str: number
@@ -20,7 +20,7 @@ export interface AbilityMods {
   cha: number
 }
 
-// Phase 59 (D-08): structured IWR shape. `ImmunityEntry` keeps legacy `string`
+// structured IWR shape. `ImmunityEntry` keeps legacy `string`
 // form in the union so Foundry raw data can be stored verbatim — the normalizer
 // in `iwr-normalize.ts` wraps strings at read time for uniform UI consumption.
 export type ImmunityEntry = string | { type: string; exceptions?: string[] }
@@ -60,7 +60,7 @@ export interface CreatureStatBlockData extends Creature {
     traits: string[]
     group?: string
     additionalDamage?: { formula: string; type: string; label?: string }[]
-    // v1.4.1 UAT BUG-Z: reach (feet) for melee strikes; `range` (feet) for
+    // reach (feet) for melee strikes; `range` (feet) for
     // ranged strikes. Both optional; when absent the UI falls back to the
     // creature's base reach.
     reach?: number
@@ -77,7 +77,7 @@ export interface CreatureStatBlockData extends Creature {
   spellcasting?: SpellcastingSection[]
   equipment?: CreatureItemRow[]
 
-  // Phase 59 (D-08): new fields introduced for the custom creature builder.
+  // new fields introduced for the custom creature builder.
   abilityMods: AbilityMods
   auras?: AuraEntry[]
   rituals?: RitualEntry[]
@@ -85,7 +85,7 @@ export interface CreatureStatBlockData extends Creature {
 
 // Serializable creature entity for display and SQLite persistence.
 // Engine Creature has non-serializable ConditionManager and nested hp/saves —
-// Phase 7 maps Foundry VTT data → this interface.
+// maps Foundry VTT data → this interface.
 export interface Creature {
   id: string
   name: string

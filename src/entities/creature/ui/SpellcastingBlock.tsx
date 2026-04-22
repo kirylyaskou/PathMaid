@@ -30,7 +30,7 @@ interface EncounterContext {
   onInventoryChanged?: () => void
 }
 
-// Phase 68: ephemeral Cast request in flight (picker is open).
+// ephemeral Cast request in flight (picker is open).
 interface PendingCast {
   castType: 'prepared' | 'spontaneous'
   spellName: string
@@ -66,18 +66,18 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
   } = useSpellcasting(section, creatureLevel, encounterContext)
   const { encounterId, combatantId } = encounterContext ?? {}
 
-  // 62-02: mode toggle — view default, edit unlocks +/-, add/remove spell, pip click.
+  // mode toggle — view default, edit unlocks +/-, add/remove spell, pip click.
   // Mode is per-component; not persisted. Only relevant when combat-backed.
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const isEdit = mode === 'edit' && !!encounterId
   const editorMode: 'view' | 'edit' = isEdit ? 'edit' : 'view'
 
-  // Phase 68: target picker wiring.
+  // target picker wiring.
   const [pendingCast, setPendingCast] = useState<PendingCast | null>(null)
 
   const dcCol = spellMod.netModifier < 0 ? 'text-pf-blood' : spellMod.netModifier > 0 ? 'text-pf-threat-low' : 'text-primary'
 
-  // Phase 68 D-68-06: helper — opens the picker for a cast request, or no-ops
+  // helper — opens the picker for a cast request, or no-ops
   // if no linked effect is known for the spell.
   async function openPicker(
     castType: 'prepared' | 'spontaneous',
@@ -133,7 +133,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
       }
     : undefined
 
-  // Phase 68 D-68-06: commit — for each selected target, apply effect + any
+  // commit — for each selected target, apply effect + any
   // same-pack granted children, then consume the caster's slot once.
   async function handlePickerApply(targetIds: string[]) {
     if (!encounterId || !pendingCast) return
@@ -155,7 +155,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
           level: effectLevel,
         })
 
-        // 65-06: same-pack GrantItem children cascade to the same combatant.
+        // same-pack GrantItem children cascade to the same combatant.
         const granted = await applyGrantedEffects(
           encounterId,
           targetId,
@@ -313,7 +313,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
         />
       )}
 
-      {/* Phase 68: target picker dialog */}
+      {/* target picker dialog */}
       {pendingCast && combatantId && (
         <TargetPickerDialog
           open={true}

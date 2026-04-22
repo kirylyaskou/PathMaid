@@ -50,7 +50,7 @@ export function CharactersPage() {
   const [pregenOpen, setPregenOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null)
   const [selectedCharacter, setSelectedCharacter] = useState<CharacterRecord | null>(null)
-  // 70-04: active chip filter. Defaults to user imports per UI-SPEC.
+  // active chip filter. Defaults to user imports per UI-SPEC.
   const [sourceFilter, setSourceFilter] = useState<string>(USER_FILTER)
 
   async function loadCharacters() {
@@ -62,7 +62,7 @@ export function CharactersPage() {
     loadCharacters()
   }, [])
 
-  // 70-04: chip options are derived from the loaded characters so the UI
+  // chip options are derived from the loaded characters so the UI
   // only ever shows sources that actually have rows. Order: User imports
   // → Iconics → alphabetically sorted adventure slugs.
   const chipOptions = useMemo<string[]>(() => {
@@ -164,7 +164,7 @@ export function CharactersPage() {
       </header>
 
       {chipOptions.length > 1 && (
-        // 70-04 / v1.4.1 UAT BUG-8: the scrolling chip row was awkward on
+        // 70-04 / the scrolling chip row was awkward on
         // narrow viewports. Replaced with a shadcn Select dropdown; values
         // unchanged (USER_FILTER / '__iconics__' / adventure slug).
         <div className="px-4 pt-3 shrink-0">

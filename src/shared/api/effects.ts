@@ -2,7 +2,7 @@ import { getDb } from '@/shared/db'
 import type { SpellEffectRow } from '@/entities/spell-effect'
 import { parseSpellEffectGrantItems, type GrantItemInput } from '@engine'
 
-// 60-02: level = COALESCE(spells.rank, 1). Used by parseSpellEffectModifiers to
+// level = COALESCE(spells.rank, 1). Used by parseSpellEffectModifiers to
 // evaluate @item.level in scaling FlatModifier expressions (Heroism etc.).
 // Effects without a linked spell (spell_id IS NULL) fall back to level=1.
 //
@@ -38,7 +38,7 @@ export async function listSpellEffects(): Promise<SpellEffectRow[]> {
   )
 }
 
-// Phase 68 D-68-01: batch-resolve spell → spell_effects linkage so the
+// batch-resolve spell → spell_effects linkage so the
 // Cast button visibility + cast-apply flow can be primed at spellcasting
 // section load time (not per-render async).
 //
@@ -121,7 +121,7 @@ function stripEffectPrefix(s: string): string {
   return s.replace(/^(?:Spell Effect|Effect|Stance|Aura):\s*/i, '').trim()
 }
 
-// 61-11: context query unions three sources of relevance:
+// context query unions three sources of relevance:
 //
 //   1. spell effects whose linked spell id appears in any combatant's
 //      creature_spell_lists (bestiary / monster spells)
@@ -379,7 +379,7 @@ export async function applyEffectToCombatant(
   return id
 }
 
-// 65-06: parse the effect's rules_json, resolve same-pack GrantItem targets
+// parse the effect's rules_json, resolve same-pack GrantItem targets
 // against spell_effects.name, and auto-apply each grantee to the same
 // combatant. Returns the freshly-created encounter_combatant_effects rows
 // so the caller can seed useEffectStore with the complete chain.

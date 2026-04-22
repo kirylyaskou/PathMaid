@@ -72,7 +72,7 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
   }, [combatantId])
 
   const handleRemove = useCallback(async (effectDbId: string) => {
-    // 65-06: re-fetch the combatant's active rows AFTER the DELETE so the
+    // re-fetch the combatant's active rows AFTER the DELETE so the
     // FK cascade has already removed any auto-granted children. Then resync
     // the store by name to drop store entries for the removed chain.
     await removeEffectFromCombatant(effectDbId)
