@@ -1,16 +1,14 @@
 import { useMemo } from 'react'
-import { Plus, Minus, X, Flame } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
-import { IconButton } from '@/shared/ui/icon-button'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { rankLabel } from '@/shared/lib/pf2e-display'
-import { SlotPips, SpellCard } from '@/entities/creature'
+import { SpellRankBlock } from './SpellRankBlock'
 import type { SpellcastingEditorProps } from '../model/types'
 
 /**
  * Pure presentation component for a single SpellcastingSection.
  *
- * Rendering scope (per 67-UI-SPEC.md):
+ * Rendering scope:
  *   - optional rank-filter pills
  *   - per-rank blocks (rank label + slot pips +/- + spell cards + add-spell)
  *   - optional "add rank" footer
@@ -19,8 +17,7 @@ import type { SpellcastingEditorProps } from '../model/types'
  *   - entry header (tradition pill / DC+Attack / mode toggle)
  *   - SpellSearchDialog — caller owns open state; trigger via `onOpenSpellSearch`
  *
- * Zero persistence surface: no DB calls, no Zustand imports, no store writes —
- * all state & actions arrive via props/callbacks .
+ * Zero persistence surface: no DB calls, no Zustand imports, no store writes.
  */
 export function SpellcastingEditor(props: SpellcastingEditorProps) {
   const {
@@ -48,8 +45,6 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
   } = props
 
   const isEdit = mode === 'edit'
-  const isPrepared = entry.castType === 'prepared'
-  const isSpontaneous = entry.castType === 'spontaneous'
 
   // Derived: full set of ranks present either in the section or via positive slot delta.
   const effectiveRanks = useMemo(() => {
@@ -76,7 +71,6 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
 
   return (
     <div className="space-y-3">
-      {/* Rank filter pills */}
       {effectiveRanks.length > 1 && onSelectSlotLevel && (
         <div className="flex flex-wrap gap-1 pb-1" role="tablist">
           <button
@@ -115,224 +109,31 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
         </div>
       )}
 
-      {/* Per-rank blocks */}
-      {filteredRanks.map((rank) => {
-        const byRank = entry.spellsByRank.find((br) => br.rank === rank)
-        const baseSlots = byRank?.slots ?? 0
-        const delta = slotDeltas[rank] ?? 0
-        const totalSlots = Math.max(0, baseSlots + delta)
-        const used = usedSlots[rank] ?? 0
-        const visibleSpells = byRank
-          ? byRank.spells.filter((s) => !removedSpells.has(`${rank}:${s.name}`))
-          : []
-        const added = addedByRank[rank] ?? []
-        const warn = rankWarning ? rankWarning(rank) : null
+      {filteredRanks.map((rank) => (
+        <SpellRankBlock
+          key={rank}
+          rank={rank}
+          byRank={entry.spellsByRank.find((br) => br.rank === rank)}
+          slotDelta={slotDeltas[rank] ?? 0}
+          used={usedSlots[rank] ?? 0}
+          warn={rankWarning ? rankWarning(rank) : null}
+          addedSpells={addedByRank[rank] ?? []}
+          removedSpells={removedSpells}
+          preparedCasts={preparedCasts}
+          mode={mode}
+          castType={entry.castType}
+          tradition={entry.tradition}
+          sourceName={sourceName}
+          combatId={combatId}
+          onTogglePip={onTogglePip}
+          onSlotDelta={onSlotDelta}
+          onRemoveSpell={onRemoveSpell}
+          onCastPrepared={onCastPrepared}
+          onCastSpontaneous={onCastSpontaneous}
+          onOpenSpellSearch={onOpenSpellSearch}
+        />
+      ))}
 
-        // Per-rank occurrence counter so duplicate prepared spells get unique slot keys.
-        const occurrenceCount = new Map<string, number>()
-        const takeSlotKey = (spellName: string) => {
-          const seen = occurrenceCount.get(spellName) ?? 0
-          occurrenceCount.set(spellName, seen + 1)
-          return `${spellName}#${seen}`
-        }
-
-        return (
-          <div key={rank}>
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              {warn ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider cursor-help">
-                      {rankLabel(rank)} ⚠
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs text-amber-300 bg-amber-950 border-amber-500/40">
-                    {warn}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {rankLabel(rank)}
-                </span>
-              )}
-              {rank === 0 ? null : totalSlots > 0 ? (
-                <div className="flex items-center gap-1.5">
-                  {isEdit && onSlotDelta && (
-                    <IconButton
-                      intent="danger"
-                      onClick={() => onSlotDelta(rank, -1)}
-                      disabled={totalSlots <= 0}
-                      title="Remove slot"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </IconButton>
-                  )}
-                  <div className={cn(!isEdit && 'pointer-events-none select-none')}>
-                    <SlotPips
-                      total={totalSlots}
-                      used={used}
-                      baseSlots={baseSlots}
-                      tradition={entry.tradition}
-                      onToggle={(idx) => onTogglePip?.(rank, idx, totalSlots)}
-                    />
-                  </div>
-                  {isEdit && onSlotDelta && (
-                    <IconButton
-                      intent="primary"
-                      onClick={() => onSlotDelta(rank, 1)}
-                      title="Add slot"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </IconButton>
-                  )}
-                </div>
-              ) : totalSlots === 0 && isEdit && onSlotDelta ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">(0 slots)</span>
-                  <IconButton
-                    intent="primary"
-                    onClick={() => onSlotDelta(rank, 1)}
-                    title="Add slot"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </IconButton>
-                </div>
-              ) : !isEdit && baseSlots > 0 && !onTogglePip ? (
-                <span className="text-xs text-muted-foreground">({baseSlots} slots)</span>
-              ) : null}
-            </div>
-
-            {/* Default spells for this rank */}
-            <div className="space-y-1">
-              {visibleSpells.map((spell, i) => {
-                const slotKey = takeSlotKey(spell.name)
-                const cast = isPrepared && preparedCasts.has(`${rank}:${slotKey}`)
-                // Flame always visible in combat (rank > 0). If no
-                // linked effect exists, openPicker falls back to slot-only consume.
-                const showCastButton = !isEdit && rank > 0 && (!!onCastPrepared || !!onCastSpontaneous)
-                const canSpontCast = isSpontaneous && used < totalSlots
-                return (
-                  <div key={`def-${i}`} className="flex items-center gap-1 group">
-                    {showCastButton && (isPrepared || canSpontCast) && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              isPrepared
-                                ? onCastPrepared?.(spell.name, spell.foundryId, rank, slotKey, totalSlots)
-                                : onCastSpontaneous?.(spell.name, spell.foundryId, rank, totalSlots)
-                            }
-                            className={cn(
-                              'p-1 rounded shrink-0 transition-colors',
-                              cast
-                                ? 'text-primary bg-primary/10'
-                                : 'text-muted-foreground/70 hover:text-primary hover:bg-accent/30',
-                            )}
-                            aria-label={`Cast ${spell.name} at rank ${rank}`}
-                          >
-                            <Flame className="w-3 h-3" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="text-xs">
-                          Cast &amp; apply effect
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    <div className="flex-1">
-                      <SpellCard
-                        name={spell.name}
-                        foundryId={spell.foundryId}
-                        source={sourceName}
-                        combatId={combatId}
-                        castRank={rank}
-                        castConsumed={cast}
-                      />
-                    </div>
-                    {isEdit && onRemoveSpell && (
-                      <IconButton
-                        intent="danger"
-                        showOnHover
-                        onClick={() => onRemoveSpell(spell.name, rank, true)}
-                        title="Remove"
-                      >
-                        <X className="w-3 h-3" />
-                      </IconButton>
-                    )}
-                  </div>
-                )
-              })}
-
-              {/* Added spells (from caller-provided addedByRank) */}
-              {added.map((name, i) => {
-                const slotKey = takeSlotKey(name)
-                const cast = isPrepared && preparedCasts.has(`${rank}:${slotKey}`)
-                // Flame always visible in combat (rank > 0). If no
-                // linked effect exists, openPicker falls back to slot-only consume.
-                const showCastButton = !isEdit && rank > 0 && (!!onCastPrepared || !!onCastSpontaneous)
-                const canSpontCast = isSpontaneous && used < totalSlots
-                return (
-                  <div key={`add-${i}`} className="flex items-center gap-1 group">
-                    {showCastButton && (isPrepared || canSpontCast) && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          isPrepared
-                            ? onCastPrepared?.(name, null, rank, slotKey, totalSlots)
-                            : onCastSpontaneous?.(name, null, rank, totalSlots)
-                        }
-                        className={cn(
-                          'p-1 rounded shrink-0 transition-colors',
-                          cast
-                            ? 'text-primary bg-primary/10'
-                            : 'text-muted-foreground/70 hover:text-primary hover:bg-accent/30',
-                        )}
-                        aria-label={`Cast ${name} at rank ${rank}`}
-                      >
-                        <Flame className="w-3 h-3" />
-                      </button>
-                    )}
-                    <div className="flex-1">
-                      <SpellCard
-                        name={name}
-                        foundryId={null}
-                        source={sourceName}
-                        combatId={combatId}
-                        castRank={rank}
-                        castConsumed={cast}
-                      />
-                    </div>
-                    {isEdit && onRemoveSpell && (
-                      <IconButton
-                        intent="danger"
-                        showOnHover
-                        onClick={() => onRemoveSpell(name, rank, false)}
-                        title="Remove added spell"
-                      >
-                        <X className="w-3 h-3" />
-                      </IconButton>
-                    )}
-                  </div>
-                )
-              })}
-
-              {/* Add-spell button */}
-              {isEdit && onOpenSpellSearch && (
-                <button
-                  type="button"
-                  onClick={() => onOpenSpellSearch(rank)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mt-1"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add spell…</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )
-      })}
-
-      {/* Add new rank button */}
       {isEdit && onAddRank && nextRank <= 10 && (
         <button
           type="button"
