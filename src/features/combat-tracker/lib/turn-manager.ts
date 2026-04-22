@@ -129,7 +129,9 @@ export function advanceTurn(): void {
   const nextConditions = useConditionStore.getState().activeConditions
     .filter((c) => c.combatantId === nextCombatant.id)
   const dyingValue = nextConditions.find((c) => c.slug === 'dying')?.value ?? 0
-  if (dyingValue > 0) {
+  const doomedValue = nextConditions.find((c) => c.slug === 'doomed')?.value ?? 0
+  const deathThreshold = 4 - doomedValue
+  if (dyingValue > 0 && dyingValue < deathThreshold) {
     tracker.setPendingRecoveryCheck({
       combatantId: nextCombatant.id,
       combatantName: nextCombatant.displayName,

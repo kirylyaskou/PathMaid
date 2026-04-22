@@ -3,6 +3,7 @@ import { Skull, Dices, Keyboard } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog'
@@ -98,6 +99,8 @@ export function DyingCascadeDialog({
     setCheckResult(result)
 
     if (result.newDyingValue === -1) {
+      const deathThreshold = 4 - doomedValue
+      setConditionValue(combatantId, 'dying' as ConditionSlug, deathThreshold)
       setIsDead(true)
     } else if (result.stabilized) {
       stabilize()
@@ -146,6 +149,11 @@ export function DyingCascadeDialog({
             <Skull className="w-5 h-5 text-destructive" />
             Dying — {combatantName}
           </DialogTitle>
+          <DialogDescription>
+            {mode === 'recovery'
+              ? 'Recovery check — roll to stabilize or worsen dying condition'
+              : 'Knocked out — apply dying condition and optional critical penalty'}
+          </DialogDescription>
         </DialogHeader>
 
         {isDead ? (
