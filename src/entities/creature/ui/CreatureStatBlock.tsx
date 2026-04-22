@@ -26,6 +26,7 @@ import {
 } from '../model/iwr-normalize'
 import { stripHtml } from '@/shared/lib/html'
 import { useModifiedStats } from '../model/use-modified-stats'
+import { useEffectiveSpeeds } from '../model/use-effective-speeds'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { useBattleFormOverridesStore, useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
@@ -44,6 +45,7 @@ import { highlightGameText } from '../lib/foundry-text'
 import { StatItem } from './StatItem'
 import { SpellcastingBlock } from './SpellcastingBlock'
 import { EquipmentBlock } from './EquipmentBlock'
+import { CreatureSpeedLine } from './CreatureSpeedLine'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
@@ -247,6 +249,8 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
     return byType
   }, [combatantEffects, creature.speeds])
 
+  const effectiveSpeeds = useEffectiveSpeeds(creature.speeds, effectSpeeds, modStats)
+
   const sizeShift = useMemo(() => {
     let topSize: EngineSize | null = null
     let topDamage = 0
@@ -445,58 +449,9 @@ console.log(creature)
           </>
         )}
 
-        {/* Speed.
-            v1.4.1 UAT BUG-6: apply speed modifiers (active + inactive) via
-            ModifierTooltip so Acid Grip struck-out -10 surfaces before the
-            persistent acid condition fires, and drops to active once it
-            does. min floor = 5 feet per PF2e — never let speed drop below
-            a single Stride.
-            v1.4.1 UAT BUG-5: merge BaseSpeed contributions from active
-            effects (Fly, Adapt Self, Angelic Wings, …). Effect-provided
-            speeds that don't exist on the base creature get appended;
-            ones that do get the max of base + effect (extra speed from an
-            effect never reduces an existing higher base speed). */}
         <div className="p-4">
           <StatRow label="Speed">
-            {(() => {
-              // Merge base creature speeds with effect-granted BaseSpeed entries.
-              const merged: Record<string, number> = {}
-              for (const [type, value] of Object.entries(creature.speeds)) {
-                if (typeof value === 'number' && value > 0) merged[type] = value
-              }
-              for (const [type, value] of Object.entries(effectSpeeds)) {
-                if (typeof value !== 'number' || value <= 0) continue
-                merged[type] = Math.max(merged[type] ?? 0, value)
-              }
-              const entries = Object.entries(merged) as [string, number][]
-              if (entries.length === 0) return ''
-              const parts: React.ReactNode[] = []
-              entries.forEach(([type, value], idx) => {
-                const slug = `${type}-speed`
-                const modResult = modStats.get(slug)
-                const net = modResult?.netModifier ?? 0
-                const hasInactive = (modResult?.inactiveModifiers?.length ?? 0) > 0
-                const final = Math.max(5, value + net)
-                const text = type === 'land' ? `${final} feet` : `${type} ${final} feet`
-                const node = modResult && (net !== 0 || hasInactive)
-                  ? (
-                    <ModifierTooltip
-                      key={type}
-                      modifiers={modResult.modifiers}
-                      netModifier={net}
-                      finalDisplay={String(final)}
-                      inactiveModifiers={modResult.inactiveModifiers}
-                      showInactive
-                    >
-                      <span className={net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : ''}>{text}</span>
-                    </ModifierTooltip>
-                  )
-                  : <span key={type}>{text}</span>
-                if (idx > 0) parts.push(<span key={`sep-${type}`}>, </span>)
-                parts.push(node)
-              })
-              return <>{parts}</>
-            })()}
+            <CreatureSpeedLine speeds={effectiveSpeeds} />
           </StatRow>
         </div>
 
