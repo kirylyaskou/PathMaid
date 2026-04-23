@@ -74,8 +74,14 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
 
   // Pre-compute slot instances per rank so duplicate spell names get stable,
   // unique slotKeys without mutating closure state during render.
+  //
+  // Innate-specific expansion: `sys.frequency` controls consumable-copy count:
+  //   - at-will → 1 nonConsumable slot (badge "At will", no cast/strike)
+  //   - N/day → N slots, each consumable with unique slotKey
+  //   - undefined → legacy behavior (1 slot per entry in byRank.spells)
   const slotsByRank = useMemo(() => {
     const result = new Map<number, { defaultSlots: SlotInstance[]; addedSlots: SlotInstance[] }>()
+    const isInnate = castMode === 'innate'
     for (const rank of effectiveRanks) {
       const byRank = entry.spellsByRank.find((br) => br.rank === rank)
       const visible = byRank
@@ -87,12 +93,37 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
         occ.set(name, seen + 1)
         return `${name}#${seen}`
       }
-      const defaultSlots: SlotInstance[] = visible.map((s) => ({
-        kind: 'default',
-        name: s.name,
-        foundryId: s.foundryId,
-        slotKey: take(s.name),
-      }))
+      const defaultSlots: SlotInstance[] = []
+      for (const s of visible) {
+        if (isInnate && s.frequency?.kind === 'at-will') {
+          defaultSlots.push({
+            kind: 'default',
+            name: s.name,
+            foundryId: s.foundryId,
+            slotKey: `atwill:${s.name}`,
+            nonConsumable: true,
+            frequencyLabel: 'At will',
+          })
+        } else if (isInnate && s.frequency?.kind === 'per') {
+          const label = `${s.frequency.max}/${s.frequency.per}`
+          for (let i = 0; i < s.frequency.max; i++) {
+            defaultSlots.push({
+              kind: 'default',
+              name: s.name,
+              foundryId: s.foundryId,
+              slotKey: `freq:${s.name}#${i}`,
+              frequencyLabel: label,
+            })
+          }
+        } else {
+          defaultSlots.push({
+            kind: 'default',
+            name: s.name,
+            foundryId: s.foundryId,
+            slotKey: take(s.name),
+          })
+        }
+      }
       const addedRefs = addedByRank[rank] ?? []
       const addedSlots: SlotInstance[] = addedRefs.map((ref) => ({
         kind: 'added',
@@ -103,7 +134,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
       result.set(rank, { defaultSlots, addedSlots })
     }
     return result
-  }, [effectiveRanks, entry.spellsByRank, removedSpells, addedByRank])
+  }, [effectiveRanks, entry.spellsByRank, removedSpells, addedByRank, castMode])
 
   function renderRank(rank: number) {
     const byRank = entry.spellsByRank.find((br) => br.rank === rank)

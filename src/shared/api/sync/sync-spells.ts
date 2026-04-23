@@ -77,6 +77,28 @@ interface RawCreatureSpell {
   spell_name: string
   rank_prepared: number
   sort_order: number
+  frequency_json: string | null
+}
+
+/**
+ * Extract Foundry `sys.frequency` into our canonical JSON shape. Foundry uses
+ * `{ per: "duration:at-will" }` for unlimited and `{ max: N, per: "day" }`
+ * for limited-frequency innate spells. Unknown shapes return null — UI falls
+ * back to entries.length as a consumable-copy count proxy.
+ */
+function extractInnateFrequency(sys: Record<string, unknown>): string | null {
+  const freq = sys.frequency as Record<string, unknown> | undefined
+  if (!freq) return null
+  const per = freq.per as string | undefined
+  if (per === 'duration:at-will' || per === 'at-will') {
+    return JSON.stringify({ kind: 'at-will' })
+  }
+  if (per === 'day' || per === 'hour' || per === 'round') {
+    const max = Number(freq.max ?? freq.value ?? 1)
+    if (!Number.isFinite(max) || max <= 0) return null
+    return JSON.stringify({ kind: 'per', max, per })
+  }
+  return null
 }
 
 export async function extractAndInsertSpells(entities: RawEntity[]): Promise<void> {
@@ -189,6 +211,7 @@ export async function extractCreatureSpellcasting(entities: RawEntity[]): Promis
             spell_name: it.name as string,
             rank_prepared: isCantrip ? 0 : ((sys.level as Record<string, unknown>)?.value as number ?? 0),
             sort_order: (it.sort as number) ?? 0,
+            frequency_json: extractInnateFrequency(sys),
           })
         }
       }
@@ -212,13 +235,14 @@ export async function extractCreatureSpellcasting(entities: RawEntity[]): Promis
 
   for (let i = 0; i < spellItems.length; i += BATCH_SIZE) {
     const batch = spellItems.slice(i, i + BATCH_SIZE)
-    const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')
+    const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ')
     const values = batch.flatMap((s) => [
       s.id, s.creature_id, s.entry_id,
       s.spell_foundry_id, s.spell_name, s.rank_prepared, s.sort_order,
+      s.frequency_json,
     ])
     await db.execute(
-      `INSERT OR REPLACE INTO creature_spell_lists (id, creature_id, entry_id, spell_foundry_id, spell_name, rank_prepared, sort_order) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO creature_spell_lists (id, creature_id, entry_id, spell_foundry_id, spell_name, rank_prepared, sort_order, frequency_json) VALUES ${placeholders}`,
       values
     )
   }

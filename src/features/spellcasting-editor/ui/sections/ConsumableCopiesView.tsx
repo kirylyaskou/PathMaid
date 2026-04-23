@@ -81,6 +81,8 @@ export function ConsumableCopiesView({
               combatId={combatId}
               showCastTooltip
               removeTitle="Remove"
+              nonConsumable={slot.nonConsumable}
+              frequencyLabel={slot.frequencyLabel}
             />
           )
         })}

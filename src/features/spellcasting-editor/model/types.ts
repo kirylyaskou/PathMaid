@@ -27,6 +27,10 @@ export interface SlotInstance {
   name: string
   foundryId: string | null
   slotKey: string
+  /** True for innate at-will entries: no pip/strike, cast never consumes. */
+  nonConsumable?: boolean
+  /** Shown as a "At will" / "3/day" badge next to the spell name. */
+  frequencyLabel?: string
 }
 
 /**

@@ -37,6 +37,7 @@ export interface CreatureSpellItem {
   spell_name: string
   rank_prepared: number
   sort_order: number
+  frequency_json: string | null
 }
 
 export interface SpellSearchResult extends SpellRow {

@@ -19,6 +19,10 @@ export interface SpellRowProps {
   castRank?: number
   showCastTooltip: boolean
   removeTitle?: string
+  /** Innate at-will: hide cast/strike entirely. */
+  nonConsumable?: boolean
+  /** Badge like "At will" or "3/day" rendered next to the SpellCard. */
+  frequencyLabel?: string
 }
 
 export function SpellRow({
@@ -36,8 +40,12 @@ export function SpellRow({
   castRank,
   showCastTooltip,
   removeTitle,
+  nonConsumable,
+  frequencyLabel,
 }: SpellRowProps) {
-  const castButton = showCast && canCast ? (
+  const effectiveShowCast = showCast && !nonConsumable
+  const effectiveCast = cast && !nonConsumable
+  const castButton = effectiveShowCast && canCast ? (
     <button
       type="button"
       onClick={onCast}
@@ -65,15 +73,22 @@ export function SpellRow({
           </Tooltip>
         ) : castButton
       )}
-      <div className="flex-1">
-        <SpellCard
-          name={name}
-          foundryId={foundryId}
-          source={sourceName}
-          combatId={combatId}
-          castRank={castRank ?? rank}
-          castConsumed={cast}
-        />
+      <div className="flex-1 flex items-center gap-1.5">
+        <div className="flex-1">
+          <SpellCard
+            name={name}
+            foundryId={foundryId}
+            source={sourceName}
+            combatId={combatId}
+            castRank={castRank ?? rank}
+            castConsumed={effectiveCast}
+          />
+        </div>
+        {frequencyLabel && (
+          <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded border border-primary/30 bg-primary/10 text-primary uppercase tracking-wider font-semibold">
+            {frequencyLabel}
+          </span>
+        )}
       </div>
       {isEdit && onRemove && (
         <IconButton

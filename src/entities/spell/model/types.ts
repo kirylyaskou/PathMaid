@@ -45,6 +45,17 @@ export interface AddedSpellRef {
   heightenedFromRank?: number
 }
 
+/**
+ * Innate-spell cast frequency. Parsed from Foundry `sys.frequency` at sync
+ * time and propagated to the editor for pip rendering.
+ *   - `at-will`: no pips, no strike-through; cast never consumes a slot
+ *   - `per`: N per-spell consumable pips (strike-through on cast), refreshed
+ *     manually on encounter rest (no automatic cadence yet)
+ */
+export type InnateFrequency =
+  | { kind: 'at-will' }
+  | { kind: 'per'; max: number; per: 'day' | 'hour' | 'round' }
+
 export interface SpellListEntry {
   name: string
   foundryId: string | null  // references spells(id) if resolvable
@@ -57,4 +68,7 @@ export interface SpellListEntry {
   // Base rank of the spell when added via search dialog at a higher rank.
   // undefined = spell is cast at its listed `rank` (no heightening applied).
   heightenedFromRank?: number
+  // Innate-spell frequency (undefined for prepared/spontaneous/focus/legacy
+  // innate NPCs whose Foundry data has no `sys.frequency` field).
+  frequency?: InnateFrequency
 }
