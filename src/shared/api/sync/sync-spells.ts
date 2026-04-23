@@ -94,11 +94,13 @@ export async function extractAndInsertSpells(entities: RawEntity[]): Promise<voi
       const damageObj = sys.damage ?? {}
       const areaObj = sys.area
       const defenseObj = sys.defense
+      const traitsArr = sys.traits?.value as string[] | undefined
+      const isCantrip = Array.isArray(traitsArr) && traitsArr.includes('cantrip')
 
       spells.push({
         id: entity.id,
         name: entity.name,
-        rank: sys.level?.value ?? 0,
+        rank: isCantrip ? 0 : (sys.level?.value ?? 0),
         traditions: sys.traits?.traditions?.length
           ? JSON.stringify(sys.traits.traditions)
           : null,
