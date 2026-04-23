@@ -39,13 +39,31 @@ export interface CreatureSpellItem {
   sort_order: number
 }
 
+export interface SpellSearchResult extends SpellRow {
+  heightenedToRank?: number
+}
+
+type HeightenSpec =
+  | { type: 'interval'; perRanks: number; damage: Record<string, string> }
+  | { type: 'fixed'; levels: Record<string, unknown> }
+
+function heightenEligible(spec: HeightenSpec, baseRank: number, targetRank: number): boolean {
+  if (targetRank <= baseRank) return false
+  if (spec.type === 'interval') {
+    const perRanks = Math.max(1, spec.perRanks)
+    return Math.floor((targetRank - baseRank) / perRanks) > 0
+  }
+  return Object.prototype.hasOwnProperty.call(spec.levels, String(targetRank))
+}
+
 export async function searchSpells(
   query: string,
   rank?: number,
   tradition?: string,
   trait?: string,
-  isFocus?: boolean
-): Promise<SpellRow[]> {
+  isFocus?: boolean,
+  includeHeightened?: boolean,
+): Promise<SpellSearchResult[]> {
   const db = await getDb()
   const traitFilter = trait ? `AND s.traits LIKE ?` : ''
   const traitParam = trait ? [`%"${trait}"%`] : []
@@ -56,6 +74,7 @@ export async function searchSpells(
         ? `AND (s.traditions IS NOT NULL OR s.traits NOT LIKE '%"focus"%')`
         : ''
 
+  let exact: SpellRow[]
   if (query.trim()) {
     const ftsQuery = query.trim().replace(/['"*]/g, '') + '*'
     const rows = await db.select<SpellRow[]>(
@@ -75,14 +94,33 @@ export async function searchSpells(
         ...traitParam,
       ]
     )
-    if (rows.length > 0) return rows
-
-    // FTS5 fallback: if the FTS index is empty/out-of-sync or the query
-    // tokenizer drops short inputs, fall back to a LIKE scan on name.
-    const likePattern = `%${query.trim().replace(/[%_]/g, '')}%`
-    return await db.select<SpellRow[]>(
+    if (rows.length > 0) {
+      exact = rows
+    } else {
+      // FTS5 fallback: if the FTS index is empty/out-of-sync or the query
+      // tokenizer drops short inputs, fall back to a LIKE scan on name.
+      const likePattern = `%${query.trim().replace(/[%_]/g, '')}%`
+      exact = await db.select<SpellRow[]>(
+        `SELECT * FROM spells s
+         WHERE s.name LIKE ? COLLATE NOCASE
+           ${rank !== undefined ? 'AND s.rank = ?' : ''}
+           ${tradition ? "AND s.traditions LIKE ?" : ''}
+           ${traitFilter}
+           ${focusFilter}
+         ORDER BY s.rank ASC, s.name ASC
+         LIMIT 500`,
+        [
+          likePattern,
+          ...(rank !== undefined ? [rank] : []),
+          ...(tradition ? [`%"${tradition}"%`] : []),
+          ...traitParam,
+        ]
+      )
+    }
+  } else {
+    exact = await db.select<SpellRow[]>(
       `SELECT * FROM spells s
-       WHERE s.name LIKE ? COLLATE NOCASE
+       WHERE 1=1
          ${rank !== undefined ? 'AND s.rank = ?' : ''}
          ${tradition ? "AND s.traditions LIKE ?" : ''}
          ${traitFilter}
@@ -90,7 +128,6 @@ export async function searchSpells(
        ORDER BY s.rank ASC, s.name ASC
        LIMIT 500`,
       [
-        likePattern,
         ...(rank !== undefined ? [rank] : []),
         ...(tradition ? [`%"${tradition}"%`] : []),
         ...traitParam,
@@ -98,22 +135,49 @@ export async function searchSpells(
     )
   }
 
-  const rows = await db.select<SpellRow[]>(
+  // Exact-rank rows come first, unmodified.
+  const results: SpellSearchResult[] = exact.map((r) => ({ ...r }))
+
+  if (!includeHeightened || rank === undefined || rank <= 0) return results
+
+  // Second query: spells with base rank < target rank and a heighten spec.
+  // Post-filter in TS applies the HeightenSpec eligibility rule (interval
+  // increment count or fixed-level presence).
+  const heightenRows = await db.select<SpellRow[]>(
     `SELECT * FROM spells s
-     WHERE 1=1
-       ${rank !== undefined ? 'AND s.rank = ?' : ''}
+     WHERE s.rank < ?
+       AND s.rank > 0
+       AND s.heightened_json IS NOT NULL
+       ${query.trim() ? "AND s.name LIKE ? COLLATE NOCASE" : ''}
        ${tradition ? "AND s.traditions LIKE ?" : ''}
        ${traitFilter}
        ${focusFilter}
      ORDER BY s.rank ASC, s.name ASC
      LIMIT 500`,
     [
-      ...(rank !== undefined ? [rank] : []),
+      rank,
+      ...(query.trim() ? [`%${query.trim().replace(/[%_]/g, '')}%`] : []),
       ...(tradition ? [`%"${tradition}"%`] : []),
       ...traitParam,
     ]
   )
-  return rows
+
+  const seen = new Set(results.map((r) => r.id))
+  for (const row of heightenRows) {
+    if (seen.has(row.id)) continue
+    if (!row.heightened_json) continue
+    let spec: HeightenSpec | null = null
+    try {
+      spec = JSON.parse(row.heightened_json) as HeightenSpec
+    } catch {
+      continue
+    }
+    if (!spec || !heightenEligible(spec, row.rank, rank)) continue
+    results.push({ ...row, heightenedToRank: rank })
+    seen.add(row.id)
+  }
+
+  return results
 }
 
 export async function getSpellById(id: string): Promise<SpellRow | null> {
