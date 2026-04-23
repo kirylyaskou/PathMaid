@@ -5,8 +5,16 @@ import { searchSpells } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { SpellReferenceDrawer } from '@/entities/spell'
 import { useSpellsCatalogStore, SpellFilterPanel, SpellRankSection } from '@/features/spells-catalog'
+import { MascotWatermark } from '@/shared/ui/mascot-watermark'
 
 const ALL_RANKS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
+
+const TRADITION_MASCOT: Record<string, string> = {
+  arcane: '/mascot/arcane_magic_bg.png',
+  divine: '/mascot/divine_magic_bg.png',
+  occult: '/mascot/occult_magic_bg.png',
+  primal: '/mascot/nature_magic_bg.png',
+}
 
 export function SpellsPage() {
   const [regularSpells, setRegularSpells] = useState<SpellRow[]>([])
@@ -67,11 +75,15 @@ export function SpellsPage() {
   const activeCount = activeSpells.length
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="relative flex flex-col h-full overflow-hidden">
+      <MascotWatermark
+        src={selectedTradition ? TRADITION_MASCOT[selectedTradition] : null}
+        full={!loading && activeCount === 0}
+      />
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as 'spells' | 'focus')}
-        className="flex flex-col h-full overflow-hidden"
+        className="relative z-10 flex flex-col h-full overflow-hidden"
       >
         <TabsList className="shrink-0 mx-3 mt-3 mb-0 w-auto self-start">
           <TabsTrigger value="spells">Spells</TabsTrigger>

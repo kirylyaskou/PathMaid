@@ -7,8 +7,16 @@ import { useItemsCatalogStore, ItemFilterPanel, ItemsTable, FavoritesStar, Favor
 import { ItemReferenceDrawer, ITEM_TYPE_LABELS } from '@/entities/item'
 import { useShallow } from 'zustand/react/shallow'
 import { logError } from '@/shared/lib/error'
+import { MascotWatermark } from '@/shared/ui/mascot-watermark'
 
 const CATEGORY_ORDER = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'treasure', 'backpack', 'kit', 'book', 'effect']
+
+const ITEM_MASCOT: Record<string, string> = {
+  weapon: '/mascot/weapons_bg.png',
+  armor: '/mascot/armor_bg.png',
+  shield: '/mascot/shields_bg.png',
+}
+const NO_FILTER_MASCOT = '/mascot/no_type_bg.png'
 
 interface FavoritesContentProps {
   favoriteIds: Set<string>
@@ -75,6 +83,7 @@ export function ItemsPage() {
   const [loading, setLoading] = useState(false)
   const [drawerItemId, setDrawerItemId] = useState<string | null>(null)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
+  const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all')
 
   // Load favorites on mount
   useEffect(() => {
@@ -116,9 +125,19 @@ export function ItemsPage() {
     return () => clearTimeout(timer)
   }, [query, selectedType, minLevel, maxLevel, selectedRarity, selectedTraits, selectedSource, selectedSubcategory])
 
+  const mascotSrc = activeTab === 'all'
+    ? (selectedType ? ITEM_MASCOT[selectedType] : NO_FILTER_MASCOT) ?? null
+    : null
+  const showMascotFull = activeTab === 'all' && !loading && items.length === 0
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <Tabs defaultValue="all" className="flex flex-col h-full overflow-hidden">
+    <div className="relative flex flex-col h-full overflow-hidden">
+      <MascotWatermark src={mascotSrc} full={showMascotFull} />
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as 'all' | 'favorites')}
+        className="relative z-10 flex flex-col h-full overflow-hidden"
+      >
         <TabsList className="shrink-0 mx-3 mt-2">
           <TabsTrigger value="all">All Items</TabsTrigger>
           <TabsTrigger value="favorites">Favorites</TabsTrigger>
