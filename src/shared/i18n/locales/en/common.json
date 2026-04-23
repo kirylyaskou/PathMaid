@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "combatTracker": "Combat Tracker",
+    "encounters": "Encounters",
+    "characters": "Characters",
+    "bestiary": "Bestiary",
+    "actions": "Actions",
+    "spells": "Spells",
+    "items": "Items",
+    "conditions": "Conditions",
+    "hazards": "Hazards",
+    "customCreatures": "Custom Creatures",
+    "settings": "Settings"
+  },
+  "navSection": {
+    "tools": "Tools",
+    "reference": "Reference"
+  },
+  "sidebar": {
+    "search": "Search...",
+    "searchHint": "Ctrl+K",
+    "collapse": "Collapse",
+    "expand": "Expand sidebar"
+  },
+  "header": {
+    "diceRoller": "Dice Roller",
+    "rollHistory": "Roll History",
+    "toggleTheme": "Toggle theme",
+    "language": "Language"
+  },
+  "language": {
+    "en": "English",
+    "ru": "Русский"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "loading": "Loading…"
+  }
+}

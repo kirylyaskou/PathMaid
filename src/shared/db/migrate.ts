@@ -36,8 +36,21 @@ export async function runMigrations(db: Database): Promise<void> {
       .split(';')
       .map((s) => s.trim())
       .filter((s) => s.length > 0)
-    for (const stmt of statements) {
-      await db.execute(stmt, [])
+    for (let i = 0; i < statements.length; i++) {
+      const stmt = statements[i]
+      try {
+        await db.execute(stmt, [])
+      } catch (err) {
+        // Rich error message so the SplashScreen surface points at the exact
+        // failing migration + statement in production. SQLite errors from the
+        // plugin only carry the terse code ("no such table: foo") without
+        // migration context — which made clean-install triage guesswork.
+        const snippet = stmt.replace(/\s+/g, ' ').slice(0, 140)
+        const msg = err instanceof Error ? err.message : String(err)
+        throw new Error(
+          `[migrate] ${name} failed at statement #${i + 1}: ${msg}\nSQL: ${snippet}${stmt.length > 140 ? '…' : ''}`,
+        )
+      }
     }
 
     // INSERT OR IGNORE — defense against races where two concurrent runMigrations

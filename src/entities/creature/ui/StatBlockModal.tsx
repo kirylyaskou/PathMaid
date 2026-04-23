@@ -29,7 +29,10 @@ export function StatBlockModal({ creatureId, open, onOpenChange }: StatBlockModa
         {/* BUG-04 (52-08): Radix Dialog requires a DialogTitle for a11y; a
             missing title surfaces as a console error in dev and can break
             focus trap timing. Visually hidden since the stat block has its
-            own heading. */}
+            own heading. Translation-aware rendering lives inside
+            CreatureStatBlock itself (v1.5.1), so every consumer (this
+            modal, BestiaryPage inline pane, combat detail) gets RU
+            automatically when a translation exists. */}
         <DialogTitle className="sr-only">
           {data?.name ?? 'Creature stat block'}
         </DialogTitle>

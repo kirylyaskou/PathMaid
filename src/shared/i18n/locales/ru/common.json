@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "dashboard": "Главная",
+    "combatTracker": "Бой",
+    "encounters": "Энкаунтеры",
+    "characters": "Персонажи",
+    "bestiary": "Бестиарий",
+    "actions": "Действия",
+    "spells": "Заклинания",
+    "items": "Предметы",
+    "conditions": "Состояния",
+    "hazards": "Опасности",
+    "customCreatures": "Свои существа",
+    "settings": "Настройки"
+  },
+  "navSection": {
+    "tools": "Инструменты",
+    "reference": "Справочник"
+  },
+  "sidebar": {
+    "search": "Поиск...",
+    "searchHint": "Ctrl+K",
+    "collapse": "Свернуть",
+    "expand": "Развернуть боковую панель"
+  },
+  "header": {
+    "diceRoller": "Бросок кубов",
+    "rollHistory": "История бросков",
+    "toggleTheme": "Переключить тему",
+    "language": "Язык"
+  },
+  "language": {
+    "en": "English",
+    "ru": "Русский"
+  },
+  "common": {
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "loading": "Загрузка…"
+  }
+}

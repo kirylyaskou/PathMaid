@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Stone Bones",
+    "rus_name": "Каменные кости",
+    "traits": "Dwarf",
+    "rus_traits": "Дварф",
+    "text": "<b>Source</b> Player Core <br><b>Trigger</b> You are struck by a critical hit that deals physical damage<br><hr>Your intractable nature can help you shrug off even the most grievous injuries. Attempt a DC 17 flat check. If you are successful, the attack becomes a normal hit.",
+    "rus_text": "<b>Источник</b> Основная книга игрока <br>\n<b>Условие</b> вы получили критический удар, который наносит физический урон.\n<hr>\nВаша невероятная неподатливость позволяет переносить даже самые опасные раны. Совершите чистую проверку со СЛ 17. При успехе критический удар становится обычным попаданием.",
+    "level": 9
+  }
+]

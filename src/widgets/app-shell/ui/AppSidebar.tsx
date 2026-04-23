@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import {
@@ -22,6 +23,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
     try { return localStorage.getItem(STORAGE_KEY) === 'true' } catch { return false }
   })
   const { pathname } = useLocation()
+  const { t } = useTranslation()
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(collapsed)) } catch {}
@@ -65,9 +67,9 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
                 <Search className="w-4 h-4" />
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left text-sm">Search...</span>
+                    <span className="flex-1 text-left text-sm">{t('sidebar.search')}</span>
                     <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-sidebar-border bg-sidebar px-1.5 font-mono text-[10px] font-medium text-sidebar-foreground/50">
-                      Ctrl+K
+                      {t('sidebar.searchHint')}
                     </kbd>
                   </>
                 )}
@@ -75,7 +77,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
             </TooltipTrigger>
             {collapsed && (
               <TooltipContent side="right">
-                <p>Search (Ctrl+K)</p>
+                <p>{`${t('sidebar.search')} (${t('sidebar.searchHint')})`}</p>
               </TooltipContent>
             )}
           </Tooltip>
@@ -85,7 +87,12 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
         <nav className="flex-1 px-2 py-2 overflow-y-auto">
           {(['main', 'reference', 'settings'] as const).map((section) => {
             const items = NAV_ITEMS.filter((i) => i.section === section)
-            const sectionLabel = section === 'main' ? 'Tools' : section === 'reference' ? 'Reference' : null
+            const sectionLabel =
+              section === 'main'
+                ? t('navSection.tools')
+                : section === 'reference'
+                  ? t('navSection.reference')
+                  : null
             return (
               <div key={section} className="space-y-1 mt-4 first:mt-0">
                 {sectionLabel && !collapsed && (
@@ -96,6 +103,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
                 {items.map((item) => {
                   const isActive = pathname === item.href ||
                     (item.href !== '/' && pathname.startsWith(item.href))
+                  const translatedLabel = t(item.labelKey, { defaultValue: item.label })
                   return (
                     <Tooltip key={item.href}>
                       <TooltipTrigger asChild>
@@ -110,12 +118,12 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
                           )}
                         >
                           <item.icon className={cn('w-4 h-4 flex-shrink-0', isActive && 'text-primary')} />
-                          {!collapsed && <span>{item.label}</span>}
+                          {!collapsed && <span>{translatedLabel}</span>}
                         </Link>
                       </TooltipTrigger>
                       {collapsed && (
                         <TooltipContent side="right">
-                          <p>{item.label}</p>
+                          <p>{translatedLabel}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -139,7 +147,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
                 )}
                 onClick={() => setCollapsed(!collapsed)}
               >
-                {!collapsed && <span className="text-xs">Collapse</span>}
+                {!collapsed && <span className="text-xs">{t('sidebar.collapse')}</span>}
                 {collapsed ? (
                   <ChevronRight className="w-4 h-4" />
                 ) : (
@@ -149,7 +157,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
             </TooltipTrigger>
             {collapsed && (
               <TooltipContent side="right">
-                <p>Expand sidebar</p>
+                <p>{t('sidebar.expand')}</p>
               </TooltipContent>
             )}
           </Tooltip>

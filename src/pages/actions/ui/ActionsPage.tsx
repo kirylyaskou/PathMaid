@@ -5,6 +5,7 @@ import { getAllActions } from '@/shared/api'
 import type { ActionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { useContentTranslation } from '@/shared/i18n'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
 
@@ -44,6 +45,9 @@ function ActionCard({ action, expanded, onToggle }: {
   const traits = parseJsonArray(action.traits)
   const costDisplay = actionCostDisplay(action)
   const badgeClass = CATEGORY_BADGE[action.action_category] ?? CATEGORY_BADGE.basic
+  // Phase 80: actions have no level — pass null
+  const { data: translation } = useContentTranslation('action', action.name, null)
+  const displayName = translation?.nameLoc ?? action.name
 
   return (
     <div
@@ -62,7 +66,7 @@ function ActionCard({ action, expanded, onToggle }: {
           {costDisplay}
         </span>
 
-        <span className="font-semibold text-sm flex-1">{action.name}</span>
+        <span className="font-semibold text-sm flex-1">{displayName}</span>
 
         {/* Category badge */}
         <span className={cn(
@@ -87,7 +91,7 @@ function ActionCard({ action, expanded, onToggle }: {
         </div>
       )}
 
-      {/* Expanded detail */}
+      {/* Expanded detail — RU overlay is name-only for v1.5.1 */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/30 pt-2 space-y-2">
           {action.description && (

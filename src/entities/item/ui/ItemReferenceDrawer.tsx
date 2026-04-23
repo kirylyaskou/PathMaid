@@ -6,6 +6,7 @@ import type { ItemRow } from '@/shared/api'
 import { formatPrice, ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '@/entities/item'
 import { cn } from '@/shared/lib/utils'
 import { stripHtml } from '@/shared/lib/html'
+import { useContentTranslation } from '@/shared/i18n'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { SpellInlineCard } from '@/entities/spell'
 import { parseJsonArray } from '@/shared/lib/json'
@@ -32,13 +33,18 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
   const typeColor = item ? (ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40') : ''
   const typeLabel = item ? (ITEM_TYPE_LABELS[item.item_type] ?? item.item_type) : ''
 
+  // Phase 80: item translation lookup
+  const { data: translation } = useContentTranslation('item', item?.name, item?.level ?? null)
+
   return (
     <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto flex flex-col gap-0 p-0">
         {item && (
           <>
             <SheetHeader className="p-4 pb-3 border-b border-border/30">
-              <SheetTitle className="text-base font-semibold leading-tight">{item.name}</SheetTitle>
+              <SheetTitle className="text-base font-semibold leading-tight">
+                {translation?.nameLoc ?? item.name}
+              </SheetTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground">Level {item.level}</span>
                 {item.rarity && item.rarity !== 'common' && (
@@ -145,7 +151,8 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 </div>
               )}
 
-              {/* Description */}
+              {/* Description — RU overlay is name-only for v1.5.1; rus_text
+                  blob ignored pending field-level translation spec. */}
               {item.description && (
                 <p className="text-[13px] text-foreground/80 leading-relaxed">
                   {stripHtml(item.description)}

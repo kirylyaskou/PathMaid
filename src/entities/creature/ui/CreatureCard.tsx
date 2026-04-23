@@ -5,6 +5,7 @@ import { Button } from "@/shared/ui/button"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { StatBlock } from "@/shared/ui/stat-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
+import { useContentTranslation } from "@/shared/i18n"
 import type { Creature } from '../model/types'
 
 interface CreatureCardProps {
@@ -17,6 +18,11 @@ interface CreatureCardProps {
 }
 
 export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick, className }: CreatureCardProps) {
+  // Phase 79: when a Russian translation exists for this creature, show the
+  // localized name in summary tiles too — lets users recognize entries by
+  // the name they know. The detail modal does the full stat-block switch.
+  const { data: translation } = useContentTranslation('monster', creature.name, creature.level)
+  const displayName = translation?.nameLoc ?? creature.name
   if (compact) {
     return (
       <Card
@@ -31,7 +37,7 @@ export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick
             <LevelBadge level={creature.level} size="sm" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <h4 className="font-medium text-sm truncate">{creature.name}</h4>
+                <h4 className="font-medium text-sm truncate">{displayName}</h4>
                 <div className="flex items-center gap-1 shrink-0">
                   {onAddToStaging && (
                     <Button
@@ -102,7 +108,7 @@ export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold">{creature.name}</h3>
+                <h3 className="font-semibold">{displayName}</h3>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">
                   {creature.size} {creature.type}
                 </p>

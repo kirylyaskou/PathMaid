@@ -4,6 +4,7 @@ import { getFeatByName } from '@/shared/api'
 import type { FeatEntityRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { useContentTranslation } from '@/shared/i18n'
 import { ActionIcon } from '@/shared/ui/action-icon'
 
 type ActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
@@ -23,6 +24,18 @@ export function FeatInlineCard({ featName, typeLabel, level, note }: FeatInlineC
     setFeat('loading')
     getFeatByName(featName).then(setFeat).catch(() => setFeat(null))
   }, [featName])
+
+  // Phase 80: feat translation lookup — matching key is the canonical feat
+  // name; level passed in as a prop helps disambiguate same-name feats.
+  const featLoadedName = feat && feat !== 'loading' ? feat.name : null
+  const featLoadedLevel = feat && feat !== 'loading'
+    ? typeof feat.level === 'number' ? feat.level : level ?? null
+    : null
+  const { data: translation } = useContentTranslation(
+    'feat',
+    featLoadedName,
+    featLoadedLevel,
+  )
 
   if (feat === 'loading') {
     return (
@@ -70,7 +83,7 @@ export function FeatInlineCard({ featName, typeLabel, level, note }: FeatInlineC
       {actionCostValue !== null && (
         <ActionIcon cost={actionCostValue} className="text-base text-primary shrink-0" />
       )}
-      <span className="font-semibold text-sm flex-1">{feat.name}</span>
+      <span className="font-semibold text-sm flex-1">{translation?.nameLoc ?? feat.name}</span>
       {typeLabel && <span className="text-[11px] text-muted-foreground shrink-0">{typeLabel}</span>}
       {level !== undefined && <span className="text-[11px] text-muted-foreground shrink-0">{level}</span>}
     </div>

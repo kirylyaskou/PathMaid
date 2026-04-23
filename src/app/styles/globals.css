@@ -386,3 +386,78 @@
   font-size: 16px;
   font-weight: 600;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   SafeHtml — styles for translated pf2e content (Phase 79+).
+   Target classes come verbatim from pf2.ru HTML source; we
+   restyle them to match the Golden Parchment theme.
+   ───────────────────────────────────────────────────────────── */
+
+.pf2e-safe-html {
+  line-height: 1.55;
+  color: var(--foreground);
+}
+
+.pf2e-safe-html b,
+.pf2e-safe-html strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.pf2e-safe-html hr {
+  margin: 0.6rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.pf2e-safe-html p {
+  margin: 0.5rem 0;
+}
+
+/* Action-cost glyph wrapper injected by SafeHtml preprocess step.
+   Matches the rest of the app's visual language (◆ / ◇ / ↺). */
+.pf2e-action-cost {
+  display: inline-block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--pf-gold);
+  letter-spacing: -0.05em;
+  margin: 0 0.15em;
+  vertical-align: 0.02em;
+}
+
+/* pf2.ru wraps inline ability blurbs (auras, reactions, free actions) in
+   a distinct "boxed" callout inside the stat block. Render as a subtle
+   parchment panel with a gold left rule — reads as a sidebar without
+   breaking the flow of the stat block. */
+.pf2e-safe-html .in-box-ability {
+  display: block;
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid var(--pf-gold);
+  background: color-mix(in oklab, var(--pf-parchment) 70%, transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* pf2.ru item-breakdown sub-heading: "Manacles (Simple) [Item 1]".
+   Render as a subsection title with a bottom rule. */
+.pf2e-safe-html .h2-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.35rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pf-gold-dim);
+}
+
+/* The right-aligned "Item N" / "Предмет N" badge inside .h2-header. */
+.pf2e-safe-html .item-type {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

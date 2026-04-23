@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Ready",
+    "rus_name": "Подготовка действия",
+    "traits": "Concentrate",
+    "rus_traits": "Концентрация",
+    "text": "<b>Source</b> Player Core <hr>You prepare to use an action that will occur outside your turn. Choose a single action or free action you can use, and designate a trigger. Your turn then ends. If the trigger you designated occurs before the start of your next turn, you can use the chosen action as a reaction (provided you still meet the requirements to use it). You can't Ready a free action that already has a trigger.<br> If you have a multiple attack penalty and your readied action is an attack action, your readied attack takes the multiple attack penalty you had at the time you used Ready. This is one of the few times the multiple attack penalty applies when it's not your turn.",
+    "rus_text": "<b>Источник</b> Основная книга игрока \n<hr>\nВы готовитесь применить действие вне вашего хода. Выберите одно из доступных вам одиночных или свободных действий и определите условие его применения. Ваш ход после этого завершается. Если до начала вашего следующего хода выполнится требуемое условие, вы можете использовать выбранное действие в качестве ответного (если всё ещё соответствуете требованиям). Вы не можете подготовить свободное действие, если для него уже есть условие применения.<br>\nЕсли у вас есть штраф за последовательные атаки и вы подготовили действие с дескриптором «атака», оно использует значение штрафа, бывшее у вас на момент Подготовки действия. Это один из немногих случаев, когда штраф за последовательные атаки применяется вне вашего хода."
+  }
+]

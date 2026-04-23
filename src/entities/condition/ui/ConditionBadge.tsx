@@ -38,7 +38,9 @@ export function ConditionBadge({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs cursor-pointer transition-colors hover:brightness-110',
+        // Badge sizing bumped — was text-xs / gap-1 / px-2 py-0.5, felt cramped
+        // and the action icons (info/lock) were tiny and low-contrast.
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-sm cursor-pointer transition-colors hover:brightness-110',
         colorClass,
         className
       )}
@@ -46,7 +48,7 @@ export function ConditionBadge({
       title={`Click to remove ${condition.slug}`}
     >
       {condition.grantedBy && (
-        <Link className="w-2.5 h-2.5 opacity-60" />
+        <Link className="w-3 h-3 opacity-60" />
       )}
       <span className="capitalize">{condition.slug.replace('-', ' ')}</span>
       {condition.value !== undefined && condition.value > 0 && (
@@ -54,16 +56,24 @@ export function ConditionBadge({
       )}
       {onInfo && (
         <button
-          className="ml-0.5 hover:text-foreground opacity-50 hover:opacity-100 transition-opacity"
+          className="ml-0.5 text-sky-300 hover:text-sky-100 transition-colors"
           onClick={(e) => { e.stopPropagation(); onInfo() }}
           title="View condition details"
         >
-          <Info className="w-2.5 h-2.5" />
+          <Info className="w-4 h-4" />
         </button>
       )}
       {onToggleLock && (
         <button
-          className="ml-0.5 hover:text-foreground"
+          className={cn(
+            'ml-0.5 transition-colors',
+            // Distinct per-state color so Lock ≠ Unlock at a glance.
+            // Locked  → amber   (warning: pinned, auto-decrement skipped)
+            // Unlock  → muted but visible (opacity bumped from 40 → 70)
+            condition.isLocked
+              ? 'text-amber-300 hover:text-amber-100'
+              : 'text-foreground/60 hover:text-foreground',
+          )}
           onClick={(e) => {
             e.stopPropagation()
             onToggleLock()
@@ -71,9 +81,9 @@ export function ConditionBadge({
           title={condition.isLocked ? 'Unlock (allow auto-decrement)' : 'Lock (skip auto-decrement)'}
         >
           {condition.isLocked ? (
-            <Lock className="w-2.5 h-2.5" />
+            <Lock className="w-4 h-4" />
           ) : (
-            <Unlock className="w-2.5 h-2.5 opacity-40" />
+            <Unlock className="w-4 h-4" />
           )}
         </button>
       )}

@@ -165,9 +165,10 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
               ))}
             </div>
           )}
-          {/* Description */}
+          {/* Description — full body, no clamp so DMs can read long spell
+              effects (e.g. Charm, Dominate) without clipping. */}
           {spell.description && (
-            <p className="text-xs text-foreground/75 leading-relaxed line-clamp-4">
+            <p className="text-xs text-foreground/75 leading-relaxed whitespace-pre-line">
               {stripHtml(resolveFoundryTokensForSpell(spell.description))}
             </p>
           )}
