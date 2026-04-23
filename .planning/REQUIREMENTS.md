@@ -10,7 +10,7 @@
 
 ### Translation (`TRANS-*`)
 
-- [ ] **TRANS-01**: Parser `parseMonsterRuHtml(text, rus_text)` извлекает структурированный RU объект из HTML пары
+- [x] **TRANS-01**: Parser `parseMonsterRuHtml(text, rus_text)` извлекает структурированный RU объект из HTML пары
   - Возвращает: `{abilitiesLoc[], skillsLoc[], speedsLoc, savesLoc, strikesLoc[], spellcastingLoc, perceptionLoc, languagesLoc, hpLoc, acLoc, weaknessesLoc, resistancesLoc, abilityScoresLoc} | null`
   - Pair-parse EN+RU для matching по index (порядок `<span class="in-box-ability">` совпадает)
   - Pure TS module в `shared/i18n/pf2e-content/lib/parse-monster.ts`, native `DOMParser`, zero new deps

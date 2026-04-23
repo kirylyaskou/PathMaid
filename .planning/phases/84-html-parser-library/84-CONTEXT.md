@@ -67,6 +67,21 @@ Pure TypeScript модуль `parseMonsterRuHtml(textEn, rusText)` → `MonsterS
   - Unknown HTML tags → stripped (текст сохраняется)
 - **D-08:** Renderer для markdown-lite — НЕ Phase 84 scope. Parser выдаёт строки с markdown-lite; Phase 88 добавит `shared/lib/render-markdown-lite.tsx` (~15 lines regex→React fragments). Zero deps, no SafeHtml required.
 
+### Scope Extension (D-09)
+
+- **D-09:** `abilityScoresLoc` добавляется в `MonsterStructuredLoc` (gap-closure 84.1). Причина: ability-score labels нужны для RU display в Phase 88 — тот же принцип, что и у `skillsLoc` (labels приходят из парсера, не хардкодятся). Форма:
+  ```ts
+  interface AbilityScoresLoc {
+    strLabel: string  // "Сил"
+    dexLabel: string  // "Лов"
+    conLabel: string  // "Стой"
+    intLabel: string  // "Инт"
+    wisLabel: string  // "Муд"
+    chaLabel: string  // "Хар"
+  }
+  ```
+  Bonuses (+6) НЕ парсятся (D-03). Extractor ищет секцию с `<b>Сил</b>`, `<b>Лов</b>`, etc., или default labels если секция отсутствует. Выравнивает D-02 type signature с REQUIREMENTS.md TRANS-01 (14 полей вместо 13).
+
 ### Claude's Discretion
 
 - Внутренняя структура `parse-monster.ts` (helper functions, section splitters) — builder decides.
