@@ -41,7 +41,10 @@ interface PendingCast {
   effectRulesJson: string
   effectDurationJson: string
   effectDescription: string | null
-  effectLevel: number
+  // cast rank — feeds encounter_combatant_effects.cast_at_rank and
+  // ActiveEffect.level so engine @item.level math reflects the slot the
+  // spell was cast from (heightened = cast rank, base = listed rank).
+  castAtRank: number
   maxTargets: number
 }
 
@@ -118,7 +121,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
       effectRulesJson: effectRow.rules_json,
       effectDurationJson: effectRow.duration_json,
       effectDescription: effectRow.description,
-      effectLevel: effectRow.level,
+      castAtRank: rank,
       maxTargets,
     })
   }
@@ -145,12 +148,19 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
   // same-pack granted children, then consume the caster's slot once.
   async function handlePickerApply(targetIds: string[]) {
     if (!encounterId || !pendingCast) return
-    const { effect, effectRulesJson, effectDurationJson, effectDescription, effectLevel } = pendingCast
+    const { effect, effectRulesJson, effectDurationJson, effectDescription, castAtRank } = pendingCast
     const remainingTurns = durationToRounds(effectDurationJson)
 
     try {
       for (const targetId of targetIds) {
-        const newId = await applyEffectToCombatant(encounterId, targetId, effect.id, remainingTurns)
+        const newId = await applyEffectToCombatant(
+          encounterId,
+          targetId,
+          effect.id,
+          remainingTurns,
+          null,
+          castAtRank,
+        )
         useEffectStore.getState().addEffect({
           id: newId,
           combatantId: targetId,
@@ -160,16 +170,20 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
           rulesJson: effectRulesJson,
           durationJson: effectDurationJson,
           description: effectDescription,
-          level: effectLevel,
+          level: castAtRank,
+          castAtRank,
         })
 
-        // same-pack GrantItem children cascade to the same combatant.
+        // same-pack GrantItem children cascade to the same combatant; they
+        // inherit castAtRank so engine @item.level is consistent across
+        // the parent/child chain (Spiritual Weapon → strike effect).
         const granted = await applyGrantedEffects(
           encounterId,
           targetId,
           newId,
           effectRulesJson,
           remainingTurns,
+          castAtRank,
         )
         for (const g of granted) {
           useEffectStore.getState().addEffect({
@@ -182,6 +196,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
             durationJson: g.durationJson,
             description: g.description,
             level: g.level,
+            castAtRank: g.castAtRank,
           })
         }
       }

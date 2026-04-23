@@ -66,6 +66,7 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
           durationJson: r.duration_json,
           description: r.description,
           level: r.level,
+          castAtRank: r.level,
         }))
       )
     })
@@ -91,6 +92,7 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
           durationJson: r.duration_json,
           description: r.description,
           level: r.level,
+          castAtRank: r.level,
         })),
       )
     } else {

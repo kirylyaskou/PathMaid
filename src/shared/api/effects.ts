@@ -340,8 +340,14 @@ export interface ActiveEffectRow {
   rules_json: string
   duration_json: string
   description: string | null
-  level: number  // 60-02: @item.level for expression eval; COALESCE(spells.rank, 1)
-  granted_by: string | null  // 65-06: parent encounter_combatant_effects.id (cascade)
+  // `level` feeds @item.level for FlatModifier/DamageDice expressions.
+  // Resolution order: ece.cast_at_rank (per-instance, set on heightened cast)
+  // → spells.rank (spell's base rank) → 1 (fallback for effects without a
+  // linked spell). Semantics shift: when heightened, `level` holds cast rank
+  // instead of base rank — engine math is unchanged; callers that care about
+  // base rank must use cast_at_rank explicitly.
+  level: number
+  granted_by: string | null
 }
 
 export async function getActiveEffectsForCombatant(
@@ -352,7 +358,7 @@ export async function getActiveEffectsForCombatant(
   return db.select<ActiveEffectRow[]>(
     `SELECT ece.id, ece.effect_id, ece.applied_at, ece.remaining_turns,
             se.name, se.rules_json, se.duration_json, se.description,
-            COALESCE(s.rank, 1) AS level,
+            COALESCE(ece.cast_at_rank, COALESCE(s.rank, 1)) AS level,
             ece.granted_by
      FROM encounter_combatant_effects ece
      JOIN spell_effects se ON ece.effect_id = se.id
@@ -368,13 +374,14 @@ export async function applyEffectToCombatant(
   effectId: string,
   remainingTurns: number,
   grantedBy?: string | null,
+  castAtRank?: number,
 ): Promise<string> {
   const db = await getDb()
   const id = crypto.randomUUID()
   const appliedAt = Math.floor(Date.now() / 1000)
   await db.execute(
-    'INSERT INTO encounter_combatant_effects (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns, granted_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [id, encounterId, combatantId, effectId, appliedAt, remainingTurns, grantedBy ?? null]
+    'INSERT INTO encounter_combatant_effects (id, encounter_id, combatant_id, effect_id, applied_at, remaining_turns, granted_by, cast_at_rank) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, encounterId, combatantId, effectId, appliedAt, remainingTurns, grantedBy ?? null, castAtRank ?? null]
   )
   return id
 }
@@ -393,8 +400,10 @@ export interface ResolvedGrantedEffect {
   rulesJson: string
   durationJson: string
   description: string | null
+  // Effective @item.level (cast rank if parent was heightened, else base).
   level: number
   remainingTurns: number
+  castAtRank?: number
 }
 
 export async function applyGrantedEffects(
@@ -403,6 +412,7 @@ export async function applyGrantedEffects(
   parentEceId: string,
   parentRulesJson: string,
   parentRemainingTurns: number,
+  parentCastAtRank?: number,
 ): Promise<ResolvedGrantedEffect[]> {
   const grants: GrantItemInput[] = parseSpellEffectGrantItems(parentRulesJson)
   if (grants.length === 0) return []
@@ -430,7 +440,12 @@ export async function applyGrantedEffects(
       grantee.id,
       parentRemainingTurns,
       parentEceId,
+      parentCastAtRank,
     )
+    // Grantee effect inherits parent's cast rank so @item.level evaluates
+    // consistently across the parent/child chain (Spiritual Weapon cast-at-6
+    // → strike effect also operates at rank 6).
+    const effectiveLevel = parentCastAtRank ?? grantee.level
     resolved.push({
       id: ceId,
       effectId: grantee.id,
@@ -438,8 +453,9 @@ export async function applyGrantedEffects(
       rulesJson: grantee.rules_json,
       durationJson: grantee.duration_json,
       description: grantee.description,
-      level: grantee.level,
+      level: effectiveLevel,
       remainingTurns: parentRemainingTurns,
+      castAtRank: parentCastAtRank,
     })
   }
 
