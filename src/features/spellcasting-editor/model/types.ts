@@ -1,6 +1,35 @@
 import type { SpellcastingSection } from '@/entities/spell'
 
 /**
+ * Cast-mode dispatcher for SpellcastingEditor.
+ *
+ * PF2e distinguishes five render modes:
+ * - `cantrip` — rank-0 spells, no slots/pips, unlimited casts
+ * - `prepared` — consumable copies, strike-through per slot instance
+ * - `spontaneous` — shared pool, pips deplete on cast
+ * - `innate` — consumable copies (like prepared), but per-spell frequency
+ * - `focus` — focus pool (single global resource, no per-rank pips)
+ */
+export type CastMode = 'prepared' | 'spontaneous' | 'innate' | 'focus' | 'cantrip'
+
+export function resolveCastMode(castType: SpellcastingSection['castType']): CastMode {
+  switch (castType) {
+    case 'prepared': return 'prepared'
+    case 'spontaneous': return 'spontaneous'
+    case 'innate': return 'innate'
+    case 'focus': return 'focus'
+    default: return 'spontaneous'
+  }
+}
+
+export interface SlotInstance {
+  kind: 'default' | 'added'
+  name: string
+  foundryId: string | null
+  slotKey: string
+}
+
+/**
  * Shared `SpellcastingEditor` component API.
  *
  * The editor is a pure presentation component — state is passed in via props
