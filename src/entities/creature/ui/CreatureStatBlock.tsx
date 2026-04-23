@@ -32,8 +32,10 @@ import type { SpeedType } from '@engine'
 import { mapSize } from '@/shared/lib/size-map'
 import { classifyAbilities } from '../model/classify-abilities'
 import { StatItem } from './StatItem'
-import { SpellcastingBlock } from './SpellcastingBlock'
+import { SpellListPreview } from './SpellListPreview'
 import { EquipmentBlock } from './EquipmentBlock'
+import type { SpellcastingSection } from '@/entities/spell'
+import type { ReactNode } from 'react'
 import { CreatureSpeedLine } from './CreatureSpeedLine'
 import { CreatureStrikesSection } from './CreatureStrikesSection'
 import { CreatureAbilitiesSection } from './CreatureAbilitiesSection'
@@ -89,9 +91,17 @@ interface CreatureStatBlockProps {
   creature: CreatureStatBlockData
   className?: string
   encounterContext?: EncounterContext
+  /** Inject a live-combat spellcasting renderer (SpellcastingBlock). When
+   *  omitted, falls back to SpellListPreview — read-only cards only. Used as
+   *  dependency-injection to avoid entities→features FSD violation. */
+  renderSpellcasting?: (
+    section: SpellcastingSection,
+    creatureLevel: number,
+    creatureName: string,
+  ) => ReactNode
 }
 
-export function CreatureStatBlock({ creature, className, encounterContext }: CreatureStatBlockProps) {
+export function CreatureStatBlock({ creature, className, encounterContext, renderSpellcasting }: CreatureStatBlockProps) {
   // Tag this hook as an "attack" roll site so Sure Strike (RollTwice
   // selector: attack-roll) produces a fortune-aware formula in the toast.
   // Saves and perception use separate useRoll calls in CombatantSavesBar.
@@ -430,15 +440,11 @@ export function CreatureStatBlock({ creature, className, encounterContext }: Cre
 
         {creature.spellcasting && creature.spellcasting.length > 0 && (
           <>
-            {creature.spellcasting.map((section) => (
-              <SpellcastingBlock
-                key={section.entryId}
-                section={section}
-                creatureLevel={creature.level}
-                creatureName={creature.name}
-                {...(encounterContext ? { encounterContext } : {})}
-              />
-            ))}
+            {creature.spellcasting.map((section) =>
+              renderSpellcasting
+                ? renderSpellcasting(section, creature.level, creature.name)
+                : <SpellListPreview key={section.entryId} section={section} creatureName={creature.name} />
+            )}
             <Separator />
           </>
         )}

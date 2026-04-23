@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { SpellcastingSection } from '@/entities/spell'
-import { useSpellModifiers } from './use-modified-stats'
+import { useSpellModifiers } from '@/entities/creature'
 import { useCasterProgression } from './spellcasting/use-caster-progression'
 import { useRankFilter } from './spellcasting/use-rank-filter'
 import { useSpellOverrides } from './spellcasting/use-spell-overrides'
@@ -116,4 +116,4 @@ export function useSpellcasting(
   }
 }
 
-export { useSpellModifiers } from './use-modified-stats'
+export { useSpellModifiers } from '@/entities/creature'

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { SearchInput } from '@/shared/ui/search-input'
 import { searchSpells, type SpellSearchResult } from '@/shared/api'
 import { computeHeightenPreview } from '@/entities/spell'
-import { rankLabel, actionCostLabel } from '../lib/spellcasting-helpers'
+import { rankLabel, actionCostLabel } from '@/entities/creature'
 import { parseJsonArray } from '@/shared/lib/json'
 
 const DIALOG_TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const

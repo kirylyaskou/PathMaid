@@ -13,7 +13,7 @@ import { X, Plus } from 'lucide-react'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { BuilderTabsProps } from '../BuilderTabs'
 import { BenchmarkHint } from '../BenchmarkHint'
-import { SpellSearchDialog } from '@/entities/creature'
+import { SpellSearchDialog } from '@/features/spellcasting'
 import { SpellcastingEditor } from '@/features/spellcasting-editor'
 
 const TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const

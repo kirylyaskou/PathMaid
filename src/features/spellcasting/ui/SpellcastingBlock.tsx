@@ -12,7 +12,7 @@ import {
 import { ChevronDown, HelpCircle, Pencil, Check } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import type { SpellcastingSection } from '@/entities/spell'
-import { traditionColor } from '../lib/spellcasting-helpers'
+import { traditionColor } from '@/entities/creature'
 import { useSpellcasting } from '../model/use-spellcasting'
 import { SpellSearchDialog } from './SpellSearchDialog'
 import { SpellcastingEditor } from '@/features/spellcasting-editor'

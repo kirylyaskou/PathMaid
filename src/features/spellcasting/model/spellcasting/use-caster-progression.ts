@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { detectCasterProgression, getMaxRecommendedRank } from '@engine'
 import type { SpellcastingSection } from '@/entities/spell'
-import { RANK_WARNINGS } from '../../lib/spellcasting-helpers'
+import { RANK_WARNINGS } from '@/entities/creature'
 
 export function useCasterProgression(section: SpellcastingSection, creatureLevel: number) {
   const maxSlotRank = useMemo(() => {
