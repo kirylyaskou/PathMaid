@@ -10,12 +10,12 @@
 // Ground truth: Amiri (Level 1) Barbarian, PF2e Player Core rules.
 //
 // PF2e formula cheatsheet
-//   ability_mod        = floor((score - 10) / 2)
-//   prof_mod(rank)     = rank > 0 ? level + rank*2 : 0
-//   save               = ability_mod + prof_mod(saveRank)
-//   perception         = wis_mod + prof_mod(perceptionRank)
-//   ac                 = 10 + min(dex_mod, dexCap) + armor.acBonus + prof_mod(armorRank)
-//   strike attack      = ability_mod + prof_mod(weaponRank) + potency
+//   ability_mod = floor((score - 10) / 2)
+//   prof_mod(rank) = rank > 0 ? level + rank*2 : 0
+//   save = ability_mod + prof_mod(saveRank)
+//   perception = wis_mod + prof_mod(perceptionRank)
+//   ac = 10 + min(dex_mod, dexCap) + armor.acBonus + prof_mod(armorRank)
+//   strike attack = ability_mod + prof_mod(weaponRank) + potency
 //     where ability = STR for melee; DEX for ranged unless finesse/thrown
 //     damage uses STR for melee + thrown; 0 for pure ranged
 //
@@ -25,7 +25,7 @@
 //     ancestry.system.boosts.{idx}.selected
 //     background.system.boosts.{idx}.selected
 //     class.system.keyAbility.value[0]
-//     system.build.attributes.boosts.1[]  (4 free boosts at creation)
+//     system.build.attributes.boosts.1[] (4 free boosts at creation)
 //   each boost = +2 if score < 18, else +1. flaws = -2.
 //   No two boosts inside the SAME stage to the same ability (PF2e creation
 //   rule) — the selected values already encode this, so we just apply them

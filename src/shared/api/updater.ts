@@ -2,7 +2,7 @@ import { check, type Update, type DownloadEvent } from '@tauri-apps/plugin-updat
 import { relaunch } from '@tauri-apps/plugin-process'
 import { closeDatabase } from './db'
 
-// --- Types (public API — API-01, API-02) ---
+// --- Types (public API) ---
 
 export interface UpdateInfo {
   version: string
@@ -16,7 +16,7 @@ export interface ProgressEvent {
   total: number | null
 }
 
-// --- Errors (D-01: ES2020 native class extends Error; instanceof narrowing via prototype chain) ---
+// --- Errors (ES2020 native class extends Error; instanceof narrowing via prototype chain) ---
 
 export class UpdaterError extends Error {
   constructor(message: string, public readonly cause?: unknown) {
@@ -31,7 +31,7 @@ export class UpdateInstallError extends UpdaterError {}
 // --- Internal helpers ---
 
 // Maps Tauri's Update (body?: string, date?: string) to our UpdateInfo (body: string, date: string | null).
-// Required: API-01 pins body as non-nullable string and date as string | null.
+// The public API pins body as non-nullable string and date as string | null.
 function toUpdateInfo(u: Update): UpdateInfo {
   return {
     version: u.version,
@@ -41,8 +41,8 @@ function toUpdateInfo(u: Update): UpdateInfo {
   }
 }
 
-// D-11: case-insensitive substring match on error message. Tauri plugin errors come as strings
-// from Rust side (SignatureError, "signature verification failed", "os error 18", etc.).
+// Case-insensitive substring match on error message. Tauri plugin errors come as
+// strings from the Rust side (SignatureError, "signature verification failed", …).
 function classifyUpdateError(e: unknown): UpdaterError {
   const raw = e instanceof Error ? e.message : String(e)
   const msg = raw.toLowerCase()
@@ -75,7 +75,7 @@ function classifyUpdateError(e: unknown): UpdaterError {
 /**
  * Check for an available update.
  *
- * - In dev (`!import.meta.env.PROD`): returns null without IPC call (D-07 dev-guard).
+ * - In dev (`!import.meta.env.PROD`): returns null without IPC call (dev-guard).
  * - In prod: calls plugin-updater's `check()`, maps Update → UpdateInfo.
  * - Network/signature failures are classified and THROWN (not swallowed to null).
  *   `null` is reserved for "no update available" semantics only.
@@ -94,7 +94,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 /**
  * Download and install the available update, emitting normalized progress events.
  *
- * - Re-calls `check()` internally to get a fresh Update resource (OQ-1: stateless, retry-safe).
+ * - Re-calls `check()` internally to get a fresh Update resource (stateless, retry-safe).
  * - Normalizes Tauri's Started/Progress/Finished events into cumulative {received, total}.
  * - Throws UpdateInstallError if update is no longer available (race condition).
  * - On failure: classifies and throws typed error (NetworkError / SignatureError / InstallError).
@@ -102,7 +102,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 export async function downloadAndInstallUpdate(
   onProgress: (e: ProgressEvent) => void,
 ): Promise<void> {
-  // D-04: Close SQLite before any update activity. The Windows NSIS installer
+  // Close SQLite before any update activity. The Windows NSIS installer
   // cannot overwrite pathmaid.db while tauri-plugin-sql holds the WAL lock
   // (Tauri bug #12309 "Failed to kill"). closeDatabase() silent-fails — if
   // close() throws we'd rather attempt the install than block it.
@@ -135,9 +135,9 @@ export async function downloadAndInstallUpdate(
  * Relaunch the application after update install.
  *
  * - On platforms where relaunch() fails (notably macOS — Tauri issue #11392):
- *   throws UpdateInstallError with localized message (D-09).
- * - macOS darwin-gate at UI layer (Phase 74 UI-04) prevents reaching this on darwin —
- *   this throw is a safety net.
+ *   throws UpdateInstallError with localized message.
+ * - macOS darwin-gate at the UI layer prevents reaching this on darwin — this
+ *   throw is a safety net.
  */
 export async function relaunchApp(): Promise<void> {
   try {

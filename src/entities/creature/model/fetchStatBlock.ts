@@ -1,17 +1,31 @@
 import { fetchCreatureById, getCreatureSpellcasting, getCreatureItems, getCustomCreatureById } from '@/shared/api'
-import type { SpellcastingSection, SpellsByRank } from '@/entities/spell'
+import type { SpellcastingSection, SpellsByRank, InnateFrequency } from '@/entities/spell'
 import { toCreatureStatBlockData } from './mappers'
 import type { CreatureStatBlockData } from './types'
+
+function parseFrequency(json: string | null): InnateFrequency | undefined {
+  if (!json) return undefined
+  try {
+    const parsed = JSON.parse(json) as InnateFrequency
+    if (parsed.kind === 'at-will') return { kind: 'at-will' }
+    if (parsed.kind === 'per' && typeof parsed.max === 'number' && parsed.max > 0) {
+      return { kind: 'per', max: parsed.max, per: parsed.per }
+    }
+  } catch {
+    // malformed JSON — fall through to undefined
+  }
+  return undefined
+}
 
 /**
  * Async stat block loader — fetches creature row + spellcasting from DB
  * and returns a fully populated CreatureStatBlockData with spellcasting sections.
  *
- * D-24: ids with the `custom-` prefix are routed to custom_creatures first;
+ * ids with the `custom-` prefix are routed to custom_creatures first;
  * bestiary lookup is skipped in that case (no extra DB round-trip).
  */
 export async function fetchCreatureStatBlockData(id: string): Promise<CreatureStatBlockData | null> {
-  // D-24: prefix-aware routing. Custom IDs are `custom-<uuid>` (see shared/api/custom-creatures.ts).
+  // prefix-aware routing. Custom IDs are `custom-<uuid>` (see shared/api/custom-creatures.ts).
   if (id.startsWith('custom-')) {
     const custom = await getCustomCreatureById(id)
     return custom?.statBlock ?? null
@@ -28,8 +42,13 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
   const { entries, spells } = await getCreatureSpellcasting(id)
   if (entries.length === 0) return base
 
+  interface RankSpell {
+    name: string
+    foundryId: string | null
+    frequency?: InnateFrequency
+  }
   // Group creature spell list items by entry_id → rank
-  const spellsByEntry = new Map<string, Map<number, { name: string; foundryId: string | null }[]>>()
+  const spellsByEntry = new Map<string, Map<number, RankSpell[]>>()
   for (const spell of spells) {
     if (!spellsByEntry.has(spell.entry_id)) spellsByEntry.set(spell.entry_id, new Map())
     const byRank = spellsByEntry.get(spell.entry_id)!
@@ -37,6 +56,7 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
     byRank.get(spell.rank_prepared)!.push({
       name: spell.spell_name,
       foundryId: spell.spell_foundry_id,
+      frequency: parseFrequency(spell.frequency_json),
     })
   }
 
@@ -54,7 +74,7 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
         return {
           rank,
           slots: slotMax,
-          spells: rankSpells.map((s: { name: string; foundryId: string | null }) => ({ ...s, entryId: entry.id })),
+          spells: rankSpells.map((s: RankSpell) => ({ ...s, entryId: entry.id })),
         }
       })
 

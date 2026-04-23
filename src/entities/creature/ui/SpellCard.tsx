@@ -11,7 +11,9 @@ import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasti
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
 
 type IntervalHeighten = { type: 'interval'; perRanks: number; damage: Record<string, string> }
-type FixedHeighten = { type: 'fixed'; levels: Record<string, unknown> }
+type FixedHeightenDamageEntry = { formula?: string; type?: string; damageType?: string; category?: string | null }
+type FixedHeightenLevel = { damage?: Record<string, FixedHeightenDamageEntry> }
+type FixedHeighten = { type: 'fixed'; levels: Record<string, FixedHeightenLevel> }
 type HeightenSpec = IntervalHeighten | FixedHeighten
 
 export function SpellCard({ foundryId, name, source, combatId, castRank, castConsumed }: {
@@ -71,17 +73,35 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
   )
 
   const parsedDamage = useMemo(() => {
-    const dmg = parseJsonOrNull<Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>>(spell?.damage)
+    type DamageEntry = { formula?: string; damage?: string; damageType?: string; type?: string }
+    const dmg = parseJsonOrNull<Record<string, DamageEntry>>(spell?.damage)
     if (!dmg || !spell) return null
     const baseRank = spell.rank
     const effectiveRank = castRank ?? baseRank
-    const parts = Object.entries(dmg)
+
+    // Fixed heighten: at specified levels, the `damage` object REPLACES base
+    // damage entirely (magic-missile / acid-splash style). Use the highest
+    // level key ≤ effectiveRank (so casterLevel 14 → ceil/2=7 picks levels[7]).
+    let effectiveDamage: Record<string, DamageEntry> = dmg
+    if (heighten?.type === 'fixed' && effectiveRank > baseRank) {
+      const levelKeys = Object.keys(heighten.levels)
+        .map(Number)
+        .filter((k) => Number.isFinite(k) && k <= effectiveRank)
+        .sort((a, b) => b - a)
+      const pick = levelKeys[0]
+      if (pick !== undefined) {
+        const lvlDamage = heighten.levels[String(pick)]?.damage
+        if (lvlDamage && Object.keys(lvlDamage).length > 0) {
+          effectiveDamage = lvlDamage as Record<string, DamageEntry>
+        }
+      }
+    }
+
+    const parts = Object.entries(effectiveDamage)
       .map(([key, d]) => {
         const rawFormula = d.formula ?? d.damage ?? null
         if (!rawFormula) return null
-        // Only apply heighten when interval spec has a matching key AND we're
-        // casting above base rank. Fixed-rank heighten (magic missile-style)
-        // is stored but not yet applied at display time — see 0029 migration note.
+        // Interval heighten additively scales each damage key.
         let formula = rawFormula
         if (
           heighten?.type === 'interval' &&
@@ -169,7 +189,7 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
               effects (e.g. Charm, Dominate) without clipping. */}
           {spell.description && (
             <p className="text-xs text-foreground/75 leading-relaxed whitespace-pre-line">
-              {stripHtml(resolveFoundryTokensForSpell(spell.description))}
+              {stripHtml(resolveFoundryTokensForSpell(spell.description, { itemLevel: castRank ?? spell.rank }))}
             </p>
           )}
         </div>

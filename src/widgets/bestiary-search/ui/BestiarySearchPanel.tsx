@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import { CreatureCard, toCreature, extractIwr } from '@/entities/creature'
+import { toCreature, extractIwr, BestiaryResultRow } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
 import { fetchCreatureStatBlockData } from '@/entities/creature/model/fetchStatBlock'
 import type { CreatureStatBlockData } from '@/entities/creature/model/types'
@@ -17,12 +17,12 @@ import type { CreatureRow, LibrarySourceOption } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
 import { createCombatantFromCreature } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
-import { getHpAdjustment, getStatAdjustment } from '@engine'
+import { getHpAdjustment } from '@engine'
 import { useDraggable } from '@dnd-kit/core'
 import { HazardSearchPanel } from './HazardSearchPanel'
 import { CharactersTab } from './CharactersTab'
 
-// v1.4.1 UAT BUG-1: custom creatures live in a separate table and have no
+// custom creatures live in a separate table and have no
 // source_pack, so the bestiary search query misses them entirely. Adapt the
 // loaded stat block into the CreatureRow shape the existing add-to-combat
 // pipeline consumes — same approach as CreatureSearchSidebar.
@@ -81,13 +81,13 @@ export function BestiarySearchPanel() {
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTier, setSelectedTier] = useState<WeakEliteTier>('normal')
-  // 70-04: library source filter. `null` = All sources (default).
+  // library source filter. `null` = All sources (default).
   // Otherwise a token returned by fetchDistinctLibrarySources — either the
   // `__iconics__` sentinel or an adventure slug.
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
   const [librarySources, setLibrarySources] = useState<LibrarySourceOption[]>([])
 
-  // v1.4.1 UAT BUG-1: custom creatures resolved to CreatureRow shape once so
+  // custom creatures resolved to CreatureRow shape once so
   // the same CreatureCard + drag/add pipeline works uniformly. Only shown when
   // `sourceFilter === null` (All) — source chips filter Paizo-library scope
   // and customs don't belong to any such scope.
@@ -96,7 +96,7 @@ export function BestiarySearchPanel() {
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const addCombatant = useCombatantStore((s) => s.addCombatant)
 
-  // 70-04: load the list of Paizo-library chips once — the set only changes
+  // load the list of Paizo-library chips once — the set only changes
   // on sync and regenerating it per-search would be wasteful.
   useEffect(() => {
     let cancelled = false
@@ -134,7 +134,7 @@ export function BestiarySearchPanel() {
     return () => { cancelled = true; clearTimeout(timer) }
   }, [query, creatureType, activeTab, sourceFilter])
 
-  // v1.4.1 UAT BUG-1: eager-fetch custom creatures and resolve each to a
+  // eager-fetch custom creatures and resolve each to a
   // CreatureRow. Cheap in practice (tens of entries at most).
   useEffect(() => {
     let cancelled = false
@@ -278,7 +278,7 @@ export function BestiarySearchPanel() {
                 </button>
               ))}
             </div>
-            {/* 70-04 / v1.4.1 UAT BUG-8: Paizo library scope.
+            {/* Paizo library scope.
                 Previously a horizontally-scrolling chip row — the scroll
                 was ugly on narrow sidebars. Replaced with a shadcn Select
                 dropdown that uses the same values ('__all__' sentinel +
@@ -313,65 +313,28 @@ export function BestiarySearchPanel() {
                   {query.trim() ? `No creatures found for "${query}"` : 'No creatures found'}
                 </p>
               )}
-              {/* v1.4.1 UAT BUG-1: custom creatures rendered first with a gold
+              {/* Custom creatures rendered first with a gold
                   accent + "custom" pill so they stand out. Same pipeline as
                   bestiary entries. */}
-              {customFiltered.map((row) => {
-                const creature = toCreature(row)
-                const hpDelta = getHpAdjustment(selectedTier, creature.level)
-                const statDelta = getStatAdjustment(selectedTier)
-                return (
-                  <DraggableBestiaryRow key={`custom-${row.id}`} row={row} tier={selectedTier}>
-                    <div className="relative">
-                      <span
-                        className="absolute top-1.5 right-1.5 z-10 text-[10px] px-1.5 py-0.5 rounded bg-pf-gold/15 text-pf-gold border border-pf-gold/30 pointer-events-none uppercase tracking-wider"
-                      >
-                        custom
-                      </span>
-                      <CreatureCard
-                        creature={creature}
-                        compact
-                        className="border-l-2 border-l-pf-gold"
-                        onAdd={() => handleAdd(row)}
-                      />
-                    </div>
-                    {hpDelta !== 0 && (
-                      <p className="text-[10px] text-muted-foreground px-2 -mt-0.5 mb-1">
-                        HP: {creature.hp} → {Math.max(1, creature.hp + hpDelta)}{' '}
-                        <span className={hpDelta > 0 ? 'text-primary' : 'text-destructive'}>
-                          ({hpDelta > 0 ? '+' : ''}{hpDelta})
-                        </span>
-                        {' | '}AC: {creature.ac} → {creature.ac + statDelta}{' '}
-                        <span className={statDelta > 0 ? 'text-primary' : 'text-destructive'}>
-                          ({statDelta > 0 ? '+' : ''}{statDelta})
-                        </span>
-                      </p>
-                    )}
-                  </DraggableBestiaryRow>
-                )
-              })}
-              {results.map((row) => {
-                const creature = toCreature(row)
-                const hpDelta = getHpAdjustment(selectedTier, creature.level)
-                const statDelta = getStatAdjustment(selectedTier)
-                return (
-                  <DraggableBestiaryRow key={row.id} row={row} tier={selectedTier}>
-                    <CreatureCard creature={creature} compact onAdd={() => handleAdd(row)} />
-                    {hpDelta !== 0 && (
-                      <p className="text-[10px] text-muted-foreground px-2 -mt-0.5 mb-1">
-                        HP: {creature.hp} → {Math.max(1, creature.hp + hpDelta)}{' '}
-                        <span className={hpDelta > 0 ? 'text-primary' : 'text-destructive'}>
-                          ({hpDelta > 0 ? '+' : ''}{hpDelta})
-                        </span>
-                        {' | '}AC: {creature.ac} → {creature.ac + statDelta}{' '}
-                        <span className={statDelta > 0 ? 'text-primary' : 'text-destructive'}>
-                          ({statDelta > 0 ? '+' : ''}{statDelta})
-                        </span>
-                      </p>
-                    )}
-                  </DraggableBestiaryRow>
-                )
-              })}
+              {customFiltered.map((row) => (
+                <DraggableBestiaryRow key={`custom-${row.id}`} row={row} tier={selectedTier}>
+                  <BestiaryResultRow
+                    row={row}
+                    tier={selectedTier}
+                    onAdd={() => handleAdd(row)}
+                    isCustom
+                  />
+                </DraggableBestiaryRow>
+              ))}
+              {results.map((row) => (
+                <DraggableBestiaryRow key={row.id} row={row} tier={selectedTier}>
+                  <BestiaryResultRow
+                    row={row}
+                    tier={selectedTier}
+                    onAdd={() => handleAdd(row)}
+                  />
+                </DraggableBestiaryRow>
+              ))}
             </div>
           </div>
         </>

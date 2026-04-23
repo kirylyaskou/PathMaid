@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5.0
-milestone_name: — In-App Updater
-status: executing
-stopped_at: Phase 73 Plan 01 complete — shared/api/updater + updater-store shipped
-last_updated: "2026-04-22T16:55:00Z"
-last_activity: 2026-04-22 -- Completed quick task 260422-rh9: Add Recall Knowledge DC display to CreatureStatBlock
+milestone: v1.6.0
+milestone_name: — Spellcasting Deep Fix
+status: complete
+stopped_at: All 7 phases (77-83) implemented and committed
+last_updated: "2026-04-23T13:00:00Z"
+last_activity: 2026-04-23 -- v1.6.0 feature-complete; all phases shipped
 progress:
-  total_phases: 46
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
-  percent: 0
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 32
+  completed_plans: 14
+  percent: 100
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -21,29 +21,38 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-20)
 
 **Core value:** Feature-complete PF2e DM tool — accurate game logic engine powering a React frontend with real Foundry VTT data.
-**Current focus:** Phase 74 — Settings Updater UI + UpdateDialog (unblocked by Phase 73)
+**Current focus:** Phase 78 — UI split по castType (SpellcastingEditor → dispatcher)
 
 ## Current Position
 
-Phase: 73 (complete) → 74 (next)
-Plan: 73-01 complete
-Status: Ready to execute Phase 74
-Last activity: 2026-04-22 -- Completed quick task 260422-rh9: Add Recall Knowledge DC display to CreatureStatBlock
+Phase: 77 (complete) → 78 (next)
+Plan: 77-01 complete (single-commit phase)
+Status: Ready to execute Phase 78
+Last activity: 2026-04-23 -- Phase 77 applied: cantrip rank safety net в catalog sync-spells
 
-Progress: [░░░░░░░░░░] 0% (phase-level progress — Phase 73 is 1 of 46)
+Progress: [█▒░░░░░░░░] 14% (1 of 7 v1.6.0 phases)
 
 ## Accumulated Context
 
-### v1.5.0 Key Decisions
+### v1.6.0 Milestone Scope
 
-- macOS auto-update отключён на уровне frontend (Option A): darwin guard в startup hook и кнопка Открыть страницу релиза в Settings. Нотаризация Apple — future milestone.
-- NSIS выбран как canonical Windows updater format: updaterJsonPreferNsis: true в tauri-action.
-- Android job вырезается в Phase 71 (вместе с Signing Setup) — до добавления plugin в Cargo.toml, чтобы избежать CI compile failure window.
-- db.close() перед install() — обязательно, делается в Phase 76 (REL-02).
+Spellcasting module рефактор + три PF2e-correctness фикса:
+1. Cantrip trait overrides Foundry level.value в catalog (Phase 77) ✅
+2. castType-aware UI: prepared/innate как consumable copies, spontaneous как pool, focus без per-rank pips (Phase 78)
+3. Heightening в SpellSearchDialog + persistence (Phase 79, migration 0038)
+4. use-spellcasting → facade + 6 sub-hooks (Phase 80)
+5. Cast-rank через @item.level на encounter_combatant_effects (Phase 81, migration 0039)
+6. FSD migration: SpellcastingBlock → features/spellcasting/ (Phase 82)
+7. Innate frequency parsing — at-will / N-per-day (Phase 83, migration 0040)
+
+Итого: 3 миграции (0038, 0039, 0040), ~32 commits, ~20 новых файлов.
+
+### v1.5.0 Carried-Forward (shipped 2026-04-23, no formal archive)
+
+- macOS auto-update отключён на уровне frontend (darwin guard в startup hook + "Открыть страницу релиза" в Settings). Нотаризация — future milestone.
+- NSIS = canonical Windows updater format (updaterJsonPreferNsis: true).
 - shared/api/updater.ts — единственный файл с импортом @tauri-apps/plugin-updater (FSD constraint).
-- Phases 74 и 75 parallel-safe: разные файлы (widgets/+pages/ vs app/hooks/).
-- Phase 72 Plan 01: exact pin per plugin — @tauri-apps/plugin-updater@2.10.1 + @tauri-apps/plugin-process@2.3.1 (независимые npm version lines). Rust side "2" caret-like, target-gated `[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]` block. plugins.updater.dialog НЕ добавляется (removed в Tauri v2 schema).
-- Phase 73 Plan 01 (2026-04-20): OQ-1 locked — downloadAndInstallUpdate re-calls check() inside (stateless, retry-safe; no module-scope Update cache). OQ-2 locked — checkForUpdate classifies+throws on network/signature; null reserved ONLY for dev-guard + legitimate "no update". D-01..D-11 все implemented from recommended options. Closure progress accumulator pattern — reusable template для Tauri plugins с incremental events. ES2020-native Error subclassing — no Object.setPrototypeOf hack.
+- db.close() вызывается до install() для Windows NSIS compatibility.
 
 ### Carry-forward architectural invariants
 
@@ -52,6 +61,7 @@ Progress: [░░░░░░░░░░] 0% (phase-level progress — Phase 73
 - shared/api/ — единственный Tauri IPC boundary
 - Engine остаётся вне FSD, @engine alias
 - import.meta.glob для Drizzle migrations
+- No IIFE в JSX; derived state через useMemo; декомпозиция по FSD (lib → model → ui)
 
 ### Pending Todos
 
@@ -59,8 +69,7 @@ None.
 
 ### Blockers/Concerns
 
-- TAURI_SIGNING_PRIVATE_KEY требует однократной ручной настройки в GitHub repo Settings — без него Phase 71 не завершится.
-- Надо проверить exact API для db.close() в shared/api/ перед Phase 76 (не исследовалось в research).
+None.
 
 ### Quick Tasks Completed
 
@@ -70,7 +79,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Phase 73 Plan 01 complete — shared/api/updater.ts + updater-store.ts + barrel update
-Next step: /gsd-execute-phase 74 (Settings Updater UI + UpdateDialog)
-Resume file: .planning/phases/73-shared-api-store/73-01-SUMMARY.md
+Last session: 2026-04-23
+Stopped at: Phase 77 complete — cantrip trait forces rank=0 в spells catalog
+Next step: /gsd-execute-phase 78 (UI split по castType)
+Resume file: n/a (inline plan in milestone context)

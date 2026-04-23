@@ -1,4 +1,4 @@
-// ─── BattleForm / CreatureSize overrides (Phase 65, D-65-04) ─────────────────
+// ─── BattleForm / CreatureSize overrides ─────────────────
 // Session-only Zustand store mirroring the `useEffectStore` lifecycle. Keyed
 // by combatant id; one size and/or one BattleForm override per combatant.
 //

@@ -23,6 +23,7 @@ import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { useEncounterStore } from '@/entities/encounter'
 import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
+import { SpellcastingBlock } from '@/features/spellcasting'
 import { getHpAdjustment, applyTierToStatBlock } from '@engine'
 import { PCCombatCard } from '@/features/characters'
 import { useShallow } from 'zustand/react/shallow'
@@ -237,7 +238,7 @@ export function CombatPage() {
   const { lastNpcStatBlock, statBlockLoading, selectedPcBuild, pcBuildLoading, loadForCombatant, refreshShieldBonus } =
     useCombatDetailLoader()
 
-  // BUG-02 (52-08 follow-up): require 8px of movement before dnd-kit starts a
+  // require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
   // not swallowed as drag-starts. Previously the first creature add appeared
   // to "do nothing" because dnd-kit ate the click as a zero-distance drag.
@@ -296,6 +297,13 @@ export function CombatPage() {
   const splitMode = useEncounterTabsStore((s) => s.splitMode)
   const setActiveTab = useEncounterTabsStore((s) => s.setActiveTab)
   const selectedCombatant = selectedId ? combatants.find((x) => x.id === selectedId) : null
+  const spellcastingEncounter = isEncounterBacked && combatId && selectedId
+    ? {
+        encounterId: combatId,
+        combatantId: selectedId,
+        onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
+      }
+    : undefined
 
   // Mount: migrate existing running combat to a tab, then setup auto-save per active tab
   useEffect(() => {
@@ -552,15 +560,16 @@ export function CombatPage() {
                       (selectedCombatant && selectedCombatant.kind === 'npc' && selectedCombatant.weakEliteTier) || 'normal',
                     )}
                     className="rounded-none border-x-0 border-t-0"
-                    encounterContext={
-                      isEncounterBacked && combatId && selectedId
-                        ? {
-                            encounterId: combatId,
-                            combatantId: selectedId,
-                            onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
-                          }
-                        : undefined
-                    }
+                    encounterContext={spellcastingEncounter}
+                    renderSpellcasting={(section, level, name) => (
+                      <SpellcastingBlock
+                        key={section.entryId}
+                        section={section}
+                        creatureLevel={level}
+                        creatureName={name}
+                        encounterContext={spellcastingEncounter}
+                      />
+                    )}
                   />
                 )}
 

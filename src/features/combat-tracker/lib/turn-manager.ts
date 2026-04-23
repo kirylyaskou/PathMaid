@@ -41,7 +41,7 @@ export function advanceTurn(): void {
         .activeEffects.filter((e) => e.combatantId === endingCombatantId),
     }
 
-    // FEAT-11: reset MAP (multiple attack penalty) when the turn ends.
+    // reset MAP (multiple attack penalty) when the turn ends.
     useCombatantStore.getState().updateCombatant(endingCombatantId, { mapIndex: 0 })
 
     const changes = endTurnConditions(endingCombatantId)
@@ -57,7 +57,7 @@ export function advanceTurn(): void {
       toast(`${combatant?.displayName ?? 'Combatant'}: ${summary}`)
     }
 
-    // ── Spell Effect auto-decrement (D-04) ────────────────────────────────────
+    // ── Spell Effect auto-decrement ────────────────────────────────────
     const encounterId = tracker.combatId
     if (encounterId && endingCombatantId) {
       const removed = useEffectStore.getState().decrementTurns(endingCombatantId)

@@ -1,4 +1,37 @@
-import type { SpellcastingSection } from '@/entities/spell'
+import type { SpellcastingSection, AddedSpellRef } from '@/entities/spell'
+
+/**
+ * Cast-mode dispatcher for SpellcastingEditor.
+ *
+ * PF2e distinguishes five render modes:
+ * - `cantrip` — rank-0 spells, no slots/pips, unlimited casts
+ * - `prepared` — consumable copies, strike-through per slot instance
+ * - `spontaneous` — shared pool, pips deplete on cast
+ * - `innate` — consumable copies (like prepared), but per-spell frequency
+ * - `focus` — focus pool (single global resource, no per-rank pips)
+ */
+export type CastMode = 'prepared' | 'spontaneous' | 'innate' | 'focus' | 'cantrip'
+
+export function resolveCastMode(castType: SpellcastingSection['castType']): CastMode {
+  switch (castType) {
+    case 'prepared': return 'prepared'
+    case 'spontaneous': return 'spontaneous'
+    case 'innate': return 'innate'
+    case 'focus': return 'focus'
+    default: return 'spontaneous'
+  }
+}
+
+export interface SlotInstance {
+  kind: 'default' | 'added'
+  name: string
+  foundryId: string | null
+  slotKey: string
+  /** True for innate at-will entries: no pip/strike, cast never consumes. */
+  nonConsumable?: boolean
+  /** Shown as a "At will" / "3/day" badge next to the spell name. */
+  frequencyLabel?: string
+}
 
 /**
  * Shared `SpellcastingEditor` component API.
@@ -26,7 +59,7 @@ export interface SpellcastingEditorProps {
 
   // Overrides — added / removed spell sets (combat: DB overrides; builder: empty)
   removedSpells: Set<string>          // `${rank}:${name}`
-  addedByRank: Record<number, string[]>
+  addedByRank: Record<number, AddedSpellRef[]>
 
   // Callbacks — all optional for read-only / builder use
   onTogglePip?: (rank: number, idx: number, total: number) => void
@@ -34,10 +67,17 @@ export interface SpellcastingEditorProps {
   onAddRank?: (rank: number) => void
   onAddSpell?: (name: string, rank: number, foundryId?: string | null) => void
   onRemoveSpell?: (name: string, rank: number, isDefault: boolean) => void
-  // Phase 68: callbacks receive the spell identity so the combat-side caller
+  // callbacks receive the spell identity so the combat-side caller
   // can open the TargetPickerDialog keyed to the right spell_effects row.
   // Builder callers never pass these — irrelevant.
   onCastPrepared?: (
+    spellName: string,
+    foundryId: string | null,
+    rank: number,
+    slotKey: string,
+    total: number,
+  ) => void
+  onCastInnate?: (
     spellName: string,
     foundryId: string | null,
     rank: number,
@@ -51,7 +91,7 @@ export interface SpellcastingEditorProps {
     total: number,
   ) => void
 
-  // Phase 68: lookup a "cast flame" visibility for an added-by-rank spell
+  // lookup a "cast flame" visibility for an added-by-rank spell
   // whose link is not known at entry-load time. Default `undefined` = treat
   // as "has link" (same backward-compat convention as hasLinkedEffect).
   hasLinkedEffectForAdded?: (name: string) => boolean | undefined

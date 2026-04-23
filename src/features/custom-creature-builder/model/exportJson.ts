@@ -1,11 +1,11 @@
 // Blob + <a download> file export. Works in Tauri WebView without plugin-fs.
-// D-22 envelope: { formatVersion, metadata, data }. Filename: {slug}-level-{N}.json.
+// { formatVersion, metadata, data }. Filename: {slug}-level-{N}.json.
 // Pitfall 3: export from the PERSISTED stat block shape — strip `id` and
 // `equipment` here to match what `toDataJson` writes into `data_json`.
 
 import type { CreatureStatBlockData } from '@/entities/creature/model/types'
 
-// Hand-maintained alongside app version per D-22 / RESEARCH.md Pattern 4 option A.
+// Hand-maintained alongside app version.md Pattern 4 option A.
 const FORMAT_VERSION = '1.2.1'
 
 // Pathmaid app version — hand-bump per release. Kept as a constant (not read

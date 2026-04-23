@@ -2,7 +2,7 @@ import { createEncounter, saveEncounterCombatants, listEncounters } from '@/shar
 import type { EncounterCombatantRow } from '@/shared/api'
 import type { MatchedEncounter } from './types'
 
-// 64-03: commit a matched encounter to DB. Creates a new encounter row with
+// commit a matched encounter to DB. Creates a new encounter row with
 // a fresh UUID and persists matched combatants only (skipped ones are dropped).
 // Name-collision: append "(imported)" so the user can distinguish.
 

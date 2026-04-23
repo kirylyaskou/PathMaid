@@ -21,7 +21,8 @@
 - ✅ **v1.2.1 — Spell Effects + Custom Creatures** — Phases 56-59 (shipped 2026-04-17)
 - ✅ **v1.3.0 — Encounter Import + Combat UX Refinement** — Phases 60-64 (shipped 2026-04-19)
 - ✅ **v1.4.0 — Effects Deep Dive + PC Library + UX Unification** — Phases 65-70 (shipped 2026-04-20)
-- U0001f6a7 **v1.5.0 — In-App Updater** — Phases 71-76 (in progress)
+- ✅ **v1.5.0 — In-App Updater** — Phases 71-76 (shipped 2026-04-23)
+- 🚧 **v1.6.0 — Spellcasting Deep Fix** — Phases 77-83 (in progress)
 
 ## Phases
 
@@ -1088,11 +1089,95 @@ Archived — see `.planning/milestones/v1.4.0-ROADMAP.md`
 |-------|----------------|--------|-----------|
 | 71. CI Signing Setup | 3/3 | Complete    | 2026-04-20 |
 | 72. Rust Plugin + Config | 2/2 | Complete    | 2026-04-20 |
-| 73. Shared API + Store | 0/TBD | Not started | - |
-| 74. Update Dialog + Settings UI | 0/TBD | Not started | - |
-| 75. Startup Auto-Check | 0/TBD | Not started | - |
-| 76. Version Bump + Release | 0/TBD | Not started | - |
+| 73. Shared API + Store | 1/1 | Complete    | 2026-04-22 |
+| 74. Update Dialog + Settings UI | 1/1 | Complete    | 2026-04-23 |
+| 75. Startup Auto-Check | 1/1 | Complete    | 2026-04-23 |
+| 76. Version Bump + Release | 1/1 | Complete    | 2026-04-23 |
+
+### Phase 77: Cantrip Rank Safety Net
+**Goal**: Любой Foundry spell с трейтом `cantrip` ложится на `spells.rank = 0` независимо от `sys.level.value`. Унифицирует catalog sync с creature_spell_lists.
+**Depends on**: Nothing
+**Files**: `src/shared/api/sync/sync-spells.ts`
+**Success Criteria**:
+  1. После resync `SELECT COUNT(*) FROM spells WHERE traits LIKE '%cantrip%' AND rank > 0` = 0
+  2. Bestiary preview mixed caster: cantrips показаны в rank-0 секции
+  3. `tsc --noEmit` = 0, `pnpm lint` = 0 new errors
+
+### Phase 78: UI Split по castType
+**Goal**: SpellcastingEditor становится dispatcher по castType. Четыре view-компонента: CantripSection, ConsumableCopiesView (prepared + innate), PooledSpellsView (spontaneous), FocusPoolView. Innate рендерится как prepared (strike-through per copy), не как spontaneous pool.
+**Depends on**: Phase 77
+**Files**: `features/spellcasting-editor/ui/sections/{CantripSection,ConsumableCopiesView,PooledSpellsView,FocusPoolView,RankHeader,SpellRow}.tsx`, `SpellcastingEditor.tsx`, `model/types.ts`, `entities/creature/ui/SpellcastingBlock.tsx`, `entities/creature/model/use-spellcasting.ts`
+**Success Criteria**:
+  1. Prepared caster: cast → strike-through на выбранной копии + 1 pip потрачен
+  2. Innate caster: strike-through per spell instance (было spontaneous-style pool)
+  3. Spontaneous: pip+1 без strike; Focus: cards без per-rank pips
+  4. `resolveCastMode` маршрутизирует корректно все 4 castType
+  5. `SpellRankBlock.tsx` + `SpellSlotRow.tsx` удалены
+
+### Phase 79: Heightening в SpellSearchDialog
+**Goal**: При фильтре rank N в spell search появляется секция "Heightenable → N" со spells с base rank < N + heighten preview. Add кладёт spell с `heightened_from_rank`, SpellCard рендерит heightened damage.
+**Depends on**: Phase 78
+**Files**: migration `0038_spell_overrides_heightened.sql`, `shared/api/spells.ts`, `shared/api/encounters.ts`, `entities/spell/model/types.ts`, `entities/spell/lib/heighten-preview.ts` (new), `entities/creature/ui/SpellSearchDialog.tsx`, `use-spellcasting.ts`, views из Phase 78
+**Success Criteria**:
+  1. Search "Fireball" rank=8 → row с badge "3rd → 8th, +10d6 fire"
+  2. Add → card в rank-8 блоке, damage = 16d6
+  3. Reload encounter → `heightened_from_rank` = 3 в DB
+  4. Default bestiary spells не затронуты (NULL heightened_from_rank)
+
+### Phase 80: Split use-spellcasting
+**Goal**: 393-строчный хук → facade композирующий 6 sub-hooks (useCasterProgression, useRankFilter, useSpellOverrides, useSpellLinkMap, usePooledSlots, useConsumableCopies). Каждый sub-hook владеет одним concern (DB-таблица или derived state). Callers не меняются.
+**Depends on**: Phase 79
+**Files**: `entities/creature/model/spellcasting/{use-caster-progression,use-rank-filter,use-spell-overrides,use-spell-link-map,use-pooled-slots,use-consumable-copies}.ts` (new), `use-spellcasting.ts` (facade, ~80 lines)
+**Success Criteria**:
+  1. `use-spellcasting.ts` < 100 строк после рефактора
+  2. Ни одного user-visible изменения — все Phase 78 сценарии проходят
+  3. 0 `useState` в facade
+  4. `SpellcastingBlock.tsx` destructures те же props
+
+### Phase 81: Cast-rank через @item.level
+**Goal**: Per-instance `cast_at_rank` column на `encounter_combatant_effects`. При касте heightened spell engine получает `@item.level = cast rank`, damage/attack рассчитываются корректно. Fireball rank-8 = 16d6, Heroism rank-6 = +2.
+**Depends on**: Phase 80
+**Files**: migration `0039_encounter_effects_cast_rank.sql`, `shared/api/effects.ts`, `entities/spell-effect/model/types.ts`, `entities/creature/ui/SpellcastingBlock.tsx`, `widgets/combatant-detail/ui/EffectsSection.tsx`
+**Success Criteria**:
+  1. Heroism @ rank 3/6/9 → ally attack +1/+2/+3 (verified через engine)
+  2. Fireball @ rank 8 → 16d6 damage на cast
+  3. Reload encounter → все cast_at_rank сохранены
+  4. Non-heightened cast identical поведение (NULL → COALESCE → base rank)
+  5. Granted effects наследуют parent cast_at_rank
+
+### Phase 82: FSD Migration — features/spellcasting/
+**Goal**: Убрать FSD-нарушение (entities/creature → features). SpellcastingBlock + SpellSearchDialog + use-spellcasting + sub-hooks переезжают в `features/spellcasting/`. CreatureStatBlock получает `renderSpellcasting?` prop (DI). Новый `SpellListPreview` — read-only fallback.
+**Depends on**: Phase 81
+**Files**: `features/spellcasting/**` (new root), `entities/creature/ui/CreatureStatBlock.tsx` (DI prop), `entities/creature/ui/SpellListPreview.tsx` (new), 5 call-sites (CombatantDetail, CombatPage, BestiaryPage, BuilderPage, StatBlockModal)
+**Success Criteria**:
+  1. `grep -rn "from '@/features/spellcasting'" src/entities/` = 0 results
+  2. Live combat: SpellcastingBlock UX идентичен
+  3. Bestiary/Builder/Modal preview: read-only через SpellListPreview
+  4. `pnpm lint:arch` не хуже master
+  5. Old files в `entities/creature/` удалены
+
+### Phase 83: Innate Frequency Parsing
+**Goal**: Foundry `sys.frequency` парсится → сохраняется в `creature_spell_lists.frequency_json` → UI innate рендерит per-spell frequency. At-will badge вместо pips, N/day = N per-spell consumable pips.
+**Depends on**: Phase 82
+**Files**: migration `0040_creature_spells_frequency.sql`, `shared/api/sync/sync-spells.ts`, `entities/spell/model/types.ts`, `entities/creature/model/fetchStatBlock.ts`, `features/spellcasting/ui/sections/ConsumableCopiesView.tsx`
+**Success Criteria**:
+  1. NPC с at-will innate: "At will" badge, cast не консьюмит slot
+  2. NPC с 3/day innate: ровно 3 per-spell pips, strike-through работает
+  3. Legacy NPC без frequency_json: fallback на Phase 78 поведение (entries.length)
+  4. Foundry alternative shapes (string frequency) → graceful null
+
+### v1.6.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 77. Cantrip Rank Safety Net | 1/1 | Complete    | 2026-04-23 |
+| 78. UI Split по castType | 5/5 | Complete    | 2026-04-23 |
+| 79. Heightening в SpellSearchDialog | 5/5 | Complete    | 2026-04-23 |
+| 80. Split use-spellcasting | 1/1 | Complete    | 2026-04-23 |
+| 81. Cast-rank через @item.level | 1/1 | Complete    | 2026-04-23 |
+| 82. FSD Migration — features/spellcasting/ | 1/1 | Complete    | 2026-04-23 |
+| 83. Innate Frequency Parsing | 1/1 | Complete    | 2026-04-23 |
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-20 — v1.5.0 In-App Updater roadmap added (Phases 71-76)*
+*Last updated: 2026-04-23 — v1.6.0 Spellcasting Deep Fix roadmap added (Phases 77-83)*

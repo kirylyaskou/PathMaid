@@ -1,7 +1,7 @@
 // Normalizer helpers for the structured IWR shape. Consumers get monomorphic objects
 // and can map/render without union-type narrowing at every usage site.
 //
-// Background: D-08 extends CreatureStatBlockData.immunities from string[] to
+// Background: extends CreatureStatBlockData.immunities from string[] to
 // (string | { type, exceptions? })[]. This helper lets UI render either legacy
 // string entries or structured entries uniformly.
 

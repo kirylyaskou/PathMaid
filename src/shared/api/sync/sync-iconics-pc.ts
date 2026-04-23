@@ -1,9 +1,9 @@
-// Phase 70 / D-70-03 — adapt a Foundry iconic/pregen character actor JSON
+// adapt a Foundry iconic/pregen character actor JSON
 // to the Pathbuilder 2e export shape (`PathbuilderBuild`) so the existing
 // PC pipeline (character sheet, combat HP math, party picker) can consume
 // Paizo-shipped iconics and pregens alongside user-imported builds.
 //
-// v1.4.1 UAT fix: this adapter now delegates all computation to the shared
+// this adapter now delegates all computation to the shared
 // `parseFoundryCharacterDoc` so the character-sheet path and the iconic-as-
 // NPC path share a single source of truth. The function's contract stays
 // the same — returns `null` when the record is not a character or has no
@@ -181,13 +181,13 @@ export function buildPathbuilderFromFoundryPC(
 }
 
 /**
- * Phase 70 / D-70-05 — orchestration entry point. Walks every synced
+ * orchestration entry point. Walks every synced
  * `RawEntity` of type `character` (shipped only by `iconics` and
  * `paizo-pregens`), builds a Pathbuilder-shaped record from the stashed
  * `raw_json`, and routes it through `insertIconicCharacter` which handles
  * the skip-user-imports collision rule.
  *
- * v1.4.1 UAT: the caller now also stores the raw Foundry JSON on the
+ * the caller now also stores the raw Foundry JSON on the
  * `characters` row so the load path can re-derive stats without a
  * re-sync when parsing logic changes (migration 0037).
  *

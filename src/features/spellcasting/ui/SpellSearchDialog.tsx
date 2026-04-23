@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { cn } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { SearchInput } from '@/shared/ui/search-input'
-import { searchSpells } from '@/shared/api'
-import type { SpellRow } from '@/entities/spell'
-import { rankLabel, actionCostLabel } from '../lib/spellcasting-helpers'
+import { searchSpells, type SpellSearchResult } from '@/shared/api'
+import { computeHeightenPreview } from '@/entities/spell'
+import { rankLabel, actionCostLabel } from '@/entities/creature'
 import { parseJsonArray } from '@/shared/lib/json'
 
 const DIALOG_TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
@@ -21,15 +21,16 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
   defaultRank: number
   defaultTradition?: string
   focusOnly?: boolean
-  /** foundryId is the resolvable spell id (SpellRow.id). Callers that only
-   *  care about name+rank can ignore the third argument — it's null-safe by
-   *  the API contract of SpellRow. */
-  onAdd: (name: string, rank: number, foundryId: string | null) => void
+  /** foundryId is the resolvable spell id (SpellRow.id). `heightenedFromRank`
+   *  is set when the user picks a lower-rank spell from the "Heightenable"
+   *  section — the override row records the base rank so SpellCard renders
+   *  heightened damage at the target slot rank. */
+  onAdd: (name: string, rank: number, foundryId: string | null, heightenedFromRank?: number) => void
 }) {
   const [query, setQuery] = useState('')
   const [tradition, setTradition] = useState<string | null>(defaultTradition ?? null)
   const [rank, setRank] = useState<number | null>(defaultRank)
-  const [results, setResults] = useState<SpellRow[]>([])
+  const [results, setResults] = useState<SpellSearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -53,13 +54,87 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
         query,
         rank ?? undefined,
         focusOnly ? undefined : (tradition ?? undefined),
-        focusOnly ? 'focus' : undefined
+        focusOnly ? 'focus' : undefined,
+        undefined,
+        rank !== null && rank > 0,
       )
       setResults(r)
       setLoading(false)
     }, 200)
     return () => clearTimeout(t)
   }, [query, rank, tradition, open, focusOnly])
+
+  const { nativeResults, heightenedResults } = useMemo(() => {
+    const native: SpellSearchResult[] = []
+    const heightened: SpellSearchResult[] = []
+    for (const r of results) {
+      if (r.heightenedToRank !== undefined) heightened.push(r)
+      else native.push(r)
+    }
+    return { nativeResults: native, heightenedResults: heightened }
+  }, [results])
+
+  function renderRow(s: SpellSearchResult) {
+    const traditions = parseJsonArray(s.traditions)
+    const isHeightened = s.heightenedToRank !== undefined
+    const targetRank = s.heightenedToRank ?? s.rank
+    const preview = isHeightened
+      ? computeHeightenPreview({
+        baseRank: s.rank,
+        heightenedJson: s.heightened_json,
+        damageJson: s.damage,
+        targetRank,
+      })
+      : null
+
+    return (
+      <div
+        key={`${isHeightened ? 'h' : 'n'}:${s.id}`}
+        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium truncate">{s.name}</span>
+            {s.action_cost && (
+              <span className="font-mono text-primary text-xs shrink-0">
+                {actionCostLabel(s.action_cost)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {isHeightened ? (
+              <span className="text-[10px] text-amber-300 font-semibold">
+                {rankLabel(s.rank)} → {rankLabel(targetRank)}
+              </span>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">{rankLabel(s.rank)}</span>
+            )}
+            {traditions.map((t) => (
+              <span key={t} className={cn("px-1 py-0 text-[9px] rounded border uppercase font-semibold", DIALOG_TRADITION_COLORS[t] ?? '')}>
+                {t.slice(0, 3)}
+              </span>
+            ))}
+            {s.save_stat && <span className="text-[10px] text-muted-foreground capitalize">{s.save_stat}</span>}
+            {preview?.map((p, i) => (
+              <span key={i} className="px-1 py-0 text-[9px] rounded border border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono">
+                {p.deltaFormula}{p.damageType ? ` ${p.damageType}` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const slotRank = targetRank
+            const fromRank = isHeightened ? s.rank : undefined
+            onAdd(s.name, slotRank, s.id, fromRank)
+          }}
+          className="shrink-0 px-2 py-1 text-xs rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+        >
+          Add
+        </button>
+      </div>
+    )
+  }
 
   return (
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
@@ -120,41 +195,24 @@ export function SpellSearchDialog({ open, onOpenChange, defaultRank, defaultTrad
 
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5 min-h-0">
-          {results.map((s) => {
-            const traditions = parseJsonArray(s.traditions)
-            return (
-              <div
-                key={s.id}
-                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{s.name}</span>
-                    {s.action_cost && (
-                      <span className="font-mono text-primary text-xs shrink-0">
-                        {actionCostLabel(s.action_cost)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-muted-foreground">{rankLabel(s.rank)}</span>
-                    {traditions.map((t) => (
-                      <span key={t} className={cn("px-1 py-0 text-[9px] rounded border uppercase font-semibold", DIALOG_TRADITION_COLORS[t] ?? '')}>
-                        {t.slice(0, 3)}
-                      </span>
-                    ))}
-                    {s.save_stat && <span className="text-[10px] text-muted-foreground capitalize">{s.save_stat}</span>}
-                  </div>
+          {nativeResults.length > 0 && (
+            <>
+              {rank !== null && heightenedResults.length > 0 && (
+                <div className="px-2 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Native {rankLabel(rank)} · {nativeResults.length}
                 </div>
-                <button
-                  onClick={() => onAdd(s.name, rank ?? s.rank, s.id)}
-                  className="shrink-0 px-2 py-1 text-xs rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
-                >
-                  Add
-                </button>
+              )}
+              {nativeResults.map(renderRow)}
+            </>
+          )}
+          {heightenedResults.length > 0 && (
+            <>
+              <div className="px-2 pt-2 pb-0.5 text-[10px] uppercase tracking-wider text-amber-400 font-semibold">
+                Heightenable → {rank !== null ? rankLabel(rank) : ''} · {heightenedResults.length}
               </div>
-            )
-          })}
+              {heightenedResults.map(renderRow)}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

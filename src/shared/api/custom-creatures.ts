@@ -24,7 +24,7 @@ function parseStatBlock(row: {
 }): CreatureStatBlockData {
   const parsed = JSON.parse(row.data_json) as Partial<CreatureStatBlockData>
 
-  // D-10: backfill new fields so pre-D-08 records read without crashing.
+  // backfill new fields so older records read without crashing.
   const backfilled: CreatureStatBlockData = {
     ...(parsed as CreatureStatBlockData),
     id: row.id,

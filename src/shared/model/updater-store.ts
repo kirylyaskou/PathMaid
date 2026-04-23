@@ -63,7 +63,7 @@ export const useUpdaterStore = create<UpdaterState>()(immer((set) => ({
       state.update = null
       state.progress = null
       state.error = null
-      // NB: toastShown intentionally NOT reset — session-scoped per D-15
+      // NB: toastShown intentionally NOT reset — session-scoped
     }),
   markToastShown: () =>
     set((state) => {

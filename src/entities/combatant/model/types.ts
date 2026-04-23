@@ -73,7 +73,7 @@ export function kindFromLegacy(isNPC: boolean, isHazard: boolean): 'npc' | 'pc' 
 /** A combatant waiting in the staging pool (reinforcements / summons).
  *  Uses the same Combatant union type — lives in a separate array, never in turn-manager. */
 export interface StagingCombatant {
-  combatant: Combatant    // same union type (D-02)
+  combatant: Combatant    // same union type
   round?: number          // combat round on which this creature auto-enters (triggers deploy dialog)
   sortOrder: number
 }

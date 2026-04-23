@@ -1,6 +1,6 @@
 /**
  * Merge spell effect resistances into base creature resistances.
- * For each damage type, keeps the higher value (take max per type, D-06).
+ * For each damage type, keeps the higher value (take max per type).
  * New types from overlays are added if not present in base.
  */
 export function mergeResistances(

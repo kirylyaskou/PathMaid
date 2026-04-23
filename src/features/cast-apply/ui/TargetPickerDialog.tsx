@@ -64,7 +64,7 @@ export function TargetPickerDialog({
     [effect.rulesJson],
   )
 
-  // Default-selection preset (D-68-04). Runs whenever the dialog opens with a
+  // Default-selection preset . Runs whenever the dialog opens with a
   // fresh effect/caster pair. Users can deselect/multi-select freely afterwards.
   const defaultIds = useMemo(() => {
     if (kind === 'buff') {

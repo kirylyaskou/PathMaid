@@ -23,7 +23,7 @@ interface Props {
   onClone: (data: CreatureStatBlockData) => void | Promise<void>
 }
 
-// D-21: Clone from bestiary = modal picker analogous to SpellSearchDialog.
+// Clone from bestiary = modal picker analogous to SpellSearchDialog.
 // Pitfall 8: reset `source` to 'custom' on the mapped stat block so a later
 // export does not carry the Foundry pack name (e.g. "Monster Core").
 export function CloneFromBestiaryDialog({ open, onOpenChange, onClone }: Props) {

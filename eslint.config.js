@@ -1,7 +1,11 @@
 import tseslint from 'typescript-eslint'
 import boundaries from 'eslint-plugin-boundaries'
 import importX from 'eslint-plugin-import-x'
+import react from 'eslint-plugin-react'
 import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
+
+const IIFE_MESSAGE =
+  'IIFE в JSX запрещено. Вынеси в под-компонент, useMemo или чистую функцию в lib/ (см. CLAUDE.md → React 19 Conventions).'
 
 export default tseslint.config(
   {
@@ -22,8 +26,10 @@ export default tseslint.config(
     plugins: {
       boundaries,
       'import-x': importX,
+      react,
     },
     settings: {
+      react: { version: '19' },
       'boundaries/elements': [
         { type: 'app',      pattern: ['src/app/**'],      mode: 'full' },
         { type: 'pages',    pattern: ['src/pages/**'],    mode: 'full' },
@@ -40,7 +46,6 @@ export default tseslint.config(
       ],
     },
     rules: {
-      // FSD layer import direction (D-09: eslint-plugin-boundaries)
       'boundaries/dependencies': ['error', {
         default: 'disallow',
         rules: [
@@ -53,17 +58,33 @@ export default tseslint.config(
         ],
       }],
 
-      // Import hygiene (D-09: eslint-plugin-import-x)
       'import-x/no-cycle': 'error',
       'import-x/no-duplicates': 'error',
       'import-x/no-self-import': 'error',
 
-      // Relax typescript-eslint rules that conflict with our codebase patterns
       '@typescript-eslint/no-empty-object-type': 'off',
       '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
       }],
+
+      'react/jsx-no-useless-fragment': ['error', { allowExpressions: true }],
+      'react/no-unstable-nested-components': ['error', { allowAsProps: false }],
+      'react/jsx-key': 'error',
+
+      'no-restricted-syntax': ['error',
+        {
+          selector: "JSXExpressionContainer > CallExpression[callee.type='ArrowFunctionExpression']",
+          message: IIFE_MESSAGE,
+        },
+        {
+          selector: "JSXExpressionContainer > CallExpression[callee.type='FunctionExpression']",
+          message: IIFE_MESSAGE,
+        },
+      ],
+
+      'prefer-const': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
 )

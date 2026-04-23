@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { X, AlertTriangle, Skull, Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
+import { Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { LevelBadge } from '@/shared/ui/level-badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import {
   AlertDialog,
@@ -28,10 +27,10 @@ import {
 } from '@/features/combat-tracker'
 import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
-import { calculateCreatureXP, getHazardXp, getAdjustedLevel } from '@engine'
 import { useCombatantStore } from '@/entities/combatant'
 import type { StagingCombatant, Combatant } from '@/entities/combatant'
 import { StagingTable } from './StagingTable'
+import { EncounterRosterItem } from './EncounterRosterItem'
 
 interface Props {
   encounterId: string
@@ -45,13 +44,13 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const navigate = useNavigate()
   const [showLoadConfirm, setShowLoadConfirm] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  // 63-03: dedup — when loading an encounter that already has an open tab,
+  // dedup — when loading an encounter that already has an open tab,
   // offer Open / Refresh / Cancel rather than silently opening a duplicate.
   const [dedupTargetTabId, setDedupTargetTabId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
-  // FEAT-12 (52-03 follow-up): clicking a creature name opens its stat block.
+  // clicking a creature name opens its stat block.
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
@@ -113,7 +112,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         encounterId,
         name: encounter?.name ?? 'Encounter',
         snapshot,
-        // 63-03: pass the load-time snapshot as the template so Refresh reverts
+        // pass the load-time snapshot as the template so Refresh reverts
         // to pristine pre-start state; isStarted defaults to false via the store.
         templateSnapshot: snapshot,
       })
@@ -125,7 +124,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   }
 
   function handleLoadClick() {
-    // 63-03: dedup — if a tab is already open for this encounter, offer
+    // dedup — if a tab is already open for this encounter, offer
     // Open-existing / Refresh-existing / Cancel instead of silently duplicating.
     const existing = useEncounterTabsStore
       .getState()
@@ -144,7 +143,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     }
   }
 
-  // 63-03: dedup actions
+  // dedup actions
   function handleDedupOpen() {
     if (!dedupTargetTabId) return
     useEncounterTabsStore.getState().setActiveTab(dedupTargetTabId)
@@ -299,72 +298,15 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
             </p>
           )}
 
-          {combatants.map((c) => {
-            const effectivePartyLevel = partyLevel
-            // PF2e Monster Core pg. 6-7: elite/weak shift creature level by
-            // ±1 for XP budget. getAdjustedLevel also applies the display
-            // clamps for level -1/0/1 so the badge label stays sensible.
-            const adjustedLevel = getAdjustedLevel(c.weakEliteTier, c.creatureLevel)
-            const isHazard = c.isHazard === true
-            const xpResult = isHazard
-              ? getHazardXp(c.creatureLevel, effectivePartyLevel, c.hazardType ?? 'simple')
-              : calculateCreatureXP(adjustedLevel, effectivePartyLevel)
-
-            return (
-              <div
-                key={c.id}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md group ${
-                  isHazard
-                    ? 'border-l-2 border-amber-600/60 bg-amber-950/30 hover:bg-amber-950/50'
-                    : 'bg-secondary/30 hover:bg-secondary/50'
-                }`}
-              >
-                {isHazard && (
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                )}
-                <LevelBadge level={adjustedLevel} size="sm" />
-                {!isHazard && c.weakEliteTier !== 'normal' && (
-                  <span
-                    className={`text-[10px] px-1 rounded ${
-                      c.weakEliteTier === 'elite'
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {c.weakEliteTier === 'elite' ? 'E' : 'W'}
-                  </span>
-                )}
-                {isHazard || !c.creatureRef ? (
-                  <span className="flex-1 text-sm font-medium truncate">{c.displayName}</span>
-                ) : (
-                  <button
-                    type="button"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setStatBlockCreatureId(c.creatureRef)
-                    }}
-                    className="flex-1 text-sm font-medium truncate text-left hover:text-pf-gold transition-colors"
-                    title="View stat block"
-                  >
-                    {c.displayName}
-                  </button>
-                )}
-                {xpResult.xp != null
-                  ? <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
-                  : <span className="flex items-center gap-1 text-red-500"><Skull className="w-3 h-3 shrink-0" /><span className="text-xs font-mono">???</span></span>
-                }
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-5 h-5 opacity-0 group-hover:opacity-100"
-                  onClick={() => handleRemove(c.id)}
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            )
-          })}
+          {combatants.map((c) => (
+            <EncounterRosterItem
+              key={c.id}
+              combatant={c}
+              partyLevel={partyLevel}
+              onRemove={() => handleRemove(c.id)}
+              onViewStatBlock={setStatBlockCreatureId}
+            />
+          ))}
         </div>
       </ScrollArea>
 
@@ -393,7 +335,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 63-03: Duplicate tab — offer Open / Refresh / Cancel */}
+      {/* Duplicate tab — offer Open / Refresh / Cancel */}
       <AlertDialog
         open={dedupTargetTabId !== null}
         onOpenChange={(o) => !o && setDedupTargetTabId(null)}

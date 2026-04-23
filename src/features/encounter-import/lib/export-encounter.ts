@@ -5,7 +5,7 @@ import { listEncounters, loadEncounterCombatants } from '@/shared/api'
 // through parseEncounterJson → matchEncounter → commitMatchedEncounter. The
 // `lookupName` field is the canonical bestiary / custom-creature / hazard row
 // name used by the matcher; `name` is the GM's local moniker (`displayName`).
-// Schema is locked in .planning/phases/69-encounter-export/69-CONTEXT.md §D-69-02.
+// Schema is locked; see the project planning notes for the frozen contract.
 
 export interface PathmaidenV1Combatant {
   name: string

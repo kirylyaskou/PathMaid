@@ -46,7 +46,7 @@ export function SavedEncounterList() {
     if (e.key === 'Escape') { setIsCreating(false); setNewName('') }
   }
 
-  // 69-04: download encounter as pathmaiden-v1 JSON. Tauri WebView honours the
+  // download encounter as pathmaiden-v1 JSON. Tauri WebView honours the
   // `<a download>` + object URL pattern the same way a browser would (same
   // pattern used elsewhere for exports).
   async function handleExport(id: string) {
@@ -66,13 +66,13 @@ export function SavedEncounterList() {
     }
   }
 
-  // BUG-6: open export dialog — pre-select all encounters.
+  // open export dialog — pre-select all encounters.
   function handleOpenExportDialog() {
     setExportSelected(new Set(encounters.map((e) => e.id)))
     setExportOpen(true)
   }
 
-  // BUG-6: export all selected encounters as individual .pathmaiden files.
+  // export all selected encounters as individual .pathmaiden files.
   async function handleExportSelected() {
     setExporting(true)
     try {
@@ -136,7 +136,7 @@ export function SavedEncounterList() {
       </div>
       <ImportEncounterDialog open={importOpen} onOpenChange={setImportOpen} />
 
-      {/* BUG-6: Export selection dialog */}
+      {/* Export selection dialog */}
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>

@@ -21,6 +21,30 @@ PF2e (Pathfinder 2e) GM Assistant. Tauri 2 desktop app.
 - Engine stays outside FSD — consumed as external lib via `@engine` alias
 - No test files — breaking changes expected, tests removed intentionally
 
+## React 19 Conventions
+
+### Запрещено (enforced by ESLint)
+- **IIFE в JSX** — никаких `{(() => { ... })()}` или `{(function(){...})()}` внутри рендера. Нужна логика → хук в `model/` или чистая функция в `lib/`. Линтер ловит через `no-restricted-syntax`.
+- **Inline `.map/.filter/.reduce` с > 3 строк вычислений на элемент** — выносить в под-компонент или мемоизированный хук.
+- **Мутация локальных массивов через `forEach + push`** для сборки `ReactNode` — использовать декларативный `.map()` с `<Fragment key>` для разделителей.
+- **Nested component definitions** в теле родителя — ловится `react/no-unstable-nested-components`.
+- **Немемоизированные производные данные** в рендере — любой `Object.entries`, merge, sort на пропсах/state должен жить в `useMemo`.
+- **Ссылки на фазы/версии/UAT в комментариях** — `v1.4.1`, `Phase 39`, `UAT BUG-6`, `Plan 02`, `D-09` и т.п. Комментарий объясняет WHY-инвариант, а не историю патча. История живёт в git blame и PR description.
+
+### Обязательно
+- `useShallow` для любого объектного/массивного селектора Zustand (дублирует CONSTRAINTS — здесь как напоминание в React-контексте).
+- `useMemo` для derived state; `useCallback` для обработчиков, уходящих в props дочерних компонентов.
+- Секции JSX > 30 строк или с собственной логикой → выносить в под-компонент.
+- FSD-раскладка для декомпозиции: чистые утилиты в `entities/<X>/lib/`, реактивные хуки в `entities/<X>/model/`, презентация в `entities/<X>/ui/`.
+- Комментарий пишется только когда WHY не читается из кода (скрытый инвариант, обход бага, неочевидный контракт).
+
+### Паттерн декомпозиции сложного стата
+1. Чистая функция мёржа/вычисления → `entities/<X>/lib/<name>.ts` (no React, testable).
+2. Реактивный хук-адаптер → `entities/<X>/model/use-<name>.ts` (useMemo + подписки).
+3. Презентационный компонент → `entities/<X>/ui/<Name>.tsx` (только props, без store-вызовов).
+
+Эталон: `entities/spell-effect/lib/merge-resistances.ts` + использование в `widgets/combatant-detail/ui/HpControls.tsx` через `useMemo`.
+
 ## Behaviour
 - When uncertain → STOP and ask, never improvise
 - Read existing patterns before writing new code — match the style

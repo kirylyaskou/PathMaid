@@ -8,7 +8,7 @@ import { classifyStat, getBenchmark } from '@engine'
 import type { StatKind, Tier } from '@engine'
 import { TIER_COLORS, TIER_LABEL, TIER_ORDER } from '../lib/tier-colors'
 
-// D-19: per-stat tier chip + dropdown. Always 5 tiers (D-28).
+// per-stat tier chip + dropdown. Always 5 tiers .
 // For simple numeric stats only — strikeDamage / areaDamage use their own dedicated hint in Strikes tab.
 
 type SimpleStat = Exclude<StatKind, 'strikeDamage' | 'areaDamage'>

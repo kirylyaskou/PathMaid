@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Plus, Minus, Check, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
@@ -169,6 +169,11 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     [search],
   )
 
+  const filteredSlugs = useMemo(
+    () => (search ? allSlugs.filter(matchesSearch) : []),
+    [search, matchesSearch],
+  )
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -252,10 +257,10 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
             />
             {search ? (
               <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
-                {allSlugs.filter(matchesSearch).length === 0 ? (
+                {filteredSlugs.length === 0 ? (
                   <p className="col-span-3 text-center text-xs text-muted-foreground py-4">No condition found.</p>
                 ) : (
-                  allSlugs.filter(matchesSearch).map((slug) => (
+                  filteredSlugs.map((slug) => (
                     <ConditionPill
                       key={slug}
                       slug={slug}

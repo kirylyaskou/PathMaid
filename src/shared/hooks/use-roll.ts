@@ -14,16 +14,16 @@ import { useEffectStore } from '@/entities/spell-effect'
  * the shared roll history, and returns the Roll for further inspection.
  * Optionally tags the roll with a source name and combat encounter id.
  *
- * v1.4.1 UAT BUG-7 (wired): when `combatantId` is supplied, the hook
+ * when `combatantId` is supplied, the hook
  * inspects every active effect on that combatant for `RollTwice` rules
  * whose selector matches `rollContext`. At least one `keep: "higher"`
  * → fortune; `keep: "lower"` → misfortune. Both cancel.
  *
- * v1.4.1 UAT BUG-B (dual-roll execution): `planFortuneRoll` returns a
+ * `planFortuneRoll` returns a
  * structured plan instead of a rewritten `2d20kh1+mod` string. The hook
  * then executes:
- *   - `normal`    → roll the formula once (legacy path)
- *   - `fortune`   → roll `1d20+mod` twice independently, attach both
+ *   - `normal` → roll the formula once (legacy path)
+ *   - `fortune` → roll `1d20+mod` twice independently, attach both
  *                    rolls to the primary Roll's `.fortune` field, keep
  *                    the higher total as the "chosen" roll
  *   - `misfortune`→ same, but keep the lower total

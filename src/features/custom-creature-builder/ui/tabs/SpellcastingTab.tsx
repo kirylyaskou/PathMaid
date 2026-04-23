@@ -13,7 +13,7 @@ import { X, Plus } from 'lucide-react'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { BuilderTabsProps } from '../BuilderTabs'
 import { BenchmarkHint } from '../BenchmarkHint'
-import { SpellSearchDialog } from '@/entities/creature'
+import { SpellSearchDialog } from '@/features/spellcasting'
 import { SpellcastingEditor } from '@/features/spellcasting-editor'
 
 const TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
@@ -26,7 +26,7 @@ const EMPTY_USED_SLOTS: Record<number, number> = {}
 const EMPTY_SLOT_DELTAS: Record<number, number> = {}
 const EMPTY_PREPARED_CASTS: Set<string> = new Set()
 const EMPTY_REMOVED_SPELLS: Set<string> = new Set()
-const EMPTY_ADDED_BY_RANK: Record<number, string[]> = {}
+const EMPTY_ADDED_BY_RANK: Record<number, never[]> = {}
 
 function newEntry(): SpellcastingSection {
   return {

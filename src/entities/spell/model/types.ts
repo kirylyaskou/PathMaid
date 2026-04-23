@@ -32,13 +32,43 @@ export interface SpellsByRank {
   spells: SpellListEntry[]
 }
 
+/**
+ * Minimal spell reference for override-added spells. Tracked per rank in the
+ * spellcasting editor's `addedByRank` map. `heightenedFromRank` preserves the
+ * spell's original base rank when the user added it from the search dialog's
+ * "Heightenable" section, so downstream consumers can display "X → Y" badges
+ * or skip heighten math for non-heightened adds.
+ */
+export interface AddedSpellRef {
+  name: string
+  foundryId?: string | null
+  heightenedFromRank?: number
+}
+
+/**
+ * Innate-spell cast frequency. Parsed from Foundry `sys.frequency` at sync
+ * time and propagated to the editor for pip rendering.
+ *   - `at-will`: no pips, no strike-through; cast never consumes a slot
+ *   - `per`: N per-spell consumable pips (strike-through on cast), refreshed
+ *     manually on encounter rest (no automatic cadence yet)
+ */
+export type InnateFrequency =
+  | { kind: 'at-will' }
+  | { kind: 'per'; max: number; per: 'day' | 'hour' | 'round' }
+
 export interface SpellListEntry {
   name: string
   foundryId: string | null  // references spells(id) if resolvable
   entryId: string
-  // Phase 68 D-68-01: precomputed at load time (or patched by the combat-side
+  // precomputed at load time (or patched by the combat-side
   // loader). `true` gates the Cast flame button on the row. `undefined` means
   // "unknown" and the editor treats it as "show the flame" — backward-compat
   // for existing callers (builder) that never populate it.
   hasLinkedEffect?: boolean
+  // Base rank of the spell when added via search dialog at a higher rank.
+  // undefined = spell is cast at its listed `rank` (no heightening applied).
+  heightenedFromRank?: number
+  // Innate-spell frequency (undefined for prepared/spontaneous/focus/legacy
+  // innate NPCs whose Foundry data has no `sys.frequency` field).
+  frequency?: InnateFrequency
 }

@@ -1,4 +1,4 @@
-// Phase 68 D-68-05: derive the declared target cap for a spell from action
+// derive the declared target cap for a spell from action
 // cost metadata + description prose.
 //
 // Sources checked (first match wins):

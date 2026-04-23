@@ -8,7 +8,7 @@ interface ModifierTooltipProps {
   finalDisplay: string
   children: ReactElement
   /**
-   * 66-06: Predicate-gated modifiers that target this stat but are currently
+   * Predicate-gated modifiers that target this stat but are currently
    * inactive (predicate evaluated to false). Rendered beneath the active
    * block with `line-through opacity-50` and a `requires: <atom>` subtitle
    * so the GM can see which buff/debuff would fire once the trigger is met.
@@ -16,7 +16,7 @@ interface ModifierTooltipProps {
   inactiveModifiers?: InactiveModifier[]
   /**
    * Opt-in flag for the inactive block. Defaulting to `false` keeps every
-   * existing call-site visually unchanged — only the new Phase 66 paths
+   * existing call-site visually unchanged — only the paths
    * that want the "gated by predicate" readout pass `showInactive`.
    */
   showInactive?: boolean

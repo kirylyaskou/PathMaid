@@ -15,7 +15,7 @@ interface Props {
 }
 
 /**
- * Role swap rationale (D-26):
+ * Role swap rationale :
  * UI-SPEC says "Keep editing" is default/primary and "Discard changes" is destructive.
  * Radix AlertDialog's ESC → triggers Cancel, so we mount:
  *   - Keep editing as AlertDialogAction (default focus)

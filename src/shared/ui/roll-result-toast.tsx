@@ -9,7 +9,7 @@ interface RollResultToastProps {
 }
 
 export function RollResultToast({ roll }: RollResultToastProps) {
-  // v1.4.1 UAT BUG-B: fortune / misfortune rolls render an expanded layout
+  // fortune / misfortune rolls render an expanded layout
   // showing each of the two independent d20 totals so the GM can see both
   // rolls, which one was chosen, and whether either would have been a crit
   // or fumble. Normal rolls fall through to the legacy single-roll layout.

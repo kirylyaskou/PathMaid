@@ -1,6 +1,6 @@
 import type { ImportFormat, ParsedEncounter, ParsedCombatant } from './types'
 
-// 64-01: format detection + parsing. Pure functions; no DB access.
+// format detection + parsing. Pure functions; no DB access.
 
 // Dashboard combatant fields. Note that hp / level / perception arrive as
 // nested {value, max, modifications, note} objects, not bare numbers.
@@ -142,7 +142,7 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
   const combatants: ParsedCombatant[] = []
   for (const c of enc.combatants ?? []) {
     if (!c?.name || typeof c.name !== 'string') continue
-    // 69-03: pathmaiden-v1 exports since Phase 69 carry a separate lookupName
+    // pathmaiden-v1 exports carry a separate lookupName
     // (canonical bestiary name) so GM-renamed combatants still match on
     // re-import. Legacy exports omitted it; fall back to the display name.
     const lookupName =

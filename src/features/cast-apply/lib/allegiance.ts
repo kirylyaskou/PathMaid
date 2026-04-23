@@ -1,7 +1,7 @@
-// Phase 68 D-68-03: allegiance classification for the target picker.
+// allegiance classification for the target picker.
 //
 // Rule: PCs form one faction, NPCs + hazards form the other.
-// No per-combatant faction override in v1.4.
+// No per-combatant faction override
 //
 // "Ally of caster" = same faction as caster (caster included only if they
 //   are the sole member of their faction; otherwise excluded so the Allies

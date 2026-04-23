@@ -15,7 +15,7 @@ export interface RawEntity {
   source_pack: string | null
   raw_json: string
   source_name: string | null
-  // 70-02: adventure segment from paizo-pregens/<adventure>/... path.
+  // adventure segment from paizo-pregens/<adventure>/... path.
   // Serde on the Rust side emits snake_case via #[derive(Serialize)], so the
   // field name matches the struct literally.
   source_adventure: string | null

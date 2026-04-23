@@ -60,7 +60,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const ALL_STAT_SLUGS = [
   'fortitude', 'reflex', 'will', 'perception',
   'strike-attack',   // virtual: attack rolls — receives 'attack' selector effects
-  'spell-attack',    // virtual: spell attack roll — D-03
+  'spell-attack',    // virtual: spell attack roll
   ...Object.keys(SKILL_ABILITY),
 ]
 

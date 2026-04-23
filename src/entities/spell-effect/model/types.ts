@@ -7,8 +7,8 @@ export interface SpellEffectRow {
   duration_json: string
   description: string | null
   spell_id: string | null
-  level: number  // 60-02: COALESCE(spells.rank, 1) — used for @item.level eval
-  category: SpellEffectCategory  // 61-01: derived at API layer for picker grouping
+  level: number  // COALESCE(spells.rank, 1) — used for @item.level eval
+  category: SpellEffectCategory  // derived at API layer for picker grouping
 }
 
 export interface ActiveEffect {
@@ -20,5 +20,10 @@ export interface ActiveEffect {
   rulesJson: string       // raw from spell_effects for engine processing
   durationJson: string
   description: string | null
-  level: number           // 60-02: @item.level for FlatModifier expression eval (Heroism etc.)
+  // @item.level for FlatModifier/DamageDice expression eval. Holds cast rank
+  // when the effect was applied from a heightened cast, spell base rank
+  // otherwise. `castAtRank` preserves the user-visible intent separately so
+  // UIs can distinguish "Fireball @ rank 8" from "Fireball (base 3)".
+  level: number
+  castAtRank?: number
 }

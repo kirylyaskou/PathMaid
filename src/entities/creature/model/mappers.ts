@@ -3,6 +3,7 @@ import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
 import { parseJsonArray } from '@/shared/lib/json'
 import { parseFoundryCharacterDoc } from '@/shared/api/sync/foundry-pc-parser'
+import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
 import type {
   Creature,
   CreatureStatBlockData,
@@ -15,12 +16,12 @@ import type {
 import type { FoundrySystem, FoundryItem, FoundryIwrEntry, FoundrySenseEntry, FoundryDamageRoll } from './foundry-types'
 
 export function toCreature(row: CreatureRow): Creature {
-  // v1.4.1 UAT BUG-2: iconic-as-NPC rows (Foundry `type: "character"`
-  // re-routed to `type='npc'` by the Rust sync). Character docs ship without
-  // `attributes.hp.max` / `attributes.ac.value` / saves (those paths only
-  // exist on true NPCs) so every numeric stat the Rust extractor reached
-  // for is null, and add-to-combat wrote HP 1/1. Overlay with the shared
-  // parser so combat-tracker receives the computed values.
+  // Iconic-as-NPC rows: Foundry `type: "character"` re-routed to `type='npc'`
+  // by the Rust sync. Character docs ship without `attributes.hp.max` /
+  // `attributes.ac.value` / saves (those paths only exist on true NPCs), so
+  // every numeric stat the Rust extractor reached for is null and add-to-combat
+  // would write HP 1/1. Overlay with the shared parser so the combat-tracker
+  // receives computed values.
   let derivedHp: number | null = null
   let derivedAc: number | null = null
   let derivedFort: number | null = null
@@ -81,8 +82,9 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const system = (raw.system || {}) as FoundrySystem
   const details = system.details || {}
 
-  // D-09: structured IWR transform at map-time. Legacy string[] inputs wrapped as { type }.
-  // Foundry `.exceptions` may be string[] or { label }[] — coerce to string[] with filter(Boolean).
+  // Structured IWR transform at map-time. Legacy string[] inputs wrapped as
+  // { type }. Foundry `.exceptions` may be string[] or { label }[] — coerce
+  // to string[] with filter(Boolean).
   const immunities = asArray(system.attributes?.immunities).map((i): ImmunityEntry => {
     const entry = i as FoundryIwrEntry & { exceptions?: unknown }
     const type = entry.type || String(i)
@@ -134,9 +136,8 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const weaponsById = new Map<string, FoundryItem>(
     items.filter((item) => item.type === 'weapon').map((item) => [item._id, item])
   )
-  // v1.4.1 UAT BUG-Z: compute a creature's base reach (feet) from its
-  // Foundry size. `"reach"` / `"reach-N"` traits on a strike layer on top
-  // of this base.
+  // Base reach (feet) derived from Foundry size. `"reach"` / `"reach-N"`
+  // traits on a strike layer on top of this base.
   const creatureSize: string = (typeof (system as { traits?: { size?: { value?: string } } }).traits?.size?.value === 'string')
     ? ((system as { traits: { size: { value: string } } }).traits.size.value)
     : 'med'
@@ -250,7 +251,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     classDCFromMod != null ? 10 + Number(classDCFromMod) :
     undefined
 
-  // D-08: Ability modifiers from Foundry `system.abilities.{str,dex,con,int,wis,cha}.mod`.
+  // Ability modifiers from Foundry `system.abilities.{str,dex,con,int,wis,cha}.mod`.
   // Bestiary rows have these; fallback to 0 if missing.
   const foundryAbilities = (system as { abilities?: Record<string, { mod?: number }> }).abilities ?? {}
   let abilityMods: AbilityMods = {
@@ -262,14 +263,13 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
     cha: foundryAbilities.cha?.mod ?? 0,
   }
 
-  // v1.4 UAT BUG-B + v1.4.1 UAT fix: iconic-as-NPC (Foundry `type: "character"`
-  // synced into the bestiary as `type: "npc"`). Character documents store
-  // declarative data only — numeric stats live on nested items
-  // (class/ancestry/armor/weapon) and have to be reconstructed via the
-  // shared Foundry-PC parser. The Rust sync path reads NPC paths
-  // (attributes.hp.max, saves.fortitude.value, …) which are all absent on a
-  // character document, so the row ships with hp/ac/saves = null. The parser
-  // overlay fills them plus strikes, skills, languages, speed, and reach.
+  // Iconic-as-NPC overlay: Foundry `type: "character"` gets synced into the
+  // bestiary as `type: "npc"`, but character documents carry declarative data
+  // only — numeric stats live on nested items (class/ancestry/armor/weapon)
+  // and have to be reconstructed via the shared Foundry-PC parser. Rust sync
+  // reads NPC paths (attributes.hp.max, saves.fortitude.value, …) which are
+  // all absent on a character doc, so the row ships with hp/ac/saves = null.
+  // The parser overlay fills them plus strikes, skills, languages, speed, reach.
   let derivedStrikes: typeof strikes | null = null
   let derivedBase: Partial<Creature> | null = null
   let derivedSkills: typeof skills | null = null
@@ -310,7 +310,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   }
 }
 
-// ─── v1.4.1 UAT: character-as-NPC derivation via shared parser ────────────
+// ─── Character-as-NPC derivation via shared parser ────────────────────────
 // Foundry character documents don't carry computed numeric stats on disk.
 // `derivePcStats` delegates to the shared `parseFoundryCharacterDoc` so the
 // iconic-as-NPC overlay (this file) and the PC-library row (sync-iconics-pc)
@@ -474,80 +474,6 @@ function parseActionCost(actionType?: string, actions?: number | null): DisplayA
   if (actionType === 'passive') return undefined
   if (actions != null && actions >= 1 && actions <= 3) return actions as 1 | 2 | 3
   return undefined
-}
-
-function resolveFoundryTokens(text: string): string {
-  // @UUID with alias: @UUID[Compendium.pf2e.X.Item.Y]{alias} → alias text
-  text = text.replace(/@UUID\[[^\]]*\]\{([^}]+)\}/g, '$1')
-  // @UUID without alias: extract last dot-path segment (e.g. "Enfeebled")
-  text = text.replace(/@UUID\[([^\]]+)\]/g, (_, path: string) => {
-    const parts = path.split('.')
-    return parts[parts.length - 1]
-  })
-  // @Damage: @Damage[9d10[untyped]] → "9d10 untyped"
-  //          @Damage[2d6[fire], 1d4[bleed]] → "2d6 fire plus 1d4 bleed"
-  text = text.replace(/@Damage\[([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/g, (_, inner: string) => {
-    const parts = inner.split(/,\s*/).map((part: string) => {
-      const m = part.trim().match(/^(.+?)\[(.+?)\]$/)
-      return m ? `${m[1]} ${m[2]}` : part.trim()
-    })
-    return parts.join(' plus ')
-  })
-  // @Check: @Check[type:perception|dc:20] → "DC 20 Perception check"
-  //         @Check[will|dc:25]            → "DC 25 Will check"  (Foundry positional)
-  //         @Check[dc:25]                 → "DC 25"             (no type at all)
-  text = text.replace(/@Check\[([^\]]+)\]/g, (_, inner: string) => {
-    const segments = inner.split('|')
-    const params: Record<string, string> = {}
-    let positionalType: string | undefined
-    for (const seg of segments) {
-      if (seg.includes(':')) {
-        const [k, v] = seg.split(':')
-        params[k] = v
-      } else if (!positionalType && seg) {
-        positionalType = seg
-      }
-    }
-    const rawType = params.type ?? positionalType
-    if (!rawType) {
-      return params.dc ? `DC ${params.dc}` : 'flat check'
-    }
-    const type = rawType.charAt(0).toUpperCase() + rawType.slice(1)
-    const dc = params.dc ? `DC ${params.dc} ` : ''
-    return `${dc}${type} check`
-  })
-  // Collapse accidental "check check" duplication left behind when the
-  // Foundry author wrote " check" after an @Check token that already
-  // renders its own "check" suffix.
-  text = text.replace(/\bcheck\s+check\b/gi, 'check')
-  // @Template: @Template[type:cone|distance:15] → "15-foot cone"
-  //            @Template[type:emanation|distance:30] → "30-foot emanation"
-  text = text.replace(/@Template\[([^\]]+)\]/g, (_, inner: string) => {
-    const params = Object.fromEntries(inner.split('|').map((p: string) => p.split(':')))
-    const distance = params.distance ?? '?'
-    const type = params.type ?? 'area'
-    return `${distance}-foot ${type}`
-  })
-  // [[/act slug]] or [[/act slug #id]] → capitalize slug, hyphens to spaces
-  text = text.replace(/\[\[\/act\s+([^#\s\]]*)[^\]]*\]\]/g, (_, slug: string) => {
-    if (!slug) return ''
-    return slug
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, (c: string) => c.toUpperCase())
-  })
-
-  // [[/br expr #label]]{display} → use display text only
-  text = text.replace(/\[\[\/br\s+[^\]]*\]\]\{([^}]+)\}/g, '$1')
-
-  // [[/br expr]] with NO {display} → use expr as-is
-  text = text.replace(/\[\[\/br\s+([^#\s\]]+)[^\]]*\]\]/g, '$1')
-
-  // {Nfeet} or {Nfoot} where N is digits → "N feet"
-  text = text.replace(/\{(\d+)feet?\}/gi, '$1 feet')
-
-  // @Localize fallback — strip token (sync pipeline resolves these at import time)
-  text = text.replace(/@Localize\[[^\]]+\]/g, '')
-  return text
 }
 
 function stripHtml(html: string): string {

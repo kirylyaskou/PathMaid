@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean
 }
 
-// D-22: download a per-creature JSON envelope via Blob + <a download>.
+// download a per-creature JSON envelope via Blob + <a download>.
 // Pitfall 3: pull the stat block from the PERSISTED record (not the in-memory
 // builder form) so exports always match the last-saved state.
 export function ExportJsonButton({ creatureId, disabled }: Props) {

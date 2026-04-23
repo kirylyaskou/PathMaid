@@ -21,15 +21,15 @@ import {
  *
  * Driven entirely by useUpdaterStore.status. Opens when status is one of
  * 'available' | 'downloading' | 'installing' | 'error'. Closed (returns null)
- * on macOS per D-14 / UI-04 — darwin is a read-only updater platform.
+ * on macOS — darwin is a read-only updater platform.
  *
  * Progress events from downloadAndInstallUpdate flow back into the store via
  * setDownloading — useShallow ensures the component re-renders only when
  * the four selected fields change (not on unrelated store writes).
  */
 export function UpdateDialog() {
-  // D-14 darwin guard — return null BEFORE any hook calls (hook order stability).
-  // isDarwin() is sync (Plan 01 — platform() reads from window.__TAURI_OS_PLUGIN_INTERNALS__
+  // darwin guard — return null BEFORE any hook calls (hook order stability).
+  // isDarwin() is sync (platform() reads from window.__TAURI_OS_PLUGIN_INTERNALS__
   // synchronously) — safe in render.
   if (isDarwin()) return null
 
@@ -50,8 +50,8 @@ export function UpdateDialog() {
 
   const isBusy = status === 'downloading' || status === 'installing'
 
-  // D-11: Linux cross-device error detection — case-insensitive substring match.
-  // Phase 73 classifyUpdateError preserves raw Tauri message, which on Linux
+  // Linux cross-device error detection — case-insensitive substring match.
+  // classifyUpdateError preserves raw Tauri message, which on Linux
   // is literally "Invalid cross-device link (os error 18)".
   const isCrossDeviceError =
     status === 'error' &&

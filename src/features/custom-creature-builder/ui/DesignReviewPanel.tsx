@@ -16,7 +16,7 @@ interface Props {
 export function DesignReviewPanel({ form }: Props) {
   const [issues, setIssues] = useState<SanityIssue[]>([])
 
-  // Debounce 150ms — UI-SPEC Micro-interactions (D-23).
+  // Debounce 150ms — UI-SPEC Micro-interactions .
   useEffect(() => {
     const t = setTimeout(() => {
       const firstStrike = form.strikes[0]

@@ -319,6 +319,7 @@ export interface SpellOverrideRow {
   rank: number
   isRemoved: boolean
   sortOrder: number
+  heightenedFromRank?: number
 }
 
 export async function loadSpellOverrides(
@@ -328,7 +329,8 @@ export async function loadSpellOverrides(
   const db = await getDb()
   const rows = await db.select<{
     id: string; encounter_id: string; combatant_id: string; entry_id: string;
-    spell_name: string; rank: number; is_removed: number; sort_order: number
+    spell_name: string; rank: number; is_removed: number; sort_order: number;
+    heightened_from_rank: number | null
   }[]>(
     `SELECT * FROM encounter_combatant_spells WHERE encounter_id=? AND combatant_id=?`,
     [encounterId, combatantId]
@@ -342,6 +344,7 @@ export async function loadSpellOverrides(
     rank: r.rank,
     isRemoved: r.is_removed === 1,
     sortOrder: r.sort_order,
+    heightenedFromRank: r.heightened_from_rank ?? undefined,
   }))
 }
 
@@ -349,10 +352,11 @@ export async function upsertSpellOverride(override: SpellOverrideRow): Promise<v
   const db = await getDb()
   await db.execute(
     `INSERT OR REPLACE INTO encounter_combatant_spells
-       (id, encounter_id, combatant_id, entry_id, spell_name, rank, is_removed, sort_order)
-     VALUES (?,?,?,?,?,?,?,?)`,
+       (id, encounter_id, combatant_id, entry_id, spell_name, rank, is_removed, sort_order, heightened_from_rank)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
     [override.id, override.encounterId, override.combatantId, override.entryId,
-     override.spellName, override.rank, override.isRemoved ? 1 : 0, override.sortOrder]
+     override.spellName, override.rank, override.isRemoved ? 1 : 0, override.sortOrder,
+     override.heightenedFromRank ?? null]
   )
 }
 
@@ -504,14 +508,14 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
     `DELETE FROM encounter_staging_combatants WHERE encounter_id=?`,
     [encounterId]
   )
-  // 62-01: clear prepared-spell cast marks on refresh
+  // clear prepared-spell cast marks on refresh
   await db.execute(
     `DELETE FROM encounter_prepared_casts WHERE encounter_id=?`,
     [encounterId]
   )
 }
 
-// ── Prepared spell cast marks (62-01) ─────────────────────────────────────────
+// ── Prepared spell cast marks ─────────────────────────────────────────
 
 export interface PreparedCastRow {
   encounterId: string
