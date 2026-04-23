@@ -41,4 +41,7 @@ export interface SpellListEntry {
   // "unknown" and the editor treats it as "show the flame" — backward-compat
   // for existing callers (builder) that never populate it.
   hasLinkedEffect?: boolean
+  // Base rank of the spell when added via search dialog at a higher rank.
+  // undefined = spell is cast at its listed `rank` (no heightening applied).
+  heightenedFromRank?: number
 }
