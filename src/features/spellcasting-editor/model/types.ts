@@ -1,4 +1,4 @@
-import type { SpellcastingSection } from '@/entities/spell'
+import type { SpellcastingSection, AddedSpellRef } from '@/entities/spell'
 
 /**
  * Cast-mode dispatcher for SpellcastingEditor.
@@ -55,7 +55,7 @@ export interface SpellcastingEditorProps {
 
   // Overrides — added / removed spell sets (combat: DB overrides; builder: empty)
   removedSpells: Set<string>          // `${rank}:${name}`
-  addedByRank: Record<number, string[]>
+  addedByRank: Record<number, AddedSpellRef[]>
 
   // Callbacks — all optional for read-only / builder use
   onTogglePip?: (rank: number, idx: number, total: number) => void

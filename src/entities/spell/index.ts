@@ -1,4 +1,4 @@
-export type { SpellRow, SpellcastingSection, SpellsByRank, SpellListEntry } from './model/types'
+export type { SpellRow, SpellcastingSection, SpellsByRank, SpellListEntry, AddedSpellRef } from './model/types'
 export { SpellInlineCard } from './ui/SpellInlineCard'
 export { SpellReferenceDrawer } from './ui/SpellReferenceDrawer'
 export { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from './lib/helpers'

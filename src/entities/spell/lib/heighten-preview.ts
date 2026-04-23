@@ -40,10 +40,11 @@ export function computeHeightenPreview(args: {
   const increments = Math.floor((targetRank - baseRank) / perRanks)
   if (increments <= 0) return null
 
-  let damageByKey: Record<string, { damageType?: string; type?: string }> | null = null
+  type DamageEntry = { damageType?: string; type?: string }
+  let damageByKey: Record<string, DamageEntry> | null = null
   if (damageJson) {
     try {
-      damageByKey = JSON.parse(damageJson) as typeof damageByKey
+      damageByKey = JSON.parse(damageJson) as Record<string, DamageEntry>
     } catch {
       damageByKey = null
     }

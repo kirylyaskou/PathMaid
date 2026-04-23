@@ -16,7 +16,7 @@ import {
 import { getSpellEffectsForSpells } from '@/shared/api/effects'
 import type { SpellOverrideRow, SpellRow } from '@/shared/api'
 import type { SpellEffectRow } from '@/entities/spell-effect'
-import type { SpellcastingSection } from '@/entities/spell'
+import type { SpellcastingSection, AddedSpellRef } from '@/entities/spell'
 import { useSpellModifiers } from './use-modified-stats'
 import { RANK_WARNINGS } from '../lib/spellcasting-helpers'
 
@@ -176,12 +176,17 @@ export function useSpellcasting(
     await saveSlotOverride(encounterId, combatantId, section.entryId, newRank, 1)
   }
 
-  async function handleAddSpell(name: string, rank: number) {
+  async function handleAddSpell(
+    name: string,
+    rank: number,
+    heightenedFromRank?: number,
+  ) {
     if (!encounterId || !combatantId) return
     const id = `${combatantId}:${section.entryId}:add:${name}:${rank}`
     const override: SpellOverrideRow = {
       id, encounterId, combatantId, entryId: section.entryId,
       spellName: name, rank, isRemoved: false, sortOrder: Date.now(),
+      heightenedFromRank,
     }
     await upsertSpellOverride(override)
     setOverrides((prev) => [...prev.filter((o) => o.id !== id), override])
@@ -256,9 +261,12 @@ export function useSpellcasting(
   )
   const addedByRank = overrides
     .filter((o) => !o.isRemoved)
-    .reduce<Record<number, string[]>>((acc, o) => {
+    .reduce<Record<number, AddedSpellRef[]>>((acc, o) => {
       if (!acc[o.rank]) acc[o.rank] = []
-      acc[o.rank].push(o.spellName)
+      acc[o.rank].push({
+        name: o.spellName,
+        heightenedFromRank: o.heightenedFromRank,
+      })
       return acc
     }, {})
 

@@ -32,6 +32,19 @@ export interface SpellsByRank {
   spells: SpellListEntry[]
 }
 
+/**
+ * Minimal spell reference for override-added spells. Tracked per rank in the
+ * spellcasting editor's `addedByRank` map. `heightenedFromRank` preserves the
+ * spell's original base rank when the user added it from the search dialog's
+ * "Heightenable" section, so downstream consumers can display "X → Y" badges
+ * or skip heighten math for non-heightened adds.
+ */
+export interface AddedSpellRef {
+  name: string
+  foundryId?: string | null
+  heightenedFromRank?: number
+}
+
 export interface SpellListEntry {
   name: string
   foundryId: string | null  // references spells(id) if resolvable

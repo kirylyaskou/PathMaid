@@ -93,12 +93,12 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
         foundryId: s.foundryId,
         slotKey: take(s.name),
       }))
-      const addedNames = addedByRank[rank] ?? []
-      const addedSlots: SlotInstance[] = addedNames.map((name) => ({
+      const addedRefs = addedByRank[rank] ?? []
+      const addedSlots: SlotInstance[] = addedRefs.map((ref) => ({
         kind: 'added',
-        name,
-        foundryId: null,
-        slotKey: take(name),
+        name: ref.name,
+        foundryId: ref.foundryId ?? null,
+        slotKey: take(ref.name),
       }))
       result.set(rank, { defaultSlots, addedSlots })
     }

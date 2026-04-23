@@ -320,7 +320,7 @@ export function SpellcastingBlock({ section, creatureLevel, encounterContext, cr
           defaultRank={spellDialogRank}
           defaultTradition={traditionFilter}
           focusOnly={isFocus}
-          onAdd={(name, rank) => handleAddSpell(name, rank)}
+          onAdd={(name, rank, _foundryId, heightenedFromRank) => handleAddSpell(name, rank, heightenedFromRank)}
         />
       )}
 
