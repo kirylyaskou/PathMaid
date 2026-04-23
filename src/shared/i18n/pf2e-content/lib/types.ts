@@ -6,9 +6,8 @@
  *   all are computed and owned by the engine (engine.creature.*). The RU
  *   overlay touches only textual labels and names. Parsing numeric values
  *   from HTML would duplicate engine-authoritative data and create a
- *   two-source-of-truth risk. Consumers (Phase 88) read the structured
- *   fields here and fall back to engine for all numeric rendering.
- *   See CONTEXT.md D-03.
+ *   two-source-of-truth risk. Consumers read the structured fields here
+ *   and fall back to engine for all numeric rendering.
  */
 export interface MonsterStructuredLoc {
   abilitiesLoc: AbilityLoc[]
@@ -24,6 +23,29 @@ export interface MonsterStructuredLoc {
   languagesLoc: string[]
   strikesLoc: StrikeLoc[]
   spellcastingLoc: { headingLabel: string }
+  abilityScoresLoc: AbilityScoresLoc
+}
+
+/**
+ * Six ability-score labels as rendered in the RU stat block.
+ * pf2.ru uses 2-3 letter Cyrillic abbreviations; the exact spelling
+ * varies by source (e.g. "Лвк" vs "Лов" for Dexterity). Parser reads
+ * whatever the HTML ships and maps positionally — bonuses are omitted
+ * because the engine owns numeric values.
+ */
+export interface AbilityScoresLoc {
+  /** Strength label — pf2.ru typically "Сил" */
+  strLabel: string
+  /** Dexterity label — pf2.ru typically "Лвк" */
+  dexLabel: string
+  /** Constitution label — pf2.ru typically "Вын" */
+  conLabel: string
+  /** Intelligence label — pf2.ru typically "Инт" */
+  intLabel: string
+  /** Wisdom label — pf2.ru typically "Мдр" */
+  wisLabel: string
+  /** Charisma label — pf2.ru typically "Хар" */
+  chaLabel: string
 }
 
 export interface AbilityLoc {
@@ -39,7 +61,7 @@ export interface SkillLoc {
   name: string
   /** EN lookup key (e.g. "Acrobatics") — canonical engine.creature.skills[].name */
   engineKey: string
-  /** parsed from HTML for debug verification; Phase 88 ignores and uses engine value */
+  /** parsed from HTML for debug verification; UI consumers use engine value, not this */
   bonus: number
 }
 
