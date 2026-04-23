@@ -1013,7 +1013,7 @@ Full details: [`.planning/milestones/v1.6.0-ROADMAP.md`](./milestones/v1.6.0-ROA
 **Milestone Goal:** Load-time HTML→structured парсер для RU-переводов монстров; `CreatureStatBlock` отображает RU текст в ability cards / skills / saves / speeds / strikes с fallback на EN. Runtime без парсинга.
 
 - [x] **Phase 84: HTML Parser Library** — `parseMonsterRuHtml(text, rus_text)` pure TS + native DOMParser; unit coverage на Succubus + 5 other monsters (completed 2026-04-23)
-- [ ] **Phase 85: Migration + DB Schema** — `0041_translation_structured_json.sql`: rename `0038_translations.sql` → `0041_translations.sql` + add `structured_json TEXT NULL` column
+- [x] **Phase 85: Migration + DB Schema** — `0041_translation_structured_json.sql`: rename `0038_translations.sql` → `0041_translations.sql` + add `structured_json TEXT NULL` column (completed 2026-04-23)
 - [ ] **Phase 86: Bundled Loader Integration** — parser дёргается при seed translations table; structured_json populated; graceful degradation на malformed HTML
 - [ ] **Phase 87: API + Hook Extension** — `shared/api/translations.ts` возвращает typed `structured` field; `useContentTranslation` surface'ит его consumers; backward compat для существующих consumers
 - [ ] **Phase 88: CreatureStatBlock Overlay Wiring** — ability cards / skills / saves / speeds / strikes / spellcasting heading читают structured RU с EN fallback
@@ -1100,7 +1100,7 @@ Full details: [`.planning/milestones/v1.6.0-ROADMAP.md`](./milestones/v1.6.0-ROA
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 84. HTML Parser Library | 2/2 | Complete    | 2026-04-23 |
-| 85. Migration + DB Schema | 0/? | Not started | — |
+| 85. Migration + DB Schema | 1/1 | Complete   | 2026-04-23 |
 | 86. Bundled Loader Integration | 0/? | Not started | — |
 | 87. API + Hook Extension | 0/? | Not started | — |
 | 88. CreatureStatBlock Overlay Wiring | 0/? | Not started | — |

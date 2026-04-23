@@ -17,7 +17,7 @@
   - Unit-covered на Succubus + 5 other monsters (из `monster.json`) — 100% parse success, no throws на unknown markup
   - Graceful degradation: malformed HTML → `null` (вызывающий код фолбэкится на EN)
 
-- [ ] **TRANS-02**: Migration `0041_translation_structured_json.sql`
+- [x] **TRANS-02**: Migration `0041_translation_structured_json.sql`
   - Добавляет column `structured_json TEXT NULL` на `translations` table
   - **Renames** `0038_translations.sql` → `0041_translations.sql` (resolves migration 0038 prefix collision с Phase 79's `0038_spell_overrides_heightened.sql` — tech debt из v1.6.0 audit)
   - Fresh-install seed: loader populates `structured_json` для всех monster rows

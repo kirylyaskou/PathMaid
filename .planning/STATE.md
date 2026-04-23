@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7.0
 milestone_name: — Monster Translation
 status: verifying
-stopped_at: Completed 84-02-PLAN.md — Gap Closure actionCount + weaknesses strip + abilityScoresLoc
-last_updated: "2026-04-23T23:00:08.996Z"
+stopped_at: Completed 85-01-PLAN.md
+last_updated: "2026-04-23T23:36:46.597Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 52
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
@@ -21,17 +21,17 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-24 for v1.7.0 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** Phase 84 — html-parser-library
+**Current focus:** Phase 86 — bundled-loader (next)
 
 ## Current Position
 
 Milestone: v1.7.0 Monster Translation
-Phase: 999.1
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 85 (migration-db-schema) — COMPLETE
+Plan: 1 of 1 — all plans complete
+Status: Phase 85 complete, TRANS-02 satisfied — ready for Phase 86
 Last activity: 2026-04-23
 
-Progress: [░░░░░░░░░░] 0% (roadmap pending)
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0% (roadmap pending)
 - **Migration:** `0041_translation_structured_json.sql` добавляет `structured_json TEXT NULL` на `translations` table **и** ренеймит `0038_translations.sql` → `0041_translations.sql` в том же touch (resolve migration 0038 collision с Phase 79's `0038_spell_overrides_heightened.sql`)
 - **Matching strategy:** EN/RU парсинг парой (оба HTML), match abilities по index (порядок гарантирован в pf2.ru source), fallback на bolded-name match через normalized lowercase
 - **Runtime:** zero parsing в UI — `useContentTranslation` returns ready-made structured object; parser живёт только в `shared/i18n/pf2e-content/` loader code path
+- **Phase 85 schema decisions:** `_migrations` cleanup идёт в `0042_*` (не в `0041_*`) — ALTER TABLE должен выполняться после CREATE TABLE; `structuredJson: string | null` в raw SQL pattern — JSON.parse деферред в Phase 87; `migrations.debug.ts` co-located в `shared/db/` без новых deps
 
 ### Known Tech Debt (v1.6.0 audit carryover — scoped into v1.7.0)
 
@@ -81,6 +82,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T22:32:27.739Z
-Stopped at: Completed 84-02-PLAN.md — Gap Closure actionCount + weaknesses strip + abilityScoresLoc
+Last session: 2026-04-23T23:36:46.593Z
+Stopped at: Completed 85-01-PLAN.md
 Next step: Draft REQUIREMENTS.md → ROADMAP.md → commit kickoff → `/gsd-discuss-phase 84` or `/gsd-plan-phase 84`.
