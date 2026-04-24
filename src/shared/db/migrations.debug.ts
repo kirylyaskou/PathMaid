@@ -12,6 +12,8 @@
  *   4. _migrations contains the renamed filename marker (0041_translations.sql)
  *   5. _migrations no longer contains the pre-rename marker (0038_translations.sql)
  *   6. _migrations contains the new structured_json migration marker
+ *   7. translations table has at least one monster row with structured_json populated
+ *      (proves the bundled loader wrote JSON after seed — not just that the column exists)
  *
  * This file is NOT a test suite — it is a manual smoke test. Excluded from
  * production bundle by the DEV-guarded dynamic import in main.tsx.
@@ -30,6 +32,10 @@ interface PragmaColumn {
 
 interface MigrationRow {
   name: string
+}
+
+interface CountRow {
+  n: number
 }
 
 export async function runMigrationsDebug(): Promise<void> {
@@ -100,6 +106,18 @@ export async function runMigrationsDebug(): Promise<void> {
   assert(
     structuredMarker.length === 1,
     '_migrations must contain 0042_translation_structured_json.sql marker',
+  )
+
+  // A7: at least one monster row in translations has structured_json populated
+  //     after the bundled loader ran. Proves the write path is live end-to-end
+  //     (parser produced output → JSON.stringify → column populated).
+  const populated = await db.select<CountRow[]>(
+    "SELECT COUNT(*) AS n FROM translations WHERE kind = 'monster' AND structured_json IS NOT NULL",
+    [],
+  )
+  assert(
+    (populated[0]?.n ?? 0) >= 1,
+    "translations must contain at least one monster row with structured_json populated after seed (run pnpm tauri dev and retry if DB is empty)",
   )
 
   console.log(`[migrations.debug] ${passed}/${total} assertions passed`)
