@@ -1,12 +1,13 @@
-import { useState } from 'react'
 import type { SpellcastingSection } from '@/entities/spell'
 import { useSpellModifiers } from '@/entities/creature'
+import { resolveCastMode } from '../lib/resolve-cast-mode'
 import { useCasterProgression } from './spellcasting/use-caster-progression'
 import { useRankFilter } from './spellcasting/use-rank-filter'
 import { useSpellOverrides } from './spellcasting/use-spell-overrides'
 import { useSpellLinkMap } from './spellcasting/use-spell-link-map'
 import { usePooledSlots } from './spellcasting/use-pooled-slots'
 import { useConsumableCopies } from './spellcasting/use-consumable-copies'
+import { useSpellSearchDialog } from './spellcasting/use-spell-search-dialog'
 
 interface EncounterContext {
   encounterId: string
@@ -14,7 +15,7 @@ interface EncounterContext {
 }
 
 /**
- * Facade composing six focused spellcasting sub-hooks. Each sub-hook owns a
+ * Facade composing focused spellcasting sub-hooks. Each sub-hook owns a
  * single concern (DB-backed table or derived state). Return shape is
  * preserved for backward compatibility with existing consumers.
  */
@@ -29,11 +30,6 @@ export function useSpellcasting(
   const spellMod = useSpellModifiers(combatantId, section.tradition)
   const modifiedSpellAttack = section.spellAttack + spellMod.netModifier
   const modifiedSpellDc = section.spellDc + spellMod.netModifier
-  const spellModColor = spellMod.netModifier < 0
-    ? 'text-pf-blood decoration-pf-blood/50'
-    : spellMod.netModifier > 0
-      ? 'text-pf-threat-low decoration-pf-threat-low/50'
-      : ''
 
   const progression = useCasterProgression(section, creatureLevel)
   const overrides = useSpellOverrides(section, encounterContext)
@@ -46,23 +42,8 @@ export function useSpellcasting(
     (rank, delta, total) => pooled.adjustUsedSlots(rank, delta, total),
   )
 
-  // Spell-search dialog local UI state
-  const [spellDialogOpen, setSpellDialogOpen] = useState(false)
-  const [spellDialogRank, setSpellDialogRank] = useState(0)
-
-  // handleSlotDelta side-effect: auto-open spell search when a prepared caster
-  // expands a rank. Wired here so pooled-slots stays UI-agnostic.
-  async function handleSlotDelta(rank: number, change: 1 | -1) {
-    await pooled.handleSlotDelta(rank, change, (r) => {
-      if (section.castType === 'prepared') {
-        setSpellDialogRank(r)
-        setSpellDialogOpen(true)
-      }
-    })
-  }
-
-  const isFocus = section.castType === 'focus'
-  const traditionFilter = (section.castType === 'innate' || isFocus) ? undefined : section.tradition
+  const { isFocus, traditionFilter, spellModColor } = resolveCastMode(section, spellMod.netModifier)
+  const dialog = useSpellSearchDialog(section.castType, pooled.handleSlotDelta)
 
   return {
     // Pooled slot state
@@ -73,10 +54,10 @@ export function useSpellcasting(
     removedSpells: overrides.removedSpells,
     addedByRank: overrides.addedByRank,
     // Dialog state
-    spellDialogOpen,
-    setSpellDialogOpen,
-    spellDialogRank,
-    setSpellDialogRank,
+    spellDialogOpen: dialog.spellDialogOpen,
+    setSpellDialogOpen: dialog.setSpellDialogOpen,
+    spellDialogRank: dialog.spellDialogRank,
+    setSpellDialogRank: dialog.setSpellDialogRank,
     // Rank filter state
     selectedSlotLevel: rankFilter.selectedSlotLevel,
     setSelectedSlotLevel: rankFilter.setSelectedSlotLevel,
@@ -96,7 +77,7 @@ export function useSpellcasting(
     rankWarning: progression.rankWarning,
     // Handlers
     handleTogglePip: pooled.handleTogglePip,
-    handleSlotDelta,
+    handleSlotDelta: dialog.handleSlotDelta,
     handleAddRank: pooled.handleAddRank,
     handleAddSpell: overrides.handleAddSpell,
     handleRemoveSpell: overrides.handleRemoveSpell,
