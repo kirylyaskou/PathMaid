@@ -35,6 +35,7 @@ import { StatItem } from './StatItem'
 import { SpellListPreview } from './SpellListPreview'
 import { EquipmentBlock } from './EquipmentBlock'
 import { useContentTranslation } from '@/shared/i18n'
+import type { AbilityLoc } from '@/shared/i18n'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { ReactNode } from 'react'
 import { CreatureSpeedLine } from './CreatureSpeedLine'
@@ -114,6 +115,33 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
     creature.name,
     creature.level,
   )
+
+  // Stable references for sub-components — re-derived only when structured changes.
+  const structured = translation?.structured ?? null
+
+  const abilitiesLocByName = useMemo(() => {
+    if (!structured?.abilitiesLoc) return undefined
+    const m = new Map<string, AbilityLoc>()
+    for (const a of structured.abilitiesLoc) {
+      m.set(a.name.trim().toLowerCase(), a)
+    }
+    return m
+  }, [structured])
+
+  const defensesLoc = useMemo(() => {
+    if (!structured) return undefined
+    return {
+      acLoc: structured.acLoc,
+      hpLoc: structured.hpLoc,
+      savesLoc: structured.savesLoc,
+      weaknessesLoc: structured.weaknessesLoc,
+      resistancesLoc: structured.resistancesLoc,
+      immunitiesLoc: structured.immunitiesLoc,
+      perceptionLoc: structured.perceptionLoc,
+      languagesLoc: structured.languagesLoc,
+      abilityScoresLoc: structured.abilityScoresLoc,
+    }
+  }, [structured])
 
   // Tag this hook as an "attack" roll site so Sure Strike (RollTwice selector:
   // attack-roll) surfaces a fortune-aware formula in the toast. Non-attack
@@ -318,8 +346,6 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
     [creature.abilities, isSpecialFormation, troopDefenses],
   )
 
-  console.log(creature)
-
   return (
     <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
       <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
@@ -413,6 +439,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
               immunities={creature.immunities}
               resistances={creature.resistances}
               weaknesses={creature.weaknesses}
+              defensesLoc={defensesLoc}
             />
             <Separator />
           </>
@@ -420,7 +447,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         <div className="p-4">
           <StatRow label="Speed">
-            <CreatureSpeedLine speeds={effectiveSpeeds} />
+            <CreatureSpeedLine speeds={effectiveSpeeds} speedsLoc={structured?.speedsLoc} />
           </StatRow>
         </div>
 
@@ -456,6 +483,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
             currentMapIndex={currentMapIndex}
             isMapTracked={Boolean(mapCombatantId)}
             onAttackClick={handleStrikeAttack}
+            strikesLoc={structured?.strikesLoc}
           />
         )}
 
@@ -463,13 +491,16 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         {creature.abilities.length > 0 && (
           <>
-            <CreatureAbilitiesSection classified={classifiedAbilities} onRoll={handleRoll} />
+            <CreatureAbilitiesSection classified={classifiedAbilities} onRoll={handleRoll} abilitiesLocByName={abilitiesLocByName} />
             <Separator />
           </>
         )}
 
         {creature.spellcasting && creature.spellcasting.length > 0 && (
           <>
+            {structured?.spellcastingLoc?.headingLabel && (
+              <SectionHeader>{structured.spellcastingLoc.headingLabel}</SectionHeader>
+            )}
             {creature.spellcasting.map((section) =>
               renderSpellcasting
                 ? renderSpellcasting(section, creature.level, creature.name)
@@ -493,7 +524,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
           <SectionHeader>Skills</SectionHeader>
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2">
-              <CreatureSkillsLine skills={creature.skills} modStats={modStats} onRoll={handleRoll} />
+              <CreatureSkillsLine skills={creature.skills} modStats={modStats} onRoll={handleRoll} skillsLoc={structured?.skillsLoc} />
             </div>
           </CollapsibleContent>
         </Collapsible>
