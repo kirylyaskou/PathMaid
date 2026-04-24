@@ -10,14 +10,15 @@
  * action}. File root is a JSON array of TranslationRecord.
  *
  * Each array element maps to one `translations` row with:
- *   kind      ← filename stem
- *   name_key  ← record.name        (English)
- *   level     ← record.level       (nullable)
- *   locale    ← 'ru'               (only locale in v1.5.1; extensible)
- *   name_loc  ← record.rus_name
- *   traits_loc ← record.rus_traits (empty string → NULL)
- *   text_loc  ← record.rus_text
- *   source    ← 'pf2.ru'
+ *   kind          ← filename stem
+ *   name_key      ← record.name        (English)
+ *   level         ← record.level       (nullable)
+ *   locale        ← 'ru'               (only locale in v1.5.1; extensible)
+ *   name_loc      ← record.rus_name
+ *   traits_loc    ← record.rus_traits  (empty string → NULL)
+ *   text_loc      ← record.rus_text
+ *   source        ← 'pf2.ru'
+ *   structured_json ← JSON.stringify(parseMonsterRuHtml(text, rus_text)) for kind='monster'; NULL otherwise
  *
  * Idempotency: the unique index (kind, name_key NOCASE, level, locale)
  * plus INSERT OR REPLACE means rebooting the app does not create dupes,
@@ -25,6 +26,8 @@
  */
 
 import type Database from '@tauri-apps/plugin-sql'
+import { parseMonsterRuHtml } from './lib'
+import type { MonsterStructuredLoc } from './lib'
 
 export type TranslationKind = 'monster' | 'spell' | 'item' | 'feat' | 'action'
 
@@ -92,11 +95,34 @@ export async function loadContentTranslations(db: Database): Promise<void> {
           : null
       const level = typeof record.level === 'number' ? record.level : null
 
+      // Parse structured RU overlay only for monster records that have both
+      // EN source HTML (text) and RU HTML (rus_text). Parser returning null
+      // is a legitimate "cannot parse this shape" signal — write NULL silently.
+      // Parser throwing is unexpected — warn and fall back to NULL so one bad
+      // row never aborts seeding of the rest.
+      let structuredJson: string | null = null
+      if (kind === 'monster' && record.text && record.rus_text) {
+        try {
+          const parsed: MonsterStructuredLoc | null = parseMonsterRuHtml(
+            record.text,
+            record.rus_text,
+          )
+          if (parsed !== null) {
+            structuredJson = JSON.stringify(parsed)
+          }
+        } catch (err) {
+          console.warn(
+            `[translations] parser failed for ${record.name}:`,
+            err,
+          )
+        }
+      }
+
       await db.execute(
         `INSERT OR REPLACE INTO translations
-           (kind, name_key, level, locale, name_loc, traits_loc, text_loc, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [kind, record.name, level, LOCALE, record.rus_name, traitsLoc, record.rus_text, SOURCE]
+           (kind, name_key, level, locale, name_loc, traits_loc, text_loc, source, structured_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [kind, record.name, level, LOCALE, record.rus_name, traitsLoc, record.rus_text, SOURCE, structuredJson]
       )
     }
   }
