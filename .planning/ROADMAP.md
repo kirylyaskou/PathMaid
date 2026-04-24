@@ -673,7 +673,7 @@ Plans:
   3. Formula parser handles all PF2e damage patterns: `1d6`, `2d8+5`, `1d4+1d6`, negative modifiers, zero
   4. Roll types are exported from the engine or a shared types file — no circular imports
   5. No UI code in this phase — pure TS utilities and Zustand store only
-**Plans:** 1/1 plans complete
+**Plans:** 0/1 plans complete
 Plans:
 - [x] 36-01-PLAN.md — engine/dice/dice.ts (parser + rollDice + heightenFormula + Roll types) + engine barrel export + src/shared/model/roll-store.ts (Zustand session store with MAP tracking)
 
@@ -1016,7 +1016,7 @@ Full details: [`.planning/milestones/v1.6.0-ROADMAP.md`](./milestones/v1.6.0-ROA
 - [x] **Phase 85: Migration + DB Schema** — `0041_translation_structured_json.sql`: rename `0038_translations.sql` → `0041_translations.sql` + add `structured_json TEXT NULL` column (completed 2026-04-23)
 - [x] **Phase 86: Bundled Loader Integration** — parser дёргается при seed translations table; structured_json populated; graceful degradation на malformed HTML (completed 2026-04-24)
 - [x] **Phase 87: API + Hook Extension** — `shared/api/translations.ts` возвращает typed `structured` field; `useContentTranslation` surface'ит его consumers; backward compat для существующих consumers (completed 2026-04-24)
-- [ ] **Phase 88: CreatureStatBlock Overlay Wiring** — ability cards / skills / saves / speeds / strikes / spellcasting heading читают structured RU с EN fallback
+- [x] **Phase 88: CreatureStatBlock Overlay Wiring** — ability cards / skills / saves / speeds / strikes / spellcasting heading читают structured RU с EN fallback (completed 2026-04-24)
 - [ ] **Phase 89: Tech Debt — use-spellcasting Trim** — `use-spellcasting.ts` <100 строк (carryover из v1.6.0 audit)
 - [ ] **DEBT-02 (process)** — Per-phase SUMMARY.md / VERIFICATION.md / UAT.md дисциплина восстановлена для каждой v1.7.0 фазы (reinstates dropped-in-v1.6.0 practice)
 
@@ -1089,6 +1089,10 @@ Plans:
 5. Creature с legacy nameLoc/traitsLoc но без structured_json — old overlay behavior сохраняется (name+traits RU, остальное EN), без regression
 6. `pnpm lint` = 0, `tsc --noEmit` = 0, `pnpm lint:arch` = 0
 
+**Plans:** 1/1 plans complete
+Plans:
+- [x] 88-01-PLAN.md — CreatureStatBlock structured RU overlay wiring + markdown-lite renderer (TRANS-05)
+
 ### Phase 89: Tech Debt — use-spellcasting Trim
 **Goal**: `use-spellcasting.ts` facade <100 строк (carryover из v1.6.0 Phase 80 audit).
 **Depends on**: Nothing (orthogonal к v1.7.0 main scope; параллельна Phase 84-88)
@@ -1108,8 +1112,8 @@ Plans:
 | 84. HTML Parser Library | 2/2 | Complete    | 2026-04-23 |
 | 85. Migration + DB Schema | 1/1 | Complete    | 2026-04-24 |
 | 86. Bundled Loader Integration | 1/1 | Complete    | 2026-04-24 |
-| 87. API + Hook Extension | 1/1 | Complete   | 2026-04-24 |
-| 88. CreatureStatBlock Overlay Wiring | 0/? | Not started | — |
+| 87. API + Hook Extension | 1/1 | Complete    | 2026-04-24 |
+| 88. CreatureStatBlock Overlay Wiring | 1/1 | Complete   | 2026-04-24 |
 | 89. use-spellcasting Trim | 0/? | Not started | — |
 
 **Parallelization hint:** Phase 84 + Phase 89 можно гнать параллельно (разные файлы, orthogonal). Phase 85-88 — strict sequence (Phase 85 → 86 → 87 → 88 dep chain).

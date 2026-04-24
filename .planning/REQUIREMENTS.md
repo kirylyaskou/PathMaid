@@ -33,7 +33,7 @@
   - API layer (`shared/api/translations.ts`) парсит `structured_json` → typed object на read path
   - Backward compat: существующие consumers (FeatInlineCard, ItemReferenceDrawer, etc.) продолжают использовать только `nameLoc` — не затрагиваются
 
-- [ ] **TRANS-05**: `CreatureStatBlock` читает structured RU перевод с fallback на EN
+- [x] **TRANS-05**: `CreatureStatBlock` читает structured RU перевод с fallback на EN
   - Ability cards: `abilitiesLoc[i].description` overrides `ability.description`; `abilitiesLoc[i].name` overrides `ability.name`; action icon (`[one-action]` / `[two-actions]` / `[three-actions]`) парсится и ложится на actionCount
   - Skills row: `skillsLoc.find(s => matchSkillName(s, skill)).name` overrides `skill.name`; bonus остаётся engine-computed
   - Saves / AC / HP / Weaknesses / Resistances: бейджи используют RU лейблы (`Стойкость` / `Реакция` / `Воля` / `КБ` / `ПЗ` / `Уязвимости` / `Сопротивления`) из structured; цифры остаются engine
