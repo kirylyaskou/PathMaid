@@ -96,5 +96,4 @@ export function useSpellcasting(
     traditionFilter,
   }
 }
-
 export { useSpellModifiers } from '@/entities/creature'
