@@ -5,6 +5,7 @@ import { ActionIcon } from '@/shared/ui/action-icon'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
+import type { StrikeLoc } from '@/shared/i18n'
 
 interface CreatureStrikeRowProps {
   strike: EffectiveStrike
@@ -13,6 +14,7 @@ interface CreatureStrikeRowProps {
   currentMapIndex: number
   isMapTracked: boolean
   onAttackClick: (strike: EffectiveStrike, mapIdx: number) => void
+  strikeLoc?: StrikeLoc
 }
 
 export function CreatureStrikeRow({
@@ -22,6 +24,7 @@ export function CreatureStrikeRow({
   currentMapIndex,
   isMapTracked,
   onAttackClick,
+  strikeLoc,
 }: CreatureStrikeRowProps) {
   const {
     name, modifier, traits, group, additionalDamage,
@@ -32,11 +35,13 @@ export function CreatureStrikeRow({
   } = strike
   void modifier
 
+  const displayName = strikeLoc?.name ?? name
+
   return (
     <div className="p-3 rounded-md bg-secondary/50">
       <div className="flex items-center gap-2 flex-wrap">
         <ActionIcon cost={1} className="text-lg" />
-        <span className="font-semibold">{name}</span>
+        <span className="font-semibold">{displayName}</span>
         <div className="mt-1 flex items-center gap-1.5 text-xs">
           {[0, 1, 2].map((mapIdx) => {
             const mod = mapIdx === 0 ? modifiedMod : mapIdx === 1 ? map1 : map2
@@ -105,7 +110,8 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {d.type && (
-                <span className={cn('font-mono', damageTypeColor(d.type))}> {d.type}</span>
+                // Color mapping uses engine type key, not localised label.
+                <span className={cn('font-mono', damageTypeColor(d.type))}> {strikeLoc?.damageType ?? d.type}</span>
               )}
               {d.persistent && (
                 <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">persistent</span>
@@ -134,6 +140,8 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {ad.type && (
+                // Color mapping uses engine type key; additional damage type override
+                // not available — StrikeLoc carries one damageType for the primary hit.
                 <span className={cn('font-mono', damageTypeColor(ad.type))}> {ad.type}</span>
               )}
             </div>
