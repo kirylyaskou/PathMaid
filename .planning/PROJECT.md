@@ -1,24 +1,32 @@
 # PathMaid — Project Reference
 
-**Updated:** 2026-04-24 (начат v1.7.0)
+**Updated:** 2026-04-24 (начат v1.7.1)
 **Repo:** github.com/kirylyaskou/PathMaid
-**Current version:** v1.6.0 (shipped) · v1.7.0 (в работе)
+**Current version:** v1.7.0 (shipped 2026-04-24) · v1.7.1 (в работе)
 
-## Current Milestone: v1.7.0 Monster Translation
+## Current Milestone: v1.7.1 Translation Dictionaries
 
-**Goal:** Отрендерить полный RU-перевод stat block монстров в существующем `CreatureStatBlock` — структурированные ability cards, skills, saves, speeds, strikes показывают RU текст, цифры/rolls/spellcasting остаются интерактивными. Load-time HTML parsing, runtime читает готовые структурированные данные.
+**Goal:** Расширить RU-покрытие `CreatureStatBlock` до всего textual content (кроме numerics) через dictionary-based i18n независимого от HTML parser output. Фиксим spell translation regression из v1.7.0. Source of truth: pf2.ru/rules/player-core (author-authorized partner integration reference).
 
 **Target features:**
-- HTML parser (`rus_text` → structured RU) в bundled loader при seed translations (native `DOMParser`, zero new deps)
-- DB schema: `translations.structured_json` column + migration `0041_translation_structured_json.sql` (та же миграция фиксит 0038 prefix collision через rename `0038_translations.sql` → `0041_`)
-- `useContentTranslation` расширяется — возвращает typed `structured: {abilitiesLoc, skillsLoc, speedsLoc, savesLoc, strikesLoc, …} | null`
-- `CreatureStatBlock` wire-up — ability.description / skill.name / save.bonus / speed.type / strike.name подменяются из `translation.structured.*` с fallback на EN
-- Close v1.6.0 carryover: trim `use-spellcasting.ts` (<100 строк), reinstate per-phase SUMMARY/VERIFICATION/UAT discipline
+- Structural stat-block labels переведены через i18next (HP/AC/Fort/Ref/Will/Perception/Speed/Senses/Languages/Skills/Strikes/Abilities/Spellcasting/Damage/Recall Knowledge + tabs)
+- 17-skill dictionary вынесен в shared module, применяется к ВСЕМ скиллам при locale=ru
+- ~25 PF2e languages dictionary
+- ~60 core traits dictionary (labels + tooltip descriptions из pf2.ru)
+- Spell RU rendering regression restored (формат pre-v1.7.0 baseline)
 
 **Out of scope:**
-- Spell/item/feat/action structured RU — perception-wise работают, оставляем nameLoc-only
-- Integration regression tests для FSD moves — отдельный milestone (v1.8+)
+- Automated sync/scrape от pf2.ru — ТОЛЬКО manual authoring reference для compile-time dict
+- PC/character sheets translation — monsters only
+- Full trait coverage (все 500+) — scope только ~60 core; rest deferred
+- LLM/remote translation — remains out
 - macOS notarization / Android разморозка
+
+## Completed Milestones
+
+### v1.7.0 — Monster Translation (shipped 2026-04-24)
+
+Phases 84-89 — HTML→structured parser (native DOMParser, zero deps), migration 0041/0042/0043 (structured_json column + RU FTS5 denormalization), bundled loader integration, typed API + hook surface, CreatureStatBlock overlay wiring + markdown-lite renderer, use-spellcasting facade trim. Full details: [`.planning/milestones/v1.7.0-ROADMAP.md`](./milestones/v1.7.0-ROADMAP.md).
 
 ---
 

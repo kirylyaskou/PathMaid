@@ -24,6 +24,7 @@
 - ✅ **v1.5.0 — In-App Updater** — Phases 71-76 (shipped 2026-04-23, [archive](./milestones/v1.5.0-ROADMAP.md))
 - ✅ **v1.6.0 — Spellcasting Deep Fix** — Phases 77-83 (shipped 2026-04-23, [archive](./milestones/v1.6.0-ROADMAP.md), [audit](./milestones/v1.6.0-MILESTONE-AUDIT.md))
 - ✅ **v1.7.0 — Monster Translation** — Phases 84-89 (shipped 2026-04-24, [archive](./milestones/v1.7.0-ROADMAP.md))
+- 🚧 **v1.7.1 — Translation Dictionaries** — Phases 90-93 (in progress — started 2026-04-24)
 
 ## Phases
 
@@ -1018,6 +1019,73 @@ Post-ship hotfixes (same day): Collapsible wrapper bug, RU FTS5 search, spellcas
 
 Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves, 17-skill dict, ~25 languages, ~60 traits).
 
+### 🚧 v1.7.1 — Translation Dictionaries (In Progress)
+
+**Milestone Goal:** Расширить RU-покрытие `CreatureStatBlock` до всего textual content (кроме numerics) через dictionary-based i18n, независимого от HTML parser output. Source of truth: pf2.ru/rules/player-core (author-authorized partner integration reference).
+
+- [ ] **Phase 90: Dictionary Foundation** — extract `SKILL_RU_TO_EN` → shared module; create `languages.ts` (~25 entries) + `traits.ts` (~60 labels + tooltip descriptions); extend i18next `common.json` with `statblock.*` section
+- [ ] **Phase 91: Wire Statblock Labels + Dictionaries** — `CreatureStatBlock` + 5 sub-components используют `t('statblock.*')` + apply skills/languages dicts when locale=ru
+- [ ] **Phase 92: Wire Trait Tooltips** — `TraitPill` + trait tooltip renderer используют `traits.ts` labels + tooltip descriptions when locale=ru
+- [ ] **Phase 93: Spell Translation Regression Fix** — investigate + fix spell RU description rendering (post-v1.7.0 regression — see "Кислотная хватка" screenshot). Restore pre-v1.7.0 formatting без изменений API контракта spell translation path.
+
+### Phase 90: Dictionary Foundation
+**Goal**: Единый source-of-truth для PF2e skill/language/trait RU-переводов, доступный UI (не только parser).
+**Depends on**: Nothing (v1.7.0 shipped)
+**Requirements**: DICT-02, DICT-03, DICT-04 (labels), DICT-01 (i18next section)
+**Files**: `src/shared/i18n/pf2e-content/dictionaries/skills.ts` (new, extract from parse-monster.ts), `dictionaries/languages.ts` (new), `dictionaries/traits.ts` (new), `src/shared/i18n/locales/ru/common.json` (extend with `statblock.*`), `src/shared/i18n/pf2e-content/lib/parse-monster.ts` (refactor to import shared dict)
+**Success Criteria**:
+1. `dictionaries/skills.ts` exports `SKILL_RU_TO_EN` + reverse `SKILL_EN_TO_RU` — 17 entries
+2. `parse-monster.ts` импортирует из shared module вместо local const; все 48+9 debug assertions продолжают проходить
+3. `dictionaries/languages.ts` — ≥25 PF2e languages (common/draconic/chthonian/empyrean/undercommon/celestial/infernal/abyssal/etc.)
+4. `dictionaries/traits.ts` — ≥60 traits с labels; JSDoc attribution к pf2.ru
+5. `common.json` `statblock` section: HP, AC, Fort, Ref, Will, Perception, Speed, Senses, Languages, Skills, Strikes, Abilities, Spellcasting, Damage, RecallKnowledge (15+ keys)
+6. `tsc --noEmit` = 0, `lint` = 0 новых ошибок
+
+### Phase 91: Wire Statblock Labels + Skill/Language Dictionaries
+**Goal**: UI использует dictionaries для always-on RU display.
+**Depends on**: Phase 90
+**Requirements**: DICT-01, DICT-02 (applied), DICT-03 (applied), DICT-05
+**Files**: `src/entities/creature/ui/CreatureStatBlock.tsx`, `CreatureSkillsLine.tsx`, `CreatureDefensesBlock.tsx`, `CreatureSpeedLine.tsx`, `CreatureStrikesSection.tsx`, `CreatureAbilitiesSection.tsx`, `SpellListPreview.tsx`
+**Success Criteria**:
+1. Succubus @ locale=ru: все структурные labels RU (ПЗ/КБ/Стойкость/Реакция/Воля/Внимание/Скорость/Чувства/Языки/Навыки/Удары/Способности/Заклинания/Урон)
+2. Skills row RU ВСЕ 17 названий когда locale=ru, независимо от structured overlay
+3. Languages row RU для всех known tokens; unknown → EN silent fallback
+4. locale=en → zero changes (regression test)
+5. Bestiary search results cards используют same dictionaries (если они рендерят RU overlay)
+
+### Phase 92: Wire Trait Tooltips
+**Goal**: Trait labels + tooltip descriptions RU для ~60 core traits.
+**Depends on**: Phase 90
+**Requirements**: DICT-04 (tooltip descriptions)
+**Files**: `src/shared/ui/trait-pill.tsx`, trait tooltip renderer (possibly new or extension of existing), `CreatureStatBlock` trait rendering
+**Success Criteria**:
+1. Succubus @ locale=ru: trait badges показывают RU labels (fiend→нечестивый, demon→демон, medium→средний, unique→уникальный, etc.)
+2. Hover/tap на trait показывает RU tooltip description (~60 core)
+3. Unknown trait → EN label + no tooltip (silent fallback)
+4. locale=en → unchanged
+
+### Phase 93: Spell Translation Regression Fix
+**Goal**: Восстановить pre-v1.7.0 spell RU description rendering quality.
+**Depends on**: Nothing (orthogonal — investigation only)
+**Requirements**: SPELL-REG-01
+**Files**: TBD after investigation — likely `src/entities/spell/ui/SpellInlineCard.tsx`, `SpellReferenceDrawer.tsx`, `src/shared/api/translations.ts` (if changes regressed spell textLoc path)
+**Success Criteria**:
+1. "Кислотная хватка" (screenshot regression reference) отображается с полным RU description
+2. Formatting восстановлен — блоки Critical Success / Success / Failure / Critical Failure / Heightened +2 разделены так же как pre-v1.7.0
+3. git blame/diff vs commit `614172c5` (v1.6.0 baseline) — изменения в spell-affecting файлах идентифицированы и validated
+4. Regression root cause задокументирован в SUMMARY
+
+### v1.7.1 Progress
+
+| Phase | Plans Complete | Status | Started |
+|-------|----------------|--------|---------|
+| 90. Dictionary Foundation | 0/? | Not started | — |
+| 91. Wire Statblock Labels | 0/? | Not started | — |
+| 92. Wire Trait Tooltips | 0/? | Not started | — |
+| 93. Spell Regression Fix | 0/? | Not started | — |
+
+**Parallelization hint:** Phase 93 (spell regression) orthogonal — можно гнать параллельно Phase 90/91/92. Phase 90 → 91 strict sequence (91 consumes 90's dicts). Phase 92 depends on 90's `traits.ts` — можно после 91 или параллельно.
+
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-24 — v1.7.0 Monster Translation shipped, archived*
+*Last updated: 2026-04-24 — v1.7.1 Translation Dictionaries roadmap added (Phases 90-93)*

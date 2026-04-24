@@ -1,37 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7.0
-milestone_name: — Monster Translation (SHIPPED)
-status: shipped
-stopped_at: v1.7.0 shipped 2026-04-24; ready for v1.7.1 hotfix (UI translation dictionaries)
-last_updated: "2026-04-24T07:58:07.966Z"
-last_activity: 2026-04-24
+milestone: v1.7.1
+milestone_name: — Translation Dictionaries
+status: defining_requirements
+stopped_at: v1.7.1 kickoff — REQUIREMENTS.md + ROADMAP.md updated for Phase 90-93. Next: /gsd-discuss-phase 90 or /gsd-plan-phase 90.
+last_updated: "2026-04-24T00:00:00Z"
+last_activity: 2026-04-24 — v1.7.1 kickoff (UI Translation Dictionaries milestone defined)
 progress:
-  total_phases: 52
-  completed_phases: 5
-  total_plans: 6
-  completed_plans: 7
-  percent: 100
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-24 for v1.7.0 kickoff)
+See: `.planning/PROJECT.md` (updated 2026-04-24 for v1.7.1 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** v1.7.0 shipped. Next: v1.7.1 hotfix milestone — UI Translation Dictionaries.
+**Current focus:** v1.7.1 Translation Dictionaries — расширить RU-покрытие `CreatureStatBlock` до всего textual content через dictionary-based i18n независимого от HTML parser output. Fix spell translation regression.
 
 ## Current Position
 
-Milestone: v1.7.0 Monster Translation — SHIPPED 2026-04-24
-Phase: —
+Milestone: v1.7.1 Translation Dictionaries
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone archived, ready for tag push + CI release build
-Last activity: 2026-04-24 — version bumped 1.6.0 → 1.7.0, milestone archived
+Status: Requirements defined, roadmap drafted — ready для `/gsd-discuss-phase 90` or `/gsd-plan-phase 90`
+Last activity: 2026-04-24 — v1.7.1 kickoff
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 

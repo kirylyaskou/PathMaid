@@ -1,78 +1,74 @@
-# PathMaid v1.7.0 — Requirements: Monster Translation
+# PathMaid v1.7.1 — Requirements: UI Translation Dictionaries
 
-**Milestone goal:** Отрендерить полный RU-перевод stat block монстров в существующем `CreatureStatBlock` через load-time HTML→structured парсинг. Runtime остаётся structured — никакого HTML-парсинга в UI.
+**Milestone goal:** Расширить RU-покрытие `CreatureStatBlock` до всего, что не является numerical value. Dictionary-based i18n независимо от HTML parser output (который покрывает только monster-specific данные). Использовать pf2.ru/rules/player-core как canonical RU reference.
 
-**Definition of done:** Суккуб (и прочие монстры с переводом из `pf2e-content/monster.json`) отображается в Bestiary / Combat / Builder с RU текстом в ability cards / skills / saves / speeds / strikes — при сохранении кликабельных roll'ов, MAP, spellcasting editor и engine-powered overlays. Без перевода — английский fallback without regression.
+**Definition of done:** Суккуб (и прочие монстры) отображается с RU-переводом во ВСЕХ textual полях stat block — structural labels (HP/AC/Fort/Ref/Will/Perception/Speed/Senses/Languages/Skills/Strikes/Abilities/Spellcasting), skill names (все 17), language names, trait labels + tooltip descriptions, damage types. Numbers/rolls/formulas остаются как есть. Spell RU rendering восстановлен до pre-v1.7.0 baseline formatting (регрессия после Phase 87/88 исследуется и фиксится).
 
 ---
 
-## v1.7.0 Requirements
+## v1.7.1 Requirements
 
-### Translation (`TRANS-*`)
+### Dictionary Layer (`DICT-*`)
 
-- [x] **TRANS-01**: Parser `parseMonsterRuHtml(text, rus_text)` извлекает структурированный RU объект из HTML пары
-  - Возвращает: `{abilitiesLoc[], skillsLoc[], speedsLoc, savesLoc, strikesLoc[], spellcastingLoc, perceptionLoc, languagesLoc, hpLoc, acLoc, weaknessesLoc, resistancesLoc, abilityScoresLoc} | null`
-  - Pair-parse EN+RU для matching по index (порядок `<span class="in-box-ability">` совпадает)
-  - Pure TS module в `shared/i18n/pf2e-content/lib/parse-monster.ts`, native `DOMParser`, zero new deps
-  - Unit-covered на Succubus + 5 other monsters (из `monster.json`) — 100% parse success, no throws на unknown markup
-  - Graceful degradation: malformed HTML → `null` (вызывающий код фолбэкится на EN)
+- [ ] **DICT-01**: Structural stat-block labels переведены через i18next
+  - `src/shared/i18n/locales/ru/common.json` расширяется секцией `statblock.*` — HP, AC, Fort/Ref/Will, Perception, Speed, Senses, Languages, Skills, Strikes, Abilities, Spellcasting, Damage, Recall Knowledge, Offensive/Other tabs
+  - `CreatureStatBlock` + 5 sub-components используют `t('statblock.*')` вместо hardcoded строк
+  - Fallback: missing i18next key → EN (default i18next behavior); no console.warn в production
 
-- [x] **TRANS-02**: Migration `0041_translation_structured_json.sql`
-  - Добавляет column `structured_json TEXT NULL` на `translations` table
-  - **Renames** `0038_translations.sql` → `0041_translations.sql` (resolves migration 0038 prefix collision с Phase 79's `0038_spell_overrides_heightened.sql` — tech debt из v1.6.0 audit)
-  - Fresh-install seed: loader populates `structured_json` для всех monster rows
-  - Existing installs: structured_json starts NULL, получает populate на ближайшем seed-refresh
+- [ ] **DICT-02**: 17-skill dictionary как shared module
+  - Extract `SKILL_RU_TO_EN` map из `src/shared/i18n/pf2e-content/lib/parse-monster.ts` в `src/shared/i18n/pf2e-content/dictionaries/skills.ts` (single source)
+  - `CreatureSkillsLine` при `locale === 'ru'` применяет RU-перевод к ВСЕМ 17 skills независимо от того, был ли match с parser'овским `skillsLoc[]`
+  - Тест: монстр без structured translation (напр. Foundry-only) — skills всё равно RU
+  - Parser `parse-monster.ts` переключается на импорт из new shared dict module
 
-- [x] **TRANS-03**: Bundled loader (`shared/i18n/pf2e-content/index.ts`) вызывает `parseMonsterRuHtml` при seed'e translations table
-  - Parser ошибки логируются через `console.warn`, не ломают loader
-  - `structured_json` = JSON.stringify результата parser'a; NULL если parser вернул null
-  - Loader idempotent: повторный seed перезаписывает `structured_json` (текущая логика uses `INSERT OR REPLACE`)
+- [ ] **DICT-03**: PF2e languages dictionary (~25 common)
+  - Новый `src/shared/i18n/pf2e-content/dictionaries/languages.ts` с парами EN→RU: common→общий, draconic→драконий, chthonian→хтонический, empyrean→эмпирейский, undercommon→подобщий, celestial→небесный, infernal→инфернальный, abyssal→абиссальный, elvish→эльфийский, dwarvish→гномий, elven/dwarven/halfling/goblin/orcish/gnollish/petran/iruxi/sakvroth/etc. — actual list sourced from pf2.ru
+  - `Languages` row в `CreatureStatBlock` при `locale === 'ru'` применяет dictionary к каждому language token
+  - Fallback: unknown language → original EN string (silent)
 
-- [x] **TRANS-04**: `useContentTranslation` возвращает typed `structured` поле
-  - Type: `structured: MonsterStructuredLoc | null` (union types для future spell/item structured support)
-  - API layer (`shared/api/translations.ts`) парсит `structured_json` → typed object на read path
-  - Backward compat: существующие consumers (FeatInlineCard, ItemReferenceDrawer, etc.) продолжают использовать только `nameLoc` — не затрагиваются
+- [ ] **DICT-04**: Core traits dictionary (~60 labels + tooltip descriptions)
+  - Новый `src/shared/i18n/pf2e-content/dictionaries/traits.ts` — `{ [traitId]: { label: string; description: string } }`
+  - Scope ~60 core traits: rarity (common/uncommon/rare/unique), size tokens, origin (fiend/demon/celestial/undead/etc.), combat (agile/finesse/reach/thrown/versatile/etc.), damage types (slashing/piercing/bludgeoning + energy), ability traits (attack/manipulate/concentrate/move/etc.), misc (nonlethal/backup/magical/unholy/holy/etc.)
+  - `TraitPill` + trait tooltip render RU labels + RU descriptions при `locale === 'ru'`
+  - Source: pf2.ru/rules/traits (author-authorized partner integration reference)
+  - Attribution header JSDoc в `traits.ts`: canonical RU terms sourced from pf2.ru
 
-- [x] **TRANS-05**: `CreatureStatBlock` читает structured RU перевод с fallback на EN
-  - Ability cards: `abilitiesLoc[i].description` overrides `ability.description`; `abilitiesLoc[i].name` overrides `ability.name`; action icon (`[one-action]` / `[two-actions]` / `[three-actions]`) парсится и ложится на actionCount
-  - Skills row: `skillsLoc.find(s => matchSkillName(s, skill)).name` overrides `skill.name`; bonus остаётся engine-computed
-  - Saves / AC / HP / Weaknesses / Resistances: бейджи используют RU лейблы (`Стойкость` / `Реакция` / `Воля` / `КБ` / `ПЗ` / `Уязвимости` / `Сопротивления`) из structured; цифры остаются engine
-  - Speeds: `speedsLoc.land` / `fly` / etc. — RU-названия типов скоростей в строке; цифры engine
-  - Strikes: strike name RU (`когти` vs `claw`), damage type RU (`режущий` vs `slashing`); bonus / damage / traits kept engine-computed
-  - Spellcasting block: spell names RU если translation для spell существует (через existing `useContentTranslation('spell', …)` — уже работает); block heading RU (`Врождённые сакральные заклинания`)
-  - Fallback: любой отсутствующий structured-field → EN без warnings
-  - Existing `nameLoc`/`traitsLoc` overlay сохраняется — теперь идёт поверх structured; нет регрессий на монстров без structured RU (старая RU-branch data)
+- [ ] **DICT-05**: Fallback discipline
+  - Missing dictionary entry → silent EN fallback (no console.warn)
+  - DEV-mode opt-in: helper function `__pathmaid_logMissingTranslations()` доступна через window (like Phase 84 debug pattern) — один раз дампит missing keys в Console
+  - Matches Phase 88 D-03 silent-fallback rule
 
-### Tech Debt Carryover (`DEBT-*`)
+### Spell Regression (`SPELL-REG-*`)
 
-- [x] **DEBT-01**: `src/features/spellcasting/model/use-spellcasting.ts` <100 строк
-  - Carryover из v1.6.0 audit (Phase 80 goal was <100, landed 119)
-  - Выделить `resolveCastMode` в отдельный pure helper в `features/spellcasting/lib/`; progress computation в sub-hook
-  - Zero user-visible regressions — все existing v1.6.0 спеллкастинг сценарии проходят
+- [ ] **SPELL-REG-01**: Spell RU rendering восстановлен до pre-v1.7.0 форматирования
+  - Investigate: `SpellReferenceDrawer.tsx` / `SpellInlineCard.tsx` — как они используют `translation.textLoc` / `nameLoc` / `traitsLoc`
+  - Compare git blame pre-v1.7.0 (commit `614172c5` v1.6.0 archive) vs current master
+  - Identify regression: Phase 87 `toRow` JSON.parse изменения могли сломать spell translation path; или Phase 88 style changes
+  - Fix: восстановить прежний rendering pipeline (`<SafeHtml>` / markdown-lite / whatever был) для spell description — НЕ менять API контракт (`structured` is monster-only, spells продолжают на `textLoc`)
+  - Verify: screenshot "Кислотная хватка" shows full RU description with pre-regression formatting
 
-- [ ] **DEBT-02**: Per-phase `SUMMARY.md` / `VERIFICATION.md` / `UAT.md` артефакты для каждой фазы v1.7.0
-  - Carryover из v1.6.0 audit (inline plans blocked retroactive audit)
-  - Template comes from GSD workflow; пишется в конце каждой phase's execute-phase
-  - UAT goal: ловить description-rendering regressions (как hotfixes после Phase 79/81) до version bump
+### Out of Scope (explicit)
+
+- **Automated sync/scrape от pf2.ru** — pf2.ru используется ТОЛЬКО как manual authoring reference для compile-time dict построения. No runtime API calls.
+- **PC/character sheets translation** — только monsters в v1.7.1
+- **Trait list full coverage (все 500+ PF2e traits)** — scope ~60 core; rest deferred
+- **LLM/remote translation at sync-time** — remains out
+- **Integration regression tests для FSD migrations** — v1.6.0 carryover DEBT-02, remains deferred
+
+### Carryover из v1.7.0
+
+- **DEBT-02 (process)**: per-phase SUMMARY/VERIFICATION/UAT discipline — already established in v1.7.0, continues in v1.7.1 (not a separate REQ)
 
 ---
 
 ## Future Requirements (deferred to v1.8+)
 
 - Integration regression tests для FSD-миграций (Phase 82 hotfix 706ffed6 был бы пойман)
-- Spell/item/feat/action structured RU overlay — оценить after v1.7.0 ships, data-driven
+- Structured translation для spell/item/feat/action — evaluate after v1.7.1 dictionary foundation stabilizes
 - macOS notarization + full in-app updater (Apple Developer ID required)
 - Android build разморозка (conditional on demand)
-
----
-
-## Out of Scope (explicit exclusions)
-
-- **LLM-powered translation at sync-time** — v1.7.0 uses only pre-translated bundled data из pf2e-content. No runtime API calls to Claude/Gemini/etc.
-- **Crowd-sourced translation editor** — write path остаётся read-only bundled JSON
-- **Translation UX toggle per creature** — language switch глобальный через Settings (already shipped)
-- **Parser reuse для spell/item/feat/action** — architecture supports it, но реализация out of scope; phase-scoped для `parseMonsterRuHtml` only
-- **FSD move `shared/i18n/pf2e-content/` → `features/translations/`** — FSD-корректно, но scope-creep; обсуждается в v1.8+
+- Drizzle ORM migration (v1.7.0 D-04 deferred)
+- Full trait coverage (all 500+ PF2e traits) after v1.7.1 core-60 validates the pattern
 
 ---
 
@@ -82,14 +78,21 @@ _Roadmapper fills this section after ROADMAP.md creation._
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| TRANS-01 | Phase 84 | Not started |
-| TRANS-02 | Phase 85 | Not started |
-| TRANS-03 | Phase 86 | Not started |
-| TRANS-04 | Phase 87 | Not started |
-| TRANS-05 | Phase 88 | Not started |
-| DEBT-01  | Phase 89 | Not started |
-| DEBT-02  | all phases | Not started (process-level) |
+| DICT-01 | Phase 91 | Not started |
+| DICT-02 | Phase 90 | Not started |
+| DICT-03 | Phase 90 | Not started |
+| DICT-04 | Phase 90 + Phase 92 | Not started |
+| DICT-05 | All phases | Not started (process-level) |
+| SPELL-REG-01 | Phase 93 | Not started |
 
 ---
 
-_Created: 2026-04-24 — v1.7.0 kickoff_
+## Completed Milestones (archive reference)
+
+- **v1.7.0** — Monster Translation (Phases 84-89, shipped 2026-04-24): TRANS-01..05 + DEBT-01 + DEBT-02 — see [`milestones/v1.7.0-ROADMAP.md`](./milestones/v1.7.0-ROADMAP.md)
+- **v1.6.0** — Spellcasting Deep Fix (Phases 77-83): see archive
+- **v1.5.0** — In-App Updater (Phases 71-76): see archive
+
+---
+
+_Created: 2026-04-24 — v1.7.1 kickoff (UI Translation Dictionaries)_
