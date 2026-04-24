@@ -1,8 +1,8 @@
 ---
 phase: 85-migration-db-schema
 verified: 2026-04-24T00:00:00Z
-status: human_needed
-score: 5/6
+status: passed
+score: 6/6 (smoke-test skipped by user)
 overrides_applied: 1
 overrides:
   - must_have: "Drizzle db.select().from(translations) type включает structuredJson"
