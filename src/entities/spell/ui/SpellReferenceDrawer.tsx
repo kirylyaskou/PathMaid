@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getSpellById } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
-import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
+import { renderDescription } from '@/shared/lib/render-description'
 import { useContentTranslation } from '@/shared/i18n'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
@@ -30,9 +31,14 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
   const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 
-  // Phase 80: spell translation lookup — `rank` is the level disambiguator
+  // Spell translation lookup — `rank` is the level disambiguator
   // for spells (different-rank spells can share a base name).
   const { data: translation } = useContentTranslation('spell', spell?.name, spell?.rank ?? null)
+
+  const descriptionNode = useMemo(
+    () => renderDescription(resolveFoundryTokens(spell?.description ?? '', { itemLevel: spell?.rank ?? undefined })),
+    [spell?.description, spell?.rank],
+  )
 
   return (
     <Sheet open={!!spellId} onOpenChange={(open) => { if (!open) onClose() }}>
@@ -114,13 +120,12 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 </div>
               )}
 
-              {/* Description — always sanitized EN; RU is name-only overlay
-                  (rus_text blob ignored for v1.5.1, pending field-level
-                  translation spec). sanitizeFoundryText replaces raw
-                  @Check/@Damage/@Template tokens with readable text. */}
+              {/* Description — EN source with Foundry tokens resolved.
+                  renderDescription parses HTML and highlights degree-of-success
+                  labels (Critical Success / Failure etc) with bold + colour. */}
               {spell.description && (
-                <p className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-line">
-                  {sanitizeFoundryText(spell.description, { itemLevel: spell.rank })}
+                <p className="text-[13px] text-foreground/80 leading-relaxed">
+                  {descriptionNode}
                 </p>
               )}
 
