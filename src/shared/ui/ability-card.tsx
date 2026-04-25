@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { ActionIcon } from './action-icon'
+import { TraitPill } from './trait-pill'
 
 type ActionCost = 0 | 1 | 2 | 3 | 'reaction' | 'free'
 
@@ -26,12 +27,7 @@ export function AbilityCard({ name, actionCost, traits, meta, children }: Abilit
       {traits && traits.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {traits.map((trait) => (
-            <span
-              key={trait}
-              className="px-1.5 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
-            >
-              {trait}
-            </span>
+            <TraitPill key={trait} trait={trait} />
           ))}
         </div>
       )}

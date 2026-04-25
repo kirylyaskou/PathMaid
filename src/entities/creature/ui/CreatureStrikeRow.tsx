@@ -4,6 +4,7 @@ import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { ActionIcon } from '@/shared/ui/action-icon'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
 
 interface CreatureStrikeRowProps {
@@ -153,12 +154,7 @@ export function CreatureStrikeRow({
       {traits.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {traits.map((trait) => (
-            <span
-              key={trait}
-              className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground"
-            >
-              {trait}
-            </span>
+            <TraitPill key={trait} trait={trait} />
           ))}
         </div>
       )}
