@@ -230,6 +230,50 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     [],
   )
 
+  // Flatten actor pack items[] into entity_items so strike rendering
+  // can look up RU weapon names by (entity_name, item_id) without
+  // parsing structured_json on every paint.
+  const monsterItemPairs: Array<{ entity: string; id: string; name: string }> = []
+  for (const row of monsterRows) {
+    for (const item of row.structured.items) {
+      monsterItemPairs.push({ entity: row.packKey, id: item.id, name: item.name })
+    }
+  }
+  if (monsterItemPairs.length > 0) {
+    const existingItems = await db.select<{ n: number }[]>(
+      'SELECT COUNT(*) AS n FROM entity_items WHERE locale = ?',
+      [LOCALE],
+    )
+    const haveItems = existingItems[0]?.n ?? 0
+    if (haveItems !== monsterItemPairs.length) {
+      console.log(
+        `[translations] Seeding ${monsterItemPairs.length} entity_items rows (existing=${haveItems})`,
+      )
+      await db.execute('BEGIN TRANSACTION', [])
+      try {
+        await db.execute(`DELETE FROM entity_items WHERE locale = ?`, [LOCALE])
+        for (let i = 0; i < monsterItemPairs.length; i += CHUNK_SIZE) {
+          const chunk = monsterItemPairs.slice(i, i + CHUNK_SIZE)
+          const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
+          const params: string[] = []
+          for (const pair of chunk) {
+            params.push(pair.entity, pair.id, LOCALE, pair.name)
+          }
+          await db.execute(
+            `INSERT OR REPLACE INTO entity_items
+               (entity_name, item_id, locale, name_loc)
+             VALUES ${placeholders}`,
+            params,
+          )
+        }
+        await db.execute('COMMIT', [])
+      } catch (err) {
+        await db.execute('ROLLBACK', [])
+        throw err
+      }
+    }
+  }
+
   const counts = await db.select<{ kind: string; locale: string; n: number }[]>(
     'SELECT kind, locale, COUNT(*) as n FROM translations GROUP BY kind, locale',
   )

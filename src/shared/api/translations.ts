@@ -150,6 +150,31 @@ export async function getTranslation(
 }
 
 /**
+ * Look up the localized weapon name attached to a specific actor's strike
+ * via the denormalized entity_items table. Returns null on no match —
+ * caller falls back to the engine's English label.
+ */
+export async function getStrikeRuName(
+  entityName: string,
+  itemId: string,
+  locale: string,
+): Promise<string | null> {
+  if (locale === 'en') return null
+  if (!entityName || !itemId) return null
+  const db = await getDb()
+  const rows = await db.select<{ name_loc: string }[]>(
+    `SELECT name_loc
+       FROM entity_items
+      WHERE entity_name = ? COLLATE NOCASE
+        AND item_id = ?
+        AND locale = ?
+      LIMIT 1`,
+    [entityName, itemId, locale],
+  )
+  return rows[0]?.name_loc ?? null
+}
+
+/**
  * Diagnostic / power-user helper — count translations by (kind, locale).
  * Used by verification scripts and, later, a Settings panel that shows
  * translation coverage.
