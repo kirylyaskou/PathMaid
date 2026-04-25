@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from '@/shared/ui/dialog'
 import { useEncounterStore } from '@/entities/encounter'
-import { ImportEncounterDialog, exportEncounter } from '@/features/encounter-import'
+import { ImportEncounterDialog, exportEncounter, exportEncountersBundle } from '@/features/encounter-import'
 
 export function SavedEncounterList() {
   const encounters = useEncounterStore((s) => s.encounters)
@@ -72,13 +72,23 @@ export function SavedEncounterList() {
     setExportOpen(true)
   }
 
-  // export all selected encounters as individual .pathmaiden files.
   async function handleExportSelected() {
     setExporting(true)
     try {
-      for (const id of exportSelected) {
-        await handleExport(id)
-      }
+      const ids = Array.from(exportSelected)
+      if (ids.length === 0) return
+      const { filename, content } = await exportEncountersBundle(ids)
+      const blob = new Blob([content], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[export bundle] failed', err)
     } finally {
       setExporting(false)
       setExportOpen(false)
@@ -92,6 +102,13 @@ export function SavedEncounterList() {
       else next.add(id)
       return next
     })
+  }
+
+  const allChecked = encounters.length > 0 && exportSelected.size === encounters.length
+
+  function toggleSelectAll() {
+    if (allChecked) setExportSelected(new Set())
+    else setExportSelected(new Set(encounters.map((e) => e.id)))
   }
 
   return (
@@ -143,6 +160,16 @@ export function SavedEncounterList() {
             <DialogTitle>Export Encounters</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 max-h-64 overflow-y-auto py-1">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border/40 pb-1.5 mb-1 cursor-pointer select-none px-1 py-0.5">
+              <Checkbox
+                checked={allChecked}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>{allChecked ? 'Deselect all' : 'Select all'}</span>
+              <span className="ml-auto font-mono">
+                {exportSelected.size} / {encounters.length}
+              </span>
+            </label>
             {encounters.map((enc) => (
               <label
                 key={enc.id}
@@ -165,7 +192,7 @@ export function SavedEncounterList() {
               onClick={() => void handleExportSelected()}
               disabled={exportSelected.size === 0 || exporting}
             >
-              {exporting ? 'Exporting…' : `Export ${exportSelected.size}`}
+              {exporting ? 'Exporting…' : `Export ${exportSelected.size} as bundle`}
             </Button>
           </DialogFooter>
         </DialogContent>
