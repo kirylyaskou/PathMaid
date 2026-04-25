@@ -38,5 +38,12 @@
     "cancel": "Cancel",
     "save": "Save",
     "loading": "Loading…"
+  },
+  "statblock": {
+    "iwr": {
+      "immunities": "Immunities",
+      "resistances": "Resistances",
+      "weaknesses": "Weaknesses"
+    }
   }
 }

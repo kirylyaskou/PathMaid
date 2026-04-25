@@ -50,5 +50,12 @@
     "oglFullHeading": "Open Game License v1.0a (полный текст)",
     "oglFullToggle": "Показать полный текст",
     "githubLink": "Исходный код на GitHub"
+  },
+  "statblock": {
+    "iwr": {
+      "immunities": "Иммунитеты",
+      "resistances": "Сопротивления",
+      "weaknesses": "Уязвимости"
+    }
   }
 }

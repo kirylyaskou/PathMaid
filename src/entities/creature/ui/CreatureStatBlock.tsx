@@ -35,7 +35,14 @@ import { classifyAbilities } from '../model/classify-abilities'
 import { StatItem } from './StatItem'
 import { SpellListPreview } from './SpellListPreview'
 import { EquipmentBlock } from './EquipmentBlock'
-import { useContentTranslation } from '@/shared/i18n'
+import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import {
+  getSizeLabel,
+  getTraitLabel,
+  getSkillLabel,
+  getLanguageLabel,
+} from '@/shared/i18n/pf2e-content'
+import { unmapSize } from '@/shared/lib/size-map'
 import type { AbilityLoc } from '@/shared/i18n'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { ReactNode } from 'react'
@@ -115,6 +122,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
     creature.name,
     creature.level,
   )
+  const locale = useCurrentLocale()
 
   // Stable references for sub-components — re-derived only when structured changes.
   const structured = translation?.structured ?? null
@@ -345,16 +353,20 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
               </h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
-              {effectiveSize} {recallKnowledge.type || creature.type}
+              {getSizeLabel(unmapSize(effectiveSize), locale)}
+              {' '}
+              {getTraitLabel((recallKnowledge.type || creature.type).toLowerCase(), locale)}
             </p>
             {translation?.traitsLoc ? (
               // Translated traits string already carries rarity + size labels
               // (e.g. "Необычный, Средний, Демон, Бестия, Нечестивый") — split
-              // into a pill list; disable auto rarity/size to avoid duplicates.
+              // into a pill list; disable auto rarity/size to avoid duplicates;
+              // mark as localized so the pill skips its dict lookup.
               <TraitList
                 traits={translation.traitsLoc.split(/,\s*/).filter(Boolean)}
                 showRarity={false}
                 showSize={false}
+                localized
                 className="mt-2"
               />
             ) : (
@@ -378,10 +390,10 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
               Recall Knowledge DC {recallKnowledge.dc}
             </span>
             {recallKnowledge.type.length > 0 && (
-              <>{' • '}{capitalize(recallKnowledge.type)}</>
+              <>{' • '}{getTraitLabel(recallKnowledge.type.toLowerCase(), locale)}</>
             )}
             {recallKnowledge.skills.length > 0 && (
-              <>{' '}({recallKnowledge.skills.map(capitalize).join(', ')})</>
+              <>{' '}({recallKnowledge.skills.map((s) => getSkillLabel(capitalize(s), locale)).join(', ')})</>
             )}
           </p>
           {creature.senses.length > 0 && (
@@ -517,7 +529,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         {creature.languages.length > 0 && (
           <div className="p-4 space-y-2">
-            <StatRow label="Languages">{structured?.languageDetails ?? creature.languages.join(", ")}</StatRow>
+            <StatRow label="Languages">{structured?.languageDetails ?? creature.languages.map((slug) => getLanguageLabel(slug.toLowerCase(), locale)).join(", ")}</StatRow>
           </div>
         )}
 

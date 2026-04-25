@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { StatRow } from '@/shared/ui/stat-row'
 import type { CreatureStatBlockData } from '../model/types'
 import { normalizeImmunities, formatImmunityWithExceptions } from '../model/iwr-normalize'
@@ -15,18 +16,13 @@ function formatIwrEntry(entry: { type: string; value: number; exceptions?: strin
     : base
 }
 
-// TODO: replace hardcoded RU labels with getDictLabel('PF2E.Immunities', locale)
-// when the dictionary getter API lands. Until then, the section reads RU
-// regardless of locale — the locale selector is currently RU-focused.
-const IMMUNITIES_LABEL = 'Иммунитеты'
-const RESISTANCES_LABEL = 'Сопротивления'
-const WEAKNESSES_LABEL = 'Уязвимости'
-
 export function CreatureDefensesBlock({
   immunities,
   resistances,
   weaknesses,
 }: CreatureDefensesBlockProps) {
+  const { t } = useTranslation('common')
+
   if (immunities.length === 0 && resistances.length === 0 && weaknesses.length === 0) {
     return null
   }
@@ -34,17 +30,17 @@ export function CreatureDefensesBlock({
   return (
     <div className="p-4 space-y-2">
       {immunities.length > 0 && (
-        <StatRow label={IMMUNITIES_LABEL}>
+        <StatRow label={t('statblock.iwr.immunities')}>
           {normalizeImmunities(immunities).map(formatImmunityWithExceptions).join(', ')}
         </StatRow>
       )}
       {resistances.length > 0 && (
-        <StatRow label={RESISTANCES_LABEL}>
+        <StatRow label={t('statblock.iwr.resistances')}>
           {resistances.map(formatIwrEntry).join(', ')}
         </StatRow>
       )}
       {weaknesses.length > 0 && (
-        <StatRow label={WEAKNESSES_LABEL}>
+        <StatRow label={t('statblock.iwr.weaknesses')}>
           {weaknesses.map(formatIwrEntry).join(', ')}
         </StatRow>
       )}
