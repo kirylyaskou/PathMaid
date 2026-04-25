@@ -16,6 +16,7 @@ import { LevelBadge } from "@/shared/ui/level-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import type { CreatureStatBlockData } from '../model/types'
 import { stripHtml } from '@/shared/lib/html'
+import { SafeHtml } from '@/shared/lib/safe-html'
 import { useModifiedStats } from '../model/use-modified-stats'
 import { useEffectiveSpeeds } from '../model/use-effective-speeds'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
@@ -520,12 +521,19 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
           </div>
         )}
 
-        {creature.description && (
+        {(structured?.description || creature.description) && (
           <>
             <Separator />
             <div className="p-4">
               <div className="p-4 rounded-md bg-pf-parchment">
-                <p className="text-sm italic text-foreground/80">{creature.description}</p>
+                {structured?.description ? (
+                  <SafeHtml
+                    html={structured.description}
+                    className="text-sm italic text-foreground/80"
+                  />
+                ) : (
+                  <p className="text-sm italic text-foreground/80">{creature.description}</p>
+                )}
               </div>
             </div>
           </>
