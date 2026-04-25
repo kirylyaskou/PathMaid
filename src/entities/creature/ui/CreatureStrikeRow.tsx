@@ -5,6 +5,8 @@ import { ActionIcon } from '@/shared/ui/action-icon'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import { TraitPill } from '@/shared/ui/trait-pill'
+import { useCurrentLocale } from '@/shared/i18n'
+import { getTraitLabel } from '@/shared/i18n/pf2e-content'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
 
 interface CreatureStrikeRowProps {
@@ -33,6 +35,7 @@ export function CreatureStrikeRow({
   } = strike
   void modifier
 
+  const locale = useCurrentLocale()
   const displayName = name
 
   return (
@@ -108,7 +111,7 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {d.type && (
-                <span className={cn('font-mono', damageTypeColor(d.type))}> {d.type}</span>
+                <span className={cn('font-mono', damageTypeColor(d.type))}> {getTraitLabel(d.type, locale)}</span>
               )}
               {d.persistent && (
                 <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">persistent</span>
@@ -137,7 +140,7 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {ad.type && (
-                <span className={cn('font-mono', damageTypeColor(ad.type))}> {ad.type}</span>
+                <span className={cn('font-mono', damageTypeColor(ad.type))}> {getTraitLabel(ad.type, locale)}</span>
               )}
             </div>
           ))}
