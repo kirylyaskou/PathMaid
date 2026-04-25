@@ -60,14 +60,6 @@ i18n.on('languageChanged', (lng) => {
 export { i18n }
 export * from './config'
 export type { TranslationKind } from './pf2e-content'
-export type {
-  MonsterStructuredLoc,
-  AbilityLoc,
-  AbilityScoresLoc,
-  SkillLoc,
-  SpeedsLoc,
-  SavesLoc,
-  StrikeLoc,
-} from './pf2e-content/lib'
+export type { MonsterStructuredLoc, AbilityLoc } from './pf2e-content/lib'
 export { loadContentTranslations } from './pf2e-content'
 export { useContentTranslation } from './use-content-translation'
