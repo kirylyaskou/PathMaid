@@ -12,7 +12,7 @@
  * dropped by this adapter.
  */
 
-import type { MonsterStructuredLoc } from '../lib/types'
+import type { MonsterStructuredLoc, SpellStructuredLoc } from '../lib/types'
 
 export interface BabeleActorEntry {
   name?: string
@@ -66,30 +66,47 @@ export function isSpellPack(pack: BabelePackFile): boolean {
 }
 
 /**
- * Babele spell entry — minimal shape consumed by adapter. Full schema
- * carries more fields (target, time, cost, etc.) but they are not needed
- * for the current text-overlay rendering path.
+ * Babele spell entry — name + description + the small set of free-form
+ * stat-block overlay fields the upstream module localizes (range,
+ * target, duration, time, cost, requirements, heightening).
  */
 export interface BabeleSpellEntry {
   name?: string
   description?: string
+  range?: string
+  target?: string
+  duration?: string
+  time?: string
+  cost?: string
+  requirements?: string
+  heightening?: string
   [key: string]: unknown
 }
 
 /**
- * Pure transform: Babele spell entry → minimal text-overlay row payload.
- * Spells use a simpler shape than monsters — no structured_json yet, just
- * RU display name and HTML description in text_loc.
+ * Pure transform: Babele spell entry → name + description + structured
+ * overlay. Structured fields are optional — adapter copies only those
+ * present in the source entry (sparse delta convention).
  */
 export function adaptBabeleSpellEntry(
   entry: BabeleSpellEntry,
-): { name: string; description: string } {
+): { name: string; description: string; structured: SpellStructuredLoc } {
   if (entry === null || typeof entry !== 'object') {
     throw new Error('Invalid Babele spell entry: not an object')
+  }
+  const structured: SpellStructuredLoc = {
+    ...(typeof entry.range === 'string' && entry.range.length > 0 && { range: entry.range }),
+    ...(typeof entry.target === 'string' && entry.target.length > 0 && { target: entry.target }),
+    ...(typeof entry.duration === 'string' && entry.duration.length > 0 && { duration: entry.duration }),
+    ...(typeof entry.time === 'string' && entry.time.length > 0 && { time: entry.time }),
+    ...(typeof entry.cost === 'string' && entry.cost.length > 0 && { cost: entry.cost }),
+    ...(typeof entry.requirements === 'string' && entry.requirements.length > 0 && { requirements: entry.requirements }),
+    ...(typeof entry.heightening === 'string' && entry.heightening.length > 0 && { heightening: entry.heightening }),
   }
   return {
     name: typeof entry.name === 'string' ? entry.name : '',
     description: typeof entry.description === 'string' ? entry.description : '',
+    structured,
   }
 }
 

@@ -39,3 +39,19 @@ export interface AbilityLoc {
   name: string
   description?: string
 }
+
+/**
+ * Structured spell overlay — translates the small set of free-form
+ * stat-block fields that ship as RU prose in spells-srd packs. Numeric
+ * mechanics (rank, save type, damage formula) stay in engine row data;
+ * this overlay only replaces display text.
+ */
+export interface SpellStructuredLoc {
+  range?: string
+  target?: string
+  duration?: string
+  time?: string
+  cost?: string
+  requirements?: string
+  heightening?: string
+}

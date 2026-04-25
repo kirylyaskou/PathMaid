@@ -104,6 +104,19 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     [],
   )
 
+  // Pre-overlay spell rows from the initial Phase 95 seed had no
+  // structured_json. The skip-gate compares only row counts, so without
+  // this purge the loader would never reseed those rows after the
+  // structured shape was added. Drop incomplete spell rows so the
+  // skip-gate misfires and reseeds them with structured fields.
+  await db.execute(
+    `DELETE FROM translations
+       WHERE kind = 'spell'
+         AND source = ?
+         AND structured_json IS NULL`,
+    [SOURCE],
+  )
+
   const monsterRows = collectMonsterTranslations()
   const spellRows = collectSpellTranslations()
 
@@ -149,7 +162,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
           null,
           row.textLoc,
           SOURCE,
-          null,
+          JSON.stringify(row.structured),
         )
       }
       await db.execute(

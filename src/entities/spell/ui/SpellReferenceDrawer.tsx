@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getSpellById } from '@/shared/api'
@@ -8,6 +8,7 @@ import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
 import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import type { SpellStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
 
@@ -32,11 +33,20 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
   const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 
-  // Phase 80: spell translation lookup — `rank` is the level disambiguator
-  // for spells (different-rank spells can share a base name).
   const { data: translation } = useContentTranslation('spell', spell?.name, spell?.rank ?? null)
   const locale = useCurrentLocale()
   const showUntranslatedBadge = locale === 'ru' && translation === null
+  // Spell structured overlay shares the JSON column with the typed
+  // monster overlay; parse it locally because the generic `structured`
+  // accessor is shaped for monsters.
+  const spellLoc = useMemo<SpellStructuredLoc | null>(() => {
+    if (!translation?.structuredJson) return null
+    try {
+      return JSON.parse(translation.structuredJson) as SpellStructuredLoc
+    } catch {
+      return null
+    }
+  }, [translation?.structuredJson])
 
   return (
     <Sheet open={!!spellId} onOpenChange={(open) => { if (!open) onClose() }}>
@@ -89,10 +99,16 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                     <span className="font-mono text-pf-blood text-sm">{damageDisplay}</span>
                   </div>
                 )}
-                {spell.range_text && (
+                {(spellLoc?.range || spell.range_text) && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Range</span>
-                    <span className="text-sm">{spell.range_text}</span>
+                    <span className="text-sm">{spellLoc?.range ?? spell.range_text}</span>
+                  </div>
+                )}
+                {spellLoc?.target && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Target</span>
+                    <span className="text-sm">{spellLoc.target}</span>
                   </div>
                 )}
                 {areaDisplay && (
@@ -101,10 +117,22 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                     <span className="text-sm">{areaDisplay}</span>
                   </div>
                 )}
-                {spell.duration_text && (
+                {(spellLoc?.duration || spell.duration_text) && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</span>
-                    <span className="text-sm">{spell.duration_text}</span>
+                    <span className="text-sm">{spellLoc?.duration ?? spell.duration_text}</span>
+                  </div>
+                )}
+                {spellLoc?.time && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cast</span>
+                    <span className="text-sm">{spellLoc.time}</span>
+                  </div>
+                )}
+                {spellLoc?.cost && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cost</span>
+                    <span className="text-sm">{spellLoc.cost}</span>
                   </div>
                 )}
               </div>

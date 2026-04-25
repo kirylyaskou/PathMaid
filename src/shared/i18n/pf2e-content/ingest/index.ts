@@ -9,7 +9,7 @@
  * and skipped — one bad record never aborts seeding of the rest.
  */
 
-import type { MonsterStructuredLoc } from '../lib/types'
+import type { MonsterStructuredLoc, SpellStructuredLoc } from '../lib/types'
 import {
   adaptBabeleActorEntry,
   adaptBabeleSpellEntry,
@@ -54,6 +54,7 @@ export interface SpellTranslationRow {
   packPath: string
   nameLoc: string
   textLoc: string
+  structured: SpellStructuredLoc
 }
 
 const packFiles = import.meta.glob('/vendor/pf2e-locale-ru/pf2e/packs/*.json', {
@@ -135,6 +136,7 @@ export function collectSpellTranslations(): SpellTranslationRow[] {
           packPath: path,
           nameLoc: adapted.name,
           textLoc: adapted.description,
+          structured: adapted.structured,
         })
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
