@@ -5,6 +5,7 @@ import { getSpellById } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
 import { useContentTranslation } from '@/shared/i18n'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
@@ -114,14 +115,22 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 </div>
               )}
 
-              {/* Description — always sanitized EN; RU is name-only overlay
-                  (rus_text blob ignored for v1.5.1, pending field-level
-                  translation spec). sanitizeFoundryText replaces raw
-                  @Check/@Damage/@Template tokens with readable text. */}
-              {spell.description && (
-                <p className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-line">
-                  {sanitizeFoundryText(spell.description, { itemLevel: spell.rank })}
-                </p>
+              {/* Description — when a vendored RU translation exists, render
+                  it through SafeHtml (handles Babele @UUID / @Trait /
+                  @Damage / @Check tokens + tables / lists / details).
+                  Otherwise sanitize the engine EN HTML through the
+                  pre-existing token replacement path. */}
+              {translation?.textLoc ? (
+                <SafeHtml
+                  html={translation.textLoc}
+                  className="text-[13px] text-foreground/80 leading-relaxed"
+                />
+              ) : (
+                spell.description && (
+                  <p className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-line">
+                    {sanitizeFoundryText(spell.description, { itemLevel: spell.rank })}
+                  </p>
+                )
               )}
 
               {/* Source */}
