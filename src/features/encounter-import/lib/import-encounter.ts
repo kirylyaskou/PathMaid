@@ -4,17 +4,15 @@ import type { MatchedEncounter } from './types'
 
 // commit a matched encounter to DB. Creates a new encounter row with
 // a fresh UUID and persists matched combatants only (skipped ones are dropped).
-// Name-collision: append "(imported)" so the user can distinguish.
+// Name-collision: append "(2)", "(3)", ... until unused (case-sensitive).
 
-function deriveUniqueName(name: string, existing: Set<string>): string {
-  if (!existing.has(name.toLowerCase())) return name
-  let i = 1
-  let candidate = `${name} (imported)`
-  while (existing.has(candidate.toLowerCase())) {
-    i += 1
-    candidate = `${name} (imported ${i})`
-  }
-  return candidate
+/** Resolve name collision by appending "(2)", "(3)", ... until unused.
+ *  Names are compared case-sensitive against the provided Set. */
+function deriveUniqueName(name: string, used: Set<string>): string {
+  if (!used.has(name)) return name
+  let i = 2
+  while (used.has(`${name} (${i})`)) i += 1
+  return `${name} (${i})`
 }
 
 export interface ImportResult {
@@ -27,11 +25,13 @@ export interface ImportResult {
 export async function commitMatchedEncounter(
   matched: MatchedEncounter,
   partyLevel: number,
-  partySize: number
+  partySize: number,
+  usedNames?: Set<string>,
 ): Promise<ImportResult> {
-  const existing = new Set((await listEncounters()).map((e) => e.name.toLowerCase()))
+  const used = usedNames ?? new Set((await listEncounters()).map((e) => e.name))
   const encounterId = crypto.randomUUID()
-  const encounterName = deriveUniqueName(matched.parsed.name, existing)
+  const encounterName = deriveUniqueName(matched.parsed.name, used)
+  used.add(encounterName)
   const effPartyLevel = matched.parsed.partyLevel ?? partyLevel
   const effPartySize = matched.parsed.partySize ?? partySize
 

@@ -11,6 +11,7 @@ import { commitMatchedEncounter } from '../lib/import-encounter'
 import type { MatchedEncounter, ImportFormat } from '../lib/types'
 import { useEncounterBuilderStore } from '@/features/encounter-builder'
 import { useEncounterStore } from '@/entities/encounter'
+import { listEncounters } from '@/shared/api'
 
 type Step = 'pick' | 'preview' | 'committing' | 'done'
 
@@ -60,7 +61,7 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
       const fmt = detectFormat(json)
       setFormat(fmt)
       if (fmt === 'unknown') {
-        setError('Unknown format. Expected Pathmaiden export or Pathfinder Dashboard JSON.')
+        setError('Unknown format. Expected PathMaid bundle, Pathmaiden export or Pathfinder Dashboard JSON.')
         return
       }
       const parsed = parseEncounterJson(json)
@@ -82,10 +83,11 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
     setStep('committing')
     setBusy(true)
     try {
+      const usedNames = new Set((await listEncounters()).map((e) => e.name))
       let totalImported = 0
       let totalSkipped = 0
       for (const m of matched) {
-        const r = await commitMatchedEncounter(m, partyLevel, partySize)
+        const r = await commitMatchedEncounter(m, partyLevel, partySize, usedNames)
         totalImported += r.importedCount
         totalSkipped += r.skippedCount
       }
@@ -119,7 +121,7 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
             Import Encounter
           </DialogTitle>
           <DialogDescription className="text-xs">
-            {step === 'pick' && 'Drop a JSON file or browse. Supported: Pathmaiden export, Pathfinder Dashboard.'}
+            {step === 'pick' && 'Drop a JSON file or browse. Supported: PathMaid bundle, Pathmaiden export, Pathfinder Dashboard.'}
             {step === 'preview' && `Detected format: ${format}. Review combatant matches, then Import.`}
             {step === 'committing' && 'Committing…'}
             {step === 'done' && 'Done.'}
@@ -148,7 +150,7 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
             <input
               ref={inputRef}
               type="file"
-              accept="application/json,.json,.pfdashencounters"
+              accept="application/json,.json,.pathmaid,.pathmaiden,.pfdashencounters"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]
