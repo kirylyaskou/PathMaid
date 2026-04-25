@@ -5,7 +5,7 @@ milestone_name: — Translation Dictionaries
 status: defining_requirements
 stopped_at: v1.7.1 kickoff — REQUIREMENTS.md + ROADMAP.md updated for Phase 90-93. Next: /gsd-discuss-phase 90 or /gsd-plan-phase 90.
 last_updated: "2026-04-25T00:00:00Z"
-last_activity: 2026-04-25 — Completed quick task 260425-ayz: Multi-encounter `.pathmaid` export bundle
+last_activity: 2026-04-25 — Completed quick task 260425-bq2: Degree-of-success highlights in spell/item/ability descriptions
 progress:
   total_phases: 4
   completed_phases: 0
@@ -80,6 +80,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260425-ayz | Multi-encounter `.pathmaid` export bundle + adapt import + file picker | 2026-04-25 | 2c8ea780 | [260425-ayz-pathmaid-pathmaid-file-picker](./quick/260425-ayz-pathmaid-pathmaid-file-picker/) |
+| 260425-bq2 | Degree-of-success highlights (bold + PF2e color) in spell/item/ability descriptions | 2026-04-25 | 8d882a88 | [260425-bq2-highlight-degree-of-success-labels-bold-](./quick/260425-bq2-highlight-degree-of-success-labels-bold-/) |
 
 ## Session Continuity
 
