@@ -236,13 +236,17 @@ export async function loadContentTranslations(db: Database): Promise<void> {
 
   // Flatten actor pack items[] into entity_items so strike rendering
   // can look up RU weapon names by (entity_name, item_id) without
-  // parsing structured_json on every paint.
-  const monsterItemPairs: Array<{ entity: string; id: string; name: string }> = []
+  // parsing structured_json on every paint. Dedup on (entity, id)
+  // because the same item id can appear in multiple actor entries that
+  // share inventory and the DB primary key collapses those collisions.
+  const itemPairsDedup = new Map<string, { entity: string; id: string; name: string }>()
   for (const row of monsterRows) {
     for (const item of row.structured.items) {
-      monsterItemPairs.push({ entity: row.packKey, id: item.id, name: item.name })
+      const key = `${row.packKey.toLowerCase()}:${item.id}`
+      itemPairsDedup.set(key, { entity: row.packKey, id: item.id, name: item.name })
     }
   }
+  const monsterItemPairs = Array.from(itemPairsDedup.values())
   if (monsterItemPairs.length > 0) {
     const existingItems = await db.select<{ n: number }[]>(
       'SELECT COUNT(*) AS n FROM entity_items WHERE locale = ?',

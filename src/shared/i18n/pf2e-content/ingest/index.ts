@@ -63,7 +63,12 @@ const packFiles = import.meta.glob('/vendor/pf2e-locale-ru/pf2e/packs/*.json', {
 }) as Record<string, BabelePackFile>
 
 export function collectMonsterTranslations(): MonsterTranslationRow[] {
-  const rows: MonsterTranslationRow[] = []
+  // Dedupe by lowercase packKey — the DB primary key uses NOCASE collation
+  // on name_key, so monsters with the same name across multiple packs
+  // (e.g. "Zombie" appearing in both monster-core and bestiary-1) collapse
+  // to a single DB row via INSERT OR REPLACE. Reflecting this here keeps
+  // the skip-gate count == DB count.
+  const dedup = new Map<string, MonsterTranslationRow>()
 
   for (const [path, pack] of Object.entries(packFiles)) {
     if (!isActorPack(pack)) continue
@@ -85,7 +90,7 @@ export function collectMonsterTranslations(): MonsterTranslationRow[] {
 
       try {
         const structured = adaptBabeleActorEntry(entry)
-        rows.push({
+        dedup.set(packKey.toLowerCase(), {
           packKey,
           packLabel: pack.label,
           packPath: path,
@@ -100,11 +105,11 @@ export function collectMonsterTranslations(): MonsterTranslationRow[] {
     }
   }
 
-  return rows
+  return Array.from(dedup.values())
 }
 
 export function collectSpellTranslations(): SpellTranslationRow[] {
-  const rows: SpellTranslationRow[] = []
+  const dedup = new Map<string, SpellTranslationRow>()
   const spellPackFiles = packFiles as unknown as Record<
     string,
     BabelePackFile & { entries: Record<string, BabeleSpellEntry> }
@@ -130,7 +135,7 @@ export function collectSpellTranslations(): SpellTranslationRow[] {
 
       try {
         const adapted = adaptBabeleSpellEntry(entry)
-        rows.push({
+        dedup.set(packKey.toLowerCase(), {
           packKey,
           packLabel: pack.label,
           packPath: path,
@@ -145,11 +150,13 @@ export function collectSpellTranslations(): SpellTranslationRow[] {
     }
   }
 
-  return rows
+  return Array.from(dedup.values())
 }
 
 export function collectItemKindTranslations(): ItemTranslationRow[] {
-  const rows: ItemTranslationRow[] = []
+  // Dedupe by (kind, lowercase packKey) — DB primary key uses NOCASE on
+  // name_key, so duplicate entry names within a pack collapse to one row.
+  const dedup = new Map<string, ItemTranslationRow>()
   const itemPackFiles = packFiles as unknown as Record<
     string,
     BabelePackFile & { entries: Record<string, BabeleItemEntry> }
@@ -176,7 +183,7 @@ export function collectItemKindTranslations(): ItemTranslationRow[] {
 
       try {
         const adapted = adaptBabeleItemEntry(entry)
-        rows.push({
+        dedup.set(`${kind}:${packKey.toLowerCase()}`, {
           kind,
           packKey,
           packLabel: pack.label,
@@ -191,5 +198,5 @@ export function collectItemKindTranslations(): ItemTranslationRow[] {
     }
   }
 
-  return rows
+  return Array.from(dedup.values())
 }
