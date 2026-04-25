@@ -1,0 +1,30 @@
+source_url: https://gitlab.com/gnuraco/pf2r
+source_commit: 458d2f75ade8e6a5d398bdfd7787e9e56bb29645
+vendored_at: 2026-04-25
+scope: full-pack (19 packs + pf2e.json UI strings)
+notes: |
+  Vendored 19 pack files + pf2e.json from upstream community module
+  (https://gitlab.com/gnuraco/pf2r — "PF2eRUS" by Доктор#0353).
+
+  Vendored packs:
+    - mapping.json (Babele path config)
+    - pathfinder-monster-core.json, pathfinder-monster-core-2.json
+    - pathfinder-bestiary.json, pathfinder-bestiary-2.json, pathfinder-bestiary-3.json
+    - pathfinder-npc-core.json, npc-gallery.json
+    - bestiary-ability-glossary-srd.json, bestiary-family-ability-glossary.json
+    - bestiary-effects.json
+    - spells-srd.json, spell-effects.json
+    - actionspf2e.json, conditionitems.json
+    - equipment-srd.json, equipment-effects.json
+    - feats-srd.json, feat-effects.json
+
+  Plus pf2e/pf2e.json (UI strings — PF2E.* namespace).
+
+  AP-specific bestiaries (Abomination Vaults, Kingmaker, etc.) explicitly
+  EXCLUDED from v1.7.1 scope per ROADMAP Phase 90 — deferred to v1.8+.
+
+  Update procedure (manual):
+    1. Pull latest pf2r source from upstream master.
+    2. Re-copy 19 listed packs + pf2e.json (verbatim, byte-identical).
+    3. Bump source_commit and vendored_at fields in VERSION.txt.
+    4. Verify LICENSES/OGL-SECTION-15.md COPYRIGHT chain still matches upstream.
