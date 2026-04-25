@@ -88,5 +88,31 @@
       "success": "Import complete — {{count}} entities imported.",
       "failed": "Import failed — {{message}}. Try again."
     }
+  },
+  "updateDialog": {
+    "title": {
+      "available": "Update v{{version}} available",
+      "downloading": "Downloading update",
+      "installing": "Installing update",
+      "error": "Update error"
+    },
+    "currentToNew": "Current: {{current}} → new: {{next}}",
+    "progressDownloaded": "Downloaded {{percent}}%",
+    "progressStarting": "Starting download...",
+    "restarting": "Restarting...",
+    "crossDevice": "The installer tried to move the file across drives. Download the installer manually from the release page and run it yourself.",
+    "openReleasePage": "Open release page",
+    "errorPrefix": "Error",
+    "manualRestart": "If the update did not apply, restart the application manually — the database was briefly closed for installation.",
+    "later": "Later",
+    "downloadAndInstall": "Download and install",
+    "close": "Close",
+    "downloadProgress": "Update download progress"
+  },
+  "errors": {
+    "boundary": {
+      "title": "Something went wrong",
+      "tryAgain": "Try again"
+    }
   }
 }
