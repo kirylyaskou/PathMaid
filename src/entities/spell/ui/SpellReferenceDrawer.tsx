@@ -8,7 +8,18 @@ import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
 import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import { getTraitLabel } from '@/shared/i18n/pf2e-content'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import type { SpellStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
+
+// Save type names live in PF2E.Saves* but are not exposed via the
+// dictionary getter family. Inline mapping covers all three PF2e saves;
+// extending this table is cheaper than introducing a new dict module.
+const SAVE_RU_LABELS: Record<string, string> = {
+  reflex: 'Рефлекс',
+  fortitude: 'Стойкость',
+  will: 'Воля',
+}
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
 
@@ -72,7 +83,7 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                       TRADITION_COLORS[t] ?? 'bg-secondary text-secondary-foreground border-border'
                     )}
                   >
-                    {t}
+                    {getTraitLabel(t.toLowerCase(), locale)}
                   </span>
                 ))}
               </div>
@@ -90,7 +101,11 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 {spell.save_stat && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Save</span>
-                    <span className="text-sm capitalize">{spell.save_stat}</span>
+                    <span className="text-sm capitalize">
+                      {locale === 'ru'
+                        ? (SAVE_RU_LABELS[spell.save_stat.toLowerCase()] ?? spell.save_stat)
+                        : spell.save_stat}
+                    </span>
                   </div>
                 )}
                 {damageDisplay !== '—' && (
@@ -141,12 +156,7 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
               {traits.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {traits.map((t) => (
-                    <span
-                      key={t}
-                      className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
-                    >
-                      {t}
-                    </span>
+                    <TraitPill key={t} trait={t} />
                   ))}
                 </div>
               )}
