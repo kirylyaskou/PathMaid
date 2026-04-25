@@ -142,3 +142,8 @@ export async function getMonsterTranslation(
   const row = await getTranslation('monster', nameKey, level, locale)
   return row?.structured ?? null
 }
+
+export { getSizeLabel } from './dictionaries/sizes'
+export { getSkillLabel } from './dictionaries/skills'
+export { getLanguageLabel } from './dictionaries/languages'
+export { getTraitLabel, getTraitDescription } from './dictionaries/traits'

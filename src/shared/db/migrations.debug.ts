@@ -24,6 +24,13 @@
 
 import { getDb } from './connection'
 import { getTranslation } from '@/shared/api/translations'
+import {
+  getSkillLabel,
+  getSizeLabel,
+  getLanguageLabel,
+  getTraitLabel,
+  getTraitDescription,
+} from '@/shared/i18n'
 
 interface PragmaColumn {
   cid: number
@@ -154,13 +161,73 @@ export async function runMigrationsDebug(): Promise<void> {
   }
 }
 
+/**
+ * Smoke test for the Phase 92 dictionary getters. Verifies:
+ *   - skill label lookup, SF2e drop, Lore promotion, locale=en passthrough
+ *   - size label lookup, slug fallback
+ *   - language label lookup, known gap fallback (infernal absent in upstream)
+ *   - trait label PascalCase→kebab conversion, numbered variant
+ *   - trait description null on miss
+ */
+export function runDictionariesDebug(): void {
+  let passed = 0
+  let total = 0
+  function assert(condition: boolean, message: string): void {
+    total++
+    if (condition) {
+      passed++
+    } else {
+      console.assert(false, `[FAIL] ${message}`)
+    }
+  }
+
+  assert(getSkillLabel('Acrobatics', 'ru') === 'Акробатика', 'skill: Acrobatics → Акробатика')
+  assert(getSkillLabel('Performance', 'ru') === 'Выступление', 'skill: Performance → Выступление')
+  assert(getSkillLabel('Lore', 'ru') === 'Знания', 'skill: Lore promoted from PF2E.SkillLore')
+  assert(getSkillLabel('Computers', 'ru') === 'Computers', 'skill: SF2e Computers filtered to slug')
+  assert(getSkillLabel('Acrobatics', 'en') === 'Acrobatics', 'skill: locale=en echoes slug')
+  assert(getSkillLabel('Unknown', 'ru') === 'Unknown', 'skill: silent fallback for unknown slug')
+
+  assert(getSizeLabel('med', 'ru') === 'Средний', 'size: med → Средний')
+  assert(getSizeLabel('grg', 'ru') === 'Исполинский', 'size: grg → Исполинский')
+  assert(getSizeLabel('unknown', 'ru') === 'unknown', 'size: silent fallback for unknown engine slug')
+
+  assert(getLanguageLabel('common', 'ru').length > 0, 'language: common resolves')
+  assert(getLanguageLabel('infernal', 'ru') === 'infernal', 'language: known gap → slug fallback')
+  assert(getLanguageLabel('CommonLanguage', 'ru') === 'CommonLanguage', 'language: UI-template key filtered out')
+
+  assert(getTraitLabel('forceful', 'ru') === 'Силовое', 'trait: forceful → Силовое')
+  assert(getTraitLabel('two-hand', 'ru').length > 0, 'trait: two-hand resolves (PascalCase TwoHand)')
+  assert(getTraitLabel('additive', 'ru').length > 0, 'trait: bare additive resolves')
+  assert(getTraitLabel('unknown-trait-foo', 'ru') === 'unknown-trait-foo', 'trait: silent fallback')
+
+  assert(getTraitDescription('unknown-trait-foo', 'ru') === null, 'trait description: null on miss')
+  assert(getTraitDescription('forceful', 'en') === null, 'trait description: null at locale=en')
+
+  console.log(`[dictionaries.debug] ${passed}/${total} assertions passed`)
+  if (passed !== total) {
+    console.error(
+      `[dictionaries.debug] FAILED: ${total - passed} assertion(s) did not pass — check FAIL logs above`,
+    )
+  }
+}
+
 if (import.meta.env.DEV) {
   ;(
     window as unknown as {
       __pathmaid_migrationsDebug: () => Promise<void>
+      __pathmaid_dictionariesDebug: () => void
     }
   ).__pathmaid_migrationsDebug = runMigrationsDebug
+  ;(
+    window as unknown as {
+      __pathmaid_dictionariesDebug: () => void
+    }
+  ).__pathmaid_dictionariesDebug = runDictionariesDebug
   console.log(
     '[migrations.debug] Available via window.__pathmaid_migrationsDebug()',
+  )
+  console.log(
+    '[dictionaries.debug] Available via window.__pathmaid_dictionariesDebug()',
   )
 }
