@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.7.5
 milestone_name: — AP Bestiaries + Item-id RU + Special Abilities Coverage
-status: completed
+status: executing
 stopped_at: v1.7.5 ROADMAP.md drafted (Phases 109-114, 6 phases, 22 atomic + 1 process requirement mapped 100% coverage)
-last_updated: "2026-04-26T15:36:09.050Z"
-last_activity: 2026-04-26
+last_updated: "2026-04-26T15:46:29.045Z"
+last_activity: 2026-04-26 -- Phase 110 execution started
 progress:
   total_phases: 71
   completed_phases: 1
-  total_plans: 2
+  total_plans: 4
   completed_plans: 2
-  percent: 100
+  percent: 50
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -21,15 +21,15 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26 для v1.7.5 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** Phase 109 — Vendor Pack Expansion + License Compliance
+**Current focus:** Phase 110 — Cold-Boot Performance Validation
 
 ## Current Position
 
 Milestone: v1.7.5 AP Bestiaries + Item-id RU + Special Abilities Coverage
-Phase: 999.1
-Plan: Not started
-Status: Phase 109 complete — next: Phase 110
-Last activity: 2026-04-26
+Phase: 110 (Cold-Boot Performance Validation) — EXECUTING
+Plan: 2 of 2
+Status: Awaiting PERF-MEASUREMENT.md fill-in before Plan 02
+Last activity: 2026-04-26 -- Phase 110 Plan 01 complete (instrumentation added)
 
 Progress: [█████░░░░░] 50%
 
@@ -98,6 +98,8 @@ Reference repro: `"Lucky" Lanks` из `outlaws-of-alkenstar-bestiary.json` — f
 - 109-01: Byte-identical vendor copy — no JSON reformatting; LF/CRLF handled by git autocrlf
 - 109-02: Safe minimum OGL §6 form for all new entries — no author lists, no issue numbers, no per-volume titles
 - 109-02: Year omitted for Revenge of the Runelords, Malevolence, Hellbreakers — insufficient certainty; OGL §6 minimum satisfied by Title + Copyright Holder
+- 110-01: DEV gate via PERF_DEV constant (import.meta.env.DEV) — Vite tree-shakes all perf logs in prod build
+- 110-01: PERF-MEASUREMENT.md not committed — .planning/ is gitignored per CLAUDE.md project rules
 
 ### Blockers/Concerns
 
@@ -113,5 +115,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-26
-Stopped at: v1.7.5 ROADMAP.md drafted (Phases 109-114, 6 phases, 22 atomic + 1 process requirement mapped 100% coverage)
-Next step: `/gsd-discuss-phase 109` или `/gsd-plan-phase 109` — Phase 109 (Vendor Pack Expansion + License Compliance) ready to plan.
+Stopped at: Completed 110-01-PLAN.md — DEV-gated [perf] instrumentation added to seed pipeline, PERF-MEASUREMENT.md template created
+Next step: Fill PERF-MEASUREMENT.md with cold-boot dev run timings, then execute 110-02-PLAN.md (read verdict, strip instrumentation or add microtask yields).

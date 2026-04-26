@@ -1440,7 +1440,9 @@ Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves,
   3. Regression ≤ +50% — либо без code change, либо после chunked-seed introduction
   4. UI splash screen остаётся responsive в течение всего seed (no >500ms блок main thread)
   5. Warm-boot skip preserved (`localStorage` seed marker не повреждён добавлением packs)
-**Plans**: TBD
+**Plans**: 2 plans
+- [x] 110-01-PLAN.md — Add DEV-gated [perf] instrumentation to seed pipeline + create PERF-MEASUREMENT.md template (PERF-01, PERF-02)
+- [ ] 110-02-PLAN.md — Conditional: read filled measurement, strip instrumentation; if regression > +50% add microtask yields between packs/INSERT chunks (PERF-02, PERF-03)
 
 ### Phase 111: Item-ID Description Schema + API
 **Goal**: Расширить `entity_items` table колонкой `description_loc` для хранения RU description per-instance items (special abilities в creature `entries.<creature>.items[]`). Loader Phase 102 populates новую колонку. Новый API `getCreatureItem(creatureName, itemId, locale): { name, description | null } | null` расширяет existing `getEntityItemName`.
