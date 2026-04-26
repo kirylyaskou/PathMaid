@@ -111,6 +111,77 @@ export function adaptBabeleSpellEntry(
 }
 
 /**
+ * Maximum description length for a bestiary actor item to qualify as a
+ * spell-reference entry.
+ *
+ * Babele actor items[] carry no type/kind discriminator — creature abilities
+ * and embedded spell references share the same minimal shape. Real
+ * per-creature spell entries are reference-only (full description lives in
+ * the canonical spells-srd row); abilities carry the full trigger block
+ * inline. 180 chars covers reference notes ("Сотворяется на ранге 3, 2
+ * действия") without admitting ability-length descriptions (typically 250+
+ * chars).
+ */
+export const SPELL_REF_DESC_MAX_CHARS = 180
+
+/**
+ * Detect a spell-shaped actor-item entry within a bestiary pack.
+ *
+ * Two signals are checked here; the collision signal (Signal C) lives at
+ * the call site (collectSpellTranslations) where the canonical dedup map
+ * is in scope.
+ *
+ * Signal A — name match: item.name (RU, lowercased) is a known spell RU
+ * name present in the canonical spells-srd dedup map.
+ *
+ * Signal B — overlay-shape: description absent OR length <=
+ * SPELL_REF_DESC_MAX_CHARS. A creature ability that happens to share a
+ * spell name ("Замедление" on Shock Zombie) carries the full trigger text
+ * inline and fails this check — the false-positive is suppressed.
+ *
+ * Both signals must hold. Caller must also apply Signal C (collision check:
+ * if the EN key already exists in canonical dedup, spells-srd wins and the
+ * bestiary alias is dropped).
+ */
+export function isSpellShapedActorItem(
+  item: { id: string; name: string; description?: string },
+  knownSpellNamesRu: Set<string>,
+): boolean {
+  // Signal A
+  if (typeof item.name !== 'string' || item.name.length === 0) return false
+  const nameKey = item.name.toLowerCase()
+  if (!knownSpellNamesRu.has(nameKey)) return false
+
+  // Signal B
+  const desc = typeof item.description === 'string' ? item.description : ''
+  if (desc.length > SPELL_REF_DESC_MAX_CHARS) return false
+
+  return true
+}
+
+/**
+ * Adapt a spell-shaped actor item into a partial SpellTranslationRow shape.
+ *
+ * Bestiary items carry no structured spell fields (range, duration, time,
+ * etc.), so structured returns as an empty object. The downstream consumer
+ * falls through to engine EN for those fields gracefully — the empty overlay
+ * is the correct representation of "we have a name/description but no stat
+ * block metadata".
+ */
+export function adaptBestiarySpellItem(
+  item: { id: string; name: string; description?: string },
+): { name: string; description: string; structured: SpellStructuredLoc } {
+  if (item === null || typeof item !== 'object') {
+    throw new Error('Invalid bestiary spell item: not an object')
+  }
+  return {
+    name: typeof item.name === 'string' ? item.name : '',
+    description: typeof item.description === 'string' ? item.description : '',
+    structured: {},
+  }
+}
+
+/**
  * Babele item-shaped entry — covers actions, feats, equipment, conditions.
  * Pack mappings for these are typically empty (`{}`) because Babele falls
  * back to the global Item mapping for `name` + `description`. Entries

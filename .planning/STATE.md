@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.7.5
 milestone_name: — AP Bestiaries + Item-id RU + Special Abilities Coverage
-status: verifying
-stopped_at: Completed 111-01-PLAN.md — migration 0047 + loader description_loc + getCreatureItem API
-last_updated: "2026-04-26T16:09:10.306Z"
-last_activity: 2026-04-26
+status: executing
+stopped_at: Completed 112-01-PLAN.md — strike description surface + 3-tier AbilityCard fallback + useCreatureItem hook
+last_updated: "2026-04-26T16:25:47Z"
+last_activity: 2026-04-26 -- Phase 112 plan 01 complete
 progress:
   total_phases: 71
   completed_phases: 2
-  total_plans: 5
+  total_plans: 6
   completed_plans: 4
-  percent: 80
+  percent: 67
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -21,15 +21,15 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26 для v1.7.5 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** Phase 111 — Item-ID Description Schema + API
+**Current focus:** Phase 112 — Special Ability Surface Wiring
 
 ## Current Position
 
 Milestone: v1.7.5 AP Bestiaries + Item-id RU + Special Abilities Coverage
-Phase: 111 (Item-ID Description Schema + API) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-04-26
+Phase: 112 (Special Ability Surface Wiring) — COMPLETE
+Plan: 1 of 1 (complete)
+Status: Phase 112 complete — ready for Phase 113
+Last activity: 2026-04-26 -- Phase 112 plan 01 complete
 
 Progress: [█████░░░░░] 50%
 
@@ -101,6 +101,9 @@ Reference repro: `"Lucky" Lanks` из `outlaws-of-alkenstar-bestiary.json` — f
 - 110-01: DEV gate via PERF_DEV constant (import.meta.env.DEV) — Vite tree-shakes all perf logs in prod build
 - 110-01: PERF-MEASUREMENT.md not committed — .planning/ is gitignored per CLAUDE.md project rules
 - [Phase 111]: locale: string (not SupportedLocale) in getCreatureItem — consistency with getStrikeRuName; dual skip-gate covers post-migration reseed scenario; CHUNK_SIZE 240→199 for 5-col rows
+- [Phase 112]: useCreatureItem short-circuits on localFallback !== undefined before locale check — covers ~100% CreatureStatBlock usage
+- [Phase 112]: Tier-2 action-dict gated by null name to useContentTranslation — zero DB queries on Tier-1 hit
+- [Phase 112]: Single Map.get per strike in CreatureStrikesSection.map() — const loc before return
 
 ### Blockers/Concerns
 
