@@ -184,6 +184,48 @@ export async function getStrikeRuName(
 }
 
 /**
+ * Look up a per-creature item (weapon or special ability) attached to an
+ * actor's items[] collection. Returns name + description in a single
+ * indexed query, distinguishing three states:
+ *
+ *   - null              — no entity_items row exists for (creatureName, itemId, locale).
+ *                         Caller falls back to engine EN content.
+ *   - { name, description: null } — row exists but the Babele entry carried
+ *                                   no description (typical for plain weapons).
+ *                                   Caller may use the localized name and
+ *                                   fall back to engine EN description.
+ *   - { name, description: "..." } — full RU overlay available
+ *                                    (typical for special abilities).
+ *
+ * Distinguishing these states is important for the UI fallback chain in
+ * AbilityCard / CreatureAbilityRow / StrikeRow consumers.
+ */
+export async function getCreatureItem(
+  creatureName: string,
+  itemId: string,
+  locale: string,
+): Promise<{ name: string; description: string | null } | null> {
+  if (locale === 'en') return null
+  if (!creatureName || !itemId) return null
+  const db = await getDb()
+  const rows = await db.select<{ name_loc: string; description_loc: string | null }[]>(
+    `SELECT name_loc, description_loc
+       FROM entity_items
+      WHERE entity_name = ? COLLATE NOCASE
+        AND item_id = ?
+        AND locale = ?
+      LIMIT 1`,
+    [creatureName, itemId, locale],
+  )
+  const row = rows[0]
+  if (!row) return null
+  return {
+    name: stripReviewMarker(row.name_loc),
+    description: row.description_loc !== null ? stripReviewMarker(row.description_loc) : null,
+  }
+}
+
+/**
  * Diagnostic / power-user helper — count translations by (kind, locale).
  * Used by verification scripts and, later, a Settings panel that shows
  * translation coverage.
