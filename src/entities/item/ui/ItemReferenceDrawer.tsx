@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getItemById } from '@/shared/api'
@@ -34,16 +34,12 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
   const typeColor = item ? (ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40') : ''
   const typeLabel = item ? (ITEM_TYPE_LABELS[item.item_type] ?? item.item_type) : ''
 
+  // Phase 80: item translation lookup
   const { data: translation } = useContentTranslation('item', item?.name, item?.level ?? null)
-
-  const descriptionNode = useMemo(
-    () => renderDescription(item?.description ?? ''),
-    [item?.description],
-  )
 
   return (
     <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent side="right" className="w-105 sm:w-120 overflow-y-auto flex flex-col gap-0 p-0">
+      <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto flex flex-col gap-0 p-0">
         {item && (
           <>
             <SheetHeader className="p-4 pb-3 border-b border-border/30">

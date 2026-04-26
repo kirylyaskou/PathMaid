@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button'
 import { getSpellById } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
-import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import {  sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
 import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
@@ -58,11 +58,6 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
       return null
     }
   }, [translation?.structuredJson])
-
-  const descriptionNode = useMemo(
-    () => renderDescription(resolveFoundryTokens(spell?.description ?? '', { itemLevel: spell?.rank ?? undefined })),
-    [spell?.description, spell?.rank],
-  )
 
   return (
     <Sheet open={!!spellId} onOpenChange={(open) => { if (!open) onClose() }}>
