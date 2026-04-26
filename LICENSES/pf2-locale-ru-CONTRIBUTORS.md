@@ -10,8 +10,10 @@ Paizo Community Use Policy.
 | Field | Value |
 |-------|-------|
 | Source URL | https://gitlab.com/gnuraco/pf2r |
-| Source commit | `458d2f75ade8e6a5d398bdfd7787e9e56bb29645` |
-| Vendored at | 2026-04-25 |
+| Source commit | `ebd1a53a9ab072b12ef8d86c055cd23714334026` |
+| Vendored at | 2026-04-26 |
+| Pack count | 47 (expanded from 19 in v1.7.5 milestone) |
+| Scope | Base bestiaries + AP-specific bestiaries + spells/items/actions/feats |
 | Vendor location | [`vendor/pf2e-locale-ru/`](../vendor/pf2e-locale-ru/) |
 
 See [`vendor/pf2e-locale-ru/VERSION.txt`](../vendor/pf2e-locale-ru/VERSION.txt)
