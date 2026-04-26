@@ -54,7 +54,12 @@ export default tseslint.config(
           { from: { type: 'widgets' },  allow: { to: { type: ['features', 'entities', 'shared'] } } },
           { from: { type: 'features' }, allow: { to: { type: ['entities', 'shared'] } } },
           { from: { type: 'entities' }, allow: { to: { type: ['shared'] } } },
-          { from: { type: 'shared' },   disallow: { to: { type: '*' } } },
+          // FSD allows shared→shared (cross-module utilities, locale files,
+          // shared dictionaries). The previous '*' disallow was too tight
+          // and flagged legitimate same-segment imports — e.g.
+          // `shared/i18n/index.ts` importing JSON locales from
+          // `shared/i18n/locales/`.
+          { from: { type: 'shared' },   allow: { to: { type: ['shared'] } } },
         ],
       }],
 
