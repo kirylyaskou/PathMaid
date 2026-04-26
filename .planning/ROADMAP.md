@@ -1424,7 +1424,7 @@ Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves,
   4. Existing 19 base packs still ingest cleanly (no regression in base creature translations)
 **Plans**: 2 plans
 - [x] 109-01-PLAN.md — Copy 28 bestiary packs to vendor, sync VERSION.txt + CONTRIBUTORS.md (PACK-01..03)
-- [ ] 109-02-PLAN.md — Append per-AP copyright entries to OGL-SECTION-15.md for license compliance (PACK-04)
+- [x] 109-02-PLAN.md — Append per-AP copyright entries to OGL-SECTION-15.md for license compliance (PACK-04)
 
 ### Phase 110: Cold-Boot Performance Validation
 **Goal**: Замер baseline + post-PACK seed time. Если регрессия превышает +50%, ввести chunked seed timeslicing между packs (microtask yield) чтобы UI splash оставался responsive. Если в пределах допуска — no code change.

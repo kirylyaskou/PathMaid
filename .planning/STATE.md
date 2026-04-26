@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.7.5
 milestone_name: — AP Bestiaries + Item-id RU + Special Abilities Coverage
-status: executing
-stopped_at: "Phase 109 Plan 01 complete — 47 vendor packs, SHA ebd1a53"
-last_updated: "2026-04-26T15:20:00.000Z"
-last_activity: 2026-04-26 -- Phase 109 Plan 01 executed (28 AP bestiary packs vendored)
+status: completed
+stopped_at: v1.7.5 ROADMAP.md drafted (Phases 109-114, 6 phases, 22 atomic + 1 process requirement mapped 100% coverage)
+last_updated: "2026-04-26T15:36:09.050Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 71
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -26,10 +26,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 для v1.7.5 kickoff)
 ## Current Position
 
 Milestone: v1.7.5 AP Bestiaries + Item-id RU + Special Abilities Coverage
-Phase: 109 (Vendor Pack Expansion + License Compliance) — EXECUTING
-Plan: 2 of 2
-Status: Executing Phase 109
-Last activity: 2026-04-26 -- Phase 109 Plan 01 complete (47 packs vendored)
+Phase: 999.1
+Plan: Not started
+Status: Phase 109 complete — next: Phase 110
+Last activity: 2026-04-26
 
 Progress: [█████░░░░░] 50%
 
@@ -96,6 +96,8 @@ Reference repro: `"Lucky" Lanks` из `outlaws-of-alkenstar-bestiary.json` — f
 
 - 109-01: SHA ebd1a53a9ab072b12ef8d86c055cd23714334026 confirmed from local pf2-locale-ru checkout
 - 109-01: Byte-identical vendor copy — no JSON reformatting; LF/CRLF handled by git autocrlf
+- 109-02: Safe minimum OGL §6 form for all new entries — no author lists, no issue numbers, no per-volume titles
+- 109-02: Year omitted for Revenge of the Runelords, Malevolence, Hellbreakers — insufficient certainty; OGL §6 minimum satisfied by Title + Copyright Holder
 
 ### Blockers/Concerns
 
