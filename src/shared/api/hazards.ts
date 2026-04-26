@@ -23,7 +23,12 @@ export interface HazardRow {
   actions_json: string | null
 }
 
-const HAZARD_NAME_LOC_SUBQUERY = `(SELECT t.name_loc FROM translations t WHERE t.kind='hazard' AND t.name_key=h.name COLLATE NOCASE AND t.locale=?) AS name_loc`
+// Hazards live in TWO translation buckets:
+//  - kind='hazard' for entries from the dedicated pf2e.hazards.json pack (54 base hazards)
+//  - kind='monster' for entries from AP bestiary packs (Foundry stores AP hazards as
+//    actors alongside creatures; they share the actor-pack ingest path)
+// LIMIT 1 + ORDER BY t.kind='hazard' DESC prefers the dedicated bucket when both exist.
+const HAZARD_NAME_LOC_SUBQUERY = `(SELECT t.name_loc FROM translations t WHERE t.kind IN ('hazard','monster') AND t.name_key=h.name COLLATE NOCASE AND t.locale=? ORDER BY (t.kind='hazard') DESC LIMIT 1) AS name_loc`
 
 export async function getAllHazards(): Promise<HazardRow[]> {
   const db = await getDb()
