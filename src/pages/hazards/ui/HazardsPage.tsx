@@ -11,6 +11,17 @@ import { logError } from '@/shared/lib/error'
 import { stripRarityMarker } from '@/shared/lib/display-name'
 import { useCurrentLocale } from '@/shared/i18n'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import type { MonsterStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
+
+function parseStructured(json: string | null): MonsterStructuredLoc | null {
+  if (!json) return null
+  try {
+    return JSON.parse(json) as MonsterStructuredLoc
+  } catch {
+    return null
+  }
+}
 
 type TypeFilter = 'all' | 'simple' | 'complex'
 
@@ -37,6 +48,25 @@ function HazardCard({ hazard, expanded, onToggle }: {
   const traits = parseJsonArray(hazard.traits)
   const actions = parseJsonArray<HazardAction>(hazard.actions_json)
   const locale = useCurrentLocale()
+  const structured = useMemo(() => parseStructured(hazard.structured_json), [hazard.structured_json])
+  // Build a name→RU description map from structured.items so action rows can
+  // surface translated trigger/effect text by name match against actions_json.
+  const itemDescByName = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!structured?.items) return map
+    for (const item of structured.items) {
+      if (typeof item.description === 'string' && item.description.length > 0) {
+        map.set(item.name.toLowerCase(), item.description)
+      }
+    }
+    return map
+  }, [structured])
+  // Prefer structured RU fields when locale=ru AND vendor data present.
+  const isRu = locale === 'ru'
+  const descriptionText = isRu ? (structured?.descriptionHazard ?? structured?.description ?? hazard.description) : hazard.description
+  const disableText = isRu ? (structured?.disableDetails ?? hazard.disable_details) : hazard.disable_details
+  const resetText = isRu ? (structured?.resetDetails ?? hazard.reset_details) : hazard.reset_details
+  const stealthText = isRu ? (structured?.stealthDetails ?? hazard.stealth_details) : hazard.stealth_details
   const showUntranslated = locale === 'ru' && !hazard.name_loc
 
   return (
@@ -99,58 +129,56 @@ function HazardCard({ hazard, expanded, onToggle }: {
           </div>
 
           {/* Stealth details */}
-          {hazard.stealth_details && (
+          {stealthText && (
             <p className="text-xs text-muted-foreground">
               <span className="font-semibold text-foreground/70">Stealth: </span>
-              {sanitize(hazard.stealth_details)}
+              <SafeHtml as="span" html={stealthText} className="inline" />
             </p>
           )}
 
           {/* Description */}
-          {hazard.description && (
-            <p className="text-xs text-foreground/80 leading-relaxed">
-              {sanitize(hazard.description)}
-            </p>
+          {descriptionText && (
+            <SafeHtml html={descriptionText} className="text-xs text-foreground/80 leading-relaxed" />
           )}
 
           {/* Disable */}
-          {hazard.disable_details && (
+          {disableText && (
             <div>
               <p className="text-xs font-semibold text-amber-300/80 mb-0.5">Disable</p>
-              <p className="text-xs text-foreground/80 leading-relaxed">
-                {sanitize(hazard.disable_details)}
-              </p>
+              <SafeHtml html={disableText} className="text-xs text-foreground/80 leading-relaxed" />
             </div>
           )}
 
           {/* Reset */}
-          {hazard.reset_details && (
+          {resetText && (
             <div>
               <p className="text-xs font-semibold text-blue-300/80 mb-0.5">Reset</p>
-              <p className="text-xs text-foreground/80 leading-relaxed">
-                {sanitize(hazard.reset_details)}
-              </p>
+              <SafeHtml html={resetText} className="text-xs text-foreground/80 leading-relaxed" />
             </div>
           )}
 
           {/* Actions */}
           {actions.length > 0 && (
             <div className="space-y-1.5">
-              {actions.map((action, i) => (
-                <div key={i} className="rounded bg-secondary/40 px-2 py-1.5">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-[11px] text-muted-foreground">
-                      {ACTION_TYPE_LABEL[action.actionType] ?? '●'}
-                    </span>
-                    <span className="text-xs font-semibold">{action.name}</span>
+              {actions.map((action, i) => {
+                const ruDescription = isRu ? itemDescByName.get(action.name.toLowerCase()) : undefined
+                const desc = ruDescription ?? action.description
+                return (
+                  <div key={i} className="rounded bg-secondary/40 px-2 py-1.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[11px] text-muted-foreground">
+                        {ACTION_TYPE_LABEL[action.actionType] ?? '●'}
+                      </span>
+                      <span className="text-xs font-semibold">{action.name}</span>
+                    </div>
+                    {desc && (
+                      ruDescription
+                        ? <SafeHtml html={desc} className="text-xs text-foreground/70 leading-relaxed" />
+                        : <p className="text-xs text-foreground/70 leading-relaxed">{sanitize(desc)}</p>
+                    )}
                   </div>
-                  {action.description && (
-                    <p className="text-xs text-foreground/70 leading-relaxed">
-                      {sanitize(action.description)}
-                    </p>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 

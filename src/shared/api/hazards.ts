@@ -5,6 +5,8 @@ export interface HazardRow {
   id: string
   name: string
   name_loc: string | null
+  /** Raw structured_json from translations table — parse via getHazardStructured() */
+  structured_json: string | null
   level: number
   is_complex: number
   hazard_type: string
@@ -28,13 +30,16 @@ export interface HazardRow {
 //  - kind='monster' for entries from AP bestiary packs (Foundry stores AP hazards as
 //    actors alongside creatures; they share the actor-pack ingest path)
 // LIMIT 1 + ORDER BY t.kind='hazard' DESC prefers the dedicated bucket when both exist.
-const HAZARD_NAME_LOC_SUBQUERY = `(SELECT t.name_loc FROM translations t WHERE t.kind IN ('hazard','monster') AND t.name_key=h.name COLLATE NOCASE AND t.locale=? ORDER BY (t.kind='hazard') DESC LIMIT 1) AS name_loc`
+const HAZARD_NAME_LOC_SUBQUERY = `
+  (SELECT t.name_loc FROM translations t WHERE t.kind IN ('hazard','monster') AND t.name_key=h.name COLLATE NOCASE AND t.locale=? ORDER BY (t.kind='hazard') DESC LIMIT 1) AS name_loc,
+  (SELECT t.structured_json FROM translations t WHERE t.kind IN ('hazard','monster') AND t.name_key=h.name COLLATE NOCASE AND t.locale=? ORDER BY (t.kind='hazard') DESC LIMIT 1) AS structured_json
+`
 
 export async function getAllHazards(): Promise<HazardRow[]> {
   const db = await getDb()
   return await db.select<HazardRow[]>(
     `SELECT h.*, ${HAZARD_NAME_LOC_SUBQUERY} FROM hazards h ORDER BY h.level ASC, h.name ASC`,
-    [getCurrentLocale()]
+    [getCurrentLocale(), getCurrentLocale()]
   )
 }
 
@@ -43,12 +48,12 @@ export async function searchHazards(query: string, limit = 50): Promise<HazardRo
   if (!query.trim()) {
     return await db.select<HazardRow[]>(
       `SELECT h.*, ${HAZARD_NAME_LOC_SUBQUERY} FROM hazards h ORDER BY h.level ASC, h.name ASC LIMIT ?`,
-      [getCurrentLocale(), limit]
+      [getCurrentLocale(), getCurrentLocale(), limit]
     )
   }
   return await db.select<HazardRow[]>(
     `SELECT h.*, ${HAZARD_NAME_LOC_SUBQUERY} FROM hazards h WHERE h.name LIKE ? ORDER BY h.level ASC, h.name ASC LIMIT ?`,
-    [getCurrentLocale(), `%${query.trim()}%`, limit]
+    [getCurrentLocale(), getCurrentLocale(), `%${query.trim()}%`, limit]
   )
 }
 
@@ -56,7 +61,7 @@ export async function getHazardById(id: string): Promise<HazardRow | null> {
   const db = await getDb()
   const rows = await db.select<HazardRow[]>(
     `SELECT h.*, ${HAZARD_NAME_LOC_SUBQUERY} FROM hazards h WHERE h.id = ? LIMIT 1`,
-    [getCurrentLocale(), id]
+    [getCurrentLocale(), getCurrentLocale(), id]
   )
   return rows[0] ?? null
 }

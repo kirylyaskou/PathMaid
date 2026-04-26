@@ -22,6 +22,11 @@ export interface MonsterStructuredLoc {
   acDetails?: string
   allSavesDetails?: string
   stealthDetails?: string
+  /** Hazard-specific overlay fields (haunts/traps in bestiary packs use these) */
+  descriptionHazard?: string
+  disableDetails?: string
+  resetDetails?: string
+  hDescription?: string
   skillsDetails?: Record<string, { details?: string }>
   items: Array<{
     id: string

@@ -26,6 +26,11 @@ export interface BabeleActorEntry {
   ac?: string
   allSaves?: string
   stealth?: string
+  /** Hazard-specific Babele fields (used by haunts/traps in bestiary + hazards packs) */
+  descriptionHazard?: string
+  disable?: string
+  reset?: string
+  Hdescription?: string
   skills?: Record<string, { details?: string }>
   items?: Array<{
     id: string
@@ -250,6 +255,10 @@ export function adaptBabeleActorEntry(
     ...(entry.ac !== undefined && { acDetails: entry.ac }),
     ...(entry.allSaves !== undefined && { allSavesDetails: entry.allSaves }),
     ...(entry.stealth !== undefined && { stealthDetails: entry.stealth }),
+    ...(entry.descriptionHazard !== undefined && { descriptionHazard: entry.descriptionHazard }),
+    ...(entry.disable !== undefined && { disableDetails: entry.disable }),
+    ...(entry.reset !== undefined && { resetDetails: entry.reset }),
+    ...(entry.Hdescription !== undefined && { hDescription: entry.Hdescription }),
     ...(entry.skills !== undefined && { skillsDetails: entry.skills }),
     items,
   }

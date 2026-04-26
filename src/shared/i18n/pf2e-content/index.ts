@@ -73,7 +73,7 @@ const KIND_SPELL = 'spell' as const
 // in a way that requires re-seeding existing DBs. The warm boot guard
 // compares this against sync_metadata so collect* and INSERT loops are
 // skipped entirely when the DB is already up to date.
-const SEED_VERSION = '4'
+const SEED_VERSION = '5'
 const SEED_VERSION_KEY = 'seed.translations.version'
 
 // SQLite parameter limit is 999. With 9 columns per row, 110 rows per
