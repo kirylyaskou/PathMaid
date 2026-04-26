@@ -116,6 +116,24 @@ export async function loadContentTranslations(db: Database): Promise<void> {
   const storedVersion = versionRows[0]?.value ?? null
   if (storedVersion === SEED_VERSION) {
     console.log(`[translations] Warm boot — seed version ${SEED_VERSION} already present, skipping ingest`)
+    // Check whether any entity rows are missing a translated name — the only
+    // case that happens is when Foundry sync added new creatures after the last
+    // boot. If every entity already has name_loc populated we skip the
+    // correlated UPDATE (was 77 000 ms on a 13 K-row table) and the FTS
+    // rebuild entirely, cutting warm-boot cost to near zero.
+    const _tc = performance.now()
+    const nullRows = await db.select<{ n: number }[]>(
+      'SELECT COUNT(*) AS n FROM entities WHERE name_loc IS NULL',
+    )
+    const missingCount = nullRows[0]?.n ?? 0
+    console.log(`[startup] warm: name_loc null check: ${(performance.now() - _tc).toFixed(0)}ms (missing=${missingCount})`)
+    if (missingCount === 0) {
+      console.log('[translations] Warm boot — name_loc fully populated, skipping UPDATE+FTS rebuild')
+      return
+    }
+    // Partial update: only touch entities that still lack a translated name.
+    // This happens after a Foundry sync that imported new creatures but
+    // did not bump SEED_VERSION (translations pack unchanged).
     const _tw0 = performance.now()
     await db.execute(
       `UPDATE entities
@@ -125,10 +143,11 @@ export async function loadContentTranslations(db: Database): Promise<void> {
               AND translations.locale = ?
               AND translations.name_key = entities.name COLLATE NOCASE
             LIMIT 1
-         )`,
+         )
+       WHERE name_loc IS NULL`,
       [LOCALE],
     )
-    console.log(`[startup] warm: UPDATE entities name_loc: ${(performance.now() - _tw0).toFixed(0)}ms`)
+    console.log(`[startup] warm: UPDATE entities name_loc (partial): ${(performance.now() - _tw0).toFixed(0)}ms`)
     const _tw1 = performance.now()
     await db.execute(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`, [])
     console.log(`[startup] warm: FTS rebuild: ${(performance.now() - _tw1).toFixed(0)}ms`)
