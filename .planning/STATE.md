@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.7.5
 milestone_name: — AP Bestiaries + Item-id RU + Special Abilities Coverage
 status: executing
-stopped_at: Completed 112-01-PLAN.md — strike description surface + 3-tier AbilityCard fallback + useCreatureItem hook
-last_updated: "2026-04-26T16:25:47Z"
-last_activity: 2026-04-26 -- Phase 112 plan 01 complete
+stopped_at: Completed 113-01-PLAN.md — bestiary spell detector + collision-safe second pass
+last_updated: "2026-04-26T16:50:00Z"
+last_activity: 2026-04-26 -- Phase 113 Plan 01 complete
 progress:
   total_phases: 71
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 5
+  percent: 71
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -21,15 +21,15 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-26 для v1.7.5 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** Phase 112 — Special Ability Surface Wiring
+**Current focus:** Phase 114 — Verification + Untranslated Regression
 
 ## Current Position
 
 Milestone: v1.7.5 AP Bestiaries + Item-id RU + Special Abilities Coverage
-Phase: 112 (Special Ability Surface Wiring) — COMPLETE
-Plan: 1 of 1 (complete)
-Status: Phase 112 complete — ready for Phase 113
-Last activity: 2026-04-26 -- Phase 112 plan 01 complete
+Phase: 114 (Verification + Untranslated Regression) — NEXT
+Plan: 113/1 complete
+Status: Phase 113 complete, moving to Phase 114
+Last activity: 2026-04-26 -- Phase 113 Plan 01 complete
 
 Progress: [█████░░░░░] 50%
 
@@ -104,6 +104,9 @@ Reference repro: `"Lucky" Lanks` из `outlaws-of-alkenstar-bestiary.json` — f
 - [Phase 112]: useCreatureItem short-circuits on localFallback !== undefined before locale check — covers ~100% CreatureStatBlock usage
 - [Phase 112]: Tier-2 action-dict gated by null name to useContentTranslation — zero DB queries on Tier-1 hit
 - [Phase 112]: Single Map.get per strike in CreatureStrikesSection.map() — const loc before return
+- [Phase 113]: SPELL_REF_DESC_MAX_CHARS=180 — covers reference notes without admitting ability-length descriptions (250+ chars)
+- [Phase 113]: Signal C at call site (not in detector) — collision check requires canonical dedup map in scope
+- [Phase 113]: bestiaryAdded=0 expected — by construction Signal A → name in canonical → collision suppressed; zero rows is correct conservative outcome
 
 ### Blockers/Concerns
 

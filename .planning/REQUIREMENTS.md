@@ -35,9 +35,9 @@
 
 ### Spell Coverage Extension (`SPELL-AP-*`)
 
-- [ ] **SPELL-AP-01**: Bestiary pack `entries.<creature>.items[]` элементы с `kind=spell` (`type === 'spell'` в Foundry semantics, identifiable via `items[].rules` или другой эвристикой) маппятся на spell rows в translations table
-- [ ] **SPELL-AP-02**: Spell lookup chain: `spells-srd[name]` → bestiary per-creature spells → engine EN fallback. Untranslated spell detection works для AP-only spells.
-- [ ] **SPELL-AP-03**: Reference repro: AP-specific spells из bestiary creatures (например, любой unique spellcaster из outlaws-of-alkenstar) рендерятся RU в SpellReferenceDrawer когда vendor entry существует
+- [x] **SPELL-AP-01**: Bestiary pack `entries.<creature>.items[]` элементы с `kind=spell` (`type === 'spell'` в Foundry semantics, identifiable via `items[].rules` или другой эвристикой) маппятся на spell rows в translations table
+- [x] **SPELL-AP-02**: Spell lookup chain: `spells-srd[name]` → bestiary per-creature spells → engine EN fallback. Untranslated spell detection works для AP-only spells.
+- [x] **SPELL-AP-03**: Reference repro: AP-specific spells из bestiary creatures (например, любой unique spellcaster из outlaws-of-alkenstar) рендерятся RU в SpellReferenceDrawer когда vendor entry существует
 
 ### Item-ID RU Coverage Extension (`ITEM-ID-*`)
 
@@ -119,9 +119,9 @@ _Filled by roadmapper 2026-04-26 — Phases 109-114 mapped from REQUIREMENTS, 22
 | ABIL-02 | Phase 112 | Not started |
 | ABIL-03 | Phase 112 | Not started |
 | ABIL-04 | Phase 112 | Not started |
-| SPELL-AP-01 | Phase 113 | Not started |
-| SPELL-AP-02 | Phase 113 | Not started |
-| SPELL-AP-03 | Phase 113 | Not started |
+| SPELL-AP-01 | Phase 113 | Complete (113-01) |
+| SPELL-AP-02 | Phase 113 | Complete (113-01) |
+| SPELL-AP-03 | Phase 113 | Complete (113-01) |
 | UNTRANS-01 | Phase 114 | Not started |
 | UNTRANS-02 | Phase 114 | Not started |
 | VERIFY-01 | Phase 114 | Not started |

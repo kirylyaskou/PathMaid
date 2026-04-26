@@ -1479,7 +1479,8 @@ Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves,
   3. Ability rows do NOT trigger N+1 queries (single lookup per ability surface)
   4. EN fallback intact: ability без vendor entry показывает English description (no blank cards)
   5. tsc + lint + vite build green
-**Plans**: TBD
+**Plans:** 1/1 plans complete
+- [x] 112-01-PLAN.md — Strike description surface + AbilityCard 3-tier fallback chain + useCreatureItem hook (ABIL-01..04, DEBT-02)
 **UI hint**: yes
 
 ### Phase 113: AP Spell Coverage Extension
@@ -1497,7 +1498,8 @@ Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves,
   3. Spell name collision policy documented — base `spells-srd[name]` wins over bestiary per-creature override (single source of truth)
   4. Untranslated spell badge (Phase 98) continues to fire для truly untranslated spells (no false negatives)
   5. EN fallback intact for AP spells without vendor entry
-**Plans**: TBD
+**Plans**: 1 plan
+- [x] 113-01-PLAN.md — Bestiary spell-shape detector + collision-safe second pass over actor packs (SPELL-AP-01..03, DEBT-02)
 
 ### Phase 114: Verification + Untranslated Regression
 **Goal**: Manual smoke test 10+ AP creatures (по 1 на каждый major AP pack) renders RU end-to-end. Homebrew creature regression check — 🚫RU badge остаётся для creatures без vendor entry. Migration chain 0044 → 0045 верифицирована на warm boot. Final v1.7.5 acceptance.
