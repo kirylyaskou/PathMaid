@@ -32,6 +32,8 @@ import type { MonsterStructuredLoc } from './lib'
 
 export type TranslationKind = 'monster' | 'spell' | 'item' | 'feat' | 'action' | 'condition'
 
+const PERF_DEV = import.meta.env.DEV
+
 const LOCALE = 'ru'
 const SOURCE = 'pf2-locale-ru'
 const KIND_MONSTER = 'monster' as const
@@ -162,9 +164,15 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     return
   }
 
+  if (PERF_DEV) {
+    console.log('[perf] === cold-boot seed start ===')
+    console.time('[perf] total seed (cold boot)')
+  }
+
   // One-shot cleanup: stale rows from prior seed sources and incomplete
   // spell rows that predate structured_json. Runs only on cold boot so
   // warm boot pays no full-scan cost on the translations table.
+  if (PERF_DEV) console.time('[perf] cleanup DELETE')
   await db.execute(
     "DELETE FROM translations WHERE source = 'pf2.ru'",
     [],
@@ -176,10 +184,17 @@ export async function loadContentTranslations(db: Database): Promise<void> {
          AND structured_json IS NULL`,
     [SOURCE],
   )
+  if (PERF_DEV) console.timeEnd('[perf] cleanup DELETE')
 
+  if (PERF_DEV) console.time('[perf] collectMonsterTranslations')
   const monsterRows = await collectMonsterTranslations()
-  const spellRows = await collectSpellTranslations()
+  if (PERF_DEV) console.timeEnd('[perf] collectMonsterTranslations')
 
+  if (PERF_DEV) console.time('[perf] collectSpellTranslations')
+  const spellRows = await collectSpellTranslations()
+  if (PERF_DEV) console.timeEnd('[perf] collectSpellTranslations')
+
+  if (PERF_DEV) console.time('[perf] seedKind monster INSERT')
   await seedKind(db, KIND_MONSTER, monsterRows.length, async () => {
     for (let i = 0; i < monsterRows.length; i += CHUNK_SIZE) {
       const chunk = monsterRows.slice(i, i + CHUNK_SIZE)
@@ -206,7 +221,9 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       )
     }
   })
+  if (PERF_DEV) console.timeEnd('[perf] seedKind monster INSERT')
 
+  if (PERF_DEV) console.time('[perf] seedKind spell INSERT')
   await seedKind(db, KIND_SPELL, spellRows.length, async () => {
     for (let i = 0; i < spellRows.length; i += CHUNK_SIZE) {
       const chunk = spellRows.slice(i, i + CHUNK_SIZE)
@@ -233,17 +250,21 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       )
     }
   })
+  if (PERF_DEV) console.timeEnd('[perf] seedKind spell INSERT')
 
   // Item-shaped kinds (action / feat / item / condition) share a uniform
   // text-overlay shape with spells. Group rows by kind and feed each
   // group through seedKind so per-kind skip-gates work independently.
+  if (PERF_DEV) console.time('[perf] collectItemKindTranslations')
   const itemRows = await collectItemKindTranslations()
+  if (PERF_DEV) console.timeEnd('[perf] collectItemKindTranslations')
   const grouped = new Map<ItemKind, typeof itemRows>()
   for (const row of itemRows) {
     const bucket = grouped.get(row.kind) ?? []
     bucket.push(row)
     grouped.set(row.kind, bucket)
   }
+  if (PERF_DEV) console.time('[perf] seedKind item-kinds INSERT (loop)')
   for (const [kind, kindRows] of grouped) {
     await seedKind(db, kind, kindRows.length, async () => {
       for (let i = 0; i < kindRows.length; i += CHUNK_SIZE) {
@@ -272,7 +293,9 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       }
     })
   }
+  if (PERF_DEV) console.timeEnd('[perf] seedKind item-kinds INSERT (loop)')
 
+  if (PERF_DEV) console.time('[perf] entities.name_loc UPDATE + FTS rebuild')
   await db.execute(
     `UPDATE entities
        SET name_loc = COALESCE(
@@ -290,6 +313,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     `INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`,
     [],
   )
+  if (PERF_DEV) console.timeEnd('[perf] entities.name_loc UPDATE + FTS rebuild')
 
   // Flatten actor pack items[] into entity_items so strike rendering
   // can look up RU weapon names by (entity_name, item_id) without
@@ -304,6 +328,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     }
   }
   const monsterItemPairs = Array.from(itemPairsDedup.values())
+  if (PERF_DEV) console.time('[perf] entity_items INSERT')
   if (monsterItemPairs.length > 0) {
     const existingItems = await db.select<{ n: number }[]>(
       'SELECT COUNT(*) AS n FROM entity_items WHERE locale = ?',
@@ -338,12 +363,18 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       }
     }
   }
+  if (PERF_DEV) console.timeEnd('[perf] entity_items INSERT')
 
   // Record seed version so warm boot guard fires on next launch.
   await db.execute(
     'INSERT OR REPLACE INTO sync_metadata (key, value) VALUES (?, ?)',
     [SEED_VERSION_KEY, SEED_VERSION],
   )
+
+  if (PERF_DEV) {
+    console.timeEnd('[perf] total seed (cold boot)')
+    console.log(`[perf] === cold-boot seed end — monsters=${monsterRows.length} spells=${spellRows.length} item-kinds=${itemRows.length} entity_items=${monsterItemPairs.length} ===`)
+  }
 
   const counts = await db.select<{ kind: string; locale: string; n: number }[]>(
     'SELECT kind, locale, COUNT(*) as n FROM translations GROUP BY kind, locale',
