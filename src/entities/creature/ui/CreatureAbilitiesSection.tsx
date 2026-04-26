@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Swords, Shield as ShieldIcon, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
@@ -8,6 +8,7 @@ import { AbilityCard } from '@/shared/ui/ability-card'
 import { highlightGameText } from '../lib/foundry-text'
 import type { ClassifiedAbilities } from '../model/classify-abilities'
 import type { AbilityLoc } from '@/shared/i18n'
+import { useContentTranslation } from '@/shared/i18n'
 import type { DisplayActionCost } from '../model/types'
 import { SafeHtml } from '@/shared/lib/safe-html'
 
@@ -34,6 +35,10 @@ function resolveAbilityLoc(
     displayCost: ability.actionCost,
     displayTraits: ability.traits ?? [],
     locDescription: localizedDesc && localizedDesc.length > 0 ? loc!.description : undefined,
+    // EN name for Tier-2 action-dict fallback lookup in AbilityCardResolved.
+    // Always the engine name so action-dict keying stays consistent regardless
+    // of whether a per-creature pack overlay exists.
+    actionDictKey: ability.name,
   }
 }
 
@@ -50,25 +55,42 @@ function AbilityCardResolved({
   actionCostOverride?: DisplayActionCost
   onRoll: (formula: string, label: string) => void
 }) {
-  const { displayName, displayCost, displayTraits, locDescription } = resolveAbilityLoc(ability, loc)
+  const { displayName, displayCost, displayTraits, locDescription, actionDictKey } =
+    resolveAbilityLoc(ability, loc)
+
+  // Tier-2 fallback: action-kind dictionary (actionspf2e pack — base PF2e SRD shared abilities).
+  // Pass null as name when Tier-1 hit to short-circuit the hook with zero DB query.
+  // Hook is always called (rules of hooks); the null guard lives inside useContentTranslation.
+  const actionDictName = locDescription === undefined ? actionDictKey : null
+  const { data: actionTranslation } = useContentTranslation('action', actionDictName, null)
+
   const cost = actionCostOverride ?? (displayCost !== 0 ? displayCost : undefined)
+
+  // Description rendering precedence: Tier 1 > Tier 2 > Tier 3 (engine EN).
+  let descriptionNode: ReactNode
+  if (locDescription) {
+    // Tier 1 — pack-native per-creature overlay (RU HTML from items[]).
+    // SafeHtml sanitizes + resolves Foundry @-tokens; <strong>/<p> structure preserved.
+    descriptionNode = (
+      <SafeHtml html={locDescription} className="text-sm text-foreground/80 leading-relaxed" />
+    )
+  } else if (actionTranslation && actionTranslation.textLoc.trim().length > 0) {
+    // Tier 2 — action-kind dictionary (RU HTML from actionspf2e pack).
+    descriptionNode = (
+      <SafeHtml html={actionTranslation.textLoc} className="text-sm text-foreground/80 leading-relaxed" />
+    )
+  } else {
+    // Tier 3 — engine EN raw with clickable formula highlighting.
+    descriptionNode = (
+      <p className="text-sm text-foreground/80 leading-relaxed">
+        {highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
+      </p>
+    )
+  }
+
   return (
     <AbilityCard key={cardKey} name={displayName} actionCost={cost} traits={displayTraits}>
-      {locDescription ? (
-        // RU descriptions arrive as raw HTML from pf2-locale-ru pack —
-        // SafeHtml sanitizes + resolves Foundry @-tokens into spans so
-        // <strong>/<p> structure renders properly. Clickable-formula
-        // extraction is not reapplied here; engine numeric values surface
-        // via the separate strike/skill rows.
-        <SafeHtml
-          html={locDescription}
-          className="text-sm text-foreground/80 leading-relaxed"
-        />
-      ) : (
-        <p className="text-sm text-foreground/80 leading-relaxed">
-          {highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
-        </p>
-      )}
+      {descriptionNode}
     </AbilityCard>
   )
 }
