@@ -7,7 +7,6 @@ import { ErrorBoundary } from './shared/ui/error-boundary'
 import './app/styles/globals.css'
 
 if (import.meta.env.DEV) {
-  void import('./shared/i18n/pf2e-content/lib/parse-monster.debug')
   void import('./shared/db/migrations.debug')
 }
 

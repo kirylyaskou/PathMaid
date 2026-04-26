@@ -18,7 +18,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@engine": ["engine/index.ts"],
-      "@engine/*": ["engine/*"]
+      "@engine/*": ["engine/*"],
+      "@vendor/*": ["vendor/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "engine/**/*.ts"],

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BookOpen } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { searchSpells } from '@/shared/api'
@@ -17,6 +18,7 @@ const TRADITION_MASCOT: Record<string, string> = {
 }
 
 export function SpellsPage() {
+  const { t } = useTranslation()
   const [regularSpells, setRegularSpells] = useState<SpellRow[]>([])
   const [focusSpells, setFocusSpells] = useState<SpellRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -86,8 +88,8 @@ export function SpellsPage() {
         className="relative z-10 flex flex-col h-full overflow-hidden"
       >
         <TabsList className="shrink-0 mx-3 mt-3 mb-0 w-auto self-start">
-          <TabsTrigger value="spells">Spells</TabsTrigger>
-          <TabsTrigger value="focus">Focus Spells</TabsTrigger>
+          <TabsTrigger value="spells">{t('spells.tabs.spells')}</TabsTrigger>
+          <TabsTrigger value="focus">{t('spells.tabs.focus')}</TabsTrigger>
         </TabsList>
 
         {/* Filter panel — shared across tabs */}
@@ -96,14 +98,14 @@ export function SpellsPage() {
         {/* Count + clear row */}
         <div className="px-3 py-1.5 shrink-0 border-b border-border/30 flex items-center gap-2">
           <p className="text-xs text-muted-foreground flex-1">
-            {loading ? 'Searching…' : `${activeCount} spell${activeCount !== 1 ? 's' : ''}`}
+            {loading ? t('spells.searching') : t('spells.count', { count: activeCount })}
           </p>
           {hasActiveFilters() && (
             <button
               onClick={clearFilters}
               className="text-xs text-primary hover:underline"
             >
-              clear filters
+              {t('spells.clearFilters')}
             </button>
           )}
         </div>
@@ -149,10 +151,11 @@ interface SpellListProps {
 }
 
 function SpellList({ spellsByRank, isFocusTab, loading, onSpellClick, selectedRank, hasQuery }: SpellListProps) {
+  const { t } = useTranslation()
   if (loading) {
     return (
       <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-        Searching…
+        {t('spells.searching')}
       </div>
     )
   }
@@ -167,7 +170,7 @@ function SpellList({ spellsByRank, isFocusTab, loading, onSpellClick, selectedRa
       <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
         <BookOpen className="w-8 h-8 mb-2 opacity-40" />
         <p className="text-sm">
-          {hasQuery ? 'No spells match the filters' : 'Run sync to import spells'}
+          {hasQuery ? t('spells.noMatches') : t('spells.noData')}
         </p>
       </div>
     )

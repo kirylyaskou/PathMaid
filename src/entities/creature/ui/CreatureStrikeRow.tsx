@@ -1,11 +1,14 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { formatModifier } from '@/shared/lib/format'
 import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { ActionIcon } from '@/shared/ui/action-icon'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
+import { TraitPill } from '@/shared/ui/trait-pill'
+import { useCurrentLocale } from '@/shared/i18n'
+import { getTraitLabel } from '@/shared/i18n/pf2e-content'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
-import type { StrikeLoc } from '@/shared/i18n'
 
 interface CreatureStrikeRowProps {
   strike: EffectiveStrike
@@ -14,7 +17,9 @@ interface CreatureStrikeRowProps {
   currentMapIndex: number
   isMapTracked: boolean
   onAttackClick: (strike: EffectiveStrike, mapIdx: number) => void
-  strikeLoc?: StrikeLoc
+  /** Localized strike name from pack `items[]` lookup by Foundry _id;
+   *  parent owns the lookup so multiple strikes share a single Map traversal. */
+  nameLoc?: string
 }
 
 export function CreatureStrikeRow({
@@ -24,7 +29,7 @@ export function CreatureStrikeRow({
   currentMapIndex,
   isMapTracked,
   onAttackClick,
-  strikeLoc,
+  nameLoc,
 }: CreatureStrikeRowProps) {
   const {
     name, modifier, traits, group, additionalDamage,
@@ -35,7 +40,9 @@ export function CreatureStrikeRow({
   } = strike
   void modifier
 
-  const displayName = strikeLoc?.name ?? name
+  const { t } = useTranslation()
+  const locale = useCurrentLocale()
+  const displayName = nameLoc ?? name
 
   return (
     <div className="p-3 rounded-md bg-secondary/50">
@@ -87,19 +94,19 @@ export function CreatureStrikeRow({
         </div>
         {hasRange && (
           <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-            Range {range} ft
+            {t('statblock.rangeFt', { value: range })}
           </span>
         )}
         {hasNonDefaultReach && (
           <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-            Reach {displayReach} ft
+            {t('statblock.reachFt', { value: displayReach })}
           </span>
         )}
       </div>
 
       {effectiveDamage.length > 0 && (
         <div className="mt-1 text-sm">
-          <span className="font-semibold">Damage </span>
+          <span className="font-semibold">{t('statblock.damage')} </span>
           {effectiveDamage.map((d, di) => (
             <span key={di}>
               {di > 0 && <span className="text-muted-foreground"> plus </span>}
@@ -110,17 +117,16 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {d.type && (
-                // Color mapping uses engine type key, not localised label.
-                <span className={cn('font-mono', damageTypeColor(d.type))}> {strikeLoc?.damageType ?? d.type}</span>
+                <span className={cn('font-mono', damageTypeColor(d.type))}> {getTraitLabel(d.type, locale)}</span>
               )}
               {d.persistent && (
-                <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">persistent</span>
+                <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">{t('statblock.persistent')}</span>
               )}
             </span>
           ))}
           {enfeebledPenalty < 0 && (
             <span className="ml-1 font-mono text-xs text-pf-blood">
-              {enfeebledPenalty} <span className="text-muted-foreground">(Enfeebled)</span>
+              {enfeebledPenalty} <span className="text-muted-foreground">({t('statblock.enfeebled')})</span>
             </span>
           )}
         </div>
@@ -140,9 +146,7 @@ export function CreatureStrikeRow({
                 combatId={encounterId}
               />
               {ad.type && (
-                // Color mapping uses engine type key; additional damage type override
-                // not available — StrikeLoc carries one damageType for the primary hit.
-                <span className={cn('font-mono', damageTypeColor(ad.type))}> {ad.type}</span>
+                <span className={cn('font-mono', damageTypeColor(ad.type))}> {getTraitLabel(ad.type, locale)}</span>
               )}
             </div>
           ))}
@@ -152,19 +156,14 @@ export function CreatureStrikeRow({
       {group && (
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary/60">
-            Group: {group}
+            {t('statblock.group')}: {getTraitLabel(group.toLowerCase(), locale)}
           </span>
         </div>
       )}
       {traits.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {traits.map((trait) => (
-            <span
-              key={trait}
-              className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground"
-            >
-              {trait}
-            </span>
+            <TraitPill key={trait} trait={trait} />
           ))}
         </div>
       )}

@@ -14,6 +14,8 @@ interface SizeShift {
 }
 
 interface DisplayStrike {
+  /** Foundry item _id — pack translation key. Absent for battle-form strikes. */
+  id?: string
   name: string
   modifier: number
   traits: string[]
@@ -70,6 +72,7 @@ export function useEffectiveStrikes(
     const source: DisplayStrike[] = battleFormStrikes
       ? battleFormStrikes.map(normalizeBattleFormStrike)
       : strikes.map((s) => ({
+          id: s.id,
           name: s.name,
           modifier: s.modifier,
           traits: s.traits,

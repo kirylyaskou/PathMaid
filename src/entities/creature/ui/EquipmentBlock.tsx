@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import {
   Collapsible,
@@ -82,6 +83,7 @@ export function EquipmentBlock({
   items: CreatureItemRow[]
   encounterContext?: EncounterContext
 }) {
+  const { t } = useTranslation()
   const {
     overrides,
     addQuery, setAddQuery,
@@ -100,7 +102,7 @@ export function EquipmentBlock({
       <Collapsible defaultOpen={false}>
         <SectionHeader trailing={<span className="text-xs text-muted-foreground">({totalCount})</span>}>
           <Backpack className="w-3.5 h-3.5 text-muted-foreground" />
-          Equipment
+          {t('statblock.equipment')}
         </SectionHeader>
         <CollapsibleContent>
           <div className="px-4 pb-3 pt-2 space-y-1">
@@ -143,7 +145,7 @@ export function EquipmentBlock({
             {encounterContext && (
               <div className="relative mt-2">
                 <Input
-                  placeholder="Add item…"
+                  placeholder={t('statblock.addItem')}
                   value={addQuery}
                   onChange={(e) => setAddQuery(e.target.value)}
                   className="text-xs h-8 bg-secondary/40 border-border/50"

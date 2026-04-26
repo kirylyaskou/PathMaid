@@ -54,6 +54,8 @@ export interface CreatureStatBlockData extends Creature {
   resistances: ResistanceEntry[]
   speeds: Record<string, number | null>
   strikes: {
+    /** Foundry item _id — used for pack translation lookup (RU strike name). */
+    id?: string
     name: string
     modifier: number
     damage: { formula: string; type: string; persistent?: boolean }[]
@@ -66,7 +68,7 @@ export interface CreatureStatBlockData extends Creature {
     reach?: number
     range?: number
   }[]
-  abilities: { name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] }[]
+  abilities: { id?: string; name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] }[]
   skills: { name: string; modifier: number; calculated?: boolean }[]
   languages: string[]
   senses: string[]

@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from "react"
+import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { useRoll } from '@/shared/hooks'
 import { formatRollFormula } from '@/shared/lib/format'
@@ -13,9 +14,11 @@ import {
 import { SectionHeader } from "@/shared/ui/section-header"
 import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
+import { NoTranslationBadge } from "@/shared/ui/no-translation-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
 import type { CreatureStatBlockData } from '../model/types'
 import { stripHtml } from '@/shared/lib/html'
+import { SafeHtml } from '@/shared/lib/safe-html'
 import { useModifiedStats } from '../model/use-modified-stats'
 import { useEffectiveSpeeds } from '../model/use-effective-speeds'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
@@ -29,12 +32,18 @@ import {
   getRecallKnowledgeInfo,
 } from '@engine'
 import type { SpeedType } from '@engine'
-import { mapSize } from '@/shared/lib/size-map'
+import { mapSize, unmapSize } from '@/shared/lib/size-map'
 import { classifyAbilities } from '../model/classify-abilities'
 import { StatItem } from './StatItem'
 import { SpellListPreview } from './SpellListPreview'
 import { EquipmentBlock } from './EquipmentBlock'
-import { useContentTranslation } from '@/shared/i18n'
+import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import {
+  getSizeLabel,
+  getTraitLabel,
+  getSkillLabel,
+  getLanguageLabel,
+} from '@/shared/i18n/pf2e-content'
 import type { AbilityLoc } from '@/shared/i18n'
 import type { SpellcastingSection } from '@/entities/spell'
 import type { ReactNode } from 'react'
@@ -59,7 +68,8 @@ type EngineSize = (typeof SIZE_ORDER)[number]
 const capitalize = (s: string): string =>
   s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1)
 
-/** Renders a DC value (Spell DC / Class DC) with condition modifier tinting. */
+/** Renders a DC value (Spell DC / Class DC) with condition modifier tinting.
+ *  Caller passes localized `label` string. */
 function DcDisplay({
   label,
   baseDc,
@@ -104,43 +114,36 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({ creature, className, encounterContext, renderSpellcasting }: CreatureStatBlockProps) {
-  // RU content translation overlay. When a bundled pf2.ru translation exists
-  // we override the display name and the trait pills (traitsLoc is
-  // comma-separated and already includes rarity/size labels, so
-  // auto-rendered rarity/size pills are disabled to avoid duplicates). All
-  // numeric stats, interactive formulas, ability cards, spellcasting blocks,
-  // and skills stay English — keeps the structured UI intact.
+  const { t } = useTranslation()
+  // RU content translation overlay. When a vendored pack entry exists we
+  // override the display name and surface per-monster RU free-text deltas
+  // (description, language details, senses details, speed details) but keep
+  // numeric stats, formulas, ability cards, and spellcasting blocks in
+  // English-driven engine values — those are the source of truth.
   const { data: translation } = useContentTranslation(
     'monster',
     creature.name,
     creature.level,
   )
+  const locale = useCurrentLocale()
 
   // Stable references for sub-components — re-derived only when structured changes.
   const structured = translation?.structured ?? null
 
-  const abilitiesLocByName = useMemo(() => {
-    if (!structured?.abilitiesLoc) return undefined
+  // id-keyed: pack `items[]` carry the original Foundry `_id` which matches
+  // the strike/ability `id` produced by the bestiary mapper. Name-keyed
+  // lookup fails for translated content because pack `name` is RU and
+  // engine ability `name` is EN — id is the only stable join key.
+  const itemsLocById = useMemo(() => {
+    if (!structured?.items || structured.items.length === 0) return undefined
     const m = new Map<string, AbilityLoc>()
-    for (const a of structured.abilitiesLoc) {
-      m.set(a.name.trim().toLowerCase(), a)
+    for (const it of structured.items) {
+      // Pack contributors flag reviewed entries with `(*)` suffix on the
+      // RU name; strip it for display.
+      const cleanName = it.name.replace(/\s*\(\*\)\s*$/, '')
+      m.set(it.id, { name: cleanName, description: it.description ?? '' })
     }
-    return m
-  }, [structured])
-
-  const defensesLoc = useMemo(() => {
-    if (!structured) return undefined
-    return {
-      acLoc: structured.acLoc,
-      hpLoc: structured.hpLoc,
-      savesLoc: structured.savesLoc,
-      weaknessesLoc: structured.weaknessesLoc,
-      resistancesLoc: structured.resistancesLoc,
-      immunitiesLoc: structured.immunitiesLoc,
-      perceptionLoc: structured.perceptionLoc,
-      languagesLoc: structured.languagesLoc,
-      abilityScoresLoc: structured.abilityScoresLoc,
-    }
+    return m.size > 0 ? m : undefined
   }, [structured])
 
   // Tag this hook as an "attack" roll site so Sure Strike (RollTwice selector:
@@ -347,7 +350,12 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
   )
 
   return (
-    <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold", className)}>
+    <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold relative", className)}>
+      {locale === 'ru' && translation === null && (
+        <div className="absolute top-2 right-2 z-10">
+          <NoTranslationBadge />
+        </div>
+      )}
       <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
         <div className="flex items-start gap-4">
           <LevelBadge level={creature.level} size="lg" />
@@ -358,16 +366,20 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
               </h2>
             </div>
             <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
-              {effectiveSize} {recallKnowledge.type || creature.type}
+              {getSizeLabel(unmapSize(effectiveSize), locale)}
+              {' '}
+              {getTraitLabel((recallKnowledge.type || creature.type).toLowerCase(), locale)}
             </p>
             {translation?.traitsLoc ? (
               // Translated traits string already carries rarity + size labels
               // (e.g. "Необычный, Средний, Демон, Бестия, Нечестивый") — split
-              // into a pill list; disable auto rarity/size to avoid duplicates.
+              // into a pill list; disable auto rarity/size to avoid duplicates;
+              // mark as localized so the pill skips its dict lookup.
               <TraitList
                 traits={translation.traitsLoc.split(/,\s*/).filter(Boolean)}
                 showRarity={false}
                 showSize={false}
+                localized
                 className="mt-2"
               />
             ) : (
@@ -388,44 +400,44 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
         <div className="px-4 pt-2 pb-1 space-y-0.5">
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground/80">
-              Recall Knowledge DC {recallKnowledge.dc}
+              {t('statblock.recallKnowledgeDc', { dc: recallKnowledge.dc })}
             </span>
             {recallKnowledge.type.length > 0 && (
-              <>{' • '}{capitalize(recallKnowledge.type)}</>
+              <>{' • '}{getTraitLabel(recallKnowledge.type.toLowerCase(), locale)}</>
             )}
             {recallKnowledge.skills.length > 0 && (
-              <>{' '}({recallKnowledge.skills.map(capitalize).join(', ')})</>
+              <>{' '}({recallKnowledge.skills.map((s) => getSkillLabel(capitalize(s), locale)).join(', ')})</>
             )}
           </p>
           {creature.senses.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground/80">Senses</span>
-              {' '}{creature.senses.join(', ')}
+              <span className="font-semibold text-foreground/80">{t('statblock.senses')}</span>
+              {' '}{structured?.sensesDetails ?? creature.senses.map((s) => getTraitLabel(s.toLowerCase(), locale)).join(', ')}
             </p>
           )}
         </div>
 
         <div className="pb-4 bg-card [@container-type:inline-size]">
           <div className="flex flex-nowrap overflow-hidden">
-            <StatItem label="HP" value={creature.hp} highlight />
+            <StatItem label={t('statblock.hp')} value={creature.hp} highlight />
             <StatItem
-              label={(mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? 'AC*' : 'AC'}
+              label={(mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? `${t('statblock.ac')}*` : t('statblock.ac')}
               value={(battleFormAcOverride ?? creature.ac) + ((mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? derivedShieldAcBonus : 0)}
               colorClass="text-pf-gold"
               modResult={modStats.get('ac')}
             />
-            <StatItem label="Fort" value={creature.fort} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('fortitude')} onRoll={(f) => handleRoll(f, 'Fortitude save')} />
-            <StatItem label="Ref" value={creature.ref} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('reflex')} onRoll={(f) => handleRoll(f, 'Reflex save')} />
-            <StatItem label="Will" value={creature.will} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('will')} onRoll={(f) => handleRoll(f, 'Will save')} />
-            <StatItem label="Perception" value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc modResult={modStats.get('perception')} onRoll={(f) => handleRoll(f, 'Perception check')} />
+            <StatItem label={t('statblock.fort')} value={creature.fort} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('fortitude')} onRoll={(f) => handleRoll(f, t('statblock.fort'))} />
+            <StatItem label={t('statblock.ref')} value={creature.ref} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('reflex')} onRoll={(f) => handleRoll(f, t('statblock.ref'))} />
+            <StatItem label={t('statblock.will')} value={creature.will} modifier colorClass="text-pf-threat-low" showDc modResult={modStats.get('will')} onRoll={(f) => handleRoll(f, t('statblock.will'))} />
+            <StatItem label={t('statblock.perception')} value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc modResult={modStats.get('perception')} onRoll={(f) => handleRoll(f, t('statblock.perception'))} />
           </div>
           {(creature.spellDC != null || creature.classDC != null) && (
             <div className="flex gap-6 mt-3 pt-3 border-t border-border/40">
               {creature.spellDC != null && (
-                <DcDisplay label="Spell DC" baseDc={creature.spellDC} modResult={modStats.get('spell-dc')} />
+                <DcDisplay label={t('statblock.spellDc')} baseDc={creature.spellDC} modResult={modStats.get('spell-dc')} />
               )}
               {creature.classDC != null && (
-                <DcDisplay label="Class DC" baseDc={creature.classDC} modResult={modStats.get('spell-dc')} />
+                <DcDisplay label={t('statblock.classDc')} baseDc={creature.classDC} modResult={modStats.get('spell-dc')} />
               )}
             </div>
           )}
@@ -439,16 +451,18 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
               immunities={creature.immunities}
               resistances={creature.resistances}
               weaknesses={creature.weaknesses}
-              defensesLoc={defensesLoc}
             />
             <Separator />
           </>
         )}
 
         <div className="p-4">
-          <StatRow label="Speed">
-            <CreatureSpeedLine speeds={effectiveSpeeds} speedsLoc={structured?.speedsLoc} />
+          <StatRow label={t('statblock.speed')}>
+            <CreatureSpeedLine speeds={effectiveSpeeds} />
           </StatRow>
+          {structured?.speedDetails && (
+            <p className="mt-1 text-xs text-muted-foreground italic">{structured.speedDetails}</p>
+          )}
         </div>
 
         {isSpecialFormation && (
@@ -457,15 +471,15 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
             <div className="px-4 py-3 space-y-2">
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 text-[10px] rounded bg-primary/15 text-primary border border-primary/30 uppercase tracking-wider font-semibold">
-                  {isTroop ? 'Troop Formation' : 'Swarm Formation'}
+                  {isTroop ? t('statblock.troopFormation') : t('statblock.swarmFormation')}
                 </span>
                 {isSwarm && (
-                  <span className="text-xs text-muted-foreground">Collective damage applies</span>
+                  <span className="text-xs text-muted-foreground">{t('statblock.collectiveDamage')}</span>
                 )}
               </div>
               {isTroop && troopDefenses && (
                 <div className="p-2 rounded bg-muted/30 text-xs leading-relaxed">
-                  <span className="font-semibold">Troop Defenses: </span>
+                  <span className="font-semibold">{t('statblock.troopDefenses')}: </span>
                   <span className="text-foreground/80">{stripHtml(troopDefenses.description)}</span>
                 </div>
               )}
@@ -483,7 +497,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
             currentMapIndex={currentMapIndex}
             isMapTracked={Boolean(mapCombatantId)}
             onAttackClick={handleStrikeAttack}
-            strikesLoc={structured?.strikesLoc}
+            itemsLocById={itemsLocById}
           />
         )}
 
@@ -491,7 +505,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         {creature.abilities.length > 0 && (
           <>
-            <CreatureAbilitiesSection classified={classifiedAbilities} onRoll={handleRoll} abilitiesLocByName={abilitiesLocByName} />
+            <CreatureAbilitiesSection classified={classifiedAbilities} onRoll={handleRoll} itemsLocById={itemsLocById} />
             <Separator />
           </>
         )}
@@ -518,10 +532,10 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
         )}
 
         <Collapsible defaultOpen>
-          <SectionHeader>Skills</SectionHeader>
+          <SectionHeader>{t('statblock.skills')}</SectionHeader>
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-2">
-              <CreatureSkillsLine skills={creature.skills} modStats={modStats} onRoll={handleRoll} skillsLoc={structured?.skillsLoc} />
+              <CreatureSkillsLine skills={creature.skills} modStats={modStats} onRoll={handleRoll} />
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -529,16 +543,23 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         {creature.languages.length > 0 && (
           <div className="p-4 space-y-2">
-            <StatRow label="Languages">{creature.languages.join(", ")}</StatRow>
+            <StatRow label={t('statblock.languages')}>{structured?.languageDetails ?? creature.languages.map((slug) => getLanguageLabel(slug.toLowerCase(), locale)).join(", ")}</StatRow>
           </div>
         )}
 
-        {creature.description && (
+        {(structured?.description || creature.description) && (
           <>
             <Separator />
             <div className="p-4">
               <div className="p-4 rounded-md bg-pf-parchment">
-                <p className="text-sm italic text-foreground/80">{creature.description}</p>
+                {structured?.description ? (
+                  <SafeHtml
+                    html={structured.description}
+                    className="text-sm italic text-foreground/80"
+                  />
+                ) : (
+                  <p className="text-sm italic text-foreground/80">{creature.description}</p>
+                )}
               </div>
             </div>
           </>
@@ -546,7 +567,7 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
 
         <div className="px-4 pb-4">
           <p className="text-xs text-muted-foreground">
-            Source: {creature.source}
+            {t('statblock.source')}: {creature.source}
           </p>
         </div>
       </CardContent>

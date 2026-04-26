@@ -4,9 +4,22 @@ import { Button } from '@/shared/ui/button'
 import { getSpellById } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
-import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
-import { renderDescription } from '@/shared/lib/render-description'
-import { useContentTranslation } from '@/shared/i18n'
+import {  sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
+import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import { getTraitLabel } from '@/shared/i18n/pf2e-content'
+import { TraitPill } from '@/shared/ui/trait-pill'
+import type { SpellStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
+
+// Save type names live in PF2E.Saves* but are not exposed via the
+// dictionary getter family. Inline mapping covers all three PF2e saves;
+// extending this table is cheaper than introducing a new dict module.
+const SAVE_RU_LABELS: Record<string, string> = {
+  reflex: 'Рефлекс',
+  fortitude: 'Стойкость',
+  will: 'Воля',
+}
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
 
@@ -31,21 +44,32 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
   const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 
-  // Spell translation lookup — `rank` is the level disambiguator
-  // for spells (different-rank spells can share a base name).
   const { data: translation } = useContentTranslation('spell', spell?.name, spell?.rank ?? null)
-
-  const descriptionNode = useMemo(
-    () => renderDescription(resolveFoundryTokens(spell?.description ?? '', { itemLevel: spell?.rank ?? undefined })),
-    [spell?.description, spell?.rank],
-  )
+  const locale = useCurrentLocale()
+  const showUntranslatedBadge = locale === 'ru' && translation === null
+  // Spell structured overlay shares the JSON column with the typed
+  // monster overlay; parse it locally because the generic `structured`
+  // accessor is shaped for monsters.
+  const spellLoc = useMemo<SpellStructuredLoc | null>(() => {
+    if (!translation?.structuredJson) return null
+    try {
+      return JSON.parse(translation.structuredJson) as SpellStructuredLoc
+    } catch {
+      return null
+    }
+  }, [translation?.structuredJson])
 
   return (
     <Sheet open={!!spellId} onOpenChange={(open) => { if (!open) onClose() }}>
       <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto flex flex-col gap-0 p-0">
         {spell && (
           <>
-            <SheetHeader className="p-4 pb-3 border-b border-border/30">
+            <SheetHeader className="p-4 pb-3 border-b border-border/30 relative">
+              {showUntranslatedBadge && (
+                <div className="absolute top-2 right-10 z-10">
+                  <NoTranslationBadge />
+                </div>
+              )}
               <SheetTitle className="text-base font-semibold leading-tight">
                 {translation?.nameLoc ?? spell.name}
               </SheetTitle>
@@ -59,7 +83,7 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                       TRADITION_COLORS[t] ?? 'bg-secondary text-secondary-foreground border-border'
                     )}
                   >
-                    {t}
+                    {getTraitLabel(t.toLowerCase(), locale)}
                   </span>
                 ))}
               </div>
@@ -77,7 +101,11 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 {spell.save_stat && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Save</span>
-                    <span className="text-sm capitalize">{spell.save_stat}</span>
+                    <span className="text-sm capitalize">
+                      {locale === 'ru'
+                        ? (SAVE_RU_LABELS[spell.save_stat.toLowerCase()] ?? spell.save_stat)
+                        : spell.save_stat}
+                    </span>
                   </div>
                 )}
                 {damageDisplay !== '—' && (
@@ -86,10 +114,16 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                     <span className="font-mono text-pf-blood text-sm">{damageDisplay}</span>
                   </div>
                 )}
-                {spell.range_text && (
+                {(spellLoc?.range || spell.range_text) && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Range</span>
-                    <span className="text-sm">{spell.range_text}</span>
+                    <span className="text-sm">{spellLoc?.range ?? spell.range_text}</span>
+                  </div>
+                )}
+                {spellLoc?.target && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Target</span>
+                    <span className="text-sm">{spellLoc.target}</span>
                   </div>
                 )}
                 {areaDisplay && (
@@ -98,10 +132,22 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                     <span className="text-sm">{areaDisplay}</span>
                   </div>
                 )}
-                {spell.duration_text && (
+                {(spellLoc?.duration || spell.duration_text) && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</span>
-                    <span className="text-sm">{spell.duration_text}</span>
+                    <span className="text-sm">{spellLoc?.duration ?? spell.duration_text}</span>
+                  </div>
+                )}
+                {spellLoc?.time && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cast</span>
+                    <span className="text-sm">{spellLoc.time}</span>
+                  </div>
+                )}
+                {spellLoc?.cost && (
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cost</span>
+                    <span className="text-sm">{spellLoc.cost}</span>
                   </div>
                 )}
               </div>
@@ -110,23 +156,27 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
               {traits.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {traits.map((t) => (
-                    <span
-                      key={t}
-                      className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
-                    >
-                      {t}
-                    </span>
+                    <TraitPill key={t} trait={t} />
                   ))}
                 </div>
               )}
 
-              {/* Description — EN source with Foundry tokens resolved.
-                  renderDescription parses HTML and highlights degree-of-success
-                  labels (Critical Success / Failure etc) with bold + colour. */}
-              {spell.description && (
-                <p className="text-[13px] text-foreground/80 leading-relaxed">
-                  {descriptionNode}
-                </p>
+              {/* Description — when a vendored RU translation exists, render
+                  it through SafeHtml (handles Babele @UUID / @Trait /
+                  @Damage / @Check tokens + tables / lists / details).
+                  Otherwise sanitize the engine EN HTML through the
+                  pre-existing token replacement path. */}
+              {translation?.textLoc ? (
+                <SafeHtml
+                  html={translation.textLoc}
+                  className="text-[13px] text-foreground/80 leading-relaxed"
+                />
+              ) : (
+                spell.description && (
+                  <p className="text-[13px] text-foreground/80 leading-relaxed whitespace-pre-line">
+                    {sanitizeFoundryText(spell.description, { itemLevel: spell.rank })}
+                  </p>
+                )
               )}
 
               {/* Source */}

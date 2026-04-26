@@ -1,28 +1,44 @@
 # PathMaid — Project Reference
 
-**Updated:** 2026-04-24 (начат v1.7.1)
+**Updated:** 2026-04-26 (v1.7.2 feature-complete, v1.7.3 starting)
 **Repo:** github.com/kirylyaskou/PathMaid
-**Current version:** v1.7.0 (shipped 2026-04-24) · v1.7.1 (в работе)
+**Current version:** v1.7.0 (shipped 2026-04-24) · v1.7.1 + v1.7.2 (feature-complete, not yet tagged — held for combined release after v1.7.3) · v1.7.3 (в работе)
 
-## Current Milestone: v1.7.1 Translation Dictionaries
+## Current Milestone: v1.7.3 — Strike Names + UI Shell + Item Surface Audit
 
-**Goal:** Расширить RU-покрытие `CreatureStatBlock` до всего textual content (кроме numerics) через dictionary-based i18n независимого от HTML parser output. Фиксим spell translation regression из v1.7.0. Source of truth: pf2.ru/rules/player-core (author-authorized partner integration reference).
+**Goal:** Закрыть остатки RU translation coverage по всему UI. После этого milestone v1.7.x чист и tag-able.
 
-**Target features:**
-- Structural stat-block labels переведены через i18next (HP/AC/Fort/Ref/Will/Perception/Speed/Senses/Languages/Skills/Strikes/Abilities/Spellcasting/Damage/Recall Knowledge + tabs)
-- 17-skill dictionary вынесен в shared module, применяется к ВСЕМ скиллам при locale=ru
-- ~25 PF2e languages dictionary
-- ~60 core traits dictionary (labels + tooltip descriptions из pf2.ru)
-- Spell RU rendering regression restored (формат pre-v1.7.0 baseline)
+**Target features (объединили v1.7.3+v1.7.4+v1.7.5 в один milestone):**
+
+A. Strike Names + Spell Surface Polish:
+- `entity_items` denormalization для id-based RU strike name lookup (closes Phase 91 G-3 deferral)
+- Strike rendering surfaces RU names + damage type RU labels через TraitPill
+- Spell drawer traditions/save type/damage type chips через dict (replaces hardcoded EN spans)
+
+B. UI Shell + Toast Localization:
+- Audit + close common.json gaps (toast notifications, Settings page strings, sidebar gaps, updater states)
+- Wire `useTranslation` в недостающих компонентах (modal dialogs, error overlays, dice roller, encounter builder)
+
+C. Action/Feat/Item UI Surface Audit:
+- Verify Phase 100 seeded data actually surfaces в ActionsPage, FeatInlineCard, ItemReferenceDrawer, conditions reference UI
+- Fix gaps where useContentTranslation lookups silent-fail или not wired
 
 **Out of scope:**
-- Automated sync/scrape от pf2.ru — ТОЛЬКО manual authoring reference для compile-time dict
-- PC/character sheets translation — monsters only
-- Full trait coverage (все 500+) — scope только ~60 core; rest deferred
-- LLM/remote translation — remains out
-- macOS notarization / Android разморозка
+- `entity_items` for spells/feats (only weapons/strikes in v1.7.3)
+- Effects packs ingest — v1.8+
+- AP-specific bestiaries vendor — v1.8+
+- macOS notarization / Android distribution
+- Custom creature translation pipeline
 
 ## Completed Milestones
+
+### v1.7.2 — Translation Polish + Tech Debt (feature-complete 2026-04-25, not yet tagged)
+
+Phases 96-101 — paragraph spacing fix + orphan rows cleanup + spell-side untranslated badge + strike/ability TraitPill migration + item-shaped pack family ingest + structured spell overlay shape. Full details: [`.planning/milestones/v1.7.2-ROADMAP.md`](./milestones/v1.7.2-ROADMAP.md).
+
+### v1.7.1 — pf2-locale-ru Migration (feature-complete 2026-04-25, not yet tagged)
+
+Phases 90-95 — vendor pf2-locale-ru content + 4 LICENSES + ingest pipeline replacing HTML parser + 5 dictionary getters + UI wiring + untranslated badge + spell migration. Full details: [`.planning/milestones/v1.7.1-ROADMAP.md`](./milestones/v1.7.1-ROADMAP.md). Release blocked on paragraph spacing bug + 5 tech debts → v1.7.2 cycle.
 
 ### v1.7.0 — Monster Translation (shipped 2026-04-24)
 

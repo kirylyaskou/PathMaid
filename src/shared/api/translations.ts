@@ -59,6 +59,14 @@ interface TranslationDbRow {
   structured_json: string | null
 }
 
+// pf2-locale-ru pack appends `(*)` to translated names where the editor
+// flagged the entry for follow-up review. It's translator-side metadata,
+// not part of the displayed name. Strip once at the API boundary so every
+// downstream consumer (cards, drawers, search results) sees the clean name.
+function stripReviewMarker(s: string): string {
+  return s.replace(/\s*\(\*\)\s*$/, '')
+}
+
 function toRow(db: TranslationDbRow): TranslationRow {
   let structured: MonsterStructuredLoc | null = null
   if (db.structured_json !== null) {
@@ -77,7 +85,7 @@ function toRow(db: TranslationDbRow): TranslationRow {
     nameKey: db.name_key,
     level: db.level,
     locale: db.locale,
-    nameLoc: db.name_loc,
+    nameLoc: stripReviewMarker(db.name_loc),
     traitsLoc: db.traits_loc,
     textLoc: db.text_loc,
     source: db.source,
@@ -147,6 +155,32 @@ export async function getTranslation(
     [kind, name, locale],
   )
   return fuzzy.length > 0 ? toRow(fuzzy[0]) : null
+}
+
+/**
+ * Look up the localized weapon name attached to a specific actor's strike
+ * via the denormalized entity_items table. Returns null on no match —
+ * caller falls back to the engine's English label.
+ */
+export async function getStrikeRuName(
+  entityName: string,
+  itemId: string,
+  locale: string,
+): Promise<string | null> {
+  if (locale === 'en') return null
+  if (!entityName || !itemId) return null
+  const db = await getDb()
+  const rows = await db.select<{ name_loc: string }[]>(
+    `SELECT name_loc
+       FROM entity_items
+      WHERE entity_name = ? COLLATE NOCASE
+        AND item_id = ?
+        AND locale = ?
+      LIMIT 1`,
+    [entityName, itemId, locale],
+  )
+  const raw = rows[0]?.name_loc ?? null
+  return raw ? stripReviewMarker(raw) : null
 }
 
 /**

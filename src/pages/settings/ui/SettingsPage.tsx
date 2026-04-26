@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   syncFoundryData,
   importLocalPacks,
@@ -13,12 +14,18 @@ import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'
 import { MascotHex } from '@/shared/ui/mascot-hex'
-import { Download, RefreshCw, Loader2 } from 'lucide-react'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
+import { Download, RefreshCw, Loader2, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { getVersion } from '@tauri-apps/api/app'
 
+import oglFullText from '/LICENSES/OGL-1.0a.txt?raw'
+import section15Text from '/LICENSES/OGL-SECTION-15.md?raw'
+import vendorVersionTxt from '/vendor/pf2e-locale-ru/VERSION.txt?raw'
+
 export function SettingsPage() {
+  const { t } = useTranslation('common')
   const [syncing, setSyncing] = useState(false)
   const [stage, setStage] = useState('')
   const [progress, setProgress] = useState<{
@@ -58,7 +65,7 @@ export function SettingsPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       store.setError(msg)
-      toast.error(`Проверка обновлений: ${msg}`)
+      toast.error(`${t('settings.updaterStatus.checkFailedPrefix')}: ${msg}`)
     }
   }
 
@@ -68,17 +75,17 @@ export function SettingsPage() {
   ): string => {
     switch (s) {
       case 'checking':
-        return 'Проверяем...'
+        return t('settings.updaterStatus.checking')
       case 'available':
-        return 'Обновление доступно — см. диалог'
+        return t('settings.updaterStatus.available')
       case 'downloading':
-        return 'Скачиваем...'
+        return t('settings.updaterStatus.downloading')
       case 'installing':
-        return 'Устанавливаем...'
+        return t('settings.updaterStatus.installing')
       case 'uptodate':
-        return 'Актуальная версия'
+        return t('settings.updaterStatus.uptodate')
       case 'error':
-        return `Ошибка: ${err ?? 'неизвестно'}`
+        return `${t('settings.updaterStatus.errorPrefix')}: ${err ?? '—'}`
       case 'idle':
       default:
         return ''
@@ -109,15 +116,13 @@ export function SettingsPage() {
         setStage(stageText)
         if (total > 0) setProgress({ current, total })
       })
-      toast.success(
-        `Sync complete — ${count.toLocaleString()} entities imported.`
-      )
+      toast.success(t('toast.sync.success', { count: count.toLocaleString() }))
       useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
       console.error('[Sync] Failed:', err)
       const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
-      toast.error(`Sync failed — ${msg}. Try again.`)
+      toast.error(t('toast.sync.failed', { message: msg }))
     } finally {
       setSyncing(false)
       setStage('')
@@ -137,15 +142,13 @@ export function SettingsPage() {
           if (total > 0) setProgress({ current, total })
         }
       )
-      toast.success(
-        `Import complete — ${count.toLocaleString()} entities imported.`
-      )
+      toast.success(t('toast.import.success', { count: count.toLocaleString() }))
       useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
       console.error('[Import] Failed:', err)
       const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
-      toast.error(`Import failed — ${msg}. Try again.`)
+      toast.error(t('toast.import.failed', { message: msg }))
     } finally {
       setSyncing(false)
       setStage('')
@@ -182,7 +185,7 @@ export function SettingsPage() {
         >
           <MascotHex height={260} />
           <h2 className="text-xl font-semibold text-foreground">
-            Подготавливаем бардак
+            {t('settings.preparingMess')}
           </h2>
           <p className="text-sm text-muted-foreground">{stage}</p>
           <Progress
@@ -193,14 +196,13 @@ export function SettingsPage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl p-8">
-      <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+      <h1 className="text-xl font-semibold text-foreground">{t('settings.title')}</h1>
       <Separator className="my-6" />
 
       <section>
-        <h2 className="text-xl font-semibold text-foreground">Data Source</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t('settings.dataSource.title')}</h2>
         <p className="mt-2 text-base text-muted-foreground">
-          Import latest Foundry VTT PF2e data from GitHub. Replaces existing
-          entities.
+          {t('settings.dataSource.description')}
         </p>
 
         <div className="mt-4 flex gap-3">
@@ -210,7 +212,7 @@ export function SettingsPage() {
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
             )}
-            {syncing ? 'Syncing...' : 'Sync Foundry VTT Data'}
+            {syncing ? t('settings.dataSource.syncing') : t('settings.dataSource.syncButton')}
           </Button>
 
           <Button
@@ -218,29 +220,32 @@ export function SettingsPage() {
             onClick={handleLocalImport}
             disabled={syncing}
           >
-            Import Local (refs/)
+            {t('settings.dataSource.importLocalButton')}
           </Button>
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">
           {lastSync && entityCount
-            ? `Last synced: ${formatDate(lastSync)} — ${Number(entityCount).toLocaleString()} entities`
-            : 'No data imported yet. Run a sync to load entities.'}
+            ? t('settings.dataSource.lastSynced', {
+                date: formatDate(lastSync),
+                count: Number(entityCount).toLocaleString(),
+              })
+            : t('settings.dataSource.noData')}
         </p>
       </section>
 
       <Separator className="my-6" />
 
       <section>
-        <h2 className="text-xl font-semibold text-foreground">Обновления</h2>
+        <h2 className="text-xl font-semibold text-foreground">{t('settings.updates.title')}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Текущая версия: {currentVersion}
+          {t('settings.updates.currentVersion', { version: currentVersion })}
         </p>
         <div className="mt-4">
           {darwin ? (
             <Button variant="outline" onClick={openReleasesPage}>
               <Download className="mr-2 h-4 w-4" />
-              Открыть страницу релиза
+              {t('settings.updates.openReleasePage')}
             </Button>
           ) : (
             <Button
@@ -252,13 +257,13 @@ export function SettingsPage() {
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
-              Проверить обновления
+              {t('settings.updates.check')}
             </Button>
           )}
         </div>
         {darwin ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Автообновление недоступно — проверяйте страницу релиза вручную.
+            {t('settings.updates.darwinUnavailable')}
           </p>
         ) : (
           updaterStatus !== 'idle' && (
@@ -268,7 +273,102 @@ export function SettingsPage() {
           )
         )}
       </section>
+
+      <Separator className="my-6" />
+
+      <AboutSection currentVersion={currentVersion} />
     </div>
     </>
+  )
+}
+
+function AboutSection({ currentVersion }: { currentVersion: string }) {
+  const { t } = useTranslation('common')
+  const [section15Open, setSection15Open] = useState(false)
+  const [oglOpen, setOglOpen] = useState(false)
+
+  const vendorSha = useMemo(() => {
+    const match = vendorVersionTxt.match(/^source_commit:\s*([0-9a-f]{40})/m)
+    return match?.[1] ?? 'unknown'
+  }, [])
+
+  return (
+    <section>
+      <h2 className="text-xl font-semibold text-foreground">
+        {t('about.title')}
+      </h2>
+
+      <p className="mt-2 text-base text-foreground">
+        {t('about.version', { version: currentVersion })}
+      </p>
+
+      <p className="mt-2 text-sm text-muted-foreground">
+        {t('about.paizoDisclaimer')}
+      </p>
+
+      <p className="mt-3 text-sm text-muted-foreground">
+        {t('about.translationsAttribution')}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground font-mono">
+        {t('about.vendoredVersion', { sha: vendorSha })}
+      </p>
+
+      <Collapsible
+        open={section15Open}
+        onOpenChange={setSection15Open}
+        className="mt-4"
+      >
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm text-foreground hover:text-foreground/80">
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${section15Open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+          <span>
+            {t('about.section15Heading')}
+            {' — '}
+            {t('about.section15Toggle')}
+          </span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <pre className="mt-2 max-h-96 overflow-auto rounded border border-border bg-muted p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+            {section15Text}
+          </pre>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Collapsible
+        open={oglOpen}
+        onOpenChange={setOglOpen}
+        className="mt-3"
+      >
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm text-foreground hover:text-foreground/80">
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${oglOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+          <span>
+            {t('about.oglFullHeading')}
+            {' — '}
+            {t('about.oglFullToggle')}
+          </span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <pre className="mt-2 max-h-96 overflow-auto rounded border border-border bg-muted p-3 text-xs text-muted-foreground whitespace-pre-wrap">
+            {oglFullText}
+          </pre>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <p className="mt-4 text-sm">
+        <a
+          href="https://github.com/kirylyaskou/PathMaid"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:text-primary/80"
+        >
+          {t('about.githubLink')}
+        </a>
+      </p>
+    </section>
   )
 }

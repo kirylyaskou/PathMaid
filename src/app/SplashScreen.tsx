@@ -54,7 +54,11 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     setError(null)
     try {
       setStatus('migrating')
-      const minDelay = new Promise((r) => setTimeout(r, 2000))
+      // Floor splash visibility so the mascot/blurb registers before fade.
+      // 2s was too long when init resolved in <300ms on warm boot — felt
+      // artificially slow. 600ms keeps the welcome readable without
+      // padding cold-boot wait time on top of real init.
+      const minDelay = new Promise((r) => setTimeout(r, 600))
       await Promise.all([
         (async () => {
           await initDatabase()

@@ -5,6 +5,8 @@ import { getAllConditions } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { useContentTranslation } from '@/shared/i18n'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
 
@@ -37,6 +39,7 @@ function ConditionCard({ condition, expanded, onToggle }: {
   const group = condition.group_name ?? 'other'
   const groupColor = GROUP_BADGE[group] ?? 'bg-zinc-800/50 text-zinc-400 border-zinc-700/40'
   const overrides = parseJsonArray(condition.overrides)
+  const { data: translation } = useContentTranslation('condition', condition.name, null)
 
   return (
     <div
@@ -50,7 +53,7 @@ function ConditionCard({ condition, expanded, onToggle }: {
     >
       {/* Header row */}
       <div className="flex items-center gap-2 px-3 py-2">
-        <span className="font-semibold text-sm flex-1">{condition.name}</span>
+        <span className="font-semibold text-sm flex-1">{translation?.nameLoc ?? condition.name}</span>
 
         {/* Valued badge */}
         {condition.is_valued ? (
@@ -92,11 +95,18 @@ function ConditionCard({ condition, expanded, onToggle }: {
             </p>
           )}
 
-          {/* Description */}
-          {condition.description && (
-            <p className="text-xs text-foreground/80 leading-relaxed">
-              {sanitizeFoundryText(condition.description)}
-            </p>
+          {/* Description — RU overlay via SafeHtml when present */}
+          {translation?.textLoc ? (
+            <SafeHtml
+              html={translation.textLoc}
+              className="text-xs text-foreground/80 leading-relaxed"
+            />
+          ) : (
+            condition.description && (
+              <p className="text-xs text-foreground/80 leading-relaxed">
+                {sanitizeFoundryText(condition.description)}
+              </p>
+            )
           )}
 
           {/* Source */}

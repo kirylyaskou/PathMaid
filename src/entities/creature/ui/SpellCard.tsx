@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/entities/spell'
@@ -9,6 +11,9 @@ import { stripHtml } from '@/shared/lib/html'
 import { heightenFormula } from '@engine'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
+import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
+import { getTraitLabel } from '@/shared/i18n/pf2e-content'
+import { SafeHtml } from '@/shared/lib/safe-html'
 
 type IntervalHeighten = { type: 'interval'; perRanks: number; damage: Record<string, string> }
 type FixedHeightenDamageEntry = { formula?: string; type?: string; damageType?: string; category?: string | null }
@@ -28,9 +33,20 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
   /** 62-02: prepared spells marked consumed render name struck-through. */
   castConsumed?: boolean
 }) {
-  const [open, setOpen] = useState(true)
+  const { t } = useTranslation()
+  const locale = useCurrentLocale()
+  // Collapsed by default — long preview lists become unscrollable when every
+  // card auto-expands. DM clicks the row to peek; auto-load fires once on
+  // first open via handleToggle below.
+  const [open, setOpen] = useState(false)
   const [spell, setSpell] = useState<SpellRow | null>(null)
   const [loading, setLoading] = useState(false)
+  // Spell translation overlay — pulled from `translations` table seeded by
+  // pf2-locale-ru pack ingest. Returns localized name + structured.description
+  // when present; otherwise renders English-driven engine values.
+  const { data: spellTranslation } = useContentTranslation('spell', name, null)
+  const localizedName = spellTranslation?.nameLoc ?? name
+  const localizedDescriptionHtml = spellTranslation?.textLoc ?? null
 
   const loadSpell = useCallback(async () => {
     if (spell || loading) return
@@ -134,7 +150,7 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
           ? <ChevronDown className="w-3 h-3 shrink-0 text-muted-foreground" />
           : <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground" />
         }
-        <span className={cn('font-medium', castConsumed && 'line-through text-muted-foreground/60')}>{name}</span>
+        <span className={cn('font-medium', castConsumed && 'line-through text-muted-foreground/60')}>{localizedName}</span>
         {loading && <span className="text-xs text-muted-foreground ml-auto">…</span>}
       </button>
 
@@ -146,52 +162,59 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
               <span className="font-mono text-primary">{actionCostLabel(spell.action_cost)}</span>
             )}
             {spell.range_text && (
-              <span className="text-muted-foreground">Range: <span className="text-foreground">{spell.range_text}</span></span>
+              <span className="text-muted-foreground">{t('statblock.range')}: <span className="text-foreground">{spell.range_text}</span></span>
             )}
             {parsedArea && (
-              <span className="text-muted-foreground">Area: <span className="text-foreground">{parsedArea.value}-foot {parsedArea.type}</span></span>
+              <span className="text-muted-foreground">{t('statblock.area')}: <span className="text-foreground">{t('statblock.areaTemplate', { value: parsedArea.value, type: parsedArea.type })}</span></span>
             )}
             {spell.duration_text && (
-              <span className="text-muted-foreground">Duration: <span className="text-foreground">{spell.duration_text}</span></span>
+              <span className="text-muted-foreground">{t('statblock.duration')}: <span className="text-foreground">{spell.duration_text}</span></span>
             )}
             {spell.save_stat && (
-              <span className="text-muted-foreground">Save: <span className="text-foreground capitalize">{spell.save_stat}</span></span>
+              <span className="text-muted-foreground">{t('statblock.save')}: <span className="text-foreground capitalize">{getTraitLabel(spell.save_stat.toLowerCase(), locale)}</span></span>
             )}
           </div>
           {/* Damage */}
           {parsedDamage && (
             <p className="text-xs flex flex-wrap items-center gap-1">
-              <span className="text-muted-foreground">Damage:</span>
+              <span className="text-muted-foreground">{t('statblock.damage')}:</span>
               {parsedDamage.map((d, i) => (
                 <span key={i} className="flex items-center gap-0.5">
                   {i > 0 && <span className="text-muted-foreground">+</span>}
                   <ClickableFormula
                     formula={d.formula!}
-                    label={`${name} damage`}
+                    label={`${localizedName} ${t('statblock.damage').toLowerCase()}`}
                     source={source}
                     combatId={combatId}
                     className="text-xs"
                   />
-                  {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{d.type}</span>}
+                  {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{getTraitLabel(d.type.toLowerCase(), locale)}</span>}
                 </span>
               ))}
             </p>
           )}
-          {/* Traits */}
+          {/* Traits — route through TraitPill so dictionary lookup is consistent
+              with statblock header and ability traits. */}
           {(traits.length > 0 || traditions.length > 0) && (
             <div className="flex flex-wrap gap-1">
-              {[...traditions, ...traits].map((t) => (
-                <span key={t} className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{t}</span>
+              {[...traditions, ...traits].map((trait) => (
+                <TraitPill key={trait} trait={trait} />
               ))}
             </div>
           )}
-          {/* Description — full body, no clamp so DMs can read long spell
-              effects (e.g. Charm, Dominate) without clipping. */}
-          {spell.description && (
+          {/* Description — prefer pack-translated HTML overlay (carries
+              degree-of-success branches as <p><strong>…</strong></p> blocks);
+              fall back to engine description with foundry-token resolution. */}
+          {localizedDescriptionHtml ? (
+            <SafeHtml
+              html={localizedDescriptionHtml}
+              className="text-xs text-foreground/75 leading-relaxed"
+            />
+          ) : spell.description ? (
             <p className="text-xs text-foreground/75 leading-relaxed whitespace-pre-line">
               {stripHtml(resolveFoundryTokensForSpell(spell.description, { itemLevel: castRank ?? spell.rank }))}
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

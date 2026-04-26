@@ -1,136 +1,222 @@
 /**
- * Bundled content translations loader.
+ * Boot-time seeder for the `translations` table.
  *
- * Pattern mirrors `src/shared/db/migrate.ts:3` — `import.meta.glob` collects
- * all JSON files at build time; Vite inlines them into the bundle. The loader
- * runs once on app startup (after migrations) and upserts every row into the
- * `translations` SQLite table.
+ * Reads vendored Babele packs through the pure ingest module and writes
+ * one row per actor entry into SQLite. INSERT OR REPLACE keeps the seed
+ * idempotent — re-running on every boot is safe and refreshes any rows
+ * whose vendored content has changed since last launch.
  *
- * Filename convention: `<kind>.json` where kind ∈ {monster, spell, item, feat,
- * action}. File root is a JSON array of TranslationRecord.
+ * The FTS5 RU denormalization step (UPDATE entities.name_loc + rebuild
+ * entities_fts) is preserved verbatim so bestiary search remains
+ * FTS-accelerated against translated names instead of falling back to
+ * a JOIN + LIKE.
  *
- * Each array element maps to one `translations` row with:
- *   kind          ← filename stem
- *   name_key      ← record.name        (English)
- *   level         ← record.level       (nullable)
- *   locale        ← 'ru'               (only locale in v1.5.1; extensible)
- *   name_loc      ← record.rus_name
- *   traits_loc    ← record.rus_traits  (empty string → NULL)
- *   text_loc      ← record.rus_text
- *   source        ← 'pf2.ru'
- *   structured_json ← JSON.stringify(parseMonsterRuHtml(text, rus_text)) for kind='monster'; NULL otherwise
- *
- * Idempotency: the unique index (kind, name_key NOCASE, level, locale)
- * plus INSERT OR REPLACE means rebooting the app does not create dupes,
- * and re-shipping a new bundled JSON with updated text overwrites the old row.
+ * Babele actor entries do not carry a `level` field, so every row goes
+ * in with level=NULL. Caller-side fuzzy fallback in getTranslation
+ * handles consumers that supply a level. Likewise, no actor-level
+ * `traits` field exists in Babele — traits_loc stays NULL and the
+ * dictionary getters introduced later wire localized trait labels at
+ * the component layer.
  */
 
 import type Database from '@tauri-apps/plugin-sql'
-import { parseMonsterRuHtml } from './lib'
+import {
+  collectMonsterTranslations,
+  collectSpellTranslations,
+  collectItemKindTranslations,
+  type ItemKind,
+} from './ingest'
+import { getTranslation } from '@/shared/api/translations'
+import type { SupportedLocale } from '@/shared/i18n/config'
 import type { MonsterStructuredLoc } from './lib'
 
-export type TranslationKind = 'monster' | 'spell' | 'item' | 'feat' | 'action'
-
-interface TranslationRecord {
-  name: string
-  rus_name: string
-  traits?: string
-  rus_traits?: string
-  text?: string
-  rus_text: string
-  level?: number
-}
-
-const contentFiles = import.meta.glob('./*.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, TranslationRecord[]>
+export type TranslationKind = 'monster' | 'spell' | 'item' | 'feat' | 'action' | 'condition'
 
 const LOCALE = 'ru'
-const SOURCE = 'pf2.ru'
+const SOURCE = 'pf2-locale-ru'
+const KIND_MONSTER = 'monster' as const
+const KIND_SPELL = 'spell' as const
 
-const VALID_KINDS: readonly TranslationKind[] = [
-  'monster',
-  'spell',
-  'item',
-  'feat',
-  'action',
-]
+// SQLite parameter limit is 999. With 9 columns per row, 110 rows per
+// chunk = 990 params — just under the limit and roughly 10% fewer IPC
+// roundtrips than the previous 100-row chunk size.
+const CHUNK_SIZE = 110
 
-function extractKind(path: string): TranslationKind | null {
-  const match = path.match(/\.\/([a-z]+)\.json$/)
-  if (!match) return null
-  const kind = match[1] as TranslationKind
-  return VALID_KINDS.includes(kind) ? kind : null
+// entity_items uses 4 columns per row — we can pack much more per IPC call.
+// 240 rows × 4 cols = 960 params, still under the 999 ceiling.
+const ENTITY_ITEMS_CHUNK_SIZE = 240
+
+/**
+ * Per-kind seeding helper: counts existing rows for `(kind, locale, source)`,
+ * skips when the count matches the in-bundle row total, otherwise wraps the
+ * caller-supplied INSERT loop in a transaction so SQLite issues one fsync
+ * instead of one per chunk.
+ */
+async function seedKind(
+  db: Database,
+  kind: string,
+  expected: number,
+  insert: () => Promise<void>,
+): Promise<void> {
+  const existing = await db.select<{ n: number }[]>(
+    'SELECT COUNT(*) AS n FROM translations WHERE source = ? AND locale = ? AND kind = ?',
+    [SOURCE, LOCALE, kind],
+  )
+  const existingCount = existing[0]?.n ?? 0
+  if (existingCount === expected) {
+    console.log(`[translations] Skipping ${kind} seed — ${existingCount} rows already present`)
+    return
+  }
+  console.log(
+    `[translations] Seeding ${expected} ${kind} rows (existing=${existingCount}); chunked transaction`,
+  )
+  await db.execute('BEGIN TRANSACTION', [])
+  try {
+    await insert()
+    await db.execute('COMMIT', [])
+  } catch (err) {
+    await db.execute('ROLLBACK', [])
+    throw err
+  }
 }
 
 /**
- * Upsert all bundled translations into the `translations` table.
- * Safe to call repeatedly (idempotent via INSERT OR REPLACE on unique key).
+ * Upsert all vendored monster translations into the `translations` table.
+ *
+ * Boot strategy: idempotent and fast.
+ *   1. Count existing rows with the current source. If the count already
+ *      matches the in-bundle row count, skip the INSERT loop entirely —
+ *      vendor data hasn't changed since last boot. Vendor bumps invalidate
+ *      this gate by changing the row count.
+ *   2. Otherwise, wrap chunked multi-VALUES INSERT OR REPLACE statements in
+ *      a single transaction so SQLite issues one fsync instead of one per
+ *      row. Without batching, the IPC round-trip per row stalled boot for
+ *      minutes on the 1973-entry vendor set.
+ *
+ * The FTS5 RU denormalization step always runs because Foundry sync may
+ * have rebuilt the entities table since last seed, clearing name_loc.
  */
 export async function loadContentTranslations(db: Database): Promise<void> {
-  for (const [path, records] of Object.entries(contentFiles)) {
-    const kind = extractKind(path)
-    if (!kind) {
-      console.warn(`[translations] Skipping unrecognized file: ${path}`)
-      continue
-    }
-    if (!Array.isArray(records)) {
-      console.warn(`[translations] ${path}: expected array, got ${typeof records}`)
-      continue
-    }
+  // Stale rows from the v1.7.0 HTML-parser seed had source='pf2.ru'. The
+  // adapter pipeline writes source='pf2-locale-ru'; INSERT OR REPLACE
+  // only overwrites rows that share (kind, name_key, level, locale), so
+  // stale rows whose pack key no longer matches sit inert in the table.
+  // Clear them once on every boot — cheap when none remain (after first
+  // post-upgrade boot) and harmless on subsequent calls.
+  await db.execute(
+    "DELETE FROM translations WHERE source = 'pf2.ru'",
+    [],
+  )
 
-    for (const record of records) {
-      if (!record?.name || !record?.rus_name || !record?.rus_text) {
-        console.warn(
-          `[translations] ${path}: skipping record missing name/rus_name/rus_text`,
-          record?.name ?? '(unnamed)'
+  // Pre-overlay spell rows from the initial Phase 95 seed had no
+  // structured_json. The skip-gate compares only row counts, so without
+  // this purge the loader would never reseed those rows after the
+  // structured shape was added. Drop incomplete spell rows so the
+  // skip-gate misfires and reseeds them with structured fields.
+  await db.execute(
+    `DELETE FROM translations
+       WHERE kind = 'spell'
+         AND source = ?
+         AND structured_json IS NULL`,
+    [SOURCE],
+  )
+
+  const monsterRows = collectMonsterTranslations()
+  const spellRows = collectSpellTranslations()
+
+  await seedKind(db, KIND_MONSTER, monsterRows.length, async () => {
+    for (let i = 0; i < monsterRows.length; i += CHUNK_SIZE) {
+      const chunk = monsterRows.slice(i, i + CHUNK_SIZE)
+      const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')
+      const params: (string | null)[] = []
+      for (const row of chunk) {
+        params.push(
+          KIND_MONSTER,
+          row.packKey,
+          null,
+          LOCALE,
+          row.nameLoc,
+          null,
+          row.textLoc,
+          SOURCE,
+          JSON.stringify(row.structured),
         )
-        continue
       }
-
-      const traitsLoc =
-        record.rus_traits && record.rus_traits.trim().length > 0
-          ? record.rus_traits
-          : null
-      const level = typeof record.level === 'number' ? record.level : null
-
-      // Parse structured RU overlay only for monster records that have both
-      // EN source HTML (text) and RU HTML (rus_text). Parser returning null
-      // is a legitimate "cannot parse this shape" signal — write NULL silently.
-      // Parser throwing is unexpected — warn and fall back to NULL so one bad
-      // row never aborts seeding of the rest.
-      let structuredJson: string | null = null
-      if (kind === 'monster' && record.text && record.rus_text) {
-        try {
-          const parsed: MonsterStructuredLoc | null = parseMonsterRuHtml(
-            record.text,
-            record.rus_text,
-          )
-          if (parsed !== null) {
-            structuredJson = JSON.stringify(parsed)
-          }
-        } catch (err) {
-          console.warn(
-            `[translations] parser failed for ${record.name}:`,
-            err,
-          )
-        }
-      }
-
       await db.execute(
         `INSERT OR REPLACE INTO translations
            (kind, name_key, level, locale, name_loc, traits_loc, text_loc, source, structured_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [kind, record.name, level, LOCALE, record.rus_name, traitsLoc, record.rus_text, SOURCE, structuredJson]
+         VALUES ${placeholders}`,
+        params,
       )
     }
+  })
+
+  await seedKind(db, KIND_SPELL, spellRows.length, async () => {
+    for (let i = 0; i < spellRows.length; i += CHUNK_SIZE) {
+      const chunk = spellRows.slice(i, i + CHUNK_SIZE)
+      const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')
+      const params: (string | null)[] = []
+      for (const row of chunk) {
+        params.push(
+          KIND_SPELL,
+          row.packKey,
+          null,
+          LOCALE,
+          row.nameLoc,
+          null,
+          row.textLoc,
+          SOURCE,
+          JSON.stringify(row.structured),
+        )
+      }
+      await db.execute(
+        `INSERT OR REPLACE INTO translations
+           (kind, name_key, level, locale, name_loc, traits_loc, text_loc, source, structured_json)
+         VALUES ${placeholders}`,
+        params,
+      )
+    }
+  })
+
+  // Item-shaped kinds (action / feat / item / condition) share a uniform
+  // text-overlay shape with spells. Group rows by kind and feed each
+  // group through seedKind so per-kind skip-gates work independently.
+  const itemRows = collectItemKindTranslations()
+  const grouped = new Map<ItemKind, typeof itemRows>()
+  for (const row of itemRows) {
+    const bucket = grouped.get(row.kind) ?? []
+    bucket.push(row)
+    grouped.set(row.kind, bucket)
+  }
+  for (const [kind, kindRows] of grouped) {
+    await seedKind(db, kind, kindRows.length, async () => {
+      for (let i = 0; i < kindRows.length; i += CHUNK_SIZE) {
+        const chunk = kindRows.slice(i, i + CHUNK_SIZE)
+        const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')
+        const params: (string | null)[] = []
+        for (const row of chunk) {
+          params.push(
+            kind,
+            row.packKey,
+            null,
+            LOCALE,
+            row.nameLoc,
+            null,
+            row.textLoc,
+            SOURCE,
+            null,
+          )
+        }
+        await db.execute(
+          `INSERT OR REPLACE INTO translations
+             (kind, name_key, level, locale, name_loc, traits_loc, text_loc, source, structured_json)
+           VALUES ${placeholders}`,
+          params,
+        )
+      }
+    })
   }
 
-  // Denormalize Russian display name onto entities so FTS5 (external
-  // content) can match against it. name_loc is indexed as a column on
-  // entities_fts; without this mirror, RU search would need a JOIN +
-  // LIKE which loses FTS5 acceleration.
   await db.execute(
     `UPDATE entities
        SET name_loc = (
@@ -143,19 +229,86 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     [LOCALE],
   )
 
-  // Rebuild FTS5 so new name_loc values are indexed. Cheap for bundled
-  // dataset size (hundreds of rows) and runs once per app start.
   await db.execute(
     `INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`,
     [],
   )
 
-  // Observability: report count per (kind, locale)
-  const rows = await db.select<{ kind: string; locale: string; n: number }[]>(
-    'SELECT kind, locale, COUNT(*) as n FROM translations GROUP BY kind, locale'
+  // Flatten actor pack items[] into entity_items so strike rendering
+  // can look up RU weapon names by (entity_name, item_id) without
+  // parsing structured_json on every paint. Dedup on (entity, id)
+  // because the same item id can appear in multiple actor entries that
+  // share inventory and the DB primary key collapses those collisions.
+  const itemPairsDedup = new Map<string, { entity: string; id: string; name: string }>()
+  for (const row of monsterRows) {
+    for (const item of row.structured.items) {
+      const key = `${row.packKey.toLowerCase()}:${item.id}`
+      itemPairsDedup.set(key, { entity: row.packKey, id: item.id, name: item.name })
+    }
+  }
+  const monsterItemPairs = Array.from(itemPairsDedup.values())
+  if (monsterItemPairs.length > 0) {
+    const existingItems = await db.select<{ n: number }[]>(
+      'SELECT COUNT(*) AS n FROM entity_items WHERE locale = ?',
+      [LOCALE],
+    )
+    const haveItems = existingItems[0]?.n ?? 0
+    if (haveItems !== monsterItemPairs.length) {
+      console.log(
+        `[translations] Seeding ${monsterItemPairs.length} entity_items rows (existing=${haveItems})`,
+      )
+      await db.execute('BEGIN TRANSACTION', [])
+      try {
+        await db.execute(`DELETE FROM entity_items WHERE locale = ?`, [LOCALE])
+        for (let i = 0; i < monsterItemPairs.length; i += ENTITY_ITEMS_CHUNK_SIZE) {
+          const chunk = monsterItemPairs.slice(i, i + ENTITY_ITEMS_CHUNK_SIZE)
+          const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
+          const params: string[] = []
+          for (const pair of chunk) {
+            params.push(pair.entity, pair.id, LOCALE, pair.name)
+          }
+          await db.execute(
+            `INSERT OR REPLACE INTO entity_items
+               (entity_name, item_id, locale, name_loc)
+             VALUES ${placeholders}`,
+            params,
+          )
+        }
+        await db.execute('COMMIT', [])
+      } catch (err) {
+        await db.execute('ROLLBACK', [])
+        throw err
+      }
+    }
+  }
+
+  const counts = await db.select<{ kind: string; locale: string; n: number }[]>(
+    'SELECT kind, locale, COUNT(*) as n FROM translations GROUP BY kind, locale',
   )
   console.log(
     '[translations] Loaded:',
-    rows.map((r) => `${r.kind}/${r.locale}=${r.n}`).join(' '),
+    counts.map((r) => `${r.kind}/${r.locale}=${r.n}`).join(' '),
   )
 }
+
+/**
+ * Look up a structured monster translation overlay.
+ *
+ * Thin wrapper over the generic translation API — exposes the typed
+ * `MonsterStructuredLoc` directly so consumers do not need to deal with
+ * the wider TranslationRow shape when they only care about the structured
+ * overlay.
+ */
+export async function getMonsterTranslation(
+  nameKey: string,
+  level: number | null,
+  locale: SupportedLocale,
+): Promise<MonsterStructuredLoc | null> {
+  const row = await getTranslation('monster', nameKey, level, locale)
+  return row?.structured ?? null
+}
+
+export { getSizeLabel } from './dictionaries/sizes'
+export { getSkillLabel } from './dictionaries/skills'
+export { getLanguageLabel } from './dictionaries/languages'
+export { getTraitLabel, getTraitDescription } from './dictionaries/traits'

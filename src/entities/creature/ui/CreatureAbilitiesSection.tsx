@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Swords, Shield as ShieldIcon, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Collapsible, CollapsibleContent } from '@/shared/ui/collapsible'
@@ -8,7 +9,7 @@ import { highlightGameText } from '../lib/foundry-text'
 import type { ClassifiedAbilities } from '../model/classify-abilities'
 import type { AbilityLoc } from '@/shared/i18n'
 import type { DisplayActionCost } from '../model/types'
-import { renderMarkdownLite } from '@/shared/lib/render-markdown-lite'
+import { SafeHtml } from '@/shared/lib/safe-html'
 
 type AbilityTab = 'offensive' | 'defensive' | 'other'
 type AbilityEntry = ClassifiedAbilities['offensive'][number]
@@ -16,18 +17,23 @@ type AbilityEntry = ClassifiedAbilities['offensive'][number]
 interface CreatureAbilitiesSectionProps {
   classified: ClassifiedAbilities
   onRoll: (formula: string, label: string) => void
-  abilitiesLocByName?: Map<string, AbilityLoc>
+  /** id-keyed Map of pack `items[]` (from MonsterStructuredLoc.items) — caller
+   *  builds it once at the parent so each card row stays a sync prop lookup. */
+  itemsLocById?: Map<string, AbilityLoc>
 }
 
 function resolveAbilityLoc(
-  ability: { name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] },
+  ability: { id?: string; name: string; actionCost?: DisplayActionCost; description: string; traits?: string[] },
   loc: AbilityLoc | undefined,
 ) {
+  // Empty `loc.description` is valid (item carries name-only translation) —
+  // we still take the localized name; description falls back to engine.
+  const localizedDesc = loc?.description?.trim()
   return {
     displayName: loc?.name ?? ability.name,
-    displayCost: (loc?.actionCount ?? ability.actionCost) as DisplayActionCost | undefined,
-    displayTraits: loc?.traits?.length ? loc.traits : (ability.traits ?? []),
-    locDescription: loc?.description,
+    displayCost: ability.actionCost,
+    displayTraits: ability.traits ?? [],
+    locDescription: localizedDesc && localizedDesc.length > 0 ? loc!.description : undefined,
   }
 }
 
@@ -48,19 +54,27 @@ function AbilityCardResolved({
   const cost = actionCostOverride ?? (displayCost !== 0 ? displayCost : undefined)
   return (
     <AbilityCard key={cardKey} name={displayName} actionCost={cost} traits={displayTraits}>
-      <p className="text-sm text-foreground/80 leading-relaxed">
-        {locDescription
-          // RU descriptions render via markdown-lite — clickable-formula
-          // extraction does not survive parsing into RU tokens; engine
-          // numeric values are surfaced via separate strike/skill rows.
-          ? renderMarkdownLite(locDescription)
-          : highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
-      </p>
+      {locDescription ? (
+        // RU descriptions arrive as raw HTML from pf2-locale-ru pack —
+        // SafeHtml sanitizes + resolves Foundry @-tokens into spans so
+        // <strong>/<p> structure renders properly. Clickable-formula
+        // extraction is not reapplied here; engine numeric values surface
+        // via the separate strike/skill rows.
+        <SafeHtml
+          html={locDescription}
+          className="text-sm text-foreground/80 leading-relaxed"
+        />
+      ) : (
+        <p className="text-sm text-foreground/80 leading-relaxed">
+          {highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
+        </p>
+      )}
     </AbilityCard>
   )
 }
 
-export function CreatureAbilitiesSection({ classified, onRoll, abilitiesLocByName }: CreatureAbilitiesSectionProps) {
+export function CreatureAbilitiesSection({ classified, onRoll, itemsLocById }: CreatureAbilitiesSectionProps) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<AbilityTab>('offensive')
 
   // Switch away from 'offensive' if it's empty — fall back to first non-empty
@@ -74,9 +88,9 @@ export function CreatureAbilitiesSection({ classified, onRoll, abilitiesLocByNam
 
   const tabs = (
     [
-      { id: 'offensive', label: 'Offensive', icon: Swords, count: classified.offensive.length },
-      { id: 'defensive', label: 'Defensive', icon: ShieldIcon, count: classified.defensive.length },
-      { id: 'other', label: 'Other', icon: Sparkles, count: classified.other.length },
+      { id: 'offensive', label: t('statblock.offensive'), icon: Swords, count: classified.offensive.length },
+      { id: 'defensive', label: t('statblock.defensive'), icon: ShieldIcon, count: classified.defensive.length },
+      { id: 'other', label: t('statblock.other'), icon: Sparkles, count: classified.other.length },
     ] as const
   ).filter(({ count }) => count > 0)
 
@@ -84,7 +98,7 @@ export function CreatureAbilitiesSection({ classified, onRoll, abilitiesLocByNam
 
   return (
     <Collapsible defaultOpen>
-      <SectionHeader>Abilities</SectionHeader>
+      <SectionHeader>{t('statblock.abilities')}</SectionHeader>
       <CollapsibleContent>
         <div className="px-4 py-3 space-y-3">
           <div className="flex flex-wrap gap-1">
@@ -109,20 +123,19 @@ export function CreatureAbilitiesSection({ classified, onRoll, abilitiesLocByNam
           {activeList.length === 1 ? (
             <AbilityCardResolved
               ability={activeList[0]}
-              loc={abilitiesLocByName?.get(activeList[0].name.trim().toLowerCase())}
+              loc={activeList[0].id ? itemsLocById?.get(activeList[0].id) : undefined}
               cardKey={`${tab}-0`}
               onRoll={onRoll}
             />
           ) : (
             <div
               className="grid gap-2 items-start"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
             >
               {activeList.map((ability, i) => (
                 <AbilityCardResolved
                   key={`${tab}-${i}`}
                   ability={ability}
-                  loc={abilitiesLocByName?.get(ability.name.trim().toLowerCase())}
+                  loc={ability.id ? itemsLocById?.get(ability.id) : undefined}
                   cardKey={`${tab}-${i}`}
                   onRoll={onRoll}
                 />
@@ -133,17 +146,16 @@ export function CreatureAbilitiesSection({ classified, onRoll, abilitiesLocByNam
           {classified.reactions.length > 0 && (
             <div className="pt-2 border-t border-border/30">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Reactions
+                {t('statblock.reactions')}
               </p>
               <div
                 className="grid gap-2 items-start"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
               >
                 {classified.reactions.map((ability, i) => (
                   <AbilityCardResolved
                     key={`react-${i}`}
                     ability={ability}
-                    loc={abilitiesLocByName?.get(ability.name.trim().toLowerCase())}
+                    loc={ability.id ? itemsLocById?.get(ability.id) : undefined}
                     cardKey={`react-${i}`}
                     actionCostOverride="reaction"
                     onRoll={onRoll}

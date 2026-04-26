@@ -24,7 +24,7 @@
 - ✅ **v1.5.0 — In-App Updater** — Phases 71-76 (shipped 2026-04-23, [archive](./milestones/v1.5.0-ROADMAP.md))
 - ✅ **v1.6.0 — Spellcasting Deep Fix** — Phases 77-83 (shipped 2026-04-23, [archive](./milestones/v1.6.0-ROADMAP.md), [audit](./milestones/v1.6.0-MILESTONE-AUDIT.md))
 - ✅ **v1.7.0 — Monster Translation** — Phases 84-89 (shipped 2026-04-24, [archive](./milestones/v1.7.0-ROADMAP.md))
-- 🚧 **v1.7.1 — Translation Dictionaries** — Phases 90-93 (in progress — started 2026-04-24)
+- 🚧 **v1.7.1 — pf2-locale-ru Migration** — Phases 90-95 (replanned 2026-04-25 after rollback)
 
 ## Phases
 
@@ -1019,73 +1019,381 @@ Post-ship hotfixes (same day): Collapsible wrapper bug, RU FTS5 search, spellcas
 
 Carryover to v1.7.1: UI Translation Dictionaries (structural labels HP/AC/Saves, 17-skill dict, ~25 languages, ~60 traits).
 
-### 🚧 v1.7.1 — Translation Dictionaries (In Progress)
+### 🚧 v1.7.1 — pf2-locale-ru Migration (In Progress, Replanned 2026-04-25)
 
-**Milestone Goal:** Расширить RU-покрытие `CreatureStatBlock` до всего textual content (кроме numerics) через dictionary-based i18n, независимого от HTML parser output. Source of truth: pf2.ru/rules/player-core (author-authorized partner integration reference).
+**Milestone Goal:** Заменить v1.7.0 HTML-parser-based RU translation на прямой ingest из community Foundry locale module `pf2-locale-ru`. Single source of truth: vendored `vendor/pf2e-locale-ru/` под OGL 1.0a + Paizo Community Use Policy. Drop pf2.ru. Drop manual authoring. Drop HTML parser (`parse-monster.ts`).
 
-- [ ] **Phase 90: Dictionary Foundation** — extract `SKILL_RU_TO_EN` → shared module; create `languages.ts` (~25 entries) + `traits.ts` (~60 labels + tooltip descriptions); extend i18next `common.json` with `statblock.*` section
-- [ ] **Phase 91: Wire Statblock Labels + Dictionaries** — `CreatureStatBlock` + 5 sub-components используют `t('statblock.*')` + apply skills/languages dicts when locale=ru
-- [ ] **Phase 92: Wire Trait Tooltips** — `TraitPill` + trait tooltip renderer используют `traits.ts` labels + tooltip descriptions when locale=ru
-- [ ] **Phase 93: Spell Translation Regression Fix** — investigate + fix spell RU description rendering (post-v1.7.0 regression — see "Кислотная хватка" screenshot). Restore pre-v1.7.0 formatting без изменений API контракта spell translation path.
+**Architectural shift:** v1.7.0 path «pf2.ru → HTML parse → structured_json» → v1.7.1 path «pf2-locale-ru pack JSON → adapter → structured_json». Существующая `structured_json` shape (Phase 87 column + Phase 88 sub-component contracts) сохраняется через adapter layer — UI consumers не переписываются.
 
-### Phase 90: Dictionary Foundation
-**Goal**: Единый source-of-truth для PF2e skill/language/trait RU-переводов, доступный UI (не только parser).
-**Depends on**: Nothing (v1.7.0 shipped)
-**Requirements**: DICT-02, DICT-03, DICT-04 (labels), DICT-01 (i18next section)
-**Files**: `src/shared/i18n/pf2e-content/dictionaries/skills.ts` (new, extract from parse-monster.ts), `dictionaries/languages.ts` (new), `dictionaries/traits.ts` (new), `src/shared/i18n/locales/ru/common.json` (extend with `statblock.*`), `src/shared/i18n/pf2e-content/lib/parse-monster.ts` (refactor to import shared dict)
+**History:** Original v1.7.1 plan (Dictionary Foundation, DICT-01..05) был **rolled back 2026-04-25** после обнаружения false attribution в AI-generated `traits.ts` / `languages.ts` (claiming `Source: pf2.ru/rules/traits` без реального fetch). Replanned as E1 architecture с canonical community source.
+
+- [x] **Phase 90: Vendor pf2-locale-ru + License Disclosure** — copy selected pack files под `vendor/pf2e-locale-ru/`; add OGL 1.0a + Paizo CUP + Section 15 attribution под `LICENSES/`; About-page UI с license disclosure (completed 2026-04-25)
+- [x] **Phase 91: Ingest Adapter + DB Population** — pack→`structured_json` adapter; drop `parse-monster.ts` HTML parser; drop bundled `monster.json`/`spell.json`/etc.; rewrite `loadContentTranslations` (completed 2026-04-25)
+- [x] **Phase 92: Dictionary Modules from pf2e.json** — derive `dictionaries/{skills,languages,traits,sizes}.ts` from `vendor/pf2e-locale-ru/pf2e/pf2e.json` PF2E.* keys (17 skills + 174 languages + 892 trait labels + 501 trait descriptions + 6 sizes) (completed 2026-04-25)
+- [x] **Phase 93: Wire UI Consumers** — TraitPill + Skills + Languages + Statblock labels + Subtitle + RK DC dynamic content consume index API (completed 2026-04-25)
+- [x] **Phase 94: Untranslated Badge** — «🚫RU» indicator top-right corner для monsters/spells без pack entry (completed 2026-04-25)
+- [x] **Phase 95: Spell Migration + UAT + Cleanup** — spells from `spells-srd.json` pack; multi-monster smoke; remove dead HTML parser code; final docs (completed 2026-04-25)
+
+### Phase 90: Vendor pf2-locale-ru + License Disclosure
+**Goal**: Selected pf2-locale-ru content vendored в repo с full OGL 1.0a + Paizo CUP attribution.
+**Depends on**: Nothing
+**Requirements**: VENDOR-01, VENDOR-02, VENDOR-03, VENDOR-04
+**Files**:
+- `vendor/pf2e-locale-ru/pf2e/pf2e.json` (UI strings)
+- `vendor/pf2e-locale-ru/pf2e/packs/{mapping.json,pathfinder-monster-core.json,pathfinder-monster-core-2.json,pathfinder-bestiary.json,pathfinder-bestiary-2.json,pathfinder-bestiary-3.json,pathfinder-npc-core.json,npc-gallery.json,bestiary-ability-glossary-srd.json,bestiary-family-ability-glossary.json,bestiary-effects.json,spells-srd.json,actionspf2e.json,conditionitems.json,equipment-srd.json,feats-srd.json,feat-effects.json,equipment-effects.json,spell-effects.json}` (~25-30 MB raw)
+- `vendor/pf2e-locale-ru/VERSION.txt` (git SHA + date + source URL)
+- `LICENSES/OGL-1.0a.txt` (mandatory full text per OGL §10)
+- `LICENSES/PAIZO-COMMUNITY-USE.md` (Paizo CUP disclaimer)
+- `LICENSES/OGL-SECTION-15.md` (Section 15 COPYRIGHT NOTICE chain)
+- `LICENSES/pf2-locale-ru-CONTRIBUTORS.md` (community attribution + source URL)
+- About-page UI (new или extension Settings page)
+- README.md update с license disclosure pointer
+
 **Success Criteria**:
-1. `dictionaries/skills.ts` exports `SKILL_RU_TO_EN` + reverse `SKILL_EN_TO_RU` — 17 entries
-2. `parse-monster.ts` импортирует из shared module вместо local const; все 48+9 debug assertions продолжают проходить
-3. `dictionaries/languages.ts` — ≥25 PF2e languages (common/draconic/chthonian/empyrean/undercommon/celestial/infernal/abyssal/etc.)
-4. `dictionaries/traits.ts` — ≥60 traits с labels; JSDoc attribution к pf2.ru
-5. `common.json` `statblock` section: HP, AC, Fort, Ref, Will, Perception, Speed, Senses, Languages, Skills, Strikes, Abilities, Spellcasting, Damage, RecallKnowledge (15+ keys)
-6. `tsc --noEmit` = 0, `lint` = 0 новых ошибок
+1. `vendor/pf2e-locale-ru/` exists с минимум-pack scope (≥18 pack файлов + pf2e.json + mapping.json + VERSION.txt)
+2. Все 4 LICENSES/* файла committed; OGL-1.0a.txt = exact copy WoTC text; SECTION-15.md содержит full COPYRIGHT chain из pf2-locale-ru source
+3. About-page UI accessible в running app (через Settings или как separate route)
+4. About-page содержит: PathMaid software license, OGL 1.0a + Paizo CUP disclaimer, pf2-locale-ru attribution + version SHA
+5. README.md links to LICENSES/ directory; product disclaimer footer «Not endorsed by Paizo»
+6. `pnpm tsc --noEmit` = 0; `pnpm lint` = 0 new errors
 
-### Phase 91: Wire Statblock Labels + Skill/Language Dictionaries
-**Goal**: UI использует dictionaries для always-on RU display.
-**Depends on**: Phase 90
-**Requirements**: DICT-01, DICT-02 (applied), DICT-03 (applied), DICT-05
-**Files**: `src/entities/creature/ui/CreatureStatBlock.tsx`, `CreatureSkillsLine.tsx`, `CreatureDefensesBlock.tsx`, `CreatureSpeedLine.tsx`, `CreatureStrikesSection.tsx`, `CreatureAbilitiesSection.tsx`, `SpellListPreview.tsx`
-**Success Criteria**:
-1. Succubus @ locale=ru: все структурные labels RU (ПЗ/КБ/Стойкость/Реакция/Воля/Внимание/Скорость/Чувства/Языки/Навыки/Удары/Способности/Заклинания/Урон)
-2. Skills row RU ВСЕ 17 названий когда locale=ru, независимо от structured overlay
-3. Languages row RU для всех known tokens; unknown → EN silent fallback
-4. locale=en → zero changes (regression test)
-5. Bestiary search results cards используют same dictionaries (если они рендерят RU overlay)
 
-### Phase 92: Wire Trait Tooltips
-**Goal**: Trait labels + tooltip descriptions RU для ~60 core traits.
-**Depends on**: Phase 90
-**Requirements**: DICT-04 (tooltip descriptions)
-**Files**: `src/shared/ui/trait-pill.tsx`, trait tooltip renderer (possibly new or extension of existing), `CreatureStatBlock` trait rendering
-**Success Criteria**:
-1. Succubus @ locale=ru: trait badges показывают RU labels (fiend→нечестивый, demon→демон, medium→средний, unique→уникальный, etc.)
-2. Hover/tap на trait показывает RU tooltip description (~60 core)
-3. Unknown trait → EN label + no tooltip (silent fallback)
-4. locale=en → unchanged
+**Plans**: 6 plans
+- [x] 90-01-PLAN.md — Vendor file copy + VERSION.txt (Wave 1, parallel)
+- [x] 90-02-PLAN.md — LICENSES/ creation (4 files; Wave 1, parallel)
+- [x] 90-03-PLAN.md — Vite/tsconfig @vendor alias (Wave 2)
+- [x] 90-04-PLAN.md — SettingsPage About section + i18n keys (Wave 3)
+- [x] 90-05-PLAN.md — README.md disclosure block (Wave 3, parallel с 04)
+- [x] 90-06-PLAN.md — Build verification + manual smoke (Wave 4)
 
-### Phase 93: Spell Translation Regression Fix
-**Goal**: Восстановить pre-v1.7.0 spell RU description rendering quality.
-**Depends on**: Nothing (orthogonal — investigation only)
-**Requirements**: SPELL-REG-01
-**Files**: TBD after investigation — likely `src/entities/spell/ui/SpellInlineCard.tsx`, `SpellReferenceDrawer.tsx`, `src/shared/api/translations.ts` (if changes regressed spell textLoc path)
+### Phase 91: Ingest Adapter + DB Population
+**Goal**: HTML parser удалён, bundled JSONs удалены, `structured_json` populated через pack adapter.
+**Depends on**: Phase 90 (vendor source available)
+**Requirements**: INGEST-01, INGEST-02, INGEST-03, INGEST-04, INGEST-05 (partial)
+**Files**:
+- `src/shared/i18n/pf2e-content/ingest/pack-adapter.ts` (new)
+- `src/shared/i18n/pf2e-content/ingest/index.ts` (new — orchestrates adapter + bundles via `import.meta.glob`)
+- `src/shared/i18n/pf2e-content/index.ts` (rewrite `loadContentTranslations`)
+- `src/shared/i18n/pf2e-content/lib/parse-monster.ts` (DELETED)
+- `src/shared/i18n/pf2e-content/lib/parse-monster.debug.ts` (DELETED)
+- `src/shared/i18n/pf2e-content/{monster,spell,action,feat,item}.json` (DELETED)
+- `src/shared/i18n/pf2e-content/lib/types.ts` (preserve `MonsterStructuredLoc` shape — adapter target)
+
 **Success Criteria**:
-1. "Кислотная хватка" (screenshot regression reference) отображается с полным RU description
-2. Formatting восстановлен — блоки Critical Success / Success / Failure / Critical Failure / Heightened +2 разделены так же как pre-v1.7.0
-3. git blame/diff vs commit `614172c5` (v1.6.0 baseline) — изменения в spell-affecting файлах идентифицированы и validated
-4. Regression root cause задокументирован в SUMMARY
+1. `pack-adapter.ts` produces `MonsterStructuredLoc` matching Phase 87 contract (passes type checks against existing CreatureStatBlock consumer)
+2. `parse-monster.ts` + `.debug.ts` files removed; 0 references в codebase
+3. 5 bundled JSON files removed; `loadContentTranslations` reads vendored pack files instead
+4. `translations` table populated с pack-derived `structured_json` для всех монстров covered by vendored bestiary packs (≥492 monsters from Monster Core)
+5. Existing FTS5 RU denormalization (Phase 86 path) продолжает работать с new data path
+6. Drizzle migrations unchanged (no new migration needed)
+7. `pnpm tsc --noEmit` = 0; `pnpm lint` = 0 new errors
+
+### Phase 92: Dictionary Modules from pf2e.json
+**Goal**: Derive runtime dictionaries из `vendor/pf2e-locale-ru/pf2e/pf2e.json` для UI consumers.
+**Depends on**: Phase 90 (vendored source)
+**Requirements**: INGEST-05 (full)
+**Files**:
+- `src/shared/i18n/pf2e-content/dictionaries/skills.ts` (new — `PF2E.Skill.*`)
+- `src/shared/i18n/pf2e-content/dictionaries/languages.ts` (new — `PF2E.Actor.Creature.Language.*`)
+- `src/shared/i18n/pf2e-content/dictionaries/traits.ts` (new — `PF2E.Trait*` + `PF2E.TraitDescription*`)
+- `src/shared/i18n/pf2e-content/dictionaries/sizes.ts` (new — `PF2E.ActorSize*`)
+- `src/shared/i18n/pf2e-content/index.ts` (extend with index API)
+- `scripts/derive-pf2e-dicts.ts` (optional build-time generator)
+
+**Success Criteria**:
+1. `dictionaries/skills.ts` covers 17 PF2e core skills byte-identical с pf2e.json values (Acrobatics→Акробатика, Arcana→Аркана, Performance→Выступление и т.д.)
+2. `dictionaries/languages.ts` covers 174 languages (full pf2-locale-ru coverage)
+3. `dictionaries/traits.ts` covers 892 trait labels + 501 descriptions (Foundry slug keys lowercase)
+4. `dictionaries/sizes.ts` covers 6 sizes (Tiny→Крошечный..Gargantuan→Исполинский)
+5. Index API в `index.ts` exports `getTraitLabel`, `getTraitDescription`, `getSkillLabel`, `getLanguageLabel`, `getSizeLabel` — все return string fallback при miss (no console.warn в prod)
+6. Все dict modules имеют JSDoc attribution с reference на `vendor/pf2e-locale-ru/pf2e/pf2e.json` + version SHA — НЕ pf2.ru
+7. `pnpm tsc --noEmit` = 0; `pnpm lint` = 0 new errors
+
+### Phase 93: Wire UI Consumers
+**Goal**: UI компоненты consume Phase 92 index API + adapter output из Phase 91.
+**Depends on**: Phase 91 + Phase 92
+**Requirements**: WIRE-01, WIRE-02, WIRE-03, WIRE-04, WIRE-05, WIRE-06; partial SPELL-01
+**Files**:
+- `src/shared/ui/trait-pill.tsx` (TraitPill + tooltip wiring через getTraitLabel/getTraitDescription)
+- `src/entities/creature/ui/CreatureStatBlock.tsx` (subtitle TRAITS lookup; RK DC dynamic; structural label decision per WIRE-04)
+- `src/entities/creature/ui/CreatureSkillsLine.tsx` (getSkillLabel inline)
+- `src/entities/creature/ui/CreatureStrikeRow.tsx` + `src/shared/ui/ability-card.tsx` (TraitList consolidation если ещё нужно)
+- `src/entities/creature/ui/SpellListPreview.tsx` + `src/entities/spell/ui/SpellInlineCard.tsx` (если spell rendering wiring touched)
+- `src/shared/i18n/locales/ru/common.json` (decision per WIRE-04 (a)/(b))
+
+**Success Criteria**:
+1. Succubus @ locale=ru: subtitle = «СРЕДНИЙ БЕС» (size+type через TRAITS dict — note: `fiend → Бес` per pf2-locale-ru, NOT `Нечестивый`)
+2. Header trait pills RU labels через `getTraitLabel`
+3. Hover на trait с description: tooltip показывает RU description через `getTraitDescription`
+4. Hover на rarity/size pill: NO tooltip (description=null)
+5. RK DC line: «Знания DC 24 • Бес (Религия)» — type через TRAITS dict, skill через getSkillLabel
+6. 17 skills always-on RU при locale=ru независимо от parser overlay
+7. Languages row RU per token; unknown → EN silent fallback
+8. locale=en → zero visual diff (SC4 regression guard)
+9. Strike trait pills + ability trait pills RU
+
+### Phase 94: Untranslated Badge
+**Goal**: Visual indicator для monsters/spells без pack translation.
+**Depends on**: Phase 91
+**Requirements**: UNTRANS-01, UNTRANS-02; partial SPELL-03
+**Files**:
+- `src/shared/ui/no-translation-badge.tsx` (new — «🚫RU» component)
+- `src/entities/creature/ui/CreatureStatBlock.tsx` (top-right absolute badge при !translation && locale=ru)
+- `src/entities/creature/ui/CreatureCard.tsx` (compact + full variants)
+- `src/entities/spell/ui/SpellInlineCard.tsx` (если applies)
+
+**Success Criteria**:
+1. NoTranslationBadge component renders в top-right corner с styling (red/gray, strikethrough «RU»)
+2. Tooltip on badge: «Этот монстр не переведён в pf2-locale-ru»
+3. Detection: badge shown ONLY when `getMonsterTranslation(name, level, 'ru') === null` AND `locale === 'ru'`
+4. CreatureStatBlock + CreatureCard (compact + full) wire badge
+5. locale=en → badge никогда не показывается
+6. Smoke test: known untranslated creature shows badge; translated creature does not
+
+### Phase 95: Spell Migration + UAT + Cleanup
+**Goal**: Spells consumed из pack data; final smoke + cleanup.
+**Depends on**: Phase 91 + Phase 93 + Phase 94
+**Requirements**: SPELL-01, SPELL-02, SPELL-03; final DEBT-02
+**Files**:
+- `src/entities/spell/ui/SpellInlineCard.tsx`, `SpellReferenceDrawer.tsx`, `SpellListPreview.tsx`
+- `src/shared/api/translations.ts` (если spell read path needs adjustment)
+- Cleanup: any leftover dead code references к v1.7.0 HTML parser path
+- Documentation: README, About-page final pass
+
+**Success Criteria**:
+1. «Кислотная хватка» renders с полным RU description; formatting blocks (Crit Success / Success / Failure / Crit Failure / Heightened +2) разделены corretly
+2. Smoke test минимум 5 monsters across 2-3 different bestiaries: all stat blocks RU at locale=ru; all EN at locale=en
+3. Untranslated entities show «🚫RU» badge
+4. `git grep -E "parse-monster|parseMonster"` = 0 occurrences
+5. `git grep "pf2.ru"` returns only LICENSES context references — no fabrication-style attribution в src/
+6. README + About-page final review (license disclosure prominent)
+7. Multi-monster human UAT signed off
 
 ### v1.7.1 Progress
 
 | Phase | Plans Complete | Status | Started |
 |-------|----------------|--------|---------|
-| 90. Dictionary Foundation | 0/? | Not started | — |
-| 91. Wire Statblock Labels | 0/? | Not started | — |
-| 92. Wire Trait Tooltips | 0/? | Not started | — |
-| 93. Spell Regression Fix | 0/? | Not started | — |
+| 90. Vendor + License | 6/6 | Complete    | 2026-04-25 |
+| 91. Ingest Adapter | 5/5 | Complete    | 2026-04-25 |
+| 92. Dictionary Modules | 0/5 | Complete    | 2026-04-25 |
+| 93. Wire UI Consumers | 0/5 | Complete    | 2026-04-25 |
+| 94. Untranslated Badge | 0/0 | Complete    | 2026-04-25 |
+| 95. Spell + UAT + Cleanup | 0/0 | Complete    | 2026-04-25 |
 
-**Parallelization hint:** Phase 93 (spell regression) orthogonal — можно гнать параллельно Phase 90/91/92. Phase 90 → 91 strict sequence (91 consumes 90's dicts). Phase 92 depends on 90's `traits.ts` — можно после 91 или параллельно.
+**Dependency graph:**
+- Phase 90 (vendor) — pure prerequisite
+- Phase 91 (ingest) depends on 90
+- Phase 92 (dicts) depends on 90 (parallel с 91)
+- Phase 93 (UI wiring) depends on 91 + 92
+- Phase 94 (badge) depends on 91
+- Phase 95 (UAT + cleanup) depends на все предыдущие
+
+**Parallelization hint:** Phases 91 + 92 могут идти параллельно после Phase 90. Phase 93 + 94 могут идти параллельно после 91/92.
 
 ---
 *Roadmap created: 2026-03-31 — v0.2.2-pre-alpha fresh start*
-*Last updated: 2026-04-24 — v1.7.1 Translation Dictionaries roadmap added (Phases 90-93)*
+*Last updated: 2026-04-25 — v1.7.1 replanned as E1 (pf2-locale-ru migration; Phases 90-95)*
+
+---
+
+## v1.7.2 — Translation Polish + Tech Debt
+
+**Goal:** Закрыть блокеры релиза v1.7.1: paragraph spacing bug + 5 tech-debt items.
+
+### Phase 96: Spell description paragraph spacing fix
+**Goal**: SpellReferenceDrawer renders `<p>` blocks visibly separated.
+**Depends on**: Phase 95
+**Requirements**: POLISH-01
+**Files**:
+- `src/app/styles/globals.css` (scope-up `.pf2e-safe-html p` rule or use Tailwind layer)
+
+**Success Criteria**:
+1. Visual gap between consecutive `<p>` blocks ≥0.5rem
+2. Hr separators preserved
+3. Existing creature description rendering not regressed
+
+### Phase 97: Orphan pf2.ru rows cleanup on boot
+**Goal**: One-shot DELETE стирает stale `source='pf2.ru'` rows.
+**Depends on**: Phase 91
+**Requirements**: CLEAN-01
+**Files**:
+- `src/shared/i18n/pf2e-content/index.ts` (loader prepends DELETE)
+
+**Success Criteria**:
+1. After first boot: `SELECT COUNT(*) FROM translations WHERE source='pf2.ru'` = 0
+2. INSERT idempotency unaffected (skip-gate still works)
+
+### Phase 98: Spell-side untranslated badge slot
+**Goal**: SpellReferenceDrawer header shows 🚫RU when untranslated.
+**Depends on**: Phase 94 (NoTranslationBadge component) + Phase 95 (spell ingest)
+**Requirements**: SPELL-STRUCT-03
+**Files**:
+- `src/entities/spell/ui/SpellReferenceDrawer.tsx` (top-right absolute slot in header)
+
+**Success Criteria**:
+1. Spells without pack entry show badge при locale=ru
+2. locale=en → badge hidden
+3. Translated spells (e.g. Acid Grip) → no badge
+
+### Phase 99: Strike + ability trait pills migration
+**Goal**: CreatureStrikeRow + AbilityCard render traits через TraitPill.
+**Depends on**: Phase 93 (TraitPill+tooltip)
+**Requirements**: POLISH-02
+**Files**:
+- `src/entities/creature/ui/CreatureStrikeRow.tsx` (line ~159 traits map)
+- `src/shared/ui/ability-card.tsx` (traits prop render)
+
+**Success Criteria**:
+1. Strike trait pills render через TraitPill — RU labels + tooltips visible
+2. Ability trait pills render через TraitPill
+3. Existing traits styling preserved (uppercase, secondary bg)
+
+### Phase 100: Item-shaped pack ingest family
+**Goal**: actions / feats / equipment / conditions ingest from vendored packs.
+**Depends on**: Phase 95
+**Requirements**: INGEST-FAMILY-01, INGEST-FAMILY-02
+**Files**:
+- `src/shared/i18n/pf2e-content/ingest/pack-adapter.ts` (isItemPack helper + adaptBabeleItemEntry)
+- `src/shared/i18n/pf2e-content/ingest/index.ts` (collectActionTranslations, collectFeatTranslations, collectItemTranslations, collectConditionTranslations)
+- `src/shared/i18n/pf2e-content/index.ts` (extend seedKind for new kinds)
+- Existing consumer UI files (action page, feat inline card, item drawer) — verify auto-RU via existing useContentTranslation lookup
+
+**Success Criteria**:
+1. After boot: translations table has `kind IN ('action', 'feat', 'item', 'condition')` rows
+2. Action page → action names show RU при locale=ru
+3. Feat inline card → RU descriptions
+4. Item drawer → RU descriptions
+5. Condition references in stat block → RU labels (через existing TraitPill or text path)
+
+### Phase 101: Structured spell overlay shape
+**Goal**: SpellReferenceDrawer surfaces RU range/duration/heightening fields через typed structured_json.
+**Depends on**: Phase 95
+**Requirements**: SPELL-STRUCT-01, SPELL-STRUCT-02
+**Files**:
+- `src/shared/i18n/pf2e-content/lib/types.ts` (add SpellStructuredLoc interface)
+- `src/shared/i18n/pf2e-content/ingest/pack-adapter.ts` (extend adaptBabeleSpellEntry to populate structured fields)
+- `src/shared/i18n/pf2e-content/ingest/index.ts` (SpellTranslationRow gets structured field)
+- `src/shared/i18n/pf2e-content/index.ts` (loader writes structured_json for spell rows)
+- `src/shared/api/translations.ts` (TranslationRow.structured type union with SpellStructuredLoc)
+- `src/entities/spell/ui/SpellReferenceDrawer.tsx` (consume structured fields)
+
+**Success Criteria**:
+1. Spell rows have non-null `structured_json`
+2. SpellReferenceDrawer renders RU range/duration/cost/time when overlay exists
+3. EN fallback when no overlay
+4. tsc + build green
+
+
+---
+
+## v1.7.3 — Strike Names + UI Shell + Item Surface Audit
+
+### Phase 102: entity_items table + denormalization
+**Goal**: New table maps creature entity rows × pack item ids → RU name. Migration + loader extension.
+**Depends on**: Phase 91/100
+**Requirements**: STRIKE-01
+**Files**:
+- `src/shared/db/migrations/0043_entity_items.sql` (new)
+- `src/shared/i18n/pf2e-content/index.ts` (loader extends to populate entity_items)
+- `src/shared/api/translations.ts` (new `getStrikeRuName(creatureName, itemId, locale)` helper)
+
+**Success Criteria**:
+1. New table `entity_items` with `(entity_name TEXT, item_id TEXT, name_loc TEXT, locale TEXT)` indexed by (entity_name COLLATE NOCASE, item_id, locale)
+2. Loader populates rows from each actor pack's items[] (≈1973 actor entries × ~5 items each ≈10k rows)
+3. `getStrikeRuName('Aapoph Granitescale', '<longspear-id>', 'ru')` returns 'Длинное копьё'
+4. tsc + build clean
+
+### Phase 103: Strike rendering wires RU names
+**Goal**: CreatureStrikeRow surfaces RU strike name + RU damage type when locale=ru.
+**Depends on**: Phase 102
+**Requirements**: STRIKE-02, STRIKE-03
+**Files**:
+- `src/entities/creature/ui/CreatureStrikeRow.tsx`
+- `src/entities/creature/ui/CreatureStatBlock.tsx` (pass creature.name + item ids down)
+- `src/entities/creature/model/use-effective-strikes.ts` (verify strike id is preserved in output)
+
+**Success Criteria**:
+1. Granitescale strike shows "Длинное копьё" instead of "Longspear" at locale=ru
+2. Damage type "piercing" → TraitPill "Колющий" at locale=ru
+3. EN regression-free at locale=en
+4. tsc + build clean
+
+### Phase 104: Spell drawer chips polish
+**Goal**: Spell traditions / save type / trait pills routed through dict.
+**Depends on**: Phase 92, Phase 99
+**Requirements**: SPELL-CHIPS-01, SPELL-CHIPS-02, SPELL-CHIPS-03
+**Files**:
+- `src/entities/spell/ui/SpellReferenceDrawer.tsx`
+
+**Success Criteria**:
+1. Spell traditions chips show RU labels (Arcane→Мистическая, Primal→Первобытная, Divine→Божественная, Occult→Оккультная)
+2. Save type label RU
+3. Spell trait pills routed через TraitPill (replace inline span)
+4. tsc + build clean
+
+### Phase 105: Toast + Settings + Sidebar i18n audit
+**Goal**: Close all common.json gaps and wire useTranslation в shell-level components.
+**Depends on**: nothing
+**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04
+**Files**:
+- `src/shared/i18n/locales/en/common.json`
+- `src/shared/i18n/locales/ru/common.json`
+- `src/pages/settings/ui/SettingsPage.tsx`
+- `src/shared/api/sync.ts` (toast messages source)
+- `src/widgets/app-shell/ui/AppSidebar.tsx`
+- header / splash components
+
+**Success Criteria**:
+1. New keys: `toast.sync.success`, `toast.sync.failed`, `toast.import.success`, `toast.import.failed`, `settings.dataSource.title`, `settings.dataSource.description`, `settings.sync`, `settings.importLocal`, `settings.lastSync`, `settings.noData`
+2. SettingsPage hardcoded strings replaced
+3. Toast strings replaced
+4. Sidebar/header/splash audit complete
+5. tsc + lint clean
+
+### Phase 106: Modal + dialog i18n
+**Goal**: Confirmation prompts, update dialogs, error overlays localized.
+**Depends on**: Phase 105
+**Requirements**: SHELL-05
+**Files**:
+- `src/shared/ui/error-boundary.tsx`
+- `src/shared/ui/UpdateDialog.tsx` (если существует)
+- any modal components в widgets/
+
+**Success Criteria**:
+1. Error boundary text localized
+2. Update dialog text localized
+3. Confirmation prompts localized
+4. tsc + lint clean
+
+### Phase 107: Action/Feat/Item/Condition UI audit + fixes
+**Goal**: Verify Phase 100 seeded data actually surfaces. Fix gaps.
+**Depends on**: Phase 100
+**Requirements**: AUDIT-01..05
+**Files**:
+- `src/pages/actions/ui/ActionsPage.tsx`
+- `src/entities/feat/ui/FeatInlineCard.tsx`
+- `src/entities/item/ui/ItemReferenceDrawer.tsx`
+- conditions reference page/modal (find via grep)
+
+**Success Criteria**:
+1. ActionsPage: action names + descriptions RU at locale=ru (e.g. Flurry of Blows → Шквал ударов)
+2. FeatInlineCard: feat names + descriptions RU
+3. ItemReferenceDrawer: item names + descriptions RU; SafeHtml for HTML descriptions
+4. Conditions: condition names RU (43 entries from conditionitems pack)
+5. EN regression-free
+6. tsc + build clean
+
+### Phase 108: v1.7.3 final UAT + version bump
+**Goal**: Final smoke + version files + archive.
+**Depends on**: Phase 107
+**Requirements**: DEBT-02
+**Files**:
+- `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`
+- archive ROADMAP
+
+**Success Criteria**:
+1. Manual smoke (deferred to user) — all surfaces RU at locale=ru, EN regression-free
+2. Version bumped 1.7.2 → 1.7.3
+3. Milestone snapshot archived
+4. Final tsc + lint + vite build clean
+

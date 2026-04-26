@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getItemById } from '@/shared/api'
 import type { ItemRow } from '@/shared/api'
 import { formatPrice, ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '@/entities/item'
 import { cn } from '@/shared/lib/utils'
-import { renderDescription } from '@/shared/lib/render-description'
+import { stripHtml } from '@/shared/lib/html'
+import { SafeHtml } from '@/shared/lib/safe-html'
 import { useContentTranslation } from '@/shared/i18n'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { SpellInlineCard } from '@/entities/spell'
@@ -33,12 +34,8 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
   const typeColor = item ? (ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40') : ''
   const typeLabel = item ? (ITEM_TYPE_LABELS[item.item_type] ?? item.item_type) : ''
 
+  // Phase 80: item translation lookup
   const { data: translation } = useContentTranslation('item', item?.name, item?.level ?? null)
-
-  const descriptionNode = useMemo(
-    () => renderDescription(item?.description ?? ''),
-    [item?.description],
-  )
 
   return (
     <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
@@ -155,12 +152,19 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 </div>
               )}
 
-              {/* Description — renderDescription parses HTML and highlights
-                  degree-of-success labels with bold + colour. */}
-              {item.description && (
-                <p className="text-[13px] text-foreground/80 leading-relaxed">
-                  {descriptionNode}
-                </p>
+              {/* Description — RU overlay rendered via SafeHtml when present;
+                  engine HTML stripped to plain text otherwise. */}
+              {translation?.textLoc ? (
+                <SafeHtml
+                  html={translation.textLoc}
+                  className="text-[13px] text-foreground/80 leading-relaxed"
+                />
+              ) : (
+                item.description && (
+                  <p className="text-[13px] text-foreground/80 leading-relaxed">
+                    {stripHtml(item.description)}
+                  </p>
+                )
               )}
 
               {/* Linked Spell */}

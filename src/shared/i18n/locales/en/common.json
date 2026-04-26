@@ -38,5 +38,189 @@
     "cancel": "Cancel",
     "save": "Save",
     "loading": "Loading…"
+  },
+  "statblock": {
+    "iwr": {
+      "immunities": "Immunities",
+      "resistances": "Resistances",
+      "weaknesses": "Weaknesses"
+    },
+    "untranslated": {
+      "label": "RU",
+      "tooltip": "This monster is not translated in pf2-locale-ru"
+    },
+    "recallKnowledgeDc": "Recall Knowledge DC {{dc}}",
+    "senses": "Senses",
+    "hp": "HP",
+    "ac": "AC",
+    "fort": "Fort",
+    "ref": "Ref",
+    "will": "Will",
+    "perception": "Perception",
+    "spellDc": "Spell DC",
+    "classDc": "Class DC",
+    "speed": "Speed",
+    "skills": "Skills",
+    "languages": "Languages",
+    "source": "Source",
+    "strikes": "Strikes",
+    "damage": "Damage",
+    "range": "Range",
+    "reach": "Reach",
+    "rangeFt": "Range {{value}} ft",
+    "reachFt": "Reach {{value}} ft",
+    "group": "Group",
+    "persistent": "persistent",
+    "enfeebled": "Enfeebled",
+    "abilities": "Abilities",
+    "offensive": "Offensive",
+    "defensive": "Defensive",
+    "other": "Other",
+    "reactions": "Reactions",
+    "spellcasting": "Spellcasting",
+    "dc": "DC",
+    "attack": "Attack",
+    "cantrips": "Cantrips",
+    "rank": "Rank {{n}}",
+    "slots": "slots",
+    "area": "Area",
+    "duration": "Duration",
+    "save": "Save",
+    "areaTemplate": "{{value}}-foot {{type}}",
+    "troopFormation": "Troop Formation",
+    "swarmFormation": "Swarm Formation",
+    "collectiveDamage": "Collective damage applies",
+    "troopDefenses": "Troop Defenses",
+    "feetUnit": "ft",
+    "equipment": "Equipment",
+    "addItem": "Add item…",
+    "speedFt": "{{value}} feet",
+    "speedTypedFt": "{{type}} {{value}} feet",
+    "iwrEntry": "{{type}} {{value}}",
+    "iwrEntryWithExceptions": "{{type}} {{value}} (except {{exceptions}})",
+    "spellsHeading": "Spells"
+  },
+  "items": {
+    "tabs": {
+      "all": "All Items",
+      "favorites": "Favorites"
+    },
+    "search": "Search items…",
+    "searching": "Searching…",
+    "count_one": "{{count}} item",
+    "count_other": "{{count}} items",
+    "clearFilters": "clear filters",
+    "clearFiltersBig": "Clear filters",
+    "noMatches": "No items match the current filters.",
+    "noData": "Run sync to import equipment from Foundry VTT.",
+    "noFavorites": "No favorites yet",
+    "favoritesHint": "Star an item from the All Items tab to save it here.",
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "rarity": "Rarity",
+      "traits": "Traits",
+      "level": "Lv",
+      "price": "Price"
+    },
+    "filters": {
+      "level": "Lv",
+      "min": "min",
+      "max": "max",
+      "common": "Common",
+      "uncommon": "Uncommon",
+      "rare": "Rare",
+      "unique": "Unique",
+      "traits": "Traits",
+      "allSources": "All sources"
+    }
+  },
+  "spells": {
+    "tabs": {
+      "spells": "Spells",
+      "focus": "Focus Spells"
+    },
+    "search": "Search spells…",
+    "searching": "Searching…",
+    "count_one": "{{count}} spell",
+    "count_other": "{{count}} spells",
+    "clearFilters": "clear filters",
+    "noMatches": "No spells match the filters",
+    "noData": "Run sync to import spells",
+    "rankSpells_one": "{{count}} spell",
+    "rankSpells_other": "{{count}} spells",
+    "columns": {
+      "name": "Name",
+      "actions": "Actions",
+      "save": "Save",
+      "damage": "Damage",
+      "traditions": "Traditions",
+      "traits": "Traits"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "preparingMess": "Preparing the mess",
+    "dataSource": {
+      "title": "Data Source",
+      "description": "Import latest Foundry VTT PF2e data from GitHub. Replaces existing entities.",
+      "syncButton": "Sync Foundry VTT Data",
+      "syncing": "Syncing...",
+      "importLocalButton": "Import Local (refs/)",
+      "lastSynced": "Last synced: {{date}} — {{count}} entities",
+      "noData": "No data imported yet. Run a sync to load entities."
+    },
+    "updates": {
+      "title": "Updates",
+      "currentVersion": "Current version: {{version}}",
+      "openReleasePage": "Open release page",
+      "check": "Check for updates",
+      "darwinUnavailable": "Auto-update unavailable — check the release page manually."
+    },
+    "updaterStatus": {
+      "checking": "Checking...",
+      "available": "Update available — see dialog",
+      "downloading": "Downloading...",
+      "installing": "Installing...",
+      "uptodate": "Up to date",
+      "errorPrefix": "Error",
+      "checkFailedPrefix": "Update check"
+    }
+  },
+  "toast": {
+    "sync": {
+      "success": "Sync complete — {{count}} entities imported.",
+      "failed": "Sync failed — {{message}}. Try again."
+    },
+    "import": {
+      "success": "Import complete — {{count}} entities imported.",
+      "failed": "Import failed — {{message}}. Try again."
+    }
+  },
+  "updateDialog": {
+    "title": {
+      "available": "Update v{{version}} available",
+      "downloading": "Downloading update",
+      "installing": "Installing update",
+      "error": "Update error"
+    },
+    "currentToNew": "Current: {{current}} → new: {{next}}",
+    "progressDownloaded": "Downloaded {{percent}}%",
+    "progressStarting": "Starting download...",
+    "restarting": "Restarting...",
+    "crossDevice": "The installer tried to move the file across drives. Download the installer manually from the release page and run it yourself.",
+    "openReleasePage": "Open release page",
+    "errorPrefix": "Error",
+    "manualRestart": "If the update did not apply, restart the application manually — the database was briefly closed for installation.",
+    "later": "Later",
+    "downloadAndInstall": "Download and install",
+    "close": "Close",
+    "downloadProgress": "Update download progress"
+  },
+  "errors": {
+    "boundary": {
+      "title": "Something went wrong",
+      "tryAgain": "Try again"
+    }
   }
 }

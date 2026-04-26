@@ -180,6 +180,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
       const isMelee = item.type === 'melee' && range === undefined
       if (reach === undefined && isMelee) reach = baseCreatureReach
       return {
+        id: item._id,
         name: item.name || 'Strike',
         modifier: item.system?.bonus?.value ?? 0,
         damage: formatDamage(item.system?.damageRolls),
@@ -193,6 +194,7 @@ export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData
   const abilities = items
     .filter((item) => item.type === 'action')
     .map((item) => ({
+      id: item._id,
       name: item.name || 'Ability',
       actionCost: parseActionCost(item.system?.actionType?.value, item.system?.actions?.value),
       description: stripHtml(resolveFoundryTokens(item.system?.description?.value || '')),

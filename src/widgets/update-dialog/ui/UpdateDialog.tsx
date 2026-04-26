@@ -1,4 +1,5 @@
 import { useShallow } from 'zustand/react/shallow'
+import { useTranslation } from 'react-i18next'
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export function UpdateDialog() {
   // synchronously) — safe in render.
   if (isDarwin()) return null
 
+  const { t } = useTranslation('common')
   const { status, update, progress, error } = useUpdaterStore(
     useShallow((s) => ({
       status: s.status,
@@ -107,14 +109,14 @@ export function UpdateDialog() {
         <DialogHeader>
           <DialogTitle>
             {status === 'available' &&
-              `Доступно обновление v${update?.version ?? ''}`}
-            {status === 'downloading' && 'Скачиваем обновление'}
-            {status === 'installing' && 'Устанавливаем обновление'}
-            {status === 'error' && 'Ошибка обновления'}
+              t('updateDialog.title.available', { version: update?.version ?? '' })}
+            {status === 'downloading' && t('updateDialog.title.downloading')}
+            {status === 'installing' && t('updateDialog.title.installing')}
+            {status === 'error' && t('updateDialog.title.error')}
           </DialogTitle>
           {status === 'available' && update && (
             <DialogDescription>
-              Текущая версия: {update.currentVersion} → новая: {update.version}
+              {t('updateDialog.currentToNew', { current: update.currentVersion, next: update.version })}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -130,37 +132,36 @@ export function UpdateDialog() {
             <Progress
               value={progressPercent}
               className="h-2"
-              aria-label="Прогресс скачивания обновления"
+              aria-label={t('updateDialog.downloadProgress')}
             />
             <p className="text-sm text-muted-foreground">
               {progressPercent != null
-                ? `Скачано ${progressPercent}%`
-                : 'Начинаем скачивание...'}
+                ? t('updateDialog.progressDownloaded', { percent: progressPercent })
+                : t('updateDialog.progressStarting')}
             </p>
           </div>
         )}
 
         {status === 'installing' && (
-          <p className="text-sm text-muted-foreground">Перезапуск...</p>
+          <p className="text-sm text-muted-foreground">{t('updateDialog.restarting')}</p>
         )}
 
         {status === 'error' && isCrossDeviceError && (
           <div className="space-y-3">
-            <p className="text-sm">
-              Installer попытался переместить файл между разделами. Скачайте
-              установщик вручную со страницы релиза и запустите самостоятельно.
-            </p>
+            <p className="text-sm">{t('updateDialog.crossDevice')}</p>
             <Button variant="outline" onClick={openReleasesPage}>
-              Открыть страницу релиза
+              {t('updateDialog.openReleasePage')}
             </Button>
           </div>
         )}
 
         {status === 'error' && !isCrossDeviceError && error && (
           <div className="space-y-2">
-            <p className="text-sm text-destructive">Ошибка: {error}</p>
+            <p className="text-sm text-destructive">
+              {t('updateDialog.errorPrefix')}: {error}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Если обновление не применилось, перезапустите приложение вручную — база данных была временно закрыта для установки.
+              {t('updateDialog.manualRestart')}
             </p>
           </div>
         )}
@@ -169,14 +170,14 @@ export function UpdateDialog() {
           {status === 'available' && (
             <>
               <Button variant="outline" onClick={handleDismiss}>
-                Позже
+                {t('updateDialog.later')}
               </Button>
-              <Button onClick={handleDownload}>Скачать и установить</Button>
+              <Button onClick={handleDownload}>{t('updateDialog.downloadAndInstall')}</Button>
             </>
           )}
           {status === 'error' && (
             <Button variant="outline" onClick={handleDismiss}>
-              Закрыть
+              {t('updateDialog.close')}
             </Button>
           )}
         </DialogFooter>

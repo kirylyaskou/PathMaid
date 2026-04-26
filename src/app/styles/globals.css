@@ -404,9 +404,9 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   SafeHtml — styles for translated pf2e content (Phase 79+).
-   Target classes come verbatim from pf2.ru HTML source; we
-   restyle them to match the Golden Parchment theme.
+   SafeHtml — styles for translated pf2e content.
+   Target classes match Babele/Foundry HTML markup conventions;
+   we restyle them to match the Golden Parchment theme.
    ───────────────────────────────────────────────────────────── */
 
 .pf2e-safe-html {
@@ -427,7 +427,23 @@
 }
 
 .pf2e-safe-html p {
+  display: block;
+  margin: 0.5rem 0 !important;
+}
+
+.pf2e-safe-html p + p {
+  margin-top: 0.5rem !important;
+}
+
+.pf2e-safe-html ul,
+.pf2e-safe-html ol {
   margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  list-style: revert;
+}
+
+.pf2e-safe-html li {
+  margin: 0.15rem 0;
 }
 
 /* Action-cost glyph wrapper injected by SafeHtml preprocess step.
@@ -441,10 +457,10 @@
   vertical-align: 0.02em;
 }
 
-/* pf2.ru wraps inline ability blurbs (auras, reactions, free actions) in
-   a distinct "boxed" callout inside the stat block. Render as a subtle
-   parchment panel with a gold left rule — reads as a sidebar without
-   breaking the flow of the stat block. */
+/* Foundry pack data wraps inline ability blurbs (auras, reactions, free
+   actions) in a distinct "boxed" callout inside the stat block. Render as
+   a subtle parchment panel with a gold left rule — reads as a sidebar
+   without breaking the flow of the stat block. */
 .pf2e-safe-html .in-box-ability {
   display: block;
   margin: 0.4rem 0;
@@ -454,7 +470,7 @@
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-/* pf2.ru item-breakdown sub-heading: "Manacles (Simple) [Item 1]".
+/* Item-breakdown sub-heading (e.g. "Manacles (Simple) [Item 1]").
    Render as a subsection title with a bottom rule. */
 .pf2e-safe-html .h2-header {
   display: flex;

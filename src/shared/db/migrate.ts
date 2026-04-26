@@ -19,13 +19,18 @@ export async function runMigrations(db: Database): Promise<void> {
     a.localeCompare(b)
   )
 
+  // One SELECT instead of N — saves an IPC round-trip per migration on
+  // warm boots where every migration is already applied. Building a Set
+  // for O(1) `has()` checks below.
+  const appliedRows = await db.select<{ name: string }[]>(
+    'SELECT name FROM _migrations',
+    [],
+  )
+  const appliedSet = new Set(appliedRows.map((r) => r.name))
+
   for (const [path, sql] of sorted) {
     const name = path.split('/').pop()!
-    const applied = await db.select<{ name: string }[]>(
-      'SELECT name FROM _migrations WHERE name = ?',
-      [name]
-    )
-    if (applied.length > 0) continue
+    if (appliedSet.has(name)) continue
 
     console.log(`[migrate] Applying: ${name}`)
     // Strip SQL line comments before splitting so that any `;` inside a comment

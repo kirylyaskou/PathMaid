@@ -1,5 +1,9 @@
-/** Spell rank display label: 0 → "Cantrips", N → "Rank N" */
-export function rankLabel(rank: number): string {
+/** Spell rank display label: 0 → "Cantrips", N → "Rank N".
+ *  Pass i18next `t` for localized output; absent → English fallback. */
+export function rankLabel(rank: number, t?: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (t) {
+    return rank === 0 ? t('statblock.cantrips') : t('statblock.rank', { n: rank })
+  }
   return rank === 0 ? 'Cantrips' : `Rank ${rank}`
 }
 

@@ -1,8 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { Collapsible, CollapsibleContent } from '@/shared/ui/collapsible'
 import { SectionHeader } from '@/shared/ui/section-header'
 import { CreatureStrikeRow } from './CreatureStrikeRow'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
-import type { StrikeLoc } from '@/shared/i18n'
+import type { AbilityLoc } from '@/shared/i18n'
 
 interface CreatureStrikesSectionProps {
   strikes: EffectiveStrike[]
@@ -11,7 +12,7 @@ interface CreatureStrikesSectionProps {
   currentMapIndex: number
   isMapTracked: boolean
   onAttackClick: (strike: EffectiveStrike, mapIdx: number) => void
-  strikesLoc?: StrikeLoc[]
+  itemsLocById?: Map<string, AbilityLoc>
 }
 
 export function CreatureStrikesSection({
@@ -21,11 +22,12 @@ export function CreatureStrikesSection({
   currentMapIndex,
   isMapTracked,
   onAttackClick,
-  strikesLoc,
+  itemsLocById,
 }: CreatureStrikesSectionProps) {
+  const { t } = useTranslation()
   return (
     <Collapsible defaultOpen>
-      <SectionHeader>Strikes</SectionHeader>
+      <SectionHeader>{t('statblock.strikes')}</SectionHeader>
       <CollapsibleContent>
         <div className="px-4 py-3 space-y-3">
           {strikes.map((strike, i) => (
@@ -37,7 +39,7 @@ export function CreatureStrikesSection({
               currentMapIndex={currentMapIndex}
               isMapTracked={isMapTracked}
               onAttackClick={onAttackClick}
-              strikeLoc={strikesLoc?.[i]}
+              nameLoc={strike.id ? itemsLocById?.get(strike.id)?.name : undefined}
             />
           ))}
         </div>

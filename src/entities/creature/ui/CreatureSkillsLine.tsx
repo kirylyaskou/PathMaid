@@ -1,8 +1,10 @@
 import { cn } from '@/shared/lib/utils'
 import { formatModifier, formatRollFormula } from '@/shared/lib/format'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
+import { useCurrentLocale } from '@/shared/i18n'
+import { getSkillLabel } from '@/shared/i18n/pf2e-content'
 import type { StatModifierResult } from '../model/use-modified-stats'
-import type { SkillLoc } from '@/shared/i18n'
+import type { SupportedLocale } from '@/shared/i18n/config'
 
 interface SkillRowData {
   name: string
@@ -14,25 +16,21 @@ interface CreatureSkillsLineProps {
   skills: SkillRowData[]
   modStats: Map<string, StatModifierResult>
   onRoll: (formula: string, label: string) => void
-  skillsLoc?: SkillLoc[]
 }
 
-export function CreatureSkillsLine({ skills, modStats, onRoll, skillsLoc }: CreatureSkillsLineProps) {
+export function CreatureSkillsLine({ skills, modStats, onRoll }: CreatureSkillsLineProps) {
+  const locale = useCurrentLocale()
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-      {skills.map((skill) => {
-        // Engine key (EN) is used for modStats lookup — never swap it for the display name.
-        const loc = skillsLoc?.find((s) => s.engineKey === skill.name)
-        return (
-          <SkillEntry
-            key={skill.name}
-            skill={skill}
-            modStats={modStats}
-            onRoll={onRoll}
-            displayName={loc?.name}
-          />
-        )
-      })}
+      {skills.map((skill) => (
+        <SkillEntry
+          key={skill.name}
+          skill={skill}
+          modStats={modStats}
+          onRoll={onRoll}
+          locale={locale}
+        />
+      ))}
     </div>
   )
 }
@@ -41,18 +39,17 @@ function SkillEntry({
   skill,
   modStats,
   onRoll,
-  displayName,
+  locale,
 }: {
   skill: SkillRowData
   modStats: Map<string, StatModifierResult>
   onRoll: (formula: string, label: string) => void
-  displayName?: string
+  locale: SupportedLocale
 }) {
-  // Engine key drives modStats lookup; display name is presentation-only.
   const skillMod = modStats.get(skill.name.toLowerCase())
   const net = skillMod?.netModifier ?? 0
   const finalMod = skill.modifier + net
-  const label = displayName ?? skill.name
+  const displayLabel = getSkillLabel(skill.name, locale)
   const btnColor =
     net < 0
       ? 'text-pf-blood decoration-pf-blood/50'
@@ -61,7 +58,7 @@ function SkillEntry({
         : 'text-primary decoration-primary/50'
   return (
     <span className={skill.calculated ? 'opacity-40' : ''}>
-      <span className="text-muted-foreground">{label}</span>{' '}
+      <span className="text-muted-foreground">{displayLabel}</span>{' '}
       <ModifierTooltip
         modifiers={skillMod?.modifiers ?? []}
         netModifier={net}

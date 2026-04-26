@@ -5,6 +5,8 @@ import { getAllActions } from '@/shared/api'
 import type { ActionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import { useContentTranslation } from '@/shared/i18n'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
@@ -81,23 +83,25 @@ function ActionCard({ action, expanded, onToggle }: {
       {traits.length > 0 && (
         <div className="px-3 pb-1.5 flex flex-wrap gap-1">
           {traits.map((trait) => (
-            <span
-              key={trait}
-              className="px-1.5 py-0.5 text-[10px] rounded bg-secondary text-muted-foreground uppercase tracking-wide"
-            >
-              {trait}
-            </span>
+            <TraitPill key={trait} trait={trait} />
           ))}
         </div>
       )}
 
-      {/* Expanded detail — RU overlay is name-only for v1.5.1 */}
+      {/* Expanded detail — RU overlay rendered through SafeHtml when present */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/30 pt-2 space-y-2">
-          {action.description && (
-            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">
-              {sanitize(action.description)}
-            </p>
+          {translation?.textLoc ? (
+            <SafeHtml
+              html={translation.textLoc}
+              className="text-xs text-foreground/80 leading-relaxed"
+            />
+          ) : (
+            action.description && (
+              <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-line">
+                {sanitize(action.description)}
+              </p>
+            )
           )}
           {action.source_book && (
             <p className="text-[10px] text-muted-foreground/60 italic">{action.source_book}</p>

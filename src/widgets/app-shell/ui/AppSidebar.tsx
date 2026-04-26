@@ -42,9 +42,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
           'flex items-center h-14 px-4 border-b border-sidebar-border relative',
           collapsed ? 'justify-center' : 'gap-3'
         )}>
-          <div className="flex items-center justify-center w-8 h-8 rounded bg-primary/90">
-            <Search className="w-5 h-5 text-primary-foreground" />
-          </div>
+            <img className="w-10 h-10"  src='src-tauri\icons\128x128.png'/>
           {!collapsed && (
             <span className="font-bold text-sidebar-foreground tracking-tight text-sm">
               PathMaid

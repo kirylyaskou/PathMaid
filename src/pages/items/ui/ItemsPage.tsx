@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Package, Star } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { searchItems, getFavoriteIds, toggleFavoriteDb, getItemsByIds } from '@/shared/api'
@@ -59,6 +60,7 @@ function FavoritesContent({ favoriteIds, onItemClick, onToggleFavorite }: Favori
 }
 
 export function ItemsPage() {
+  const { t } = useTranslation()
   const {
     query, selectedType, minLevel, maxLevel, selectedRarity,
     selectedTraits, selectedSource, selectedSubcategory,
@@ -139,8 +141,8 @@ export function ItemsPage() {
         className="relative z-10 flex flex-col h-full overflow-hidden"
       >
         <TabsList className="shrink-0 mx-3 mt-2">
-          <TabsTrigger value="all">All Items</TabsTrigger>
-          <TabsTrigger value="favorites">Favorites</TabsTrigger>
+          <TabsTrigger value="all">{t('items.tabs.all')}</TabsTrigger>
+          <TabsTrigger value="favorites">{t('items.tabs.favorites')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="flex flex-col flex-1 overflow-hidden mt-0 min-h-0">
@@ -149,10 +151,10 @@ export function ItemsPage() {
           {/* Count row */}
           <div className="px-3 py-1.5 shrink-0 border-b border-border/30">
             <p className="text-xs text-muted-foreground">
-              {loading ? 'Searching\u2026' : `${items.length} item${items.length !== 1 ? 's' : ''}`}
+              {loading ? t('items.searching') : t('items.count', { count: items.length })}
               {hasActiveFilters() && (
                 <button onClick={clearFilters} className="ml-2 text-primary hover:underline">
-                  clear filters
+                  {t('items.clearFilters')}
                 </button>
               )}
             </p>
@@ -164,12 +166,12 @@ export function ItemsPage() {
               <Package className="w-8 h-8 mb-2 opacity-40" />
               <p className="text-sm">
                 {query || hasActiveFilters()
-                  ? 'No items match the current filters.'
-                  : 'Run sync to import equipment from Foundry VTT.'}
+                  ? t('items.noMatches')
+                  : t('items.noData')}
               </p>
               {hasActiveFilters() && (
                 <button onClick={clearFilters} className="text-xs text-primary hover:underline mt-1">
-                  Clear filters
+                  {t('items.clearFiltersBig')}
                 </button>
               )}
             </div>
@@ -196,8 +198,8 @@ export function ItemsPage() {
           {favoriteIds.size === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
               <Star className="w-8 h-8 mb-2 opacity-40" />
-              <p className="text-sm">No favorites yet</p>
-              <p className="text-xs mt-1">Star an item from the All Items tab to save it here.</p>
+              <p className="text-sm">{t('items.noFavorites')}</p>
+              <p className="text-xs mt-1">{t('items.favoritesHint')}</p>
             </div>
           ) : (
             <FavoritesContent

@@ -4,6 +4,8 @@ import { getFeatByName } from '@/shared/api'
 import type { FeatEntityRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { SafeHtml } from '@/shared/lib/safe-html'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import { useContentTranslation } from '@/shared/i18n'
 import { ActionIcon } from '@/shared/ui/action-icon'
 
@@ -109,20 +111,22 @@ export function FeatInlineCard({ featName, typeLabel, level, note }: FeatInlineC
           {traits.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {traits.map((t) => (
-                <span
-                  key={t}
-                  className="px-1.5 py-0.5 text-xs rounded bg-secondary text-secondary-foreground uppercase tracking-wider"
-                >
-                  {t}
-                </span>
+                <TraitPill key={t} trait={t} />
               ))}
             </div>
           )}
           {note && <p className="text-xs text-muted-foreground italic">{note}</p>}
-          {description && (
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              {sanitizeFoundryText(description)}
-            </p>
+          {translation?.textLoc ? (
+            <SafeHtml
+              html={translation.textLoc}
+              className="text-sm text-foreground/80 leading-relaxed"
+            />
+          ) : (
+            description && (
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                {sanitizeFoundryText(description)}
+              </p>
+            )
           )}
         </div>
       </CollapsibleContent>
