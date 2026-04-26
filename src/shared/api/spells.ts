@@ -1,8 +1,10 @@
 import { getDb } from '@/shared/db'
+import { getCurrentLocale } from '@/shared/i18n/get-locale'
 
 export interface SpellRow {
   id: string
   name: string
+  name_loc: string | null
   rank: number
   traditions: string | null
   traits: string | null
@@ -79,7 +81,7 @@ export async function searchSpells(
   if (query.trim()) {
     const ftsQuery = query.trim().replace(/['"*]/g, '') + '*'
     const rows = await db.select<SpellRow[]>(
-      `SELECT s.* FROM spells s
+      `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s
        JOIN spells_fts f ON s.rowid = f.rowid
        WHERE spells_fts MATCH ?
          ${rank !== undefined ? 'AND s.rank = ?' : ''}
@@ -89,6 +91,7 @@ export async function searchSpells(
        ORDER BY f.rank
        LIMIT 500`,
       [
+        getCurrentLocale(),
         ftsQuery,
         ...(rank !== undefined ? [rank] : []),
         ...(tradition ? [`%"${tradition}"%`] : []),
@@ -102,7 +105,7 @@ export async function searchSpells(
       // tokenizer drops short inputs, fall back to a LIKE scan on name.
       const likePattern = `%${query.trim().replace(/[%_]/g, '')}%`
       exact = await db.select<SpellRow[]>(
-        `SELECT * FROM spells s
+        `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s
          WHERE s.name LIKE ? COLLATE NOCASE
            ${rank !== undefined ? 'AND s.rank = ?' : ''}
            ${tradition ? "AND s.traditions LIKE ?" : ''}
@@ -111,6 +114,7 @@ export async function searchSpells(
          ORDER BY s.rank ASC, s.name ASC
          LIMIT 500`,
         [
+          getCurrentLocale(),
           likePattern,
           ...(rank !== undefined ? [rank] : []),
           ...(tradition ? [`%"${tradition}"%`] : []),
@@ -120,7 +124,7 @@ export async function searchSpells(
     }
   } else {
     exact = await db.select<SpellRow[]>(
-      `SELECT * FROM spells s
+      `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s
        WHERE 1=1
          ${rank !== undefined ? 'AND s.rank = ?' : ''}
          ${tradition ? "AND s.traditions LIKE ?" : ''}
@@ -129,6 +133,7 @@ export async function searchSpells(
        ORDER BY s.rank ASC, s.name ASC
        LIMIT 500`,
       [
+        getCurrentLocale(),
         ...(rank !== undefined ? [rank] : []),
         ...(tradition ? [`%"${tradition}"%`] : []),
         ...traitParam,
@@ -145,7 +150,7 @@ export async function searchSpells(
   // Post-filter in TS applies the HeightenSpec eligibility rule (interval
   // increment count or fixed-level presence).
   const heightenRows = await db.select<SpellRow[]>(
-    `SELECT * FROM spells s
+    `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s
      WHERE s.rank < ?
        AND s.rank > 0
        AND s.heightened_json IS NOT NULL
@@ -156,6 +161,7 @@ export async function searchSpells(
      ORDER BY s.rank ASC, s.name ASC
      LIMIT 500`,
     [
+      getCurrentLocale(),
       rank,
       ...(query.trim() ? [`%${query.trim().replace(/[%_]/g, '')}%`] : []),
       ...(tradition ? [`%"${tradition}"%`] : []),
@@ -184,8 +190,8 @@ export async function searchSpells(
 export async function getSpellById(id: string): Promise<SpellRow | null> {
   const db = await getDb()
   const rows = await db.select<SpellRow[]>(
-    'SELECT * FROM spells WHERE id = ?',
-    [id]
+    `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s WHERE s.id = ?`,
+    [getCurrentLocale(), id]
   )
   return rows[0] ?? null
 }
@@ -193,8 +199,8 @@ export async function getSpellById(id: string): Promise<SpellRow | null> {
 export async function getSpellByName(name: string): Promise<SpellRow | null> {
   const db = await getDb()
   const rows = await db.select<SpellRow[]>(
-    'SELECT * FROM spells WHERE name = ? COLLATE NOCASE LIMIT 1',
-    [name]
+    `SELECT s.*, (SELECT t.name_loc FROM translations t WHERE t.kind='spell' AND t.name_key=s.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM spells s WHERE s.name = ? COLLATE NOCASE LIMIT 1`,
+    [getCurrentLocale(), name]
   )
   return rows[0] ?? null
 }

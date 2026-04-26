@@ -73,3 +73,4 @@ export {
 export { useContentTranslation, useCreatureItem } from './use-content-translation'
 export type { UseCreatureItemResult } from './use-content-translation'
 export { useCurrentLocale } from './use-current-locale'
+export { getCurrentLocale } from './get-locale'

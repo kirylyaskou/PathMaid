@@ -71,7 +71,7 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
                 open && 'rotate-90'
               )}
             />
-            <span className="text-[13px] font-medium flex-1 truncate">{spell.name}</span>
+            <span className="text-[13px] font-medium flex-1 truncate">{spell.name_loc ?? spell.name}</span>
             {spell.action_cost && (
               <span className="font-mono text-primary text-[12px] shrink-0">{actionCostLabel(spell.action_cost)}</span>
             )}

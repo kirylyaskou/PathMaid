@@ -45,7 +45,7 @@ export function ItemTableRow({ item, selectedType, onNameClick, starSlot }: Item
           className="font-medium text-[13px] text-left truncate w-full hover:text-primary hover:underline cursor-pointer"
           onClick={() => onNameClick(item.id)}
         >
-          {item.name}
+          {item.name_loc ?? item.name}
         </button>
       </div>
 

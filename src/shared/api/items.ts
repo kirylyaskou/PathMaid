@@ -1,8 +1,10 @@
 import { getDb } from '@/shared/db'
+import { getCurrentLocale } from '@/shared/i18n/get-locale'
 
 export interface ItemRow {
   id: string
   name: string
+  name_loc: string | null
   item_type: string
   level: number
   rarity: string | null
@@ -85,25 +87,25 @@ export async function searchItems(
   if (query.trim()) {
     const ftsQuery = query.trim().replace(/['"*]/g, '') + '*'
     return await db.select<ItemRow[]>(
-      `SELECT i.* FROM items i
+      `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i
        JOIN items_fts f ON i.rowid = f.rowid
        WHERE items_fts MATCH ?
          ${typeFilter} ${minLvlFilter} ${maxLvlFilter} ${rarityFilter}
          ${traitsFilter} ${sourceFilter} ${subcategoryFilter}
        ORDER BY f.rank
        LIMIT 500`,
-      [ftsQuery, ...extraParams]
+      [ftsQuery, getCurrentLocale(), ...extraParams]
     )
   }
 
   return await db.select<ItemRow[]>(
-    `SELECT * FROM items i
+    `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i
      WHERE 1=1
        ${typeFilter} ${minLvlFilter} ${maxLvlFilter} ${rarityFilter}
        ${traitsFilter} ${sourceFilter} ${subcategoryFilter}
      ORDER BY level ASC, name ASC
      LIMIT 500`,
-    extraParams
+    [getCurrentLocale(), ...extraParams]
   )
 }
 
@@ -112,16 +114,16 @@ export async function getItemsByIds(ids: string[]): Promise<ItemRow[]> {
   const db = await getDb()
   const placeholders = ids.map(() => '?').join(', ')
   return db.select<ItemRow[]>(
-    `SELECT * FROM items WHERE id IN (${placeholders})`,
-    ids
+    `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i WHERE i.id IN (${placeholders})`,
+    [getCurrentLocale(), ...ids]
   )
 }
 
 export async function getItemById(id: string): Promise<ItemRow | null> {
   const db = await getDb()
   const rows = await db.select<ItemRow[]>(
-    'SELECT * FROM items WHERE id = ?',
-    [id]
+    `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i WHERE i.id = ?`,
+    [getCurrentLocale(), id]
   )
   return rows[0] ?? null
 }
@@ -129,8 +131,8 @@ export async function getItemById(id: string): Promise<ItemRow | null> {
 export async function getItemsByType(itemType: string): Promise<ItemRow[]> {
   const db = await getDb()
   return await db.select<ItemRow[]>(
-    'SELECT * FROM items WHERE item_type = ? ORDER BY level ASC, name ASC',
-    [itemType]
+    `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i WHERE i.item_type = ? ORDER BY i.level ASC, i.name ASC`,
+    [getCurrentLocale(), itemType]
   )
 }
 

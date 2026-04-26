@@ -53,7 +53,7 @@ function SpellRow({ spell, isFocusTab, onClick }: { spell: SpellRow; isFocusTab:
       onClick={onClick}
     >
       {/* Name */}
-      <span className="flex-[22] min-w-0 font-medium text-[13px] truncate">{spell.name}</span>
+      <span className="flex-[22] min-w-0 font-medium text-[13px] truncate">{spell.name_loc ?? spell.name}</span>
 
       {/* Actions */}
       <span className="flex-[5] shrink-0 font-mono text-primary text-[13px]">
