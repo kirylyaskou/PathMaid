@@ -51,9 +51,9 @@ const SEED_VERSION_KEY = 'seed.translations.version'
 // roundtrips than the previous 100-row chunk size.
 const CHUNK_SIZE = 110
 
-// entity_items uses 4 columns per row — we can pack much more per IPC call.
-// 240 rows × 4 cols = 960 params, still under the 999 ceiling.
-const ENTITY_ITEMS_CHUNK_SIZE = 240
+// entity_items uses 5 columns per row — packing 199 rows per IPC call.
+// 199 rows × 5 cols = 995 params, just under SQLite's 999 ceiling.
+const ENTITY_ITEMS_CHUNK_SIZE = 199
 
 /**
  * Per-kind seeding helper: counts existing rows for `(kind, locale, source)`,
@@ -320,11 +320,16 @@ export async function loadContentTranslations(db: Database): Promise<void> {
   // parsing structured_json on every paint. Dedup on (entity, id)
   // because the same item id can appear in multiple actor entries that
   // share inventory and the DB primary key collapses those collisions.
-  const itemPairsDedup = new Map<string, { entity: string; id: string; name: string }>()
+  const itemPairsDedup = new Map<string, { entity: string; id: string; name: string; description: string | null }>()
   for (const row of monsterRows) {
     for (const item of row.structured.items) {
       const key = `${row.packKey.toLowerCase()}:${item.id}`
-      itemPairsDedup.set(key, { entity: row.packKey, id: item.id, name: item.name })
+      itemPairsDedup.set(key, {
+        entity: row.packKey,
+        id: item.id,
+        name: item.name,
+        description: typeof item.description === 'string' && item.description.length > 0 ? item.description : null,
+      })
     }
   }
   const monsterItemPairs = Array.from(itemPairsDedup.values())
@@ -335,23 +340,30 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       [LOCALE],
     )
     const haveItems = existingItems[0]?.n ?? 0
-    if (haveItems !== monsterItemPairs.length) {
+    const expectedDescriptions = monsterItemPairs.filter((p) => p.description !== null).length
+    const existingWithDesc = await db.select<{ n: number }[]>(
+      'SELECT COUNT(*) AS n FROM entity_items WHERE locale = ? AND description_loc IS NOT NULL',
+      [LOCALE],
+    )
+    const haveDescriptions = existingWithDesc[0]?.n ?? 0
+    const needsReseed = haveItems !== monsterItemPairs.length || haveDescriptions !== expectedDescriptions
+    if (needsReseed) {
       console.log(
-        `[translations] Seeding ${monsterItemPairs.length} entity_items rows (existing=${haveItems})`,
+        `[translations] Seeding ${monsterItemPairs.length} entity_items rows (existing=${haveItems}, descriptions=${haveDescriptions}/${expectedDescriptions})`,
       )
       await db.execute('BEGIN TRANSACTION', [])
       try {
         await db.execute(`DELETE FROM entity_items WHERE locale = ?`, [LOCALE])
         for (let i = 0; i < monsterItemPairs.length; i += ENTITY_ITEMS_CHUNK_SIZE) {
           const chunk = monsterItemPairs.slice(i, i + ENTITY_ITEMS_CHUNK_SIZE)
-          const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
-          const params: string[] = []
+          const placeholders = chunk.map(() => '(?, ?, ?, ?, ?)').join(', ')
+          const params: (string | null)[] = []
           for (const pair of chunk) {
-            params.push(pair.entity, pair.id, LOCALE, pair.name)
+            params.push(pair.entity, pair.id, LOCALE, pair.name, pair.description)
           }
           await db.execute(
             `INSERT OR REPLACE INTO entity_items
-               (entity_name, item_id, locale, name_loc)
+               (entity_name, item_id, locale, name_loc, description_loc)
              VALUES ${placeholders}`,
             params,
           )
