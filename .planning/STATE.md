@@ -4,7 +4,7 @@ milestone: v1.7.5
 milestone_name: — AP Bestiaries + Item-id RU + Special Abilities Coverage
 status: verifying
 stopped_at: Completed 114-01-PLAN.md — SMOKE-LIST.md + AUTOMATED-VERIFY.md + HUMAN-UAT.md for v1.7.5 verification surface
-last_updated: "2026-04-26T17:11:16.941Z"
+last_updated: "2026-04-26T17:12:41.774Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 71
@@ -26,8 +26,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-26 для v1.7.5 kickoff)
 ## Current Position
 
 Milestone: v1.7.5 AP Bestiaries + Item-id RU + Special Abilities Coverage
-Phase: 114 (Verification + Untranslated Regression) — EXECUTING
-Plan: 1 of 1
+Phase: 999.1
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-26
 
