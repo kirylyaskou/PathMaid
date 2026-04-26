@@ -11,6 +11,7 @@ import { useContentTranslation } from '@/shared/i18n'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { SpellInlineCard } from '@/entities/spell'
 import { parseJsonArray } from '@/shared/lib/json'
+import { stripRarityMarker } from '@/shared/lib/display-name'
 
 
 interface ItemReferenceDrawerProps {
@@ -44,7 +45,7 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
           <>
             <SheetHeader className="p-4 pb-3 border-b border-border/30">
               <SheetTitle className="text-base font-semibold leading-tight">
-                {translation?.nameLoc ?? item.name}
+                {stripRarityMarker(translation?.nameLoc ?? item.name)}
               </SheetTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground">Level {item.level}</span>

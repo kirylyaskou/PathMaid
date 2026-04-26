@@ -2,6 +2,7 @@ import type { ItemRow } from '@/shared/api'
 import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS, formatPrice } from '@/entities/item'
 import { cn } from '@/shared/lib/utils'
 import { parseJsonArray } from '@/shared/lib/json'
+import { stripRarityMarker } from '@/shared/lib/display-name'
 
 interface ItemTableRowProps {
   item: ItemRow
@@ -45,7 +46,7 @@ export function ItemTableRow({ item, selectedType, onNameClick, starSlot }: Item
           className="font-medium text-[13px] text-left truncate w-full hover:text-primary hover:underline cursor-pointer"
           onClick={() => onNameClick(item.id)}
         >
-          {item.name_loc ?? item.name}
+          {stripRarityMarker(item.name_loc ?? item.name)}
         </button>
       </div>
 

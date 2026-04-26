@@ -2,6 +2,7 @@ import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { TRADITION_COLORS, actionCostLabel, parseDamageDisplay } from '@/entities/spell'
 import { parseJsonArray } from '@/shared/lib/json'
+import { stripRarityMarker } from '@/shared/lib/display-name'
 
 const MAX_TRADITIONS = 2
 const MAX_TRAITS = 3
@@ -53,7 +54,7 @@ function SpellRow({ spell, isFocusTab, onClick }: { spell: SpellRow; isFocusTab:
       onClick={onClick}
     >
       {/* Name */}
-      <span className="flex-[22] min-w-0 font-medium text-[13px] truncate">{spell.name_loc ?? spell.name}</span>
+      <span className="flex-[22] min-w-0 font-medium text-[13px] truncate">{stripRarityMarker(spell.name_loc ?? spell.name)}</span>
 
       {/* Actions */}
       <span className="flex-[5] shrink-0 font-mono text-primary text-[13px]">

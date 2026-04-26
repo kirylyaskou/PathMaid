@@ -39,6 +39,14 @@ const ITEM_PACK_KIND: Record<string, ItemKind> = {
   '/vendor/pf2e-locale-ru/pf2e/packs/feats-srd.json': 'feat',
   '/vendor/pf2e-locale-ru/pf2e/packs/equipment-srd.json': 'item',
   '/vendor/pf2e-locale-ru/pf2e/packs/conditionitems.json': 'condition',
+  // Effect packs share the item-shape Babele schema (name + description) and
+  // ship as item_type='effect' / 'aura' rows in the items table. Routing via
+  // kind='item' so the existing list/drawer SQL JOINs (which filter on
+  // kind='item') pick them up alongside equipment-srd.
+  '/vendor/pf2e-locale-ru/pf2e/packs/equipment-effects.json': 'item',
+  '/vendor/pf2e-locale-ru/pf2e/packs/spell-effects.json': 'item',
+  '/vendor/pf2e-locale-ru/pf2e/packs/feat-effects.json': 'item',
+  '/vendor/pf2e-locale-ru/pf2e/packs/bestiary-effects.json': 'item',
 }
 
 export interface MonsterTranslationRow {

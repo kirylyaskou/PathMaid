@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from '../lib/helpers'
 import { parseJsonArray } from '@/shared/lib/json'
+import { stripRarityMarker } from '@/shared/lib/display-name'
 
 interface SpellInlineCardProps {
   spellId?: string
@@ -71,7 +72,7 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
                 open && 'rotate-90'
               )}
             />
-            <span className="text-[13px] font-medium flex-1 truncate">{spell.name_loc ?? spell.name}</span>
+            <span className="text-[13px] font-medium flex-1 truncate">{stripRarityMarker(spell.name_loc ?? spell.name)}</span>
             {spell.action_cost && (
               <span className="font-mono text-primary text-[12px] shrink-0">{actionCostLabel(spell.action_cost)}</span>
             )}

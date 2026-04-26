@@ -11,6 +11,7 @@ import { useContentTranslation, useCurrentLocale } from '@/shared/i18n'
 import { getTraitLabel } from '@/shared/i18n/pf2e-content'
 import { TraitPill } from '@/shared/ui/trait-pill'
 import type { SpellStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
+import { stripRarityMarker } from '@/shared/lib/display-name'
 
 // Save type names live in PF2E.Saves* but are not exposed via the
 // dictionary getter family. Inline mapping covers all three PF2e saves;
@@ -71,7 +72,7 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 </div>
               )}
               <SheetTitle className="text-base font-semibold leading-tight">
-                {translation?.nameLoc ?? spell.name}
+                {stripRarityMarker(translation?.nameLoc ?? spell.name)}
               </SheetTitle>
               <div className="flex items-center flex-wrap gap-2 mt-1">
                 <span className="text-xs text-muted-foreground">{rankLabel(spell.rank)}</span>
