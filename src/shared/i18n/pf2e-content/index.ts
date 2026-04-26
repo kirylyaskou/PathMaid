@@ -121,12 +121,10 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     // boot. If every entity already has name_loc populated we skip the
     // correlated UPDATE (was 77 000 ms on a 13 K-row table) and the FTS
     // rebuild entirely, cutting warm-boot cost to near zero.
-    const _tc = performance.now()
     const nullRows = await db.select<{ n: number }[]>(
       'SELECT COUNT(*) AS n FROM entities WHERE name_loc IS NULL',
     )
     const missingCount = nullRows[0]?.n ?? 0
-    console.log(`[startup] warm: name_loc null check: ${(performance.now() - _tc).toFixed(0)}ms (missing=${missingCount})`)
     if (missingCount === 0) {
       console.log('[translations] Warm boot — name_loc fully populated, skipping UPDATE+FTS rebuild')
       return
@@ -147,7 +145,6 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     // useContentTranslation — entities.name_loc is used exclusively for
     // FTS5 search. An empty string in FTS5 produces no tokens, which is
     // correct: untranslated creatures simply won't match Russian queries.
-    const _tw0 = performance.now()
     await db.execute(
       `UPDATE entities
          SET name_loc = COALESCE(
@@ -161,10 +158,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
        WHERE name_loc IS NULL`,
       [LOCALE],
     )
-    console.log(`[startup] warm: UPDATE entities name_loc (partial): ${(performance.now() - _tw0).toFixed(0)}ms`)
-    const _tw1 = performance.now()
     await db.execute(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`, [])
-    console.log(`[startup] warm: FTS rebuild: ${(performance.now() - _tw1).toFixed(0)}ms`)
     return
   }
 

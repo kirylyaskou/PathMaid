@@ -11,11 +11,7 @@ let initPromise: Promise<void> | null = null
 export async function initDatabase(): Promise<void> {
   if (initPromise) return initPromise
   initPromise = (async () => {
-    const _t0 = performance.now()
     const db = await getDb()
-    console.log(`[startup] getDb: ${(performance.now() - _t0).toFixed(0)}ms`)
-
-    const _t1 = performance.now()
     await db.execute('PRAGMA journal_mode=WAL', [])
     // IMPORTANT: foreign_keys MUST be OFF during migrations. Several migrations
     // (0030 spell_effects_fk_cascade, 0034 effects_granted_by) use SQLite's
@@ -26,19 +22,15 @@ export async function initDatabase(): Promise<void> {
     await db.execute('PRAGMA foreign_keys=OFF', [])
     await runMigrations(db)
     await db.execute('PRAGMA foreign_keys=ON', [])
-    console.log(`[startup] runMigrations: ${(performance.now() - _t1).toFixed(0)}ms`)
 
     // Seed bundled content translations (Phase 78). Idempotent via unique
     // index + INSERT OR REPLACE — safe to re-run on every startup.
     // Silent-fail: translation loader errors must not block app init.
-    const _t2 = performance.now()
     try {
       await loadContentTranslations(db)
     } catch (err) {
       console.warn('[db] loadContentTranslations failed (non-fatal):', err)
     }
-    console.log(`[startup] loadContentTranslations: ${(performance.now() - _t2).toFixed(0)}ms`)
-    console.log(`[startup] initDatabase total: ${(performance.now() - _t0).toFixed(0)}ms`)
   })().catch((err) => {
     // Clear the cache on failure so the user's Retry button actually retries.
     initPromise = null
