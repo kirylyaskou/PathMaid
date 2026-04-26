@@ -37,6 +37,13 @@ const SOURCE = 'pf2-locale-ru'
 const KIND_MONSTER = 'monster' as const
 const KIND_SPELL = 'spell' as const
 
+// Bump this string whenever vendor pack content or adapter logic changes
+// in a way that requires re-seeding existing DBs. The warm boot guard
+// compares this against sync_metadata so collect* and INSERT loops are
+// skipped entirely when the DB is already up to date.
+const SEED_VERSION = '1'
+const SEED_VERSION_KEY = 'seed.translations.version'
+
 // SQLite parameter limit is 999. With 9 columns per row, 110 rows per
 // chunk = 990 params — just under the limit and roughly 10% fewer IPC
 // roundtrips than the previous 100-row chunk size.
@@ -121,8 +128,35 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     [SOURCE],
   )
 
-  const monsterRows = collectMonsterTranslations()
-  const spellRows = collectSpellTranslations()
+  // Warm boot guard: if sync_metadata already records the current
+  // SEED_VERSION, all packs were ingested on a previous boot and the DB
+  // is up to date. Skip collect* (no JSON parsing, no heap allocation)
+  // and go straight to FTS rebuild which is always cheap and necessary
+  // because Foundry sync may have cleared entities.name_loc since last seed.
+  const versionRows = await db.select<{ value: string }[]>(
+    'SELECT value FROM sync_metadata WHERE key = ?',
+    [SEED_VERSION_KEY],
+  )
+  const storedVersion = versionRows[0]?.value ?? null
+  if (storedVersion === SEED_VERSION) {
+    console.log(`[translations] Warm boot — seed version ${SEED_VERSION} already present, skipping ingest`)
+    await db.execute(
+      `UPDATE entities
+         SET name_loc = (
+           SELECT name_loc FROM translations
+            WHERE translations.kind = 'monster'
+              AND translations.locale = ?
+              AND translations.name_key = entities.name COLLATE NOCASE
+            LIMIT 1
+         )`,
+      [LOCALE],
+    )
+    await db.execute(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`, [])
+    return
+  }
+
+  const monsterRows = await collectMonsterTranslations()
+  const spellRows = await collectSpellTranslations()
 
   await seedKind(db, KIND_MONSTER, monsterRows.length, async () => {
     for (let i = 0; i < monsterRows.length; i += CHUNK_SIZE) {
@@ -181,7 +215,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
   // Item-shaped kinds (action / feat / item / condition) share a uniform
   // text-overlay shape with spells. Group rows by kind and feed each
   // group through seedKind so per-kind skip-gates work independently.
-  const itemRows = collectItemKindTranslations()
+  const itemRows = await collectItemKindTranslations()
   const grouped = new Map<ItemKind, typeof itemRows>()
   for (const row of itemRows) {
     const bucket = grouped.get(row.kind) ?? []
@@ -281,6 +315,12 @@ export async function loadContentTranslations(db: Database): Promise<void> {
       }
     }
   }
+
+  // Record seed version so warm boot guard fires on next launch.
+  await db.execute(
+    'INSERT OR REPLACE INTO sync_metadata (key, value) VALUES (?, ?)',
+    [SEED_VERSION_KEY, SEED_VERSION],
+  )
 
   const counts = await db.select<{ kind: string; locale: string; n: number }[]>(
     'SELECT kind, locale, COUNT(*) as n FROM translations GROUP BY kind, locale',
