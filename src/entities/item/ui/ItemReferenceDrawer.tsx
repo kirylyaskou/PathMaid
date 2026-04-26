@@ -39,7 +39,7 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
 
   return (
     <Sheet open={!!itemId} onOpenChange={(open) => { if (!open) onClose() }}>
-      <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto flex flex-col gap-0 p-0">
+      <SheetContent side="right" className="w-105 sm:w-120 overflow-y-auto flex flex-col gap-0 p-0">
         {item && (
           <>
             <SheetHeader className="p-4 pb-3 border-b border-border/30">

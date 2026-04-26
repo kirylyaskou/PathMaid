@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.7.1
-milestone_name: — Translation Dictionaries
-status: defining_requirements
-stopped_at: v1.7.1 kickoff — REQUIREMENTS.md + ROADMAP.md updated for Phase 90-93. Next: /gsd-discuss-phase 90 or /gsd-plan-phase 90.
-last_updated: "2026-04-24T00:00:00Z"
-last_activity: 2026-04-24 — v1.7.1 kickoff (UI Translation Dictionaries milestone defined)
+milestone_name: — pf2-locale-ru Migration
+status: executing
+stopped_at: Phase 90 (replanned) context gathered
+last_updated: "2026-04-25T18:11:09.470Z"
+last_activity: 2026-04-25
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 52
+  completed_phases: 2
+  total_plans: 21
+  completed_plans: 11
+  percent: 52
 ---
 
 # STATE.md - PathMaid (Pathfinder 2e DM Assistant)
@@ -21,15 +21,15 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-24 for v1.7.1 kickoff)
 
 **Core value:** Точность + скорость — чистый TS engine для PF2e-математики + React frontend с live Foundry-данными.
-**Current focus:** v1.7.1 Translation Dictionaries — расширить RU-покрытие `CreatureStatBlock` до всего textual content через dictionary-based i18n независимого от HTML parser output. Fix spell translation regression.
+**Current focus:** Phase 91 — ingest-adapter-db-population
 
 ## Current Position
 
 Milestone: v1.7.1 Translation Dictionaries
-Phase: Not started (defining requirements)
-Plan: —
-Status: Requirements defined, roadmap drafted — ready для `/gsd-discuss-phase 90` or `/gsd-plan-phase 90`
-Last activity: 2026-04-24 — v1.7.1 kickoff
+Phase: 999.1
+Plan: Not started
+Status: Executing Phase 91
+Last activity: 2026-04-25
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -83,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-24T07:56:57.817Z
-Stopped at: Completed 89-01 use-spellcasting trim
+Last session: 2026-04-25T04:32:31.389Z
+Stopped at: Phase 90 (replanned) context gathered
 Next step: Draft REQUIREMENTS.md → ROADMAP.md → commit kickoff → `/gsd-discuss-phase 84` or `/gsd-plan-phase 84`.
