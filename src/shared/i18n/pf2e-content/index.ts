@@ -104,30 +104,6 @@ async function seedKind(
  * have rebuilt the entities table since last seed, clearing name_loc.
  */
 export async function loadContentTranslations(db: Database): Promise<void> {
-  // Stale rows from the v1.7.0 HTML-parser seed had source='pf2.ru'. The
-  // adapter pipeline writes source='pf2-locale-ru'; INSERT OR REPLACE
-  // only overwrites rows that share (kind, name_key, level, locale), so
-  // stale rows whose pack key no longer matches sit inert in the table.
-  // Clear them once on every boot — cheap when none remain (after first
-  // post-upgrade boot) and harmless on subsequent calls.
-  await db.execute(
-    "DELETE FROM translations WHERE source = 'pf2.ru'",
-    [],
-  )
-
-  // Pre-overlay spell rows from the initial Phase 95 seed had no
-  // structured_json. The skip-gate compares only row counts, so without
-  // this purge the loader would never reseed those rows after the
-  // structured shape was added. Drop incomplete spell rows so the
-  // skip-gate misfires and reseeds them with structured fields.
-  await db.execute(
-    `DELETE FROM translations
-       WHERE kind = 'spell'
-         AND source = ?
-         AND structured_json IS NULL`,
-    [SOURCE],
-  )
-
   // Warm boot guard: if sync_metadata already records the current
   // SEED_VERSION, all packs were ingested on a previous boot and the DB
   // is up to date. Skip collect* (no JSON parsing, no heap allocation)
@@ -154,6 +130,21 @@ export async function loadContentTranslations(db: Database): Promise<void> {
     await db.execute(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`, [])
     return
   }
+
+  // One-shot cleanup: stale rows from prior seed sources and incomplete
+  // spell rows that predate structured_json. Runs only on cold boot so
+  // warm boot pays no full-scan cost on the translations table.
+  await db.execute(
+    "DELETE FROM translations WHERE source = 'pf2.ru'",
+    [],
+  )
+  await db.execute(
+    `DELETE FROM translations
+       WHERE kind = 'spell'
+         AND source = ?
+         AND structured_json IS NULL`,
+    [SOURCE],
+  )
 
   const monsterRows = await collectMonsterTranslations()
   const spellRows = await collectSpellTranslations()
