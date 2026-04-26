@@ -116,6 +116,7 @@ export async function loadContentTranslations(db: Database): Promise<void> {
   const storedVersion = versionRows[0]?.value ?? null
   if (storedVersion === SEED_VERSION) {
     console.log(`[translations] Warm boot — seed version ${SEED_VERSION} already present, skipping ingest`)
+    const _tw0 = performance.now()
     await db.execute(
       `UPDATE entities
          SET name_loc = (
@@ -127,7 +128,10 @@ export async function loadContentTranslations(db: Database): Promise<void> {
          )`,
       [LOCALE],
     )
+    console.log(`[startup] warm: UPDATE entities name_loc: ${(performance.now() - _tw0).toFixed(0)}ms`)
+    const _tw1 = performance.now()
     await db.execute(`INSERT INTO entities_fts(entities_fts) VALUES('rebuild')`, [])
+    console.log(`[startup] warm: FTS rebuild: ${(performance.now() - _tw1).toFixed(0)}ms`)
     return
   }
 
