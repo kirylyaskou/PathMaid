@@ -91,12 +91,33 @@ function preprocessActionTokens(html: string): string {
  * options-list and route both formula + type into the styled spans so the
  * pill renders the same way as engine-side ClickableFormula output.
  */
+// `@Glyph[Action 1]` / `@Glyph[Reaction]` / `@Glyph[Free Action]` —
+// Foundry Babele markup for action-cost icons that the upstream module
+// uses inside item / spell descriptions. Map to the same canonical
+// glyphs that ACTION_TOKEN_MAP produces for `[one-action]`-style markers.
+const GLYPH_TOKEN_MAP: Record<string, string> = {
+  'Action 1': actionCostLabel('1'),
+  'Action 2': actionCostLabel('2'),
+  'Action 3': actionCostLabel('3'),
+  'Reaction': actionCostLabel('reaction'),
+  'Free Action': actionCostLabel('free'),
+}
+
 function preprocessFoundryTokens(html: string): string {
   let out = html
   // Order matters: greedy `@UUID[…]{label}` BEFORE the generic catch-all so
   // we keep the explicit class. Same for Trait/Check/Damage.
   out = out.replace(/@UUID\[[^\]]+\]\{([^}]+)\}/g, '<span class="pf2e-uuid-ref">$1</span>')
   out = out.replace(/@UUID\[[^\]]+\]/g, '')
+  // `@Glyph[Action 1]` etc. — render as canonical action-cost glyph span.
+  // Unknown glyph kinds collapse to the kind text inside a generic span so
+  // they don't slip into the catch-all (which would print a literal `$1`).
+  out = out.replace(/@Glyph\[([^\]]+)\]/g, (_m, kind: string) => {
+    const glyph = GLYPH_TOKEN_MAP[kind] ?? ''
+    return glyph
+      ? `<span class="pf2e-action-cost" aria-label="${kind}">${glyph}</span>`
+      : `<span>${kind}</span>`
+  })
   out = out.replace(/@Trait\[([^\]]+)\]\{([^}]+)\}/g, '<span class="pf2e-trait" data-trait="$1">$2</span>')
   out = out.replace(/@Trait\[([^\]]+)\]/g, '<span class="pf2e-trait" data-trait="$1">$1</span>')
   out = out.replace(/@Check\[[^\]]+\]\{([^}]+)\}/g, '<span class="pf2e-check">$1</span>')
@@ -124,7 +145,9 @@ function preprocessFoundryTokens(html: string): string {
   )
   // Generic catch-all for any `@Kind[ref]{label}` we didn't enumerate.
   out = out.replace(/@\w+\[[^\]]+\]\{([^}]+)\}/g, '<span>$1</span>')
-  out = out.replace(/@\w+\[[^\]]+\]/g, '<span>$1</span>')
+  // Catch-all without label — drop the bracketed reference (was emitting
+  // literal `$1` because the regex had no capturing group).
+  out = out.replace(/@\w+\[[^\]]+\]/g, '')
   return out
 }
 
