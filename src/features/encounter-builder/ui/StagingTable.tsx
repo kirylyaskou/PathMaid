@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, ArrowRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
@@ -33,6 +34,7 @@ function toRows(encounterId: string, staging: StagingCombatant[]): EncounterStag
 }
 
 export function StagingTable({ encounterId, combatMode = false }: StagingTableProps) {
+  const { t } = useTranslation('common')
   const { stagingCombatants, removeStagingCombatant, releaseFromStaging, updateStagingRound } =
     useCombatantStore(
       useShallow((s) => ({
@@ -54,13 +56,13 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
     <div className="border border-border/40 rounded-md bg-card/30">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Staging Pool [{stagingCombatants.length}]
+          {t('encounterBuilder.stagingPoolHeader', { count: stagingCombatants.length })}
         </span>
       </div>
 
       <div className="divide-y divide-border/20">
         {stagingCombatants.length === 0 ? (
-          <p className="text-sm text-muted-foreground px-3 py-4 text-center">No staged creatures</p>
+          <p className="text-sm text-muted-foreground px-3 py-4 text-center">{t('encounterBuilder.noStagedCreatures')}</p>
         ) : (
           stagingCombatants.map((sc) =>
             combatMode ? (
@@ -76,7 +78,7 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  title="Enter combat"
+                  title={t('encounterBuilder.enterCombatTitle')}
                   onClick={() => {
                     const released = releaseFromStaging(sc.combatant.id)
                     if (!released) return
@@ -100,7 +102,7 @@ export function StagingTable({ encounterId, combatMode = false }: StagingTablePr
                 <Input
                   type="number"
                   min={1}
-                  placeholder="Round"
+                  placeholder={t('encounterBuilder.roundPlaceholder')}
                   value={sc.round ?? ''}
                   className="w-24 h-8"
                   onChange={(e) => {

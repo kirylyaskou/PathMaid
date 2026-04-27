@@ -1,4 +1,5 @@
 import { X, AlertTriangle, Skull } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -7,6 +8,7 @@ import { calculateCreatureXP, getHazardXp } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 
 export function EncounterCreatureList() {
+  const { t } = useTranslation('common')
   const {
     draftCreatures,
     draftHazards,
@@ -30,7 +32,7 @@ export function EncounterCreatureList() {
   if (isEmpty) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p className="text-sm">Add creatures or hazards to build an encounter</p>
+        <p className="text-sm">{t('encounterBuilder.addCreaturesOrHazards')}</p>
       </div>
     )
   }
@@ -41,10 +43,10 @@ export function EncounterCreatureList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <span className="text-xs text-muted-foreground font-medium">
-          {totalEntries} entr{totalEntries !== 1 ? 'ies' : 'y'}
+          {t('encounterBuilder.entries', { count: totalEntries })}
         </span>
         <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={clearDraft}>
-          Clear All
+          {t('encounterBuilder.clearAll')}
         </Button>
       </div>
       <ScrollArea className="flex-1">

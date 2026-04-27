@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export function EncounterEditor({ encounterId, partyLevel }: Props) {
+  const { t } = useTranslation('common')
   const encounter = useEncounterStore((s) => s.encounters.find((e) => e.id === encounterId))
   const setEncounterCombatants = useEncounterStore((s) => s.setEncounterCombatants)
   const upsertEncounter = useEncounterStore((s) => s.upsertEncounter)
@@ -268,18 +270,18 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       {/* Action buttons */}
       <div className="px-4 py-2 border-b border-border/50 flex items-center gap-2 shrink-0 flex-wrap">
         <Button variant="default" size="sm" className="h-8 text-sm" onClick={handleLoadClick} disabled={loading}>
-          Load into Combat
+          {t('encounterBuilder.loadIntoCombat')}
         </Button>
         <Button variant="outline" size="sm" className="h-8 text-sm text-destructive hover:text-destructive" onClick={() => setShowResetConfirm(true)}>
-          Reset
+          {t('encounterBuilder.reset')}
         </Button>
         <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs ml-auto" onClick={handleSortByLevel}>
           <ArrowUpDown className="w-3 h-3" />
-          Sort by Level
+          {t('encounterBuilder.sortByLevel')}
         </Button>
         <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs text-destructive/70 hover:text-destructive" onClick={handleClearAll}>
           <Trash2 className="w-3 h-3" />
-          Clear
+          {t('encounterBuilder.clear')}
         </Button>
       </div>
 
@@ -288,13 +290,13 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         <div className="p-3 space-y-1">
           {combatants.length > 0 && (
             <p className="text-xs text-muted-foreground mb-2">
-              {combatants.length} creature{combatants.length !== 1 ? 's' : ''}
+              {t('encounterBuilder.creatures', { count: combatants.length })}
             </p>
           )}
 
           {combatants.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No creatures added yet.
+              {t('encounterBuilder.noCreaturesAddedYet')}
             </p>
           )}
 
@@ -319,17 +321,17 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Open in New Tab?</AlertDialogTitle>
+            <AlertDialogTitle>{t('encounterBuilder.openInNewTabTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              A combat is already in progress. The encounter will open as a new tab alongside the current fight.
+              {t('encounterBuilder.openInNewTabDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { setShowLoadConfirm(false); doLoadIntoCombat() }}
             >
-              Open New Tab
+              {t('encounterBuilder.openNewTab')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -342,21 +344,21 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tab Already Open</AlertDialogTitle>
+            <AlertDialogTitle>{t('encounterBuilder.tabAlreadyOpenTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              A combat tab for this encounter is already open. Choose what to do.
+              {t('encounterBuilder.tabAlreadyOpenDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-muted text-foreground hover:bg-muted/80"
               onClick={handleDedupOpen}
             >
-              Open Existing Tab
+              {t('encounterBuilder.openExistingTab')}
             </AlertDialogAction>
             <AlertDialogAction onClick={handleDedupRefresh}>
-              Refresh + Focus
+              {t('encounterBuilder.refreshAndFocus')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -366,18 +368,18 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset Encounter?</AlertDialogTitle>
+            <AlertDialogTitle>{t('encounterBuilder.resetEncounterTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              All creatures return to full HP. Conditions and round state are cleared.
+              {t('encounterBuilder.resetEncounterDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => { setShowResetConfirm(false); handleReset() }}
             >
-              Reset
+              {t('encounterBuilder.reset')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

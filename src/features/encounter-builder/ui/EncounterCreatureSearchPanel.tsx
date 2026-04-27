@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { searchCreaturesFiltered, saveEncounterCombatants } from '@/shared/api'
@@ -28,6 +29,7 @@ interface Props {
 type Tier = 'normal' | 'weak' | 'elite'
 
 export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }: Props) {
+  const { t } = useTranslation('common')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -126,7 +128,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search creatures..."
+          placeholder={t('encounterBuilder.searchCreaturesPlaceholder')}
           className="h-8 text-sm"
         />
       </div>
@@ -134,10 +136,10 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       <div className="px-2 pb-1">
         <Select value={creatureType} onValueChange={setCreatureType}>
           <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="All types" />
+            <SelectValue placeholder={t('encounterBuilder.allTypes')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All types</SelectItem>
+            <SelectItem value="__all__">{t('encounterBuilder.allTypes')}</SelectItem>
             {CREATURE_TYPES.map((type) => (
               <SelectItem key={type} value={type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -151,10 +153,10 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       <ScrollArea className="h-48">
         <div className="px-2 pb-2 space-y-0.5">
           {loading && results.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t('encounterBuilder.searching')}</p>
           )}
           {!loading && results.length === 0 && query.trim() && (
-            <p className="text-sm text-muted-foreground text-center py-4">No creatures found</p>
+            <p className="text-sm text-muted-foreground text-center py-4">{t('encounterBuilder.noCreaturesFound')}</p>
           )}
           {results.map((row) => {
             const baseLevel = row.level ?? 0

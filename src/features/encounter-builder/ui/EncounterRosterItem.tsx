@@ -1,4 +1,5 @@
 import { AlertTriangle, Skull, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { LevelBadge } from '@/shared/ui/level-badge'
 import { calculateCreatureXP, getHazardXp, getAdjustedLevel } from '@engine'
@@ -20,6 +21,7 @@ interface EncounterRosterItemProps {
 export function EncounterRosterItem({
   combatant, partyLevel, onRemove, onViewStatBlock,
 }: EncounterRosterItemProps) {
+  const { t } = useTranslation('common')
   const c = combatant
   const adjustedLevel = getAdjustedLevel(c.weakEliteTier, c.creatureLevel)
   const isHazard = c.isHazard === true
@@ -59,13 +61,13 @@ export function EncounterRosterItem({
             onViewStatBlock(c.creatureRef!)
           }}
           className="flex-1 text-sm font-medium truncate text-left hover:text-pf-gold transition-colors"
-          title="View stat block"
+          title={t('encounterBuilder.viewStatBlock')}
         >
           {c.displayName}
         </button>
       )}
       {xpResult.xp != null ? (
-        <span className="text-xs font-mono text-muted-foreground">{xpResult.xp} XP</span>
+        <span className="text-xs font-mono text-muted-foreground">{t('encounterBuilder.xpValue', { xp: xpResult.xp })}</span>
       ) : (
         <span className="flex items-center gap-1 text-red-500">
           <Skull className="w-3 h-3 shrink-0" />

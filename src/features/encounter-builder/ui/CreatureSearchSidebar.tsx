@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
 import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -41,12 +42,6 @@ function stagingToRows(encounterId: string, staging: StagingCombatant[]): Encoun
 }
 
 type SidebarTab = 'creatures' | 'hazards'
-
-const TIERS: { value: WeakEliteTier; label: string }[] = [
-  { value: 'weak', label: 'Weak' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'elite', label: 'Elite' },
-]
 
 interface CreatureSearchSidebarProps {
   onAddCreature?: (row: CreatureRow, tier: WeakEliteTier) => void
@@ -120,6 +115,7 @@ function customToCreatureRow(custom: CustomCreatureRow, stat: CreatureStatBlockD
 }
 
 export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId }: CreatureSearchSidebarProps = {}) {
+  const { t } = useTranslation('common')
   const [activeTab, setActiveTab] = useState<SidebarTab>('creatures')
   const [query, setQuery] = useState('')
 
@@ -235,6 +231,12 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
     }
   }, [])
 
+  const tiers = useMemo(() => [
+    { value: 'weak' as WeakEliteTier, label: t('encounterBuilder.tierWeak') },
+    { value: 'normal' as WeakEliteTier, label: t('encounterBuilder.tierNormal') },
+    { value: 'elite' as WeakEliteTier, label: t('encounterBuilder.tierElite') },
+  ], [t])
+
   // Reset tier on query change
   useEffect(() => {
     setSelectedTier('normal')
@@ -321,7 +323,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                 : 'text-muted-foreground hover:bg-secondary/50'
             }`}
           >
-            Creatures
+            {t('encounterBuilder.tabCreatures')}
           </button>
           <button
             onClick={() => handleTabChange('hazards')}
@@ -331,7 +333,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                 : 'text-muted-foreground hover:bg-secondary/50'
             }`}
           >
-            Hazards
+            {t('encounterBuilder.tabHazards')}
           </button>
         </div>
 
@@ -339,29 +341,29 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={activeTab === 'creatures' ? 'Search creatures...' : 'Search hazards...'}
+          placeholder={activeTab === 'creatures' ? t('encounterBuilder.searchCreaturesPlaceholder') : t('encounterBuilder.searchHazardsPlaceholder')}
           className="h-8 text-sm"
         />
 
         {/* Tier selector — creatures only */}
         {activeTab === 'creatures' && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Tier</span>
-            {TIERS.map((t) => (
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">{t('encounterBuilder.tierLabel')}</span>
+            {tiers.map((tier) => (
               <button
-                key={t.value}
-                onClick={() => setSelectedTier(t.value)}
+                key={tier.value}
+                onClick={() => setSelectedTier(tier.value)}
                 className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                  selectedTier === t.value
-                    ? t.value === 'elite'
+                  selectedTier === tier.value
+                    ? tier.value === 'elite'
                       ? 'bg-primary text-primary-foreground'
-                      : t.value === 'weak'
+                      : tier.value === 'weak'
                         ? 'bg-muted text-muted-foreground'
                         : 'bg-secondary text-secondary-foreground'
                     : 'text-muted-foreground hover:bg-secondary/50'
                 }`}
               >
-                {t.label}
+                {tier.label}
               </button>
             ))}
           </div>
@@ -372,11 +374,11 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
             value={sourceFilter ?? '__all__'}
             onValueChange={(v) => setSourceFilter(v === '__all__' ? null : v)}
           >
-            <SelectTrigger className="h-7 text-xs" aria-label="Source library filter">
-              <SelectValue placeholder="All sources" />
+            <SelectTrigger className="h-7 text-xs" aria-label={t('encounterBuilder.sourceLibraryFilterAriaLabel')}>
+              <SelectValue placeholder={t('encounterBuilder.allSources')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">All sources</SelectItem>
+              <SelectItem value="__all__">{t('encounterBuilder.allSources')}</SelectItem>
               {librarySources.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
@@ -394,10 +396,10 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
           {activeTab === 'creatures' && (
             <>
               {creatureLoading && creatureResults.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('encounterBuilder.searching')}</p>
               )}
               {!creatureLoading && creatureResults.length === 0 && customFiltered.length === 0 && query.trim() && (
-                <p className="text-sm text-muted-foreground text-center py-4">No creatures found</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('encounterBuilder.noCreaturesFound')}</p>
               )}
               {/* Custom creatures — gold left-border accent + "custom" chip overlay
                   distinguishes them from bestiary entries at a glance. */}
@@ -431,11 +433,11 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
           {activeTab === 'hazards' && (
             <>
               {hazardLoading && hazardResults.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('encounterBuilder.searching')}</p>
               )}
               {!hazardLoading && hazardResults.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  {query.trim() ? 'No hazards found' : 'Run sync to import hazards'}
+                  {query.trim() ? t('encounterBuilder.noHazardsFound') : t('encounterBuilder.runSyncToImport')}
                 </p>
               )}
               {hazardResults.map((hazard) => (
@@ -448,15 +450,15 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                     <span className="flex-1 text-sm font-medium truncate">{hazard.name}</span>
                     {hazard.is_complex ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-900/30 text-orange-400 shrink-0">
-                        complex
+                        {t('encounterBuilder.chipComplex')}
                       </span>
                     ) : (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800/50 text-zinc-400 shrink-0">
-                        simple
+                        {t('encounterBuilder.chipSimple')}
                       </span>
                     )}
                     <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0">
-                      + add
+                      {t('encounterBuilder.addChip')}
                     </span>
                   </div>
                 </DraggableHazardRow>

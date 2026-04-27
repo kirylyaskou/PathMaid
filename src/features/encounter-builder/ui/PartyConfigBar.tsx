@@ -1,9 +1,11 @@
 import { Minus, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { useEncounterBuilderStore } from '../model/store'
 import { useShallow } from 'zustand/react/shallow'
 
 export function PartyConfigBar() {
+  const { t } = useTranslation('common')
   const { partyLevel, partySize, setPartyLevel, setPartySize } = useEncounterBuilderStore(
     useShallow((s) => ({
       partyLevel: s.partyLevel,
@@ -17,7 +19,7 @@ export function PartyConfigBar() {
     <div className="flex items-center gap-4 p-3 border-b border-border/50 bg-card/50">
       {/* Party Level */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground font-medium">Party Lvl</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('encounterBuilder.partyLvl')}</span>
         <div className="flex items-center">
           <Button
             variant="outline"
@@ -45,7 +47,7 @@ export function PartyConfigBar() {
 
       {/* Party Size */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground font-medium">Size</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('encounterBuilder.partySize')}</span>
         <div className="flex items-center">
           <Button
             variant="outline"

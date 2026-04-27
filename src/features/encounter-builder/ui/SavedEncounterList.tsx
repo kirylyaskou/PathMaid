@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Download, Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -15,6 +16,7 @@ import { useEncounterStore } from '@/entities/encounter'
 import { ImportEncounterDialog, exportEncounter, exportEncountersBundle } from '@/features/encounter-import'
 
 export function SavedEncounterList() {
+  const { t } = useTranslation('common')
   const encounters = useEncounterStore((s) => s.encounters)
   const selectedId = useEncounterStore((s) => s.selectedId)
   const setSelectedId = useEncounterStore((s) => s.setSelectedId)
@@ -116,7 +118,7 @@ export function SavedEncounterList() {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-          Encounters
+          {t('encounterBuilder.encountersHeader')}
         </span>
         <div className="flex items-center gap-1.5">
           <Button
@@ -124,21 +126,21 @@ export function SavedEncounterList() {
             size="sm"
             className="h-7 text-xs gap-1.5"
             onClick={() => setImportOpen(true)}
-            title="Import encounter from JSON"
+            title={t('encounterBuilder.importFromJsonTitle')}
           >
             <Upload className="w-3 h-3" />
-            Import
+            {t('encounterBuilder.importBtn')}
           </Button>
           <Button
             variant="outline"
             size="sm"
             className="h-7 text-xs gap-1.5"
             onClick={handleOpenExportDialog}
-            title="Export encounters"
+            title={t('encounterBuilder.exportEncountersAriaTitle')}
             disabled={encounters.length === 0}
           >
             <Download className="w-3 h-3" />
-            Export
+            {t('encounterBuilder.exportBtn')}
           </Button>
           <Button
             variant="outline"
@@ -147,7 +149,7 @@ export function SavedEncounterList() {
             onClick={() => setIsCreating(true)}
           >
             <Plus className="w-3 h-3" />
-            New Encounter
+            {t('encounterBuilder.newEncounter')}
           </Button>
         </div>
       </div>
@@ -157,7 +159,7 @@ export function SavedEncounterList() {
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Export Encounters</DialogTitle>
+            <DialogTitle>{t('encounterBuilder.exportEncountersTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 max-h-64 overflow-y-auto py-1">
             <label className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border/40 pb-1.5 mb-1 cursor-pointer select-none px-1 py-0.5">
@@ -165,7 +167,7 @@ export function SavedEncounterList() {
                 checked={allChecked}
                 onCheckedChange={toggleSelectAll}
               />
-              <span>{allChecked ? 'Deselect all' : 'Select all'}</span>
+              <span>{allChecked ? t('encounterBuilder.deselectAll') : t('encounterBuilder.selectAll')}</span>
               <span className="ml-auto font-mono">
                 {exportSelected.size} / {encounters.length}
               </span>
@@ -185,14 +187,14 @@ export function SavedEncounterList() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setExportOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               size="sm"
               onClick={() => void handleExportSelected()}
               disabled={exportSelected.size === 0 || exporting}
             >
-              {exporting ? 'Exporting…' : `Export ${exportSelected.size} as bundle`}
+              {exporting ? t('encounterBuilder.exporting') : t('encounterBuilder.exportCount', { count: exportSelected.size })}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -207,7 +209,7 @@ export function SavedEncounterList() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleCreate}
-            placeholder="Encounter name..."
+            placeholder={t('encounterBuilder.encounterNamePlaceholder')}
             className="h-7 text-sm"
           />
         </div>
@@ -217,8 +219,8 @@ export function SavedEncounterList() {
       <ScrollArea className="flex-1">
         {encounters.length === 0 && !isCreating ? (
           <div className="flex flex-col items-center justify-center h-32 gap-1 text-muted-foreground">
-            <p className="text-sm">No saved encounters</p>
-            <p className="text-xs">Press + to create your first encounter.</p>
+            <p className="text-sm">{t('encounterBuilder.noSavedEncounters')}</p>
+            <p className="text-xs">{t('encounterBuilder.pressToCreate')}</p>
           </div>
         ) : (
           <div className="p-1 space-y-0.5">
@@ -245,8 +247,8 @@ export function SavedEncounterList() {
                     e.stopPropagation()
                     void handleExport(enc.id)
                   }}
-                  title="Export encounter"
-                  aria-label="Export encounter"
+                  title={t('encounterBuilder.exportEncounterTitle')}
+                  aria-label={t('encounterBuilder.exportEncounterAriaLabel')}
                 >
                   <Download className="w-3 h-3" />
                 </Button>
@@ -258,7 +260,7 @@ export function SavedEncounterList() {
                     e.stopPropagation()
                     deleteEncounterById(enc.id)
                   }}
-                  title="Delete encounter"
+                  title={t('encounterBuilder.deleteEncounterTitle')}
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>
