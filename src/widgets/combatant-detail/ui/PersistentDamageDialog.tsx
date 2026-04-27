@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Flame, Dices, Keyboard } from 'lucide-react'
 import {
   Dialog,
@@ -82,6 +83,7 @@ function applyFlatCheckOnly(
 }
 
 export function PersistentDamageDialog({ pending, onClose }: PersistentDamageDialogProps) {
+  const { t } = useTranslation('common')
   const [rollMode, setRollMode] = useState<'auto' | 'manual'>('auto')
   const [manualRoll, setManualRoll] = useState('')
   const [results, setResults] = useState<RollResult[]>([])
@@ -171,7 +173,7 @@ export function PersistentDamageDialog({ pending, onClose }: PersistentDamageDia
           </div>
 
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <span>Flat-check DC:</span>
+            <span>{t('combatantDetail.flatCheckDC')}</span>
             <Input
               type="number"
               value={flatCheckDC}

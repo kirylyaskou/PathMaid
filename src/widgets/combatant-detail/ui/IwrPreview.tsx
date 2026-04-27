@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { IWRApplicationResult } from '@engine'
 
 interface IwrPreviewEntry {
@@ -11,6 +12,7 @@ interface IwrPreviewProps {
 }
 
 export function IwrPreview({ previews }: IwrPreviewProps) {
+  const { t } = useTranslation('common')
   if (previews.length === 0) return null
 
   return (
@@ -19,18 +21,18 @@ export function IwrPreview({ previews }: IwrPreviewProps) {
         <div key={type} className="space-y-0.5">
           <div className="flex justify-between text-muted-foreground/70 text-[10px]">
             <span className="capitalize">{type}</span>
-            <span className="font-mono">{amount} raw</span>
+            <span className="font-mono">{amount} {t('combatantDetail.iwrRaw')}</span>
           </div>
           {result.appliedImmunities.length > 0 && (
             <div className="flex justify-between text-blue-400">
-              <span>Immune ({result.appliedImmunities.map((i) => i.type).join(', ')})</span>
+              <span>{t('statblock.iwr.immunities')} ({result.appliedImmunities.map((i) => i.type).join(', ')})</span>
               <span className="font-mono">&rarr; 0</span>
             </div>
           )}
           {result.appliedWeaknesses.length > 0 && (
             <div className="flex justify-between text-red-400">
               <span>
-                Weakness ({result.appliedWeaknesses.map((w) => `${w.type} ${w.value}`).join(', ')})
+                {t('statblock.iwr.weaknesses')} ({result.appliedWeaknesses.map((w) => `${w.type} ${w.value}`).join(', ')})
               </span>
               <span className="font-mono">
                 +{result.appliedWeaknesses.reduce((s, w) => s + w.value, 0)}
@@ -40,7 +42,7 @@ export function IwrPreview({ previews }: IwrPreviewProps) {
           {result.appliedResistances.length > 0 && (
             <div className="flex justify-between text-green-400">
               <span>
-                Resist ({result.appliedResistances.map((r) => `${r.type} ${r.value}`).join(', ')})
+                {t('statblock.iwr.resistances')} ({result.appliedResistances.map((r) => `${r.type} ${r.value}`).join(', ')})
               </span>
               <span className="font-mono">
                 -{result.appliedResistances.reduce((s, r) => s + r.value, 0)}
@@ -50,7 +52,7 @@ export function IwrPreview({ previews }: IwrPreviewProps) {
         </div>
       ))}
       <div className="flex justify-between font-bold border-t border-border/30 pt-0.5">
-        <span>{previews.length > 1 ? 'Total final' : 'Final'}</span>
+        <span>{previews.length > 1 ? t('combatantDetail.iwrTotalFinal') : t('combatantDetail.iwrFinal')}</span>
         <span className="font-mono">
           {previews.reduce((s, p) => s + p.result.finalDamage, 0)}
         </span>

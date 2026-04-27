@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dices, Keyboard } from 'lucide-react'
 import {
   Dialog,
@@ -51,6 +52,7 @@ interface SickenedFortitudeSaveDialogProps {
 }
 
 export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortitudeSaveDialogProps) {
+  const { t } = useTranslation('common')
   const [rollMode, setRollMode] = useState<'auto' | 'manual'>('auto')
   const [manualRoll, setManualRoll] = useState('')
   const [dc, setDc] = useState(DEFAULT_DC)
@@ -118,7 +120,7 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
 
         <div className="space-y-4">
           <div className="px-2 py-1.5 rounded bg-secondary/30 flex items-center justify-between text-sm">
-            <span className="font-medium">Sickened {pending.sickenedValue}</span>
+            <span className="font-medium">{t('combatantDetail.sickenedValue', { value: pending.sickenedValue })}</span>
             <span className="text-xs text-muted-foreground">end-of-turn recovery</span>
           </div>
 
@@ -205,7 +207,7 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
             <div className="space-y-2">
               <div className="p-3 rounded bg-secondary/50 space-y-1 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">Fortitude Save</span>
+                  <span className="font-medium">{t('combatantDetail.fortitudeSave')}</span>
                   <span className="font-mono text-xs text-muted-foreground">
                     {result.d20}
                     {fortMod !== 0 && (

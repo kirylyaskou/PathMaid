@@ -329,7 +329,16 @@
     "clearAll": "Очистить всё",
     "iwrRaw": "необр.",
     "iwrTotalFinal": "Итог финальный",
-    "iwrFinal": "Финальный"
+    "iwrFinal": "Финальный",
+    "dyingLabel": "Умирание",
+    "woundedLabel": "Ранен",
+    "doomedLabel": "Обречён",
+    "roll": "Бросок",
+    "result": "Результат",
+    "flatCheckDC": "DC простой проверки:",
+    "noReferenceData": "Нет справочных данных",
+    "sickenedValue": "Тошнота {{value}}",
+    "fortitudeSave": "Спасбросок стойкости"
   },
   "initiative": {
     "label": "Инициатива",

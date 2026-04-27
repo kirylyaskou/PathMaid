@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { useConditionStore, ConditionBadge, removeCondition, setConditionLocked } from '@/entities/condition'
 import { ConditionCombobox } from '@/features/combat-tracker'
@@ -21,11 +22,12 @@ const GROUP_BADGE: Record<string, string> = {
 
 
 function ConditionDetailPanel({ row, onClose }: { row: ConditionRow | 'not-found'; onClose: () => void }) {
+  const { t } = useTranslation('common')
   if (row === 'not-found') {
     return (
       <div className="mt-2 rounded-md border border-border/50 bg-secondary/40 p-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold text-muted-foreground">No reference data</span>
+          <span className="text-xs font-semibold text-muted-foreground">{t('combatantDetail.noReferenceData')}</span>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-3 h-3" /></button>
         </div>
       </div>

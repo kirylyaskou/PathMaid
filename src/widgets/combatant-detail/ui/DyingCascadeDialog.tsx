@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Skull, Dices, Keyboard } from 'lucide-react'
 import {
   Dialog,
@@ -37,6 +38,7 @@ export function DyingCascadeDialog({
   abilities,
   mode = 'recovery',
 }: DyingCascadeDialogProps) {
+  const { t } = useTranslation('common')
   const [rollMode, setRollMode] = useState<'auto' | 'manual'>('auto')
   const [manualRoll, setManualRoll] = useState('')
   const [checkResult, setCheckResult] = useState<RecoveryCheckResult | null>(null)
@@ -177,15 +179,15 @@ export function DyingCascadeDialog({
 
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Dying</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('combatantDetail.dyingLabel')}</p>
                 <p className="text-2xl font-mono font-bold text-destructive">{dyingValue}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Wounded</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('combatantDetail.woundedLabel')}</p>
                 <p className="text-2xl font-mono font-bold text-amber-400">{woundedValue}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Doomed</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('combatantDetail.doomedLabel')}</p>
                 <p className="text-2xl font-mono font-bold text-purple-400">{doomedValue}</p>
               </div>
             </div>
@@ -264,7 +266,7 @@ export function DyingCascadeDialog({
             {checkResult && (
               <div className="p-3 rounded bg-secondary/50 space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Roll</span>
+                  <span className="text-muted-foreground">{t('combatantDetail.roll')}</span>
                   <span className="font-mono font-bold">{checkResult.roll}</span>
                 </div>
                 <div className="flex justify-between">
@@ -272,7 +274,7 @@ export function DyingCascadeDialog({
                   <span className="font-mono">{checkResult.dc}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Result</span>
+                  <span className="text-muted-foreground">{t('combatantDetail.result')}</span>
                   <span className={`font-bold ${outcomeColor(checkResult.outcome)}`}>
                     {outcomeLabel(checkResult.outcome)}
                   </span>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { User, Skull } from 'lucide-react'
 import { Separator } from '@/shared/ui/separator'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
@@ -15,6 +16,7 @@ interface CombatantDetailProps {
 }
 
 export function CombatantDetail({ combatantId }: CombatantDetailProps) {
+  const { t } = useTranslation('common')
   const combatant = useCombatantStore(
     useShallow((s) => s.combatants.find((c) => c.id === combatantId))
   )
@@ -49,7 +51,7 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
   if (!combatant) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p className="text-sm">Combatant not found</p>
+        <p className="text-sm">{t('combatantDetail.notFound')}</p>
       </div>
     )
   }
@@ -69,8 +71,8 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
         <div>
           <h2 className="text-lg font-semibold">{combatant.displayName}</h2>
           <p className="text-xs text-muted-foreground">
-            Initiative: <span className="font-mono">{combatant.initiative}</span>
-            {combatant.kind !== 'pc' ? ' — NPC' : ' — PC'}
+            {t('combatantDetail.initiativeLabel')} <span className="font-mono">{combatant.initiative}</span>
+            {combatant.kind !== 'pc' ? ` — ${t('combatantDetail.npc')}` : ` — ${t('combatantDetail.pc')}`}
           </p>
         </div>
       </div>

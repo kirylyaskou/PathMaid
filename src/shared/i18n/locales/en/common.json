@@ -314,7 +314,16 @@
     "clearAll": "Clear all",
     "iwrRaw": "raw",
     "iwrTotalFinal": "Total final",
-    "iwrFinal": "Final"
+    "iwrFinal": "Final",
+    "dyingLabel": "Dying",
+    "woundedLabel": "Wounded",
+    "doomedLabel": "Doomed",
+    "roll": "Roll",
+    "result": "Result",
+    "flatCheckDC": "Flat-check DC:",
+    "noReferenceData": "No reference data",
+    "sickenedValue": "Sickened {{value}}",
+    "fortitudeSave": "Fortitude Save"
   },
   "initiative": {
     "label": "Initiative",

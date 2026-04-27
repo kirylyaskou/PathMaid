@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { useEffectStore, mergeResistances } from '@/entities/spell-effect'
 import { parseSpellEffectResistances } from '@engine'
@@ -45,6 +46,7 @@ interface DamageEntry {
 const MATERIAL_TYPE_SET = new Set(MATERIAL_EFFECTS as readonly string[])
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
+  const { t } = useTranslation('common')
   const combatantId = combatant.id
 
   // Get active effects for IWR resistance overlay
@@ -150,11 +152,14 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     setHpInput(0)
   }, [hpInput, applyTempHp])
 
-  const stepValue = (delta: number) => setHpInput((prev) => Math.max(0, prev + delta))
+  const stepValue = (delta: number) =>
+    setHpInput((prev) =>
+      Math.max(0, prev + delta))
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
-    setHpInput((prev) => Math.max(0, prev + (e.deltaY < 0 ? 1 : -1)))
+    setHpInput((prev) =>
+      Math.max(0, prev + (e.deltaY < 0 ? 1 : -1)))
   }, [])
 
   const hpPercent = maxHp > 0 ? (hp / maxHp) * 100 : 0
@@ -179,7 +184,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             <button
               type="button"
               onClick={() => updateCombatant(combatant.id, { shieldRaised: !combatant.shieldRaised })}
-              title={`Toggle Raise Shield (+${shieldAcBonus} AC)`}
+              title={t('combatantDetail.toggleShield', { bonus: shieldAcBonus })}
               className={cn(
                 'flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors',
                 combatant.shieldRaised
@@ -188,7 +193,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               )}
             >
               <Shield className="w-3 h-3" />
-              {combatant.shieldRaised ? `Shield Raised (+${shieldAcBonus} AC)` : 'Raise Shield'}
+              {combatant.shieldRaised ? t('combatantDetail.shieldRaised', { bonus: shieldAcBonus }) : t('combatantDetail.raiseShield')}
             </button>
           )}
         </div>
@@ -205,9 +210,9 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       {isDead ? (
         <div className="flex flex-col items-center gap-3 py-4 rounded border border-destructive/30 bg-destructive/10">
           <Skull className="w-10 h-10 text-destructive" />
-          <p className="text-lg font-bold text-destructive">DEAD</p>
+          <p className="text-lg font-bold text-destructive">{t('combatantDetail.dead')}</p>
           <p className="text-xs text-muted-foreground">
-            Dying {dyingValue} reached death threshold ({deathThreshold})
+            {t('combatantDetail.dyingThreshold', { value: dyingValue, threshold: deathThreshold })}
           </p>
           <div className="flex gap-2 w-full px-4">
             <Button
@@ -216,7 +221,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               onClick={resurrect}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Resurrect
+              {t('combatantDetail.resurrect')}
             </Button>
           </div>
         </div>
@@ -229,7 +234,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             disabled={!canDamage}
           >
             <Swords className="w-3.5 h-3.5" />
-            Damage
+            {t('combatantDetail.damage')}
             {hasEntries && totalTypedDamage > 0 && (
               <span className="ml-auto font-mono opacity-80">{totalTypedDamage}</span>
             )}
@@ -238,7 +243,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
           {/* Damage entries area */}
           <div className="min-h-7 w-full flex flex-wrap items-center gap-1 px-2 py-1 rounded border border-border/50 bg-secondary/20">
             {!hasEntries && materials.length === 0 && (
-              <span className="text-xs text-muted-foreground">Untyped</span>
+              <span className="text-xs text-muted-foreground">{t('combatantDetail.untyped')}</span>
             )}
             {damageEntries.map((entry) => (
               <div key={entry.damageType} className="flex items-center gap-0.5">
@@ -279,7 +284,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               onClick={() => setTraitSelectorOpen(true)}
               className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded border border-dashed border-border/40 hover:border-border/70 transition-colors"
             >
-              + traits
+              {t('combatantDetail.addTraits')}
             </button>
           </div>
 
@@ -318,7 +323,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               disabled={hpInput <= 0}
             >
               <Plus className="w-3 h-3" />
-              Heal
+              {t('combatantDetail.heal')}
             </Button>
             <Button
               variant="secondary"
@@ -327,7 +332,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               disabled={hpInput <= 0}
             >
               <Shield className="w-3 h-3" />
-              Temp HP
+              {t('combatantDetail.tempHp')}
             </Button>
           </div>
 
@@ -338,7 +343,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               onClick={stabilize}
             >
               <HeartPulse className="w-3.5 h-3.5" />
-              Stabilize
+              {t('combatantDetail.stabilize')}
             </Button>
           )}
         </div>

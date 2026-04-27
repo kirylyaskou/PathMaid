@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { DAMAGE_GROUPS, MATERIAL_GROUP } from '@/shared/lib/damage-colors'
@@ -27,19 +28,21 @@ export function DamageTraitSelector({
   onToggleMaterial,
   onClearAll,
 }: DamageTraitSelectorProps) {
+  const { t } = useTranslation('common')
+
   return (
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold flex items-center justify-between">
-            <span>Add Damage Traits</span>
+            <span>{t('combatantDetail.addDamageTraits')}</span>
             {(damageEntries.length > 0 || materials.length > 0) && (
               <button
                 onClick={onClearAll}
                 className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 font-normal"
               >
                 <X className="w-3 h-3" />
-                Clear all
+                {t('combatantDetail.clearAll')}
               </button>
             )}
           </DialogTitle>
