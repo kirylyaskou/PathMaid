@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import { SearchInput } from '@/shared/ui/search-input'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -45,6 +46,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
   expanded: boolean
   onToggle: () => void
 }) {
+  const { t } = useTranslation('common')
   const traits = parseJsonArray(hazard.traits)
   const actions = parseJsonArray<HazardAction>(hazard.actions_json)
   const locale = useCurrentLocale()
@@ -116,7 +118,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
             )}
             {hazard.hardness != null && hazard.hardness > 0 && (
               <span>
-                <span className="text-muted-foreground">Hardness </span>
+                <span className="text-muted-foreground">{t('pages.hazards.hardness')} </span>
                 <span className="font-semibold">{hazard.hardness}</span>
               </span>
             )}
@@ -131,7 +133,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
           {/* Stealth details */}
           {stealthText && (
             <p className="text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground/70">Stealth: </span>
+              <span className="font-semibold text-foreground/70">{t('pages.hazards.stealth')} </span>
               <SafeHtml as="span" html={stealthText} className="inline" />
             </p>
           )}
@@ -144,7 +146,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
           {/* Disable */}
           {disableText && (
             <div>
-              <p className="text-xs font-semibold text-amber-300/80 mb-0.5">Disable</p>
+              <p className="text-xs font-semibold text-amber-300/80 mb-0.5">{t('pages.hazards.disable')}</p>
               <SafeHtml html={disableText} className="text-xs text-foreground/80 leading-relaxed" />
             </div>
           )}
@@ -152,7 +154,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
           {/* Reset */}
           {resetText && (
             <div>
-              <p className="text-xs font-semibold text-blue-300/80 mb-0.5">Reset</p>
+              <p className="text-xs font-semibold text-blue-300/80 mb-0.5">{t('pages.hazards.reset')}</p>
               <SafeHtml html={resetText} className="text-xs text-foreground/80 leading-relaxed" />
             </div>
           )}
@@ -207,6 +209,7 @@ function HazardCard({ hazard, expanded, onToggle }: {
 }
 
 export function HazardsPage() {
+  const { t } = useTranslation('common')
   const [allHazards, setAllHazards] = useState<HazardRow[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -232,25 +235,25 @@ export function HazardsPage() {
     return list
   }, [allHazards, query, typeFilter])
 
-  const TYPE_TABS: { value: TypeFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'simple', label: 'Simple' },
-    { value: 'complex', label: 'Complex' },
-  ]
+  const typeTabs = useMemo<{ value: TypeFilter; label: string }[]>(() => [
+    { value: 'all', label: t('pages.hazards.filterAll') },
+    { value: 'simple', label: t('pages.hazards.filterSimple') },
+    { value: 'complex', label: t('pages.hazards.filterComplex') },
+  ], [t])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
       <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
         <SearchInput
-          placeholder="Search hazards…"
+          placeholder={t('pages.hazards.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-8 text-sm"
         />
 
         <div className="flex gap-1">
-          {TYPE_TABS.map((tab) => (
+          {typeTabs.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setTypeFilter(tab.value)}
@@ -271,14 +274,14 @@ export function HazardsPage() {
       <div className="px-3 py-1.5 shrink-0 border-b border-border/30">
         <p className="text-xs text-muted-foreground">
           {loading
-            ? 'Loading…'
-            : `${filtered.length} hazard${filtered.length !== 1 ? 's' : ''}`}
+            ? t('common.loading')
+            : t('pages.hazards.count', { count: filtered.length })}
           {(query || typeFilter !== 'all') && !loading && (
             <button
               onClick={() => { setQuery(''); setTypeFilter('all') }}
               className="ml-2 text-primary hover:underline"
             >
-              clear
+              {t('pages.hazards.clear')}
             </button>
           )}
         </p>
@@ -291,8 +294,8 @@ export function HazardsPage() {
             <AlertTriangle className="w-8 h-8 mb-2 opacity-40" />
             <p className="text-sm">
               {allHazards.length === 0
-                ? 'Run sync to import hazards'
-                : 'No hazards match the filters'}
+                ? t('pages.hazards.runSync')
+                : t('pages.hazards.noResults')}
             </p>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SearchInput } from '@/shared/ui/search-input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import {
@@ -14,6 +15,7 @@ import type { CreatureRow } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
 
 export function BestiaryPage() {
+  const { t } = useTranslation('common')
   const { searchQuery, setSearchQuery, filters, selectedCreatureId, setSelectedCreatureId } =
     useBestiaryStore(
       useShallow((s) => ({
@@ -104,7 +106,7 @@ export function BestiaryPage() {
             <SearchInput
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search bestiary..."
+              placeholder={t('pages.bestiary.searchPlaceholder')}
               className="h-9"
             />
           </div>
@@ -114,7 +116,7 @@ export function BestiaryPage() {
 
           {/* Results count */}
           <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border/30">
-            {loading ? 'Searching...' : `${results.length} creature${results.length !== 1 ? 's' : ''}`}
+            {loading ? t('pages.bestiary.searching') : t('pages.bestiary.count', { count: results.length })}
           </div>
 
           {/* Creature list */}
@@ -123,8 +125,8 @@ export function BestiaryPage() {
               {!loading && results.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   {searchQuery.trim() || hasActiveFilters
-                    ? 'No creatures match your filters'
-                    : 'No creatures loaded — sync Foundry VTT data first'}
+                    ? t('pages.bestiary.noMatch')
+                    : t('pages.bestiary.noData')}
                 </p>
               )}
               {results.map((row) => (
@@ -157,7 +159,7 @@ export function BestiaryPage() {
           </div>
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p className="text-sm">Select a creature to view its stat block</p>
+            <p className="text-sm">{t('pages.bestiary.selectCreatureHint')}</p>
           </div>
         )}
       </ResizablePanel>

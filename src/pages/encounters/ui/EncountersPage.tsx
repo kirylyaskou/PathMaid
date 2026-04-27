@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core'
 import {
   ResizablePanelGroup,
@@ -25,6 +26,7 @@ type DragData =
   | { type: 'hazard'; hazard: HazardRow }
 
 export function EncountersPage() {
+  const { t } = useTranslation('common')
   const encounters = useEncounterStore((s) => s.encounters)
   const selectedId = useEncounterStore((s) => s.selectedId)
   const loadEncounters = useEncounterStore((s) => s.loadEncounters)
@@ -77,7 +79,7 @@ export function EncountersPage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p className="text-sm">Loading...</p>
+        <p className="text-sm">{t('pages.encounters.loading')}</p>
       </div>
     )
   }
@@ -258,7 +260,7 @@ export function EncountersPage() {
               <EncounterEditor encounterId={selectedId} partyLevel={partyLevel} />
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p className="text-sm">Select an encounter to edit its creature list.</p>
+                <p className="text-sm">{t('pages.encounters.selectEncounterHint')}</p>
               </div>
             )}
           </ResizablePanel>
@@ -282,7 +284,7 @@ export function EncountersPage() {
       {/* Drop no-op tooltip */}
       {dropTooltip && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-muted text-sm rounded-md shadow-lg border border-border/50 z-50">
-          Select an encounter first
+          {t('pages.encounters.selectFirst')}
         </div>
       )}
     </div>

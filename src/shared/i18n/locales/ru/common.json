@@ -737,24 +737,46 @@
     "characters": {
       "title": "Персонажи",
       "importButton": "Импортировать персонажа",
+      "usePregen": "Использовать прегена",
       "noCharacters": "Персонажи не импортированы",
       "importHint": "Импортируйте отряд из Pathbuilder 2e",
       "sourceFilterAria": "Фильтр источника персонажей"
     },
     "encounters": {
       "loading": "Загрузка...",
-      "selectEncounterHint": "Выберите встречу для редактирования."
+      "selectEncounterHint": "Выберите встречу для редактирования.",
+      "selectFirst": "Сначала выберите встречу"
     },
     "hazards": {
       "hardness": "Твёрдость",
       "stealth": "Скрытность:",
       "disable": "Обезвредить",
       "reset": "Сбросить",
-      "searchPlaceholder": "Поиск угроз…"
+      "searchPlaceholder": "Поиск угроз…",
+      "filterAll": "Все",
+      "filterSimple": "Простые",
+      "filterComplex": "Сложные",
+      "count_one": "{{count}} угроза",
+      "count_few": "{{count}} угрозы",
+      "count_many": "{{count}} угроз",
+      "clear": "сбросить",
+      "noResults": "Нет совпадений",
+      "runSync": "Запустите синхронизацию для загрузки угроз"
     },
     "bestiary": {
       "selectCreatureHint": "Выберите существо для просмотра",
-      "searchPlaceholder": "Поиск в бестиарии..."
+      "searchPlaceholder": "Поиск в бестиарии...",
+      "searching": "Поиск...",
+      "count_one": "{{count}} существо",
+      "count_few": "{{count}} существа",
+      "count_many": "{{count}} существ",
+      "noMatch": "Нет совпадений по фильтрам",
+      "noData": "Существа не загружены — запустите синхронизацию"
+    },
+    "customCreatures": {
+      "edit": {
+        "backToList": "К списку"
+      }
     }
   },
   "entities": {

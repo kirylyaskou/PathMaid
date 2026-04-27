@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Users, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -42,6 +43,7 @@ function sourceChipLabel(token: string): string {
 }
 
 export function CharactersPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const addCombatant = useCombatantStore((s) => s.addCombatant)
 
@@ -149,7 +151,7 @@ export function CharactersPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <header className="p-4 border-b border-border/50 flex items-center justify-between shrink-0">
-        <h1 className="text-base font-semibold">Characters</h1>
+        <h1 className="text-base font-semibold">{t('pages.characters.title')}</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -157,9 +159,9 @@ export function CharactersPage() {
             onClick={() => setPregenOpen(true)}
           >
             <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-            Use Pregen
+            {t('pages.characters.usePregen')}
           </Button>
-          <Button size="sm" onClick={() => setImportOpen(true)}>Import Character</Button>
+          <Button size="sm" onClick={() => setImportOpen(true)}>{t('pages.characters.importButton')}</Button>
         </div>
       </header>
 
@@ -169,7 +171,7 @@ export function CharactersPage() {
         // unchanged (USER_FILTER / '__iconics__' / adventure slug).
         <div className="px-4 pt-3 shrink-0">
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="h-8 text-xs" aria-label="Character source filter">
+            <SelectTrigger className="h-8 text-xs" aria-label={t('pages.characters.sourceFilterAria')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -188,10 +190,10 @@ export function CharactersPage() {
           <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center gap-3">
             <Users className="w-10 h-10 text-muted-foreground/30" />
             <div>
-              <p className="text-base font-semibold text-muted-foreground">No characters imported yet</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">Import your party from Pathbuilder 2e</p>
+              <p className="text-base font-semibold text-muted-foreground">{t('pages.characters.noCharacters')}</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">{t('pages.characters.importHint')}</p>
             </div>
-            <Button size="sm" onClick={() => setImportOpen(true)}>Import Character</Button>
+            <Button size="sm" onClick={() => setImportOpen(true)}>{t('pages.characters.importButton')}</Button>
           </div>
         ) : filteredCharacters.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center gap-3">

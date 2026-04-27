@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Shield } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
@@ -115,6 +116,7 @@ interface CombatColumnProps {
 }
 
 function CombatColumn({ tab, isActive, onActivate, onSelect, className }: CombatColumnProps) {
+  const { t } = useTranslation('common')
   const [columnSelectedId, setColumnSelectedId] = useState<string | null>(null)
 
   // When this column becomes active, restore its snapshot to global stores
@@ -171,7 +173,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
                 </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <p className="text-sm">Select a combatant</p>
+                  <p className="text-sm">{t('pages.combat.selectCombatant')}</p>
                 </div>
               )}
               <TurnControls />
@@ -193,8 +195,8 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
     >
       {/* Minimal header showing round/state */}
       <div className="px-3 py-1.5 border-b border-border/50 text-xs text-muted-foreground shrink-0">
-        {tab.snapshot.isRunning ? `Round ${tab.snapshot.round}` : 'Not started'}
-        <span className="ml-2 text-muted-foreground/60">(click to focus)</span>
+        {tab.snapshot.isRunning ? t('pages.dashboard.roundN', { n: tab.snapshot.round }) : t('pages.combat.notStarted')}
+        <span className="ml-2 text-muted-foreground/60">{t('pages.combat.clickToFocus')}</span>
       </div>
       {/* Read-only initiative list from snapshot */}
       <div className="flex-1 overflow-y-auto">
@@ -224,7 +226,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
             </div>
           ))}
           {combatants.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">No combatants</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t('pages.combat.noCombatants')}</p>
           )}
         </div>
       </div>
@@ -233,6 +235,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
 }
 
 export function CombatPage() {
+  const { t } = useTranslation('common')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showSelector, setShowSelector] = useState(false)
   const { lastNpcStatBlock, statBlockLoading, selectedPcBuild, pcBuildLoading, loadForCombatant, refreshShieldBonus } =
@@ -453,9 +456,9 @@ export function CombatPage() {
       {openTabs.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
           <Shield className="w-12 h-12 opacity-30" />
-          <p className="text-sm">No encounters open</p>
+          <p className="text-sm">{t('pages.combat.noEncountersOpen')}</p>
           <Button variant="outline" onClick={() => setShowSelector(true)}>
-            Open Encounter
+            {t('pages.combat.blueprint.title')}
           </Button>
           <BlueprintSelectorDialog open={showSelector} onOpenChange={setShowSelector} />
         </div>
@@ -528,7 +531,7 @@ export function CombatPage() {
                           </div>
                         ) : (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                            <p className="text-sm">Select a combatant to view details</p>
+                            <p className="text-sm">{t('pages.combat.selectCombatantDetail')}</p>
                           </div>
                         )}
                         <TurnControls />
@@ -576,7 +579,7 @@ export function CombatPage() {
                 {/* Loading */}
                 {(statBlockLoading || pcBuildLoading) && !lastNpcStatBlock && !selectedPcBuild && (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+                    <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
                   </div>
                 )}
 
@@ -584,7 +587,7 @@ export function CombatPage() {
                 {!selectedPcBuild && !lastNpcStatBlock && !statBlockLoading && !pcBuildLoading && (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
                     <Shield className="w-8 h-8 opacity-30" />
-                    <p className="text-sm">Select a creature to view its stat block</p>
+                    <p className="text-sm">{t('pages.combat.selectCreatureStatBlock')}</p>
                   </div>
                 )}
               </div>

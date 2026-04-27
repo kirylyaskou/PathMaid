@@ -718,24 +718,44 @@
     "characters": {
       "title": "Characters",
       "importButton": "Import Character",
+      "usePregen": "Use Pregen",
       "noCharacters": "No characters imported yet",
       "importHint": "Import your party from Pathbuilder 2e",
       "sourceFilterAria": "Character source filter"
     },
     "encounters": {
       "loading": "Loading...",
-      "selectEncounterHint": "Select an encounter to edit its creature list."
+      "selectEncounterHint": "Select an encounter to edit its creature list.",
+      "selectFirst": "Select an encounter first"
     },
     "hazards": {
       "hardness": "Hardness",
       "stealth": "Stealth:",
       "disable": "Disable",
       "reset": "Reset",
-      "searchPlaceholder": "Search hazards…"
+      "searchPlaceholder": "Search hazards…",
+      "filterAll": "All",
+      "filterSimple": "Simple",
+      "filterComplex": "Complex",
+      "count_one": "{{count}} hazard",
+      "count_other": "{{count}} hazards",
+      "clear": "clear",
+      "noResults": "No hazards match the filters",
+      "runSync": "Run sync to import hazards"
     },
     "bestiary": {
       "selectCreatureHint": "Select a creature to view its stat block",
-      "searchPlaceholder": "Search bestiary..."
+      "searchPlaceholder": "Search bestiary...",
+      "searching": "Searching...",
+      "count_one": "{{count}} creature",
+      "count_other": "{{count}} creatures",
+      "noMatch": "No creatures match your filters",
+      "noData": "No creatures loaded — sync Foundry VTT data first"
+    },
+    "customCreatures": {
+      "edit": {
+        "backToList": "Back to list"
+      }
     }
   },
   "entities": {

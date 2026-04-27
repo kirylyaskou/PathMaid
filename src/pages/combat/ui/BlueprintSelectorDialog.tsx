@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { useEncounterStore } from '@/entities/encounter'
@@ -14,6 +15,7 @@ interface BlueprintSelectorDialogProps {
 }
 
 export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelectorDialogProps) {
+  const { t } = useTranslation('common')
   const encounters = useEncounterStore((s) => s.encounters)
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Open Encounter</DialogTitle>
+          <DialogTitle>{t('pages.combat.blueprint.title')}</DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[400px]">
           <div className="space-y-1 p-1">
@@ -74,8 +76,8 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
               className="w-full text-left px-3 py-2 rounded hover:bg-secondary/50 transition-colors"
               onClick={handleBlankEncounter}
             >
-              <div className="text-sm font-medium">Blank Encounter</div>
-              <div className="text-xs text-muted-foreground">Start from scratch</div>
+              <div className="text-sm font-medium">{t('pages.combat.blueprint.blankEncounter')}</div>
+              <div className="text-xs text-muted-foreground">{t('pages.combat.blueprint.blankEncounterHint')}</div>
             </button>
 
             {encounters.length > 0 && (

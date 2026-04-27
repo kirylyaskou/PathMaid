@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -64,6 +65,7 @@ function ActiveCombatCard({
   activeConditions,
   onNavigate,
 }: ActiveCombatCardProps) {
+  const { t } = useTranslation('common')
   const condCountById = new Map<string, number>()
   for (const c of activeConditions) {
     condCountById.set(c.combatantId, (condCountById.get(c.combatantId) ?? 0) + 1)
@@ -74,14 +76,14 @@ function ActiveCombatCard({
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <Swords className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">Active Combat</span>
+          <span className="text-sm font-semibold text-foreground">{t('pages.dashboard.activeCombat')}</span>
           {isRunning ? (
             <Badge variant="outline" className="text-xs text-green-400 border-green-700/50 bg-green-900/20">
-              Running
+              {t('pages.dashboard.running')}
             </Badge>
           ) : (
             <Badge variant="outline" className="text-xs text-muted-foreground">
-              Inactive
+              {t('pages.dashboard.inactive')}
             </Badge>
           )}
         </div>
@@ -91,7 +93,7 @@ function ActiveCombatCard({
           className="text-xs text-muted-foreground hover:text-foreground gap-1"
           onClick={onNavigate}
         >
-          Go to Combat
+          {t('pages.dashboard.goToCombat')}
           <ChevronRight className="w-3 h-3" />
         </Button>
       </div>
@@ -100,9 +102,9 @@ function ActiveCombatCard({
         <div className="p-4">
           <div className="flex items-center gap-4 mb-3">
             <span className="text-xs text-muted-foreground">
-              <span className="text-foreground font-medium">Round {round}</span>
+              <span className="text-foreground font-medium">{t('pages.dashboard.roundN', { n: round })}</span>
               {' · '}
-              {combatants.length} combatant{combatants.length !== 1 ? 's' : ''}
+              {t('pages.dashboard.combatants', { count: combatants.length })}
             </span>
           </div>
           <div className="flex flex-col gap-1.5">
@@ -152,9 +154,9 @@ function ActiveCombatCard({
       ) : (
         <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
           <Activity className="w-8 h-8 opacity-30" />
-          <p className="text-sm">No active combat</p>
+          <p className="text-sm">{t('pages.dashboard.noActiveCombat')}</p>
           <Button variant="outline" size="sm" className="mt-1 text-xs" onClick={onNavigate}>
-            Open Combat Tracker
+            {t('pages.dashboard.openCombatTracker')}
           </Button>
         </div>
       )}
@@ -170,12 +172,13 @@ interface EncountersCardProps {
 }
 
 function EncountersCard({ encounters, onNavigate }: EncountersCardProps) {
+  const { t } = useTranslation('common')
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">Saved Encounters</span>
+          <span className="text-sm font-semibold text-foreground">{t('pages.dashboard.savedEncounters')}</span>
           {encounters.length > 0 && (
             <Badge variant="outline" className="text-xs text-muted-foreground">
               {encounters.length}
@@ -188,7 +191,7 @@ function EncountersCard({ encounters, onNavigate }: EncountersCardProps) {
           className="text-xs text-muted-foreground hover:text-foreground gap-1"
           onClick={onNavigate}
         >
-          Open Encounters
+          {t('pages.dashboard.openEncounters')}
           <ChevronRight className="w-3 h-3" />
         </Button>
       </div>
@@ -202,7 +205,7 @@ function EncountersCard({ encounters, onNavigate }: EncountersCardProps) {
                   <span className="text-sm text-foreground truncate">{enc.name}</span>
                   {enc.isRunning && (
                     <Badge variant="outline" className="text-xs text-green-400 border-green-700/50 bg-green-900/20 shrink-0">
-                      Running
+                      {t('pages.dashboard.running')}
                     </Badge>
                   )}
                 </div>
@@ -217,9 +220,9 @@ function EncountersCard({ encounters, onNavigate }: EncountersCardProps) {
       ) : (
         <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
           <AlertTriangle className="w-8 h-8 opacity-30" />
-          <p className="text-sm">No saved encounters</p>
+          <p className="text-sm">{t('pages.dashboard.noSavedEncounters')}</p>
           <Button variant="outline" size="sm" className="mt-1 text-xs" onClick={onNavigate}>
-            Create Encounter
+            {t('pages.dashboard.createEncounter')}
           </Button>
         </div>
       )}
@@ -233,22 +236,23 @@ interface CompendiumStatsCardProps {
   stats: DbStats | null
 }
 
-const STAT_ITEMS = [
-  { key: 'creatures' as const, label: 'Creatures', icon: Skull, color: 'text-red-400' },
-  { key: 'spells'   as const, label: 'Spells',    icon: Zap,   color: 'text-purple-400' },
-  { key: 'items'    as const, label: 'Items',      icon: Package, color: 'text-amber-400' },
-  { key: 'hazards'  as const, label: 'Hazards',    icon: AlertTriangle, color: 'text-orange-400' },
-]
-
 function CompendiumStatsCard({ stats }: CompendiumStatsCardProps) {
+  const { t } = useTranslation('common')
+  const statItems = useMemo(() => [
+    { key: 'creatures' as const, label: t('pages.dashboard.statCreatures'), icon: Skull, color: 'text-red-400' },
+    { key: 'spells'   as const, label: t('pages.dashboard.statSpells'),    icon: Zap,   color: 'text-purple-400' },
+    { key: 'items'    as const, label: t('pages.dashboard.statItems'),      icon: Package, color: 'text-amber-400' },
+    { key: 'hazards'  as const, label: t('pages.dashboard.statHazards'),    icon: AlertTriangle, color: 'text-orange-400' },
+  ], [t])
+
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <BookOpen className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm font-semibold text-foreground">Compendium</span>
+        <span className="text-sm font-semibold text-foreground">{t('pages.dashboard.compendium')}</span>
       </div>
       <div className="p-4 flex flex-col gap-3">
-        {STAT_ITEMS.map(({ key, label, icon: Icon, color }) => (
+        {statItems.map(({ key, label, icon: Icon, color }) => (
           <div key={key} className="flex items-center gap-3">
             <Icon className={cn('w-4 h-4 shrink-0', color)} />
             <span className="flex-1 text-sm text-muted-foreground">{label}</span>
