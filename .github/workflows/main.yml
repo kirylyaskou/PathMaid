@@ -6,8 +6,52 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create draft release
+        id: create-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const body = `## Downloads
+
+            Platform binaries are listed under **Assets** below:
+
+            - \`PathMaid_*_x64-setup.exe\` / \`PathMaid_*_x64_en-US.msi\` — Windows
+            - \`PathMaid_*_aarch64.dmg\` — macOS (Apple Silicon, manual install only — auto-update disabled on macOS until notarization is configured)
+            - \`PathMaid_*_amd64.AppImage\` / \`PathMaid_*_amd64.deb\` — Linux
+
+            ## Auto-update
+
+            Starting from **v1.5.0**, PathMaid updates itself automatically on Windows and Linux. If you're on **v1.4.1 or earlier**, you'll need to download and install this version manually **one last time** — all future updates will be delivered through the app's built-in updater.
+
+            Installer signatures (\`.sig\`) are attached alongside each installer — the updater verifies them cryptographically before applying an update.
+
+            > \`Source code (zip)\` and \`Source code (tar.gz)\` are GitHub's auto-generated tarballs from the git tag — **not the intended downloads**. Use a platform binary above.`;
+
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `pathmaid ${tag}`,
+              body: body,
+              draft: true,
+              prerelease: false,
+            });
+            core.setOutput('release_id', data.id);
+
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -18,9 +62,7 @@ jobs:
             args: --bundles deb,appimage
           - os: macos-latest
             args: --bundles dmg,app
-
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -55,24 +97,24 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: pathmaid ${{ github.ref_name }}
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
-          releaseBody: |
-            ## Downloads
-
-            Platform binaries are listed under **Assets** below:
-
-            - `PathMaid_*_x64-setup.exe` / `PathMaid_*_x64_en-US.msi` — Windows
-            - `PathMaid_*_aarch64.dmg` — macOS (Apple Silicon, manual install only — auto-update disabled on macOS until notarization is configured)
-            - `PathMaid_*_amd64.AppImage` / `PathMaid_*_amd64.deb` — Linux
-
-            ## Auto-update
-
-            Starting from **v1.5.0**, PathMaid updates itself automatically on Windows and Linux. If you're on **v1.4.1 or earlier**, you'll need to download and install this version manually **one last time** — all future updates will be delivered through the app's built-in updater.
-
-            Installer signatures (`.sig`) are attached alongside each installer — the updater verifies them cryptographically before applying an update.
-
-            > `Source code (zip)` and `Source code (tar.gz)` are GitHub's auto-generated tarballs from the git tag — **not the intended downloads**. Use a platform binary above.
-          releaseDraft: true
           updaterJsonPreferNsis: true
+
+  publish-release:
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        uses: actions/github-script@v7
+        env:
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.RELEASE_ID,
+              draft: false,
+              make_latest: 'true',
+            });
