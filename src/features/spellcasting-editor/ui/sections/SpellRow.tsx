@@ -1,4 +1,5 @@
 import { Flame, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { IconButton } from '@/shared/ui/icon-button'
@@ -43,6 +44,7 @@ export function SpellRow({
   nonConsumable,
   frequencyLabel,
 }: SpellRowProps) {
+  const { t } = useTranslation('common')
   const effectiveShowCast = showCast && !nonConsumable
   const effectiveCast = cast && !nonConsumable
   const castButton = effectiveShowCast && canCast ? (
@@ -55,7 +57,7 @@ export function SpellRow({
           ? 'text-primary bg-primary/10'
           : 'text-muted-foreground/70 hover:text-primary hover:bg-accent/30',
       )}
-      aria-label={`Cast ${name} at rank ${rank}`}
+      aria-label={t('spellcastingEditor.castSpell', { name, rank })}
     >
       <Flame className="w-3 h-3" />
     </button>
@@ -68,7 +70,7 @@ export function SpellRow({
           <Tooltip>
             <TooltipTrigger asChild>{castButton}</TooltipTrigger>
             <TooltipContent side="left" className="text-xs">
-              Cast &amp; apply effect
+              {t('spellcastingEditor.castApplyEffect')}
             </TooltipContent>
           </Tooltip>
         ) : castButton

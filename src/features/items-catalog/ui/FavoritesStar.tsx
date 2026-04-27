@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface FavoritesStarProps {
   itemId: string
@@ -7,10 +8,11 @@ interface FavoritesStarProps {
 }
 
 export function FavoritesStar({ itemId, isFavorited, onToggle }: FavoritesStarProps) {
+  const { t } = useTranslation('common')
   return (
     <button
       className="w-8 h-8 flex items-center justify-center"
-      aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+      aria-label={isFavorited ? t('items.favorites.removeFromFavorites') : t('items.favorites.addToFavorites')}
       onClick={(e) => {
         e.stopPropagation()
         onToggle(itemId)

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
@@ -15,10 +16,11 @@ interface SpellRankSectionProps {
 }
 
 export function SpellRankSection({ rank, spells, defaultOpen = true, isFocusTab, onSpellClick }: SpellRankSectionProps) {
+  const { t } = useTranslation('common')
   const [open, setOpen] = useState(defaultOpen)
   const count = spells.length
   const label = rankLabel(rank)
-  const countLabel = count === 1 ? '1 spell' : `${count} spells`
+  const countLabel = t('spells.rankSpells', { count })
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>

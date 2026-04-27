@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SearchInput } from '@/shared/ui/search-input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/shared/ui/command'
@@ -24,6 +25,7 @@ interface SpellFilterPanelProps {
 }
 
 export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
+  const { t } = useTranslation('common')
   const query = useSpellsCatalogStore((s) => s.query)
   const selectedTradition = useSpellsCatalogStore((s) => s.selectedTradition)
   const selectedTrait = useSpellsCatalogStore((s) => s.selectedTrait)
@@ -47,7 +49,7 @@ export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
     <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
       {/* Row 1: Search */}
       <SearchInput
-        placeholder="Search spells…"
+        placeholder={t('spells.search')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="h-8 text-sm"
@@ -56,17 +58,17 @@ export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
       {/* Row 2: Tradition buttons (hidden on Focus tab) */}
       {!isFocusTab && (
         <div className="flex flex-wrap gap-1.5">
-          {TRADITIONS.map((t) => (
+          {TRADITIONS.map((tradition) => (
             <button
-              key={t}
-              onClick={() => setSelectedTradition(selectedTradition === t ? null : t)}
+              key={tradition}
+              onClick={() => setSelectedTradition(selectedTradition === tradition ? null : tradition)}
               className={cn(
                 'px-2 py-0.5 text-[11px] rounded border uppercase tracking-wider font-semibold transition-opacity',
-                TRADITION_COLORS[t],
-                selectedTradition && selectedTradition !== t && 'opacity-30'
+                TRADITION_COLORS[tradition],
+                selectedTradition && selectedTradition !== tradition && 'opacity-30'
               )}
             >
-              {t}
+              {tradition}
             </button>
           ))}
         </div>
@@ -77,14 +79,14 @@ export function SpellFilterPanel({ isFocusTab }: SpellFilterPanelProps) {
         <Popover open={traitsOpen} onOpenChange={setTraitsOpen}>
           <PopoverTrigger asChild>
             <button className="h-6 px-2 text-xs border border-border/40 rounded hover:border-border transition-colors text-muted-foreground">
-              {selectedTrait ? selectedTrait : 'Traits'}
+              {selectedTrait ? selectedTrait : t('spells.traits')}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
             <Command>
-              <CommandInput placeholder="Search traits..." />
+              <CommandInput placeholder={t('spells.searchTraits')} />
               <CommandList className="max-h-[300px]">
-                <CommandEmpty>No traits found.</CommandEmpty>
+                <CommandEmpty>{t('spells.noTraits')}</CommandEmpty>
                 {allTraits.map((trait) => (
                   <CommandItem
                     key={trait}

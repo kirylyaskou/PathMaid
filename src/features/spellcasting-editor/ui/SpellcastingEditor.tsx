@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { rankLabel } from '@/shared/lib/pf2e-display'
 import { CantripSection } from './sections/CantripSection'
@@ -47,6 +48,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
     combatId,
   } = props
 
+  const { t } = useTranslation('common')
   const isEdit = mode === 'edit'
   const castMode = resolveCastMode(entry.castType)
   // PF2e RAW: cantrips heighten to ceil(casterLevel / 2), clamped 1..10.
@@ -279,7 +281,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
                 : 'bg-muted/30 text-muted-foreground border-border/30 hover:bg-muted/50',
             )}
           >
-            All
+            {t('spellcastingEditor.allRanks')}
           </button>
           {effectiveRanks.map((r) => (
             <button
@@ -312,7 +314,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
         >
           <Plus className="w-3 h-3" />
-          <span>Add rank {nextRank}</span>
+          <span>{t('spellcastingEditor.addRank', { rank: nextRank })}</span>
         </button>
       )}
     </div>

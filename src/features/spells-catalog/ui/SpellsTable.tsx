@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { SpellRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { TRADITION_COLORS, actionCostLabel, parseDamageDisplay } from '@/entities/spell'
@@ -14,16 +15,17 @@ interface SpellsTableProps {
 }
 
 export function SpellsTable({ spells, isFocusTab, onSpellClick }: SpellsTableProps) {
+  const { t } = useTranslation('common')
   return (
     <div>
       {/* Header */}
       <div className="flex items-center gap-2 px-3 h-9 bg-card border-b border-border/40 shrink-0 text-xs text-muted-foreground font-medium">
-        <span className="flex-[22] min-w-0">Name</span>
-        <span className="flex-[5] shrink-0">Actions</span>
-        <span className="flex-[8]">Save</span>
-        <span className="flex-[10]">Damage</span>
-        <span className="flex-[14]">{isFocusTab ? 'Source' : 'Traditions'}</span>
-        <span className="flex-[16]">Traits</span>
+        <span className="flex-[22] min-w-0">{t('spells.columns.name')}</span>
+        <span className="flex-[5] shrink-0">{t('spells.columns.actions')}</span>
+        <span className="flex-[8]">{t('spells.columns.save')}</span>
+        <span className="flex-[10]">{t('spells.columns.damage')}</span>
+        <span className="flex-[14]">{isFocusTab ? t('spells.columns.source') : t('spells.columns.traditions')}</span>
+        <span className="flex-[16]">{t('spells.columns.traits')}</span>
       </div>
 
       {/* Rows */}

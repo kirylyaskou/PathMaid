@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SpellRow } from './SpellRow'
 import { RankHeader } from './RankHeader'
 import type { SpellcastingSection } from '@/entities/spell'
@@ -33,6 +34,7 @@ export function CantripSection({
   sourceName,
   combatId,
 }: CantripSectionProps) {
+  const { t } = useTranslation('common')
   const isEdit = mode === 'edit'
   const rank = 0
 
@@ -65,7 +67,7 @@ export function CantripSection({
             sourceName={sourceName}
             combatId={combatId}
             showCastTooltip={false}
-            removeTitle="Remove"
+            removeTitle={t('spellcastingEditor.removeSpell')}
           />
         ))}
 
@@ -84,7 +86,7 @@ export function CantripSection({
             sourceName={sourceName}
             combatId={combatId}
             showCastTooltip={false}
-            removeTitle="Remove added spell"
+            removeTitle={t('spellcastingEditor.removeAddedSpell')}
           />
         ))}
 
@@ -95,7 +97,7 @@ export function CantripSection({
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mt-1"
           >
             <Plus className="w-3 h-3" />
-            <span>Add spell…</span>
+            <span>{t('spellcastingEditor.addSpell')}</span>
           </button>
         )}
       </div>

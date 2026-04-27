@@ -1,4 +1,5 @@
 import { Minus, Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { IconButton } from '@/shared/ui/icon-button'
@@ -31,6 +32,7 @@ export function RankHeader({
   onTogglePip,
   onSlotDelta,
 }: RankHeaderProps) {
+  const { t } = useTranslation('common')
   const pipsBlock = showPips && totalSlots > 0 ? (
     <div className="flex items-center gap-1.5">
       {isEdit && onSlotDelta && (
@@ -38,7 +40,7 @@ export function RankHeader({
           intent="danger"
           onClick={() => onSlotDelta(rank, -1)}
           disabled={totalSlots <= 0}
-          title="Remove slot"
+          title={t('spellcastingEditor.removeSlot')}
         >
           <Minus className="w-3 h-3" />
         </IconButton>
@@ -56,7 +58,7 @@ export function RankHeader({
         <IconButton
           intent="primary"
           onClick={() => onSlotDelta(rank, 1)}
-          title="Add slot"
+          title={t('spellcastingEditor.addSlot')}
         >
           <Plus className="w-3 h-3" />
         </IconButton>
@@ -64,11 +66,11 @@ export function RankHeader({
     </div>
   ) : showPips && totalSlots === 0 && isEdit && onSlotDelta ? (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">(0 slots)</span>
+      <span className="text-xs text-muted-foreground">{t('spellcastingEditor.zeroSlots')}</span>
       <IconButton
         intent="primary"
         onClick={() => onSlotDelta(rank, 1)}
-        title="Add slot"
+        title={t('spellcastingEditor.addSlot')}
       >
         <Plus className="w-3 h-3" />
       </IconButton>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Check, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/shared/ui/input'
 import { SearchInput } from '@/shared/ui/search-input'
 import { Popover, PopoverTrigger, PopoverContent } from '@/shared/ui/popover'
@@ -15,6 +16,7 @@ const ITEM_TYPES = ['weapon', 'armor', 'shield', 'consumable', 'equipment', 'tre
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'] as const
 
 export function ItemFilterPanel() {
+  const { t } = useTranslation('common')
   const query = useItemsCatalogStore((s) => s.query)
   const selectedType = useItemsCatalogStore((s) => s.selectedType)
   const minLevel = useItemsCatalogStore((s) => s.minLevel)
@@ -53,7 +55,7 @@ export function ItemFilterPanel() {
     <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
       {/* Search */}
       <SearchInput
-        placeholder="Search items…"
+        placeholder={t('items.search')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="h-8 text-sm"
@@ -80,10 +82,10 @@ export function ItemFilterPanel() {
       <div className="flex flex-wrap items-center gap-2">
         {/* Level range */}
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span>Lv</span>
+          <span>{t('items.filters.level')}</span>
           <Input
             type="number"
-            placeholder="min"
+            placeholder={t('items.filters.min')}
             value={minLevel}
             onChange={(e) => setMinLevel(e.target.value)}
             className="w-14 h-6 text-xs px-1.5"
@@ -93,7 +95,7 @@ export function ItemFilterPanel() {
           <span>–</span>
           <Input
             type="number"
-            placeholder="max"
+            placeholder={t('items.filters.max')}
             value={maxLevel}
             onChange={(e) => setMaxLevel(e.target.value)}
             className="w-14 h-6 text-xs px-1.5"
@@ -124,14 +126,14 @@ export function ItemFilterPanel() {
         <Popover open={traitsOpen} onOpenChange={setTraitsOpen}>
           <PopoverTrigger asChild>
             <button className="h-6 px-2 text-xs border border-border/40 rounded hover:border-border transition-colors text-muted-foreground">
-              {selectedTraits.length > 0 ? `${selectedTraits.length} trait${selectedTraits.length !== 1 ? 's' : ''}` : 'Traits'}
+              {selectedTraits.length > 0 ? t('items.filters.selectedTraits', { count: selectedTraits.length }) : t('items.filters.traits')}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
             <Command>
-              <CommandInput placeholder="Search traits..." />
+              <CommandInput placeholder={t('items.filters.searchTraits')} />
               <CommandList className="max-h-[300px]">
-                <CommandEmpty>No traits found.</CommandEmpty>
+                <CommandEmpty>{t('items.filters.noTraits')}</CommandEmpty>
                 {traits.map((trait) => (
                   <CommandItem
                     key={trait}
@@ -158,10 +160,10 @@ export function ItemFilterPanel() {
           onValueChange={(v) => setSelectedSource(v === '__all__' ? null : v)}
         >
           <SelectTrigger className="h-6 text-xs w-auto min-w-[110px] border-border/40">
-            <SelectValue placeholder="All sources" />
+            <SelectValue placeholder={t('items.filters.allSources')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All sources</SelectItem>
+            <SelectItem value="__all__">{t('items.filters.allSources')}</SelectItem>
             {sources.map((src) => (
               <SelectItem key={src} value={src}>{src}</SelectItem>
             ))}
@@ -175,10 +177,10 @@ export function ItemFilterPanel() {
             onValueChange={(v) => setSelectedSubcategory(v === '__all__' ? null : v)}
           >
             <SelectTrigger className="h-6 text-xs w-auto min-w-[130px] border-border/40">
-              <SelectValue placeholder="All subcategories" />
+              <SelectValue placeholder={t('items.filters.allSubcategories')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">All subcategories</SelectItem>
+              <SelectItem value="__all__">{t('items.filters.allSubcategories')}</SelectItem>
               {subcategories.map((sub) => (
                 <SelectItem key={sub} value={sub}>{sub}</SelectItem>
               ))}

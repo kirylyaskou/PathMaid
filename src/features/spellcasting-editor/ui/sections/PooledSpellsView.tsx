@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SpellRow } from './SpellRow'
 import { RankHeader } from './RankHeader'
 import type { SpellcastingSection } from '@/entities/spell'
@@ -41,6 +42,7 @@ export function PooledSpellsView({
   sourceName,
   combatId,
 }: PooledSpellsViewProps) {
+  const { t } = useTranslation('common')
   const isEdit = mode === 'edit'
   const canSpontCast = used < totalSlots
   const showCast = !isEdit && rank > 0 && !!onCast
@@ -76,7 +78,7 @@ export function PooledSpellsView({
             sourceName={sourceName}
             combatId={combatId}
             showCastTooltip
-            removeTitle="Remove"
+            removeTitle={t('spellcastingEditor.removeSpell')}
           />
         ))}
 
@@ -95,7 +97,7 @@ export function PooledSpellsView({
             sourceName={sourceName}
             combatId={combatId}
             showCastTooltip={false}
-            removeTitle="Remove added spell"
+            removeTitle={t('spellcastingEditor.removeAddedSpell')}
           />
         ))}
 
@@ -106,7 +108,7 @@ export function PooledSpellsView({
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors mt-1"
           >
             <Plus className="w-3 h-3" />
-            <span>Add spell…</span>
+            <span>{t('spellcastingEditor.addSpell')}</span>
           </button>
         )}
       </div>
