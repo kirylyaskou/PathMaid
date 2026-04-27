@@ -5,10 +5,12 @@ import { AppHeader } from './AppHeader'
 import { CommandPalette } from './CommandPalette'
 import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
 import { useHotkeyStore } from '@/shared/model/hotkey-store'
+import { useChordEngine } from '../model/use-chord-engine'
 
 export function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
   const loadHotkeys = useHotkeyStore((s) => s.loadHotkeys)
+  useChordEngine()
 
   useEffect(() => {
     loadHotkeys()
