@@ -101,7 +101,7 @@ export function BuilderPage({ creatureId }: Props) {
       savedSnapshotRef.current = state.form
       setWasSaved(true)
       toast(t('customCreatureBuilder.page.saved'))
-    } catch (e) {
+    } catch {
       toast.error(
         t('customCreatureBuilder.page.failedToSave'),
       )
