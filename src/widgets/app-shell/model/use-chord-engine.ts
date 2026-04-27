@@ -191,6 +191,5 @@ export function useChordEngine(): void {
       document.removeEventListener('keydown', onKeydown)
       if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setCursorMode, resetCursorMode, setPendingCombo, setZoomLevel])
 }
