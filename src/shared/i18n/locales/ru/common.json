@@ -236,6 +236,29 @@
       "uptodate": "Актуальная версия",
       "errorPrefix": "Ошибка",
       "checkFailedPrefix": "Проверка обновлений"
+    },
+    "hotkeys": {
+      "title": "Горячие клавиши",
+      "description": "Chord-хоткеи для боевых действий. Каждый хоткей — два нажатия: комбинация + суффикс.",
+      "add": "Добавить",
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "delete": "Удалить",
+      "edit": "Изменить",
+      "record": "Запись",
+      "recording": "Нажмите комбинацию...",
+      "recordingStep2": "Нажмите суффикс...",
+      "chordField": "Chord",
+      "actionField": "Действие",
+      "noHotkeys": "Горячие клавиши не настроены",
+      "actions": {
+        "nextInitiative": "Следующий ход",
+        "zoomIn": "Увеличить",
+        "zoomOut": "Уменьшить",
+        "applyCondition": "Применить состояние",
+        "conditionField": "Состояние",
+        "valueField": "Значение"
+      }
     }
   },
   "toast": {

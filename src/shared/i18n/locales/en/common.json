@@ -219,6 +219,29 @@
       "uptodate": "Up to date",
       "errorPrefix": "Error",
       "checkFailedPrefix": "Update check"
+    },
+    "hotkeys": {
+      "title": "Hotkeys",
+      "description": "Chord hotkeys for combat actions. Each hotkey is two keypresses: combination + suffix.",
+      "add": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "record": "Record",
+      "recording": "Press combination...",
+      "recordingStep2": "Press suffix...",
+      "chordField": "Chord",
+      "actionField": "Action",
+      "noHotkeys": "No hotkeys configured",
+      "actions": {
+        "nextInitiative": "Next Initiative",
+        "zoomIn": "Zoom In",
+        "zoomOut": "Zoom Out",
+        "applyCondition": "Apply Condition",
+        "conditionField": "Condition",
+        "valueField": "Value"
+      }
     }
   },
   "toast": {

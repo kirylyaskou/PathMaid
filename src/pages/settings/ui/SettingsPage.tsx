@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { getVersion } from '@tauri-apps/api/app'
 
+import { HotkeysSection } from './HotkeysSection'
 import oglFullText from '/LICENSES/OGL-1.0a.txt?raw'
 import section15Text from '/LICENSES/OGL-SECTION-15.md?raw'
 import vendorVersionTxt from '/vendor/pf2e-locale-ru/VERSION.txt?raw'
@@ -273,6 +274,10 @@ export function SettingsPage() {
           )
         )}
       </section>
+
+      <Separator className="my-6" />
+
+      <HotkeysSection />
 
       <Separator className="my-6" />
 
