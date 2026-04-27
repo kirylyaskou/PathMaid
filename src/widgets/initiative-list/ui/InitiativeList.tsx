@@ -1,4 +1,5 @@
 import { useCallback, useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore } from '@/entities/condition'
@@ -14,6 +15,7 @@ interface InitiativeListProps {
 }
 
 export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
+  const { t } = useTranslation('common')
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const conditions = useConditionStore(useShallow((s) => s.activeConditions))
   const activeCombatantId = useCombatTrackerStore(
@@ -68,18 +70,18 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
       <div className="p-2 space-y-0.5">
         {showBanner && (
           <div className="flex items-center gap-2 px-2 py-1.5 mb-1 rounded bg-amber-950/50 border border-amber-800/50 text-xs text-amber-200">
-            <span className="flex-1">⚠ Initiative not set</span>
+            <span className="flex-1">⚠ {t('initiative.notSet')}</span>
             <button
               className="px-2 py-0.5 rounded bg-amber-700/60 hover:bg-amber-700 transition-colors"
               onClick={handleRollAll}
             >
-              Roll All Initiative
+              {t('initiative.rollAll')}
             </button>
             <button
               className="px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
               onClick={() => setBannerDismissed(true)}
             >
-              Set Manually
+              {t('initiative.setManually')}
             </button>
           </div>
         )}
@@ -104,7 +106,7 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
         </SortableContext>
         {combatants.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Add creatures from the bestiary or add PCs to begin.
+            {t('combatTracker.addCreaturesToBegin')}
           </p>
         )}
       </div>

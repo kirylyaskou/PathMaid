@@ -230,6 +230,7 @@
     "previous": "Previous",
     "nextTurn": "Next Turn",
     "startHint": "Press Start to begin combat",
+    "addCreaturesToBegin": "Add creatures from the bestiary or add PCs to begin.",
     "addPc": {
       "trigger": "Add PC",
       "title": "Add Player Character",
@@ -332,6 +333,8 @@
     "rollInitiative": "Roll initiative",
     "set": "Set",
     "elite": "Elite",
-    "weak": "Weak"
+    "weak": "Weak",
+    "notSet": "Initiative not set",
+    "rollAll": "Roll All Initiative"
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, X, User, Skull, Info, Dices } from 'lucide-react'
@@ -37,6 +38,7 @@ export function InitiativeRow({
   onRemove,
   onCreatureClick,
 }: InitiativeRowProps) {
+  const { t } = useTranslation('common')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: combatant.id, data: { combatant } })
   const { setInitiative } = useCombatantStore()
@@ -115,7 +117,7 @@ export function InitiativeRow({
         <PopoverTrigger asChild>
           <span
             className="text-xs font-mono text-muted-foreground w-8 text-right shrink-0 cursor-pointer hover:text-foreground hover:underline"
-            title="Click to set initiative"
+            title={t('initiative.clickToSet')}
             onClick={(e) => e.stopPropagation()}
           >
             {combatant.initiative}
@@ -129,7 +131,7 @@ export function InitiativeRow({
         >
           {/* Manual input */}
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Set manually</p>
+            <p className="text-xs text-muted-foreground">{t('initiative.setManually')}</p>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -140,7 +142,7 @@ export function InitiativeRow({
                 autoFocus
               />
               <Button size="sm" className="h-8" onClick={handleManualSet}>
-                Set
+                {t('initiative.set')}
               </Button>
             </div>
           </div>
@@ -148,7 +150,7 @@ export function InitiativeRow({
           {/* Skill roll — only for creatures with a ref */}
           {combatant.creatureRef && skills.length > 0 && (
             <div className="space-y-1 border-t pt-3">
-              <p className="text-xs text-muted-foreground">Roll initiative</p>
+              <p className="text-xs text-muted-foreground">{t('initiative.rollInitiative')}</p>
               <div className="flex items-center gap-2">
                 <Select value={selectedSkill} onValueChange={setSelectedSkill}>
                   <SelectTrigger className="h-8 flex-1 text-xs">
@@ -196,7 +198,7 @@ export function InitiativeRow({
                   ? 'bg-primary/20 text-primary border border-primary/30'
                   : 'bg-muted text-muted-foreground border border-border/50',
               )}
-              title={combatant.weakEliteTier === 'elite' ? 'Elite' : 'Weak'}
+              title={combatant.weakEliteTier === 'elite' ? t('initiative.elite') : t('initiative.weak')}
             >
               {combatant.weakEliteTier === 'elite' ? 'E' : 'W'}
             </span>

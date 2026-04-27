@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dices } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
@@ -28,6 +29,7 @@ export function StagingDeployDialog({
   creatureRef,
   displayName,
 }: StagingDeployDialogProps) {
+  const { t } = useTranslation('common')
   const [skills, setSkills] = useState<SkillOption[]>([])
   const [selectedSkill, setSelectedSkill] = useState('Perception')
   const [manualValue, setManualValue] = useState('')
@@ -75,13 +77,13 @@ export function StagingDeployDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-72 p-4">
         <DialogHeader>
-          <DialogTitle className="text-sm">Initiative — {displayName}</DialogTitle>
+          <DialogTitle className="text-sm">{t('initiative.label')} — {displayName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 mt-1">
           {/* Manual input */}
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Set manually</p>
+            <p className="text-xs text-muted-foreground">{t('initiative.setManually')}</p>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -95,7 +97,7 @@ export function StagingDeployDialog({
                 autoFocus
               />
               <Button size="sm" className="h-8" onClick={handleSetManual}>
-                Set
+                {t('initiative.set')}
               </Button>
             </div>
           </div>
@@ -103,7 +105,7 @@ export function StagingDeployDialog({
           {/* Skill roll */}
           {skills.length > 0 && (
             <div className="space-y-1 border-t pt-3">
-              <p className="text-xs text-muted-foreground">Roll initiative</p>
+              <p className="text-xs text-muted-foreground">{t('initiative.rollInitiative')}</p>
               <div className="flex items-center gap-2">
                 <Select value={selectedSkill} onValueChange={setSelectedSkill}>
                   <SelectTrigger className="h-8 flex-1 text-xs">
