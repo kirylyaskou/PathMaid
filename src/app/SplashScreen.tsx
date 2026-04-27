@@ -104,13 +104,15 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black transition-opacity duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background transition-opacity duration-150"
       style={{ opacity: fading ? 0 : 1 }}
     >
       <div className="flex flex-col items-center gap-6 p-8">
-        <h1 className="text-[28px] font-semibold leading-[1.1] text-pf-gold">
-          PathMaid
-        </h1>
+        <img
+          src="/mascot/logo.png"
+          alt="PathMaid"
+          className="h-12 w-auto"
+        />
 
         {status === 'error' ? (
           <div
