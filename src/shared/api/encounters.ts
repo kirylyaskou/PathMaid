@@ -28,6 +28,7 @@ export interface EncounterCombatantRow {
   isHazard: boolean        // true for hazard rows
   hazardRef: string | null // hazard.id for hazard rows, null for creatures
   hazardType?: 'simple' | 'complex' // from JOIN with hazards table; undefined for non-hazards
+  perception?: number
 }
 
 export interface EncounterConditionRow {
@@ -110,11 +111,11 @@ export async function saveEncounterCombatants(
     await db.execute(
       `INSERT INTO encounter_combatants
          (id, encounter_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp,
-          is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref, perception)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [c.id, encounterId, c.creatureRef, c.displayName, c.initiative,
        c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, c.weakEliteTier, c.creatureLevel, i,
-       c.isHazard ? 1 : 0, c.hazardRef ?? null]
+       c.isHazard ? 1 : 0, c.hazardRef ?? null, c.perception ?? null]
     )
   }
 }
@@ -125,9 +126,12 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
     id: string; encounter_id: string; creature_ref: string | null; display_name: string;
     initiative: number; hp: number; max_hp: number; temp_hp: number; is_npc: number;
     weak_elite_tier: string; creature_level: number; sort_order: number;
-    is_hazard: number; hazard_ref: string | null; hazard_type: string | null
+    is_hazard: number; hazard_ref: string | null; hazard_type: string | null;
+    perception: number | null
   }>>(
-    `SELECT ec.*, h.hazard_type
+    `SELECT ec.id, ec.encounter_id, ec.creature_ref, ec.display_name, ec.initiative,
+            ec.hp, ec.max_hp, ec.temp_hp, ec.is_npc, ec.weak_elite_tier, ec.creature_level,
+            ec.sort_order, ec.is_hazard, ec.hazard_ref, ec.perception, h.hazard_type
      FROM encounter_combatants ec
      LEFT JOIN hazards h ON ec.hazard_ref = h.id
      WHERE ec.encounter_id = ?
@@ -150,6 +154,7 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
     isHazard: r.is_hazard === 1,
     hazardRef: r.hazard_ref ?? null,
     hazardType: r.hazard_type ? (r.hazard_type as 'simple' | 'complex') : undefined,
+    perception: r.perception ?? undefined,
   }))
 }
 
