@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getItemById } from '@/shared/api'
@@ -21,6 +22,7 @@ interface ItemReferenceDrawerProps {
 }
 
 export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemReferenceDrawerProps) {
+  const { t } = useTranslation('common')
   const [item, setItem] = useState<ItemRow | null>(null)
 
   useEffect(() => {
@@ -35,7 +37,6 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
   const typeColor = item ? (ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40') : ''
   const typeLabel = item ? (ITEM_TYPE_LABELS[item.item_type] ?? item.item_type) : ''
 
-  // Phase 80: item translation lookup
   const { data: translation } = useContentTranslation('item', item?.name, item?.level ?? null)
 
   return (
@@ -48,7 +49,7 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 {stripRarityMarker(translation?.nameLoc ?? item.name)}
               </SheetTitle>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground">Level {item.level}</span>
+                <span className="text-xs text-muted-foreground">{t('entities.item.level')} {item.level}</span>
                 {item.rarity && item.rarity !== 'common' && (
                   <span className={cn('text-xs font-medium capitalize', RARITY_COLORS[item.rarity])}>
                     {item.rarity}
@@ -61,28 +62,28 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
               {/* Key stats bar */}
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Level</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.item.level')}</span>
                   <span className="text-sm font-medium">{item.level}</span>
                 </div>
                 {item.rarity && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Rarity</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.item.rarity')}</span>
                     <span className={cn('text-sm font-medium capitalize', RARITY_COLORS[item.rarity])}>{item.rarity}</span>
                   </div>
                 )}
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Price</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.item.price')}</span>
                   <span className="text-sm font-mono">{formatPrice(item.price_gp)}</span>
                 </div>
                 {item.bulk && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Bulk</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.item.bulk')}</span>
                     <span className="text-sm font-medium">{item.bulk}</span>
                   </div>
                 )}
                 {item.usage && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Usage</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.item.usage')}</span>
                     <span className="text-sm text-muted-foreground">{item.usage}</span>
                   </div>
                 )}
@@ -107,12 +108,12 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
               {/* Traits */}
               {traits.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {traits.map((t) => (
+                  {traits.map((trait) => (
                     <span
-                      key={t}
+                      key={trait}
                       className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
                     >
-                      {t}
+                      {trait}
                     </span>
                   ))}
                 </div>
@@ -123,7 +124,7 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 <div className="space-y-1">
                   {item.damage_formula && (
                     <div className="flex gap-2 items-center text-xs">
-                      <span className="text-muted-foreground">Damage:</span>
+                      <span className="text-muted-foreground">{t('entities.item.damage')}</span>
                       <ClickableFormula
                         formula={item.damage_formula}
                         label={`${item.name} damage`}
@@ -137,18 +138,18 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
 
               {item.ac_bonus !== null && (
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">AC: <span className="text-foreground font-semibold">+{item.ac_bonus}</span></span>
-                  {item.dex_cap !== null && <span className="text-muted-foreground">Dex cap: <span className="text-foreground">+{item.dex_cap}</span></span>}
-                  {item.check_penalty !== null && item.check_penalty !== 0 && <span className="text-muted-foreground">Check: <span className="text-foreground">{item.check_penalty}</span></span>}
-                  {item.speed_penalty !== null && item.speed_penalty !== 0 && <span className="text-muted-foreground">Speed: <span className="text-foreground">{item.speed_penalty} ft</span></span>}
-                  {item.strength_req !== null && <span className="text-muted-foreground">Str req: <span className="text-foreground">{item.strength_req}</span></span>}
+                  <span className="text-muted-foreground">{t('entities.item.ac')} <span className="text-foreground font-semibold">+{item.ac_bonus}</span></span>
+                  {item.dex_cap !== null && <span className="text-muted-foreground">{t('entities.item.dexCap')} <span className="text-foreground">+{item.dex_cap}</span></span>}
+                  {item.check_penalty !== null && item.check_penalty !== 0 && <span className="text-muted-foreground">{t('entities.item.check')} <span className="text-foreground">{item.check_penalty}</span></span>}
+                  {item.speed_penalty !== null && item.speed_penalty !== 0 && <span className="text-muted-foreground">{t('entities.item.speed')} <span className="text-foreground">{item.speed_penalty} ft</span></span>}
+                  {item.strength_req !== null && <span className="text-muted-foreground">{t('entities.item.strReq')} <span className="text-foreground">{item.strength_req}</span></span>}
                 </div>
               )}
 
               {(item.uses_max !== null || item.consumable_category) && item.item_type === 'consumable' && (
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                   {item.uses_max !== null && item.uses_max > 1 && (
-                    <span className="text-muted-foreground">Uses: <span className="text-foreground">{item.uses_max}</span></span>
+                    <span className="text-muted-foreground">{t('entities.item.uses')} <span className="text-foreground">{item.uses_max}</span></span>
                   )}
                 </div>
               )}
@@ -175,14 +176,14 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
 
               {/* Source */}
               {item.source_book && (
-                <p className="text-xs text-muted-foreground">Source: {item.source_book}</p>
+                <p className="text-xs text-muted-foreground">{t('entities.item.source')} {item.source_book}</p>
               )}
             </div>
 
             <SheetFooter className="p-4 pt-2 border-t border-border/30 flex-row items-center gap-2">
               {extraActions}
               <SheetClose asChild>
-                <Button variant="ghost" size="sm">Close panel</Button>
+                <Button variant="ghost" size="sm">{t('entities.item.closePanel')}</Button>
               </SheetClose>
             </SheetFooter>
           </>

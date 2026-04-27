@@ -822,7 +822,12 @@
     },
     "creature": {
       "noStatBlock": "Стат-блок недоступен.",
-      "statBlockSrOnly": "Стат-блок существа"
+      "statBlockSrOnly": "Стат-блок существа",
+      "addToStagingPool": "Добавить в пул"
+    },
+    "condition": {
+      "viewDetails": "Просмотреть детали состояния",
+      "clickToRemove": "Нажмите, чтобы снять {{slug}}"
     }
   },
   "shared": {

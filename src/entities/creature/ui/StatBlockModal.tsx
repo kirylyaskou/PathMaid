@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog'
 import { CreatureStatBlock } from './CreatureStatBlock'
 import { fetchCreatureStatBlockData } from '../model/fetchStatBlock'
@@ -11,6 +12,7 @@ interface StatBlockModalProps {
 }
 
 export function StatBlockModal({ creatureId, open, onOpenChange }: StatBlockModalProps) {
+  const { t } = useTranslation('common')
   const [data, setData] = useState<CreatureStatBlockData | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -34,14 +36,14 @@ export function StatBlockModal({ creatureId, open, onOpenChange }: StatBlockModa
             modal, BestiaryPage inline pane, combat detail) gets RU
             automatically when a translation exists. */}
         <DialogTitle className="sr-only">
-          {data?.name ?? 'Creature stat block'}
+          {data?.name ?? t('entities.creature.statBlockSrOnly')}
         </DialogTitle>
         {loading && (
-          <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t('common.loading')}</div>
         )}
         {!loading && data && <CreatureStatBlock creature={data} />}
         {!loading && !data && open && (
-          <div className="p-8 text-center text-sm text-muted-foreground">No stat block available.</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t('entities.creature.noStatBlock')}</div>
         )}
       </DialogContent>
     </Dialog>

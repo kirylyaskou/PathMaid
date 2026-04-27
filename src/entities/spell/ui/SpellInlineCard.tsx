@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
 import { getSpellById, getSpellByName } from '@/shared/api'
 import type { SpellRow } from '@/shared/api'
@@ -18,6 +19,7 @@ interface SpellInlineCardProps {
 }
 
 export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCardProps) {
+  const { t } = useTranslation('common')
   const [spell, setSpell] = useState<SpellRow | null | 'loading'>('loading')
   const [open, setOpen] = useState(false)
 
@@ -34,8 +36,8 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
     if (compact) return <div className="text-sm text-muted-foreground px-1 py-0.5">{spellName ?? '…'}</div>
     return (
       <div className="space-y-1">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>
-        <p className="text-xs text-muted-foreground px-3 py-2">Loading…</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t('entities.spell.linkedSpell')}</p>
+        <p className="text-xs text-muted-foreground px-3 py-2">{t('entities.spell.loading')}</p>
       </div>
     )
   }
@@ -45,8 +47,8 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
     if (compact) return <div className="text-sm px-1 py-0.5">{spellName}</div>
     return (
       <div className="space-y-1">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>
-        <p className="text-xs text-muted-foreground px-3 py-2">Spell not found</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t('entities.spell.linkedSpell')}</p>
+        <p className="text-xs text-muted-foreground px-3 py-2">{t('entities.spell.notFound')}</p>
       </div>
     )
   }
@@ -58,7 +60,7 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
 
   return (
     <div className="space-y-1">
-      {!compact && <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Linked Spell</p>}
+      {!compact && <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t('entities.spell.linkedSpell')}</p>}
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <div className={cn(
@@ -91,31 +93,31 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
             {/* Meta line */}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               {spell.range_text && (
-                <span>Range: <span className="text-foreground">{spell.range_text}</span></span>
+                <span>{t('entities.spell.range')} <span className="text-foreground">{spell.range_text}</span></span>
               )}
               {areaDisplay && (
-                <span>Area: <span className="text-foreground">{areaDisplay}</span></span>
+                <span>{t('entities.spell.area')} <span className="text-foreground">{areaDisplay}</span></span>
               )}
               {spell.duration_text && (
-                <span>Duration: <span className="text-foreground">{spell.duration_text}</span></span>
+                <span>{t('entities.spell.duration')} <span className="text-foreground">{spell.duration_text}</span></span>
               )}
               {spell.source_book && (
-                <span>Source: <span className="text-foreground">{spell.source_book}</span></span>
+                <span>{t('entities.spell.source')} <span className="text-foreground">{spell.source_book}</span></span>
               )}
             </div>
 
             {/* Traditions */}
             {traditions.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {traditions.map((t) => (
+                {traditions.map((trad) => (
                   <span
-                    key={t}
+                    key={trad}
                     className={cn(
                       'px-1.5 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold',
-                      TRADITION_COLORS[t] ?? 'bg-secondary text-secondary-foreground border-border'
+                      TRADITION_COLORS[trad] ?? 'bg-secondary text-secondary-foreground border-border'
                     )}
                   >
-                    {t}
+                    {trad}
                   </span>
                 ))}
               </div>
@@ -124,12 +126,12 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
             {/* Traits */}
             {traits.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {traits.map((t) => (
+                {traits.map((trait) => (
                   <span
-                    key={t}
+                    key={trait}
                     className="px-1 py-0.5 text-[10px] rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider"
                   >
-                    {t}
+                    {trait}
                   </span>
                 ))}
               </div>

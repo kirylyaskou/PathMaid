@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { generateEncounterBudgets, calculateEncounterRating } from '@engine'
 import type { ThreatRating } from '@engine'
 import { cn } from "@/shared/lib/utils"
@@ -25,6 +27,7 @@ const threatTextColors: Record<ThreatRating, string> = {
 }
 
 export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProps) {
+  const { t } = useTranslation('common')
   const thresholds = generateEncounterBudgets(partySize)
   const threatLevel = calculateEncounterRating(currentXP, partySize)
   const maxXP = thresholds.extreme * 1.5 // extend bar beyond extreme for visual
@@ -40,11 +43,19 @@ export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProp
   // Current XP indicator position
   const indicatorPosition = Math.min((currentXP / maxXP) * 100, 100)
 
+  const thresholdLabels = useMemo<[ThreatRating, number, string][]>(() => [
+    ['trivial',  thresholds.trivial,  t('entities.encounter.trivial',  { n: thresholds.trivial })],
+    ['low',      thresholds.low,      t('entities.encounter.low',      { n: thresholds.low })],
+    ['moderate', thresholds.moderate, t('entities.encounter.moderate', { n: thresholds.moderate })],
+    ['severe',   thresholds.severe,   t('entities.encounter.severe',   { n: thresholds.severe })],
+    ['extreme',  thresholds.extreme,  t('entities.encounter.extreme',  { n: thresholds.extreme })],
+  ], [t, thresholds])
+
   return (
     <div className={cn("space-y-2", className)}>
       {/* Threat Level Display - Grimdark */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Threat Assessment</span>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('entities.encounter.threatAssessment')}</span>
         <div className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold">{currentXP} XP</span>
           <span
@@ -99,13 +110,7 @@ export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProp
       {/* Threshold Labels — absolutely positioned to match bar segments */}
       <div className="relative h-4 text-[10px] font-mono">
         <span className="absolute left-0 text-muted-foreground">0</span>
-        {([
-          ['trivial', thresholds.trivial, `Trivial: ${thresholds.trivial}`],
-          ['low',     thresholds.low,     `Low: ${thresholds.low}`],
-          ['moderate',thresholds.moderate,`Mod: ${thresholds.moderate}`],
-          ['severe',  thresholds.severe,  `Sev: ${thresholds.severe}`],
-          ['extreme', thresholds.extreme, `Ext: ${thresholds.extreme}`],
-        ] as [ThreatRating, number, string][]).map(([tier, xp, label]) => (
+        {thresholdLabels.map(([tier, xp, label]) => (
           <span
             key={tier}
             className={cn("absolute -translate-x-1/2", threatTextColors[tier])}

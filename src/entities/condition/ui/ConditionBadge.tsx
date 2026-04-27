@@ -1,4 +1,5 @@
 import { Lock, Unlock, Link, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import type { ActiveCondition } from '../model/types'
 import { CONDITION_GROUPS } from '@engine'
@@ -33,6 +34,7 @@ export function ConditionBadge({
   onInfo,
   className,
 }: ConditionBadgeProps) {
+  const { t } = useTranslation('common')
   const colorClass = getCategoryColor(condition.slug)
 
   return (
@@ -45,7 +47,7 @@ export function ConditionBadge({
         className
       )}
       onClick={onRemove}
-      title={`Click to remove ${condition.slug}`}
+      title={t('entities.condition.clickToRemove', { slug: condition.slug })}
     >
       {condition.grantedBy && (
         <Link className="w-3 h-3 opacity-60" />
@@ -58,7 +60,7 @@ export function ConditionBadge({
         <button
           className="ml-0.5 text-sky-300 hover:text-sky-100 transition-colors"
           onClick={(e) => { e.stopPropagation(); onInfo() }}
-          title="View condition details"
+          title={t('entities.condition.viewDetails')}
         >
           <Info className="w-4 h-4" />
         </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetFooter } from '@/shared/ui/sheet'
 import { Button } from '@/shared/ui/button'
 import { getSpellById } from '@/shared/api'
@@ -30,6 +31,7 @@ interface SpellReferenceDrawerProps {
 }
 
 export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerProps) {
+  const { t } = useTranslation('common')
   const [spell, setSpell] = useState<SpellRow | null>(null)
 
   useEffect(() => {
@@ -76,15 +78,15 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
               </SheetTitle>
               <div className="flex items-center flex-wrap gap-2 mt-1">
                 <span className="text-xs text-muted-foreground">{rankLabel(spell.rank)}</span>
-                {traditions.map((t) => (
+                {traditions.map((trad) => (
                   <span
-                    key={t}
+                    key={trad}
                     className={cn(
                       'px-1.5 py-0.5 text-[10px] rounded border uppercase tracking-wider font-semibold',
-                      TRADITION_COLORS[t] ?? 'bg-secondary text-secondary-foreground border-border'
+                      TRADITION_COLORS[trad] ?? 'bg-secondary text-secondary-foreground border-border'
                     )}
                   >
-                    {getTraitLabel(t.toLowerCase(), locale)}
+                    {getTraitLabel(trad.toLowerCase(), locale)}
                   </span>
                 ))}
               </div>
@@ -95,13 +97,13 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
                 {spell.action_cost && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Actions</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.actions')}</span>
                     <span className="font-mono text-primary text-sm">{actionCostLabel(spell.action_cost)}</span>
                   </div>
                 )}
                 {spell.save_stat && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Save</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.save')}</span>
                     <span className="text-sm capitalize">
                       {locale === 'ru'
                         ? (SAVE_RU_LABELS[spell.save_stat.toLowerCase()] ?? spell.save_stat)
@@ -111,43 +113,43 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 )}
                 {damageDisplay !== '—' && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Damage</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.damage')}</span>
                     <span className="font-mono text-pf-blood text-sm">{damageDisplay}</span>
                   </div>
                 )}
                 {(spellLoc?.range || spell.range_text) && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Range</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('statblock.range')}</span>
                     <span className="text-sm">{spellLoc?.range ?? spell.range_text}</span>
                   </div>
                 )}
                 {spellLoc?.target && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Target</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.target')}</span>
                     <span className="text-sm">{spellLoc.target}</span>
                   </div>
                 )}
                 {areaDisplay && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Area</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('statblock.area')}</span>
                     <span className="text-sm">{areaDisplay}</span>
                   </div>
                 )}
                 {(spellLoc?.duration || spell.duration_text) && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Duration</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('statblock.duration')}</span>
                     <span className="text-sm">{spellLoc?.duration ?? spell.duration_text}</span>
                   </div>
                 )}
                 {spellLoc?.time && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cast</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.cast')}</span>
                     <span className="text-sm">{spellLoc.time}</span>
                   </div>
                 )}
                 {spellLoc?.cost && (
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cost</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.cost')}</span>
                     <span className="text-sm">{spellLoc.cost}</span>
                   </div>
                 )}
@@ -182,13 +184,13 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
 
               {/* Source */}
               {spell.source_book && (
-                <p className="text-xs text-muted-foreground">Source: {spell.source_book}</p>
+                <p className="text-xs text-muted-foreground">{t('entities.spell.source')} {spell.source_book}</p>
               )}
             </div>
 
             <SheetFooter className="p-4 pt-2 border-t border-border/30">
               <SheetClose asChild>
-                <Button variant="ghost" size="sm">Close panel</Button>
+                <Button variant="ghost" size="sm">{t('entities.spell.closePanel')}</Button>
               </SheetClose>
             </SheetFooter>
           </>

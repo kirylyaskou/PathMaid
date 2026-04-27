@@ -1,4 +1,5 @@
 import { Plus, Inbox } from "lucide-react"
+import { useTranslation } from 'react-i18next'
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent } from "@/shared/ui/card"
 import { Button } from "@/shared/ui/button"
@@ -19,6 +20,7 @@ interface CreatureCardProps {
 }
 
 export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick, className }: CreatureCardProps) {
+  const { t } = useTranslation('common')
   // Show the localized name in summary tiles when a translation exists, so users
   // recognize entries by the name they know. Detail view does the full overlay.
   const { data: translation } = useContentTranslation('monster', creature.name, creature.level)
@@ -51,7 +53,7 @@ export function CreatureCard({ creature, compact, onAdd, onAddToStaging, onClick
                       size="sm"
                       variant="ghost"
                       className="h-6 px-2 gap-1 text-xs bg-secondary/40 text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-                      title="Add to staging pool"
+                      title={t('entities.creature.addToStagingPool')}
                       onClick={(e) => {
                         e.stopPropagation()
                         onAddToStaging()

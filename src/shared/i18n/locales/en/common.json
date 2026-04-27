@@ -801,7 +801,12 @@
     },
     "creature": {
       "noStatBlock": "No stat block available.",
-      "statBlockSrOnly": "Creature stat block"
+      "statBlockSrOnly": "Creature stat block",
+      "addToStagingPool": "Add to staging pool"
+    },
+    "condition": {
+      "viewDetails": "View condition details",
+      "clickToRemove": "Click to remove {{slug}}"
     }
   },
   "shared": {
