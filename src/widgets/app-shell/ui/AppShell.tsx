@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { CommandPalette } from './CommandPalette'
+import { ChordStatusBadge } from './ChordStatusBadge'
 import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
 import { useHotkeyStore } from '@/shared/model/hotkey-store'
 import { useChordEngine } from '../model/use-chord-engine'
@@ -26,6 +27,7 @@ export function AppShell() {
         </main>
       </div>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <ChordStatusBadge />
       <RollResultDrawer />
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -8,9 +8,13 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { useShallow } from 'zustand/react/shallow'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { toCreatureStatBlockData } from '@/entities/creature'
+import { applyCondition } from '@/entities/condition/lib/condition-bridge'
 import { fetchCreatureById } from '@/shared/api/creatures'
+import { useHotkeyStore } from '@/shared/model/hotkey-store'
+import type { ConditionSlug } from '@engine'
 import type { Combatant } from '@/entities/combatant'
 import type { ActiveCondition } from '@/entities/condition'
 
@@ -42,6 +46,9 @@ export function InitiativeRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: combatant.id, data: { combatant } })
   const { setInitiative } = useCombatantStore()
+  const { cursorMode, resetCursorMode } = useHotkeyStore(
+    useShallow((s) => ({ cursorMode: s.cursorMode, resetCursorMode: s.resetCursorMode }))
+  )
 
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [manualValue, setManualValue] = useState(String(combatant.initiative))
@@ -82,6 +89,19 @@ export function InitiativeRow({
     setPopoverOpen(false)
   }
 
+  const handleRowClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (cursorMode.type === 'apply-condition') {
+        applyCondition(combatant.id, cursorMode.conditionKey as ConditionSlug, cursorMode.value)
+        resetCursorMode()
+        e.stopPropagation()
+        return
+      }
+      onSelect()
+    },
+    [cursorMode, combatant.id, resetCursorMode, onSelect]
+  )
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -103,7 +123,7 @@ export function InitiativeRow({
         isDragging && 'opacity-50',
         combatant.hp === 0 && 'opacity-50'
       )}
-      onClick={onSelect}
+      onClick={handleRowClick}
     >
       <button
         className="cursor-grab text-muted-foreground hover:text-foreground"
