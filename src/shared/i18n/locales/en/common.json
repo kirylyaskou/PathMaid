@@ -455,7 +455,7 @@
       "creatureNotFound": "Creature not found",
       "saved": "Creature saved",
       "failedToSave": "Failed to save creature",
-      "replacedWithClone": "Replaced with clone from bestiary"
+      "replacedWithClone": "Replaced form with {{name}}. Click Save to persist."
     },
     "applyRole": {
       "buttonLabel": "Apply Role",

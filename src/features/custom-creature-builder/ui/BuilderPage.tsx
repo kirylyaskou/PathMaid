@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import type { AppliedRoleValues } from '@engine'
@@ -40,6 +41,7 @@ function rootReducer(
 }
 
 export function BuilderPage({ creatureId }: Props) {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [state, dispatch] = useReducer(rootReducer, null as MaybeBuilderState)
   const savedSnapshotRef = useRef<CreatureStatBlockData | null>(null)
@@ -55,7 +57,7 @@ export function BuilderPage({ creatureId }: Props) {
       const data = await getCustomCreatureById(creatureId)
       if (cancelled) return
       if (!data) {
-        toast.error('Creature not found')
+        toast.error(t('customCreatureBuilder.page.creatureNotFound'))
         navigate(PATHS.CUSTOM_CREATURES)
         return
       }
@@ -98,10 +100,10 @@ export function BuilderPage({ creatureId }: Props) {
       await updateCustomCreature(creatureId, state.form)
       savedSnapshotRef.current = state.form
       setWasSaved(true)
-      toast('Saved')
+      toast(t('customCreatureBuilder.page.saved'))
     } catch (e) {
       toast.error(
-        `Failed to save. ${(e as Error).message}. Your changes are still in the form.`,
+        t('customCreatureBuilder.page.failedToSave'),
       )
     } finally {
       setSaving(false)
@@ -135,7 +137,7 @@ export function BuilderPage({ creatureId }: Props) {
   if (!loaded || !state) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-        Loading…
+        {t('customCreatureBuilder.page.loading')}
       </div>
     )
   }
@@ -177,7 +179,7 @@ export function BuilderPage({ creatureId }: Props) {
         onClone={(data) => {
           // Preserve the current creature's id — clone only replaces content.
           dispatch({ type: 'REPLACE_ALL', form: { ...data, id: creatureId } })
-          toast(`Replaced form with ${data.name}. Click Save to persist.`)
+          toast(t('customCreatureBuilder.page.replacedWithClone', { name: data.name }))
         }}
       />
     </div>

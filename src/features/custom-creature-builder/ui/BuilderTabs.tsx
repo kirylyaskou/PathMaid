@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import type { Dispatch } from 'react'
 import type { BuilderState, BuilderAction } from '../model/builderReducer'
@@ -17,23 +19,39 @@ export interface BuilderTabsProps {
   dispatch: Dispatch<BuilderAction>
 }
 
-// 10 tabs in this exact order. Tab values are stable kebab-case ids.
-const TAB_DEFS = [
-  { id: 'concept', label: 'Concept' },
-  { id: 'ability-mods', label: 'Ability Mods' },
-  { id: 'defense', label: 'Defense' },
-  { id: 'perception-skills', label: 'Perception & Skills' },
-  { id: 'speeds-senses', label: 'Speeds & Senses' },
-  { id: 'strikes', label: 'Strikes' },
-  { id: 'spellcasting', label: 'Spellcasting' },
-  { id: 'abilities', label: 'Abilities' },
-  { id: 'iwr', label: 'IWR' },
-  { id: 'auras-rituals', label: 'Auras & Rituals' },
-] as const
-
-export type BuilderTabId = typeof TAB_DEFS[number]['id']
+// Tab ids are stable kebab-case strings used as Radix Tabs values.
+export type BuilderTabId =
+  | 'concept'
+  | 'ability-mods'
+  | 'defense'
+  | 'perception-skills'
+  | 'speeds-senses'
+  | 'strikes'
+  | 'spellcasting'
+  | 'abilities'
+  | 'iwr'
+  | 'auras-rituals'
 
 export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
+  const { t } = useTranslation('common')
+
+  // Labels are i18n-reactive so they must live in useMemo, not module scope.
+  const TAB_DEFS = useMemo(
+    () => [
+      { id: 'concept' as BuilderTabId, label: t('customCreatureBuilder.tabs.concept') },
+      { id: 'ability-mods' as BuilderTabId, label: t('customCreatureBuilder.tabs.abilityMods') },
+      { id: 'defense' as BuilderTabId, label: t('customCreatureBuilder.tabs.defense') },
+      { id: 'perception-skills' as BuilderTabId, label: t('customCreatureBuilder.tabs.perceptionSkills') },
+      { id: 'speeds-senses' as BuilderTabId, label: t('customCreatureBuilder.tabs.speedsSenses') },
+      { id: 'strikes' as BuilderTabId, label: t('customCreatureBuilder.tabs.strikes') },
+      { id: 'spellcasting' as BuilderTabId, label: t('customCreatureBuilder.tabs.spellcasting') },
+      { id: 'abilities' as BuilderTabId, label: t('customCreatureBuilder.tabs.abilities') },
+      { id: 'iwr' as BuilderTabId, label: t('customCreatureBuilder.tabs.iwr') },
+      { id: 'auras-rituals' as BuilderTabId, label: t('customCreatureBuilder.tabs.aurasRituals') },
+    ],
+    [t],
+  )
+
   return (
     <Tabs defaultValue="concept" className="flex-1 flex flex-col">
       <TabsList className="flex-wrap h-auto gap-1 px-2 py-2 bg-muted/30">

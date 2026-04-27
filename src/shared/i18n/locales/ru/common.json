@@ -473,7 +473,7 @@
       "creatureNotFound": "Существо не найдено",
       "saved": "Существо сохранено",
       "failedToSave": "Не удалось сохранить существо",
-      "replacedWithClone": "Заменено клоном из бестиария"
+      "replacedWithClone": "Форма заменена клоном {{name}}. Нажмите «Сохранить» для записи."
     },
     "applyRole": {
       "buttonLabel": "Применить роль",
