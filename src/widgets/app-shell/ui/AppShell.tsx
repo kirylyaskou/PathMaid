@@ -1,12 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 import { CommandPalette } from './CommandPalette'
 import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
+import { useHotkeyStore } from '@/shared/model/hotkey-store'
 
 export function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
+  const loadHotkeys = useHotkeyStore((s) => s.loadHotkeys)
+
+  useEffect(() => {
+    loadHotkeys()
+  }, [loadHotkeys])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
