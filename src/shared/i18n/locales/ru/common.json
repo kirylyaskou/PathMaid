@@ -134,7 +134,15 @@
       "rarity": "Редкость",
       "traits": "Признаки",
       "level": "Уровень",
-      "price": "Цена"
+      "price": "Цена",
+      "damage": "Урон",
+      "group": "Группа",
+      "subcategory": "Подкатегория",
+      "bulk": "Громоздкость",
+      "usage": "Использование",
+      "source": "Источник",
+      "acBonus": "AC+",
+      "dexCap": "Лвк"
     },
     "filters": {
       "level": "Ур",
@@ -145,7 +153,18 @@
       "rare": "Редкие",
       "unique": "Уникальные",
       "traits": "Признаки",
-      "allSources": "Все источники"
+      "allSources": "Все источники",
+      "selectedTraits_one": "{{count}} черта",
+      "selectedTraits_few": "{{count}} черты",
+      "selectedTraits_many": "{{count}} черт",
+      "selectedTraits_other": "{{count}} черт",
+      "allSubcategories": "Все подкатегории",
+      "searchTraits": "Поиск черт...",
+      "noTraits": "Черты не найдены."
+    },
+    "favorites": {
+      "addToFavorites": "Добавить в избранное",
+      "removeFromFavorites": "Убрать из избранного"
     }
   },
   "spells": {
@@ -170,8 +189,24 @@
       "save": "Спасбросок",
       "damage": "Урон",
       "traditions": "Традиции",
-      "traits": "Признаки"
-    }
+      "traits": "Признаки",
+      "source": "Источник"
+    },
+    "traits": "Черты",
+    "searchTraits": "Поиск черт...",
+    "noTraits": "Черты не найдены."
+  },
+  "spellcastingEditor": {
+    "allRanks": "Все",
+    "addRank": "Добавить ранг {{rank}}",
+    "castSpell": "Применить {{name}} ранга {{rank}}",
+    "castApplyEffect": "Применить и добавить эффект",
+    "removeSpell": "Удалить",
+    "removeAddedSpell": "Удалить добавленное заклинание",
+    "addSpell": "Добавить заклинание…",
+    "removeSlot": "Удалить слот",
+    "addSlot": "Добавить слот",
+    "zeroSlots": "(0 слотов)"
   },
   "settings": {
     "title": "Настройки",

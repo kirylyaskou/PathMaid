@@ -121,7 +121,15 @@
       "rarity": "Rarity",
       "traits": "Traits",
       "level": "Lv",
-      "price": "Price"
+      "price": "Price",
+      "damage": "Damage",
+      "group": "Group",
+      "subcategory": "Subcategory",
+      "bulk": "Bulk",
+      "usage": "Usage",
+      "source": "Source",
+      "acBonus": "AC+",
+      "dexCap": "Dex"
     },
     "filters": {
       "level": "Lv",
@@ -132,7 +140,16 @@
       "rare": "Rare",
       "unique": "Unique",
       "traits": "Traits",
-      "allSources": "All sources"
+      "allSources": "All sources",
+      "selectedTraits_one": "{{count}} trait",
+      "selectedTraits_other": "{{count}} traits",
+      "allSubcategories": "All subcategories",
+      "searchTraits": "Search traits...",
+      "noTraits": "No traits found."
+    },
+    "favorites": {
+      "addToFavorites": "Add to favorites",
+      "removeFromFavorites": "Remove from favorites"
     }
   },
   "spells": {
@@ -155,8 +172,24 @@
       "save": "Save",
       "damage": "Damage",
       "traditions": "Traditions",
-      "traits": "Traits"
-    }
+      "traits": "Traits",
+      "source": "Source"
+    },
+    "traits": "Traits",
+    "searchTraits": "Search traits...",
+    "noTraits": "No traits found."
+  },
+  "spellcastingEditor": {
+    "allRanks": "All",
+    "addRank": "Add rank {{rank}}",
+    "castSpell": "Cast {{name}} at rank {{rank}}",
+    "castApplyEffect": "Cast & apply effect",
+    "removeSpell": "Remove",
+    "removeAddedSpell": "Remove added spell",
+    "addSpell": "Add spell…",
+    "removeSlot": "Remove slot",
+    "addSlot": "Add slot",
+    "zeroSlots": "(0 slots)"
   },
   "settings": {
     "title": "Settings",
