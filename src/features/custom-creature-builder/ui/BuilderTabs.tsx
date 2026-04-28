@@ -59,7 +59,7 @@ export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
           <TabsTrigger
             key={t.id}
             value={t.id}
-            className="text-xs data-[state=active]:text-primary"
+            className="text-xs h-8 flex-initial data-[state=active]:text-primary"
           >
             {t.label}
           </TabsTrigger>
