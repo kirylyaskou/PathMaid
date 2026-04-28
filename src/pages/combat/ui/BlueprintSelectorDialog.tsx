@@ -8,6 +8,7 @@ import type { TabSnapshot } from '@/features/combat-tracker'
 import { loadEncounterCombatants } from '@/shared/api'
 import type { Combatant } from '@/entities/combatant'
 import { kindFromLegacy } from '@/entities/combatant'
+import { fetchCreatureStatBlockData } from '@/entities/creature'
 
 interface BlueprintSelectorDialogProps {
   open: boolean
@@ -27,16 +28,33 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
   async function handleSelectBlueprint(encounterId: string, encounterName: string) {
     try {
       const encounterCombatants = await loadEncounterCombatants(encounterId)
-      const combatants: Combatant[] = encounterCombatants.map((ec) => ({
-        id: crypto.randomUUID(),
-        creatureRef: ec.creatureRef,
-        displayName: ec.displayName,
-        initiative: ec.initiative,
-        hp: ec.maxHp,
-        maxHp: ec.maxHp,
-        tempHp: 0,
-        kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
+      const uniqueRefs = [...new Set(encounterCombatants.map((c) => c.creatureRef).filter(Boolean))]
+      const statByRef = new Map<string, Awaited<ReturnType<typeof fetchCreatureStatBlockData>>>()
+      await Promise.all(uniqueRefs.map(async (ref) => {
+        const stat = await fetchCreatureStatBlockData(ref)
+        if (stat) statByRef.set(ref, stat)
       }))
+      const combatants: Combatant[] = encounterCombatants.map((ec) => {
+        const stat = ec.creatureRef ? statByRef.get(ec.creatureRef) : null
+        const immunities = stat?.immunities.map((i) => (typeof i === 'string' ? i : i.type)) ?? []
+        const weaknesses = stat?.weaknesses ?? []
+        const resistances = stat?.resistances ?? []
+        return {
+          id: crypto.randomUUID(),
+          creatureRef: ec.creatureRef,
+          displayName: ec.displayName,
+          initiative: ec.initiative,
+          hp: ec.maxHp,
+          maxHp: ec.maxHp,
+          tempHp: 0,
+          kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
+          ...(stat?.level != null ? { level: stat.level } : {}),
+          ...(stat?.fort != null ? { fort: stat.fort } : {}),
+          ...(immunities.length > 0 ? { iwrImmunities: immunities } : {}),
+          ...(weaknesses.length > 0 ? { iwrWeaknesses: weaknesses } : {}),
+          ...(resistances.length > 0 ? { iwrResistances: resistances } : {}),
+        }
+      })
       const snapshot: TabSnapshot = {
         combatants,
         stagingCombatants: [],

@@ -13,16 +13,23 @@ interface CreatureDefensesBlockProps {
 }
 
 function formatIwrEntry(
-  entry: { type: string; value: number; exceptions?: string[] },
+  entry: { type: string; value: number; exceptions?: string[]; doubleVs?: string[] },
   locale: SupportedLocale,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ) {
   const localizedType = getTraitLabel(entry.type.toLowerCase(), locale)
-  if (entry.exceptions && entry.exceptions.length > 0) {
-    const exc = entry.exceptions.map((e) => getTraitLabel(e.toLowerCase(), locale)).join(', ')
-    return t('statblock.iwrEntryWithExceptions', { type: localizedType, value: entry.value, exceptions: exc })
+  const base = entry.exceptions && entry.exceptions.length > 0
+    ? t('statblock.iwrEntryWithExceptions', {
+        type: localizedType,
+        value: entry.value,
+        exceptions: entry.exceptions.map((e) => getTraitLabel(e.toLowerCase(), locale)).join(', '),
+      })
+    : t('statblock.iwrEntry', { type: localizedType, value: entry.value })
+  if (entry.doubleVs && entry.doubleVs.length > 0) {
+    const conds = entry.doubleVs.map((c) => getTraitLabel(c.toLowerCase(), locale)).join(', ')
+    return `${base} ${t('statblock.iwrDoubleVsHint', { conditions: conds })}`
   }
-  return t('statblock.iwrEntry', { type: localizedType, value: entry.value })
+  return base
 }
 
 export function CreatureDefensesBlock({

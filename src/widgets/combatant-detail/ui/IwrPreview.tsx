@@ -33,20 +33,22 @@ export function IwrPreview({ previews }: IwrPreviewProps) {
             <div className="flex justify-between text-red-400">
               <span>
                 {t('statblock.iwr.weaknesses')} ({result.appliedWeaknesses.map((w) => `${w.type} ${w.value}`).join(', ')})
+                {result.weaknessDoubled && (
+                  <span className="ml-1 text-red-300/80">{t('combatantDetail.iwrDoubledHint')}</span>
+                )}
               </span>
-              <span className="font-mono">
-                +{result.appliedWeaknesses.reduce((s, w) => s + w.value, 0)}
-              </span>
+              <span className="font-mono">+{result.weaknessTotal}</span>
             </div>
           )}
           {result.appliedResistances.length > 0 && (
             <div className="flex justify-between text-green-400">
               <span>
                 {t('statblock.iwr.resistances')} ({result.appliedResistances.map((r) => `${r.type} ${r.value}`).join(', ')})
+                {result.resistanceDoubled && (
+                  <span className="ml-1 text-green-300/80">{t('combatantDetail.iwrDoubledVsNonMagical')}</span>
+                )}
               </span>
-              <span className="font-mono">
-                -{result.appliedResistances.reduce((s, r) => s + r.value, 0)}
-              </span>
+              <span className="font-mono">-{result.resistanceTotal}</span>
             </div>
           )}
         </div>

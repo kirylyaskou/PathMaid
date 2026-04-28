@@ -119,6 +119,14 @@ export interface IWRApplicationResult {
   appliedImmunities: Immunity[]
   appliedWeaknesses: Weakness[]
   appliedResistances: Resistance[]
+  /** Effective weakness amount actually added (after doubleVs). 0 if no weakness applied. */
+  weaknessTotal: number
+  /** True when the applied weakness fired its doubleVs (e.g. crit). */
+  weaknessDoubled: boolean
+  /** Effective resistance amount actually subtracted (after doubleVs, before clamp). 0 if no resistance applied. */
+  resistanceTotal: number
+  /** True when the applied resistance fired its doubleVs (e.g. non-magical). */
+  resistanceDoubled: boolean
 }
 
 // ─── Factory Functions ────────────────────────────────────────────────────────
@@ -238,6 +246,10 @@ export function applyIWR(
   const appliedImmunities: Immunity[] = []
   const appliedWeaknesses: Weakness[] = []
   const appliedResistances: Resistance[] = []
+  let weaknessTotal = 0
+  let weaknessDoubled = false
+  let resistanceTotal = 0
+  let resistanceDoubled = false
 
   // ── Step 1: Immunities ────────────────────────────────────────────────────
   // Source: AON Rules.aspx?ID=2312, 2314
@@ -288,6 +300,8 @@ export function applyIWR(
 
       adjustedAmount += highestValue
       appliedWeaknesses.push(highestWeakness)
+      weaknessTotal = highestValue
+      weaknessDoubled = highestValue > highestWeakness.value
     }
   }
 
@@ -314,6 +328,8 @@ export function applyIWR(
     // Clamp to 0 minimum — resistance cannot make damage negative
     adjustedAmount = Math.max(0, adjustedAmount - highestValue)
     appliedResistances.push(highestResistance)
+    resistanceTotal = highestValue
+    resistanceDoubled = highestValue > highestResistance.value
   }
 
   return {
@@ -321,5 +337,9 @@ export function applyIWR(
     appliedImmunities,
     appliedWeaknesses,
     appliedResistances,
+    weaknessTotal,
+    weaknessDoubled,
+    resistanceTotal,
+    resistanceDoubled,
   }
 }

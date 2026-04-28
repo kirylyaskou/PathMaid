@@ -98,6 +98,7 @@
     "speedTypedFt": "{{type}} {{value}} feet",
     "iwrEntry": "{{type}} {{value}}",
     "iwrEntryWithExceptions": "{{type}} {{value}} (except {{exceptions}})",
+    "iwrDoubleVsHint": "[×2 vs {{conditions}}]",
     "spellsHeading": "Spells"
   },
   "items": {
@@ -389,6 +390,8 @@
     "iwrRaw": "raw",
     "iwrTotalFinal": "Total final",
     "iwrFinal": "Final",
+    "iwrDoubledHint": "(×2 crit)",
+    "iwrDoubledVsNonMagical": "(×2 vs non-magical)",
     "dyingLabel": "Dying",
     "woundedLabel": "Wounded",
     "doomedLabel": "Doomed",

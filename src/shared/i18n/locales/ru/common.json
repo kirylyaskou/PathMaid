@@ -110,6 +110,7 @@
     "speedTypedFt": "{{type}} {{value}} фт",
     "iwrEntry": "{{type}} {{value}}",
     "iwrEntryWithExceptions": "{{type}} {{value}} (кроме {{exceptions}})",
+    "iwrDoubleVsHint": "[×2 против {{conditions}}]",
     "spellsHeading": "Заклинания"
   },
   "items": {
@@ -406,6 +407,8 @@
     "iwrRaw": "необр.",
     "iwrTotalFinal": "Итог финальный",
     "iwrFinal": "Финальный",
+    "iwrDoubledHint": "(×2 крит)",
+    "iwrDoubledVsNonMagical": "(×2 против немагич.)",
     "dyingLabel": "Умирание",
     "woundedLabel": "Ранен",
     "doomedLabel": "Обречён",

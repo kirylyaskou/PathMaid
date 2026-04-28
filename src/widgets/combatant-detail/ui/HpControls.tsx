@@ -110,6 +110,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     () => materials.filter((t) => MATERIAL_TYPE_SET.has(t)) as MaterialEffect[],
     [materials]
   )
+  const isMagical = useMemo(() => materials.includes('magic'), [materials])
 
   const iwrPreviews = useMemo(() => {
     if (!iwrImmunities?.length && !iwrWeaknesses?.length && !mergedResistances?.length) return null
@@ -129,9 +130,9 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     return activeEntries.map(({ damageType, amount }) => ({
       type: damageType,
       amount,
-      result: applyIWR({ type: damageType, amount, materials: mats }, immunities, weaknesses, resistances),
+      result: applyIWR({ type: damageType, amount, materials: mats, magical: isMagical }, immunities, weaknesses, resistances),
     }))
-  }, [damageEntries, mats, iwrImmunities, iwrWeaknesses, mergedResistances])
+  }, [damageEntries, mats, isMagical, iwrImmunities, iwrWeaknesses, mergedResistances])
 
   const handleDamage = useCallback(() => {
     if (!canDamage) return
