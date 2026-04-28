@@ -73,7 +73,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const { hp, maxHp, tempHp, dyingValue, deathThreshold, isDead, applyDamage, applyHeal, applyTempHp, stabilize, resurrect } =
     useCombatantHp(combatant.id)
 
-  const statSlugs = useMemo(() => ['fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
+  const statSlugs = useMemo(() => ['ac', 'fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
   const modifiedStats = useModifiedStats(combatant.id, statSlugs)
 
   function getModified(base: number, statSlug: string): number {
@@ -388,7 +388,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
             combatantId={combatant.id}
             combatantName={combatant.displayName}
             creature={creature}
-            ac={creature.ac + (isNpc(combatant) && combatant.shieldRaised ? shieldAcBonus : 0)}
+            ac={getModified(creature.ac + (isNpc(combatant) && combatant.shieldRaised ? shieldAcBonus : 0), 'ac')}
             getModified={getModified}
           />
         </>
