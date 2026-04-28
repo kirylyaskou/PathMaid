@@ -94,7 +94,7 @@ export async function searchItems(
          ${traitsFilter} ${sourceFilter} ${subcategoryFilter}
        ORDER BY f.rank
        LIMIT 500`,
-      [ftsQuery, getCurrentLocale(), ...extraParams]
+      [getCurrentLocale(), ftsQuery, ...extraParams]
     )
   }
 
