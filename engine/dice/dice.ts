@@ -18,6 +18,9 @@ export interface Roll {
   timestamp: number           // Date.now()
   /** 65-05: optional roll-time notes attached by Note rule elements. */
   notes?: string[]
+  /** Optional human-readable math breakdown (e.g. "(2 + 5) × 2 = 14"). When set,
+   *  UI replaces the default "dice + modifier = total" line with this string. */
+  breakdown?: string
   /**
    * v1.4.1 UAT BUG-B: when a fortune / misfortune effect rolls the d20 twice
    * independently, the primary Roll carries the CHOSEN result (higher for

@@ -48,9 +48,10 @@ function RollRow({ roll }: { roll: Roll }) {
         {roll.combatId && (
           <span className="text-[10px] text-muted-foreground/60 truncate max-w-[80px]">#{roll.combatId.slice(0, 6)}</span>
         )}
-        <span className="text-[10px] font-mono text-muted-foreground/50 ml-auto">
-          [{roll.dice.map((d) => d.value).join('+')}
-          {roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}]
+        <span className="text-[10px] font-mono text-muted-foreground/50 ml-auto truncate max-w-[260px]">
+          {roll.breakdown
+            ? roll.breakdown
+            : `[${roll.dice.map((d) => d.value).join('+')}${roll.modifier !== 0 ? (roll.modifier > 0 ? `+${roll.modifier}` : `${roll.modifier}`) : ''}]`}
         </span>
       </div>
     </div>

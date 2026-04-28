@@ -6,6 +6,7 @@ import { ActionIcon } from '@/shared/ui/action-icon'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import { TraitPill } from '@/shared/ui/trait-pill'
+import { CritButton } from '@/shared/ui/crit-button'
 import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
 import { getTraitLabel } from '@/shared/i18n/pf2e-content'
 import { SafeHtml } from '@/shared/lib/safe-html'
@@ -111,29 +112,40 @@ export function CreatureStrikeRow({
       </div>
 
       {effectiveDamage.length > 0 && (
-        <div className="mt-1 text-sm">
+        <div className="mt-1 text-sm flex items-center gap-2 flex-wrap">
           <span className="font-semibold">{t('statblock.damage')} </span>
-          {effectiveDamage.map((d, di) => (
-            <span key={di}>
-              {di > 0 && <span className="text-muted-foreground"> plus </span>}
-              <ClickableFormula
-                formula={d.formula}
-                label={`${name} damage`}
-                source={creatureName}
-                combatId={encounterId}
-              />
-              {d.type && (
-                <span className={cn('font-mono', damageTypeColor(d.type))}> {getTraitLabel(d.type, locale)}</span>
-              )}
-              {d.persistent && (
-                <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">{t('statblock.persistent')}</span>
-              )}
-            </span>
-          ))}
-          {enfeebledPenalty < 0 && (
-            <span className="ml-1 font-mono text-xs text-pf-blood">
-              {enfeebledPenalty} <span className="text-muted-foreground">({t('statblock.enfeebled')})</span>
-            </span>
+          <span className="flex-1 min-w-0">
+            {effectiveDamage.map((d, di) => (
+              <span key={di}>
+                {di > 0 && <span className="text-muted-foreground"> plus </span>}
+                <ClickableFormula
+                  formula={d.formula}
+                  label={`${name} damage`}
+                  source={creatureName}
+                  combatId={encounterId}
+                />
+                {d.type && (
+                  <span className={cn('font-mono', damageTypeColor(d.type))}> {getTraitLabel(d.type, locale)}</span>
+                )}
+                {d.persistent && (
+                  <span className="ml-1 px-1 py-0.5 text-[10px] rounded border bg-orange-900/40 text-orange-300 border-orange-700/40 font-semibold">{t('statblock.persistent')}</span>
+                )}
+              </span>
+            ))}
+            {enfeebledPenalty < 0 && (
+              <span className="ml-1 font-mono text-xs text-pf-blood">
+                {enfeebledPenalty} <span className="text-muted-foreground">({t('statblock.enfeebled')})</span>
+              </span>
+            )}
+          </span>
+          {effectiveDamage[0] && !effectiveDamage[0].persistent && (
+            <CritButton
+              formula={effectiveDamage[0].formula}
+              traits={traits}
+              label={`${name} crit damage`}
+              source={creatureName}
+              combatId={encounterId}
+            />
           )}
         </div>
       )}

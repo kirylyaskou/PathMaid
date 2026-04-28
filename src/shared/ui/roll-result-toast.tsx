@@ -70,8 +70,10 @@ export function RollResultToast({ roll }: RollResultToastProps) {
         ))}
       </div>
 
-      {/* Row 3: Modifier (conditional) */}
-      {roll.modifier !== 0 && (
+      {/* Row 3: Breakdown (full math) or modifier fallback */}
+      {roll.breakdown ? (
+        <span className="font-mono text-[12px] text-muted-foreground">{roll.breakdown}</span>
+      ) : roll.modifier !== 0 && (
         <span className="font-mono text-[13px] text-muted-foreground">
           {roll.modifier > 0 ? '+' : ''}{roll.modifier}
         </span>

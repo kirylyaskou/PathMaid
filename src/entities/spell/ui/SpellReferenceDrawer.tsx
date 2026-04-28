@@ -12,6 +12,7 @@ import { useContentTranslation } from '@/shared/i18n/use-content-translation'
 import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
 import { getTraitLabel } from '@/shared/i18n/pf2e-content'
 import { TraitPill } from '@/shared/ui/trait-pill'
+import { CritButton } from '@/shared/ui/crit-button'
 import type { SpellStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
 import { stripRarityMarker } from '@/shared/lib/display-name'
 
@@ -115,7 +116,13 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                 {damageDisplay !== '—' && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.damage')}</span>
-                    <span className="font-mono text-pf-blood text-sm">{damageDisplay}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-pf-blood text-sm">{damageDisplay}</span>
+                      <CritButton
+                        formula={damageDisplay.split(/\s+/)[0]}
+                        label={`${spell.name} crit damage`}
+                      />
+                    </div>
                   </div>
                 )}
                 {(spellLoc?.range || spell.range_text) && (

@@ -67,6 +67,7 @@ export type {
 } from './damage/damage'
 
 export { DamageCategorization, nextDamageDieSize } from './damage/damage-helpers'
+export { rollCritDamage } from './damage/crit-damage'
 
 export {
   IMMUNITY_TYPES,

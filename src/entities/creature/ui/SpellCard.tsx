@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
+import { CritButton } from '@/shared/ui/crit-button'
 import { TraitPill } from '@/shared/ui/trait-pill'
 import { damageTypeColor } from '@/shared/lib/damage-colors'
 import { getSpellById, getSpellByName } from '@/shared/api'
@@ -192,6 +193,15 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
                   {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{getTraitLabel(d.type.toLowerCase(), locale)}</span>}
                 </span>
               ))}
+              {parsedDamage[0]?.formula && (
+                <CritButton
+                  formula={parsedDamage[0].formula}
+                  label={`${localizedName} crit damage`}
+                  source={source}
+                  combatId={combatId}
+                  className="ml-auto h-6 px-2 text-[10px]"
+                />
+              )}
             </p>
           )}
           {/* Traits — route through TraitPill so dictionary lookup is consistent

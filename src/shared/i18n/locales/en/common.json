@@ -1,4 +1,8 @@
 {
+  "actions": {
+    "crit": "Crit",
+    "critTooltip": "Roll critical damage ({{formula}})"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "combatTracker": "Combat Tracker",

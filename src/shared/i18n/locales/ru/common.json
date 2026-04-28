@@ -1,4 +1,8 @@
 {
+  "actions": {
+    "crit": "Крит",
+    "critTooltip": "Бросок крит-урона ({{formula}})"
+  },
   "nav": {
     "dashboard": "Главная",
     "combatTracker": "Бой",
