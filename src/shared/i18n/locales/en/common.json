@@ -69,6 +69,8 @@
     "source": "Source",
     "strikes": "Strikes",
     "damage": "Damage",
+    "healing": "Healing",
+    "damageHealing": "Damage/Healing",
     "range": "Range",
     "reach": "Reach",
     "rangeFt": "Range {{value}} ft",

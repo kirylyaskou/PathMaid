@@ -81,6 +81,8 @@
     "source": "Источник",
     "strikes": "Удары",
     "damage": "Урон",
+    "healing": "Лечение",
+    "damageHealing": "Урон/Лечение",
     "range": "Дистанция",
     "reach": "Досягаемость",
     "rangeFt": "Дистанция {{value}} фт",
