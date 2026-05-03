@@ -56,6 +56,18 @@ export type InnateFrequency =
   | { kind: 'at-will' }
   | { kind: 'per'; max: number; per: 'day' | 'hour' | 'round' }
 
+/**
+ * Result of grouping prepared/innate slot instances by `${name}:${foundryId}`.
+ * `slotKeys` retains insertion order so consumers can deterministically pick
+ * the next not-yet-cast copy. `totalCount === slotKeys.length`.
+ */
+export interface GroupedSpellEntry {
+  name: string
+  foundryId: string | null
+  slotKeys: string[]
+  totalCount: number
+}
+
 export interface SpellListEntry {
   name: string
   foundryId: string | null  // references spells(id) if resolvable

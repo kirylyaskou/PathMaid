@@ -7,7 +7,6 @@ import type { ItemRow } from '@/shared/api'
 import { formatPrice } from '../lib/format'
 import { ITEM_TYPE_LABELS, ITEM_TYPE_COLORS, RARITY_COLORS } from '../model/types'
 import { cn } from '@/shared/lib/utils'
-import { stripHtml } from '@/shared/lib/html'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { useContentTranslation } from '@/shared/i18n/use-content-translation'
 import { ClickableFormula } from '@/shared/ui/clickable-formula'
@@ -155,8 +154,9 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 </div>
               )}
 
-              {/* Description — RU overlay rendered via SafeHtml when present;
-                  engine HTML stripped to plain text otherwise. */}
+              {/* Both branches go through SafeHtml so Foundry inline tokens
+                  (@UUID, @Check, [[/gmr ...]], @Damage) render as styled spans
+                  instead of leaking as raw text. */}
               {translation?.textLoc ? (
                 <SafeHtml
                   html={translation.textLoc}
@@ -164,9 +164,10 @@ export function ItemReferenceDrawer({ itemId, onClose, extraActions }: ItemRefer
                 />
               ) : (
                 item.description && (
-                  <p className="text-[13px] text-foreground/80 leading-relaxed">
-                    {stripHtml(item.description)}
-                  </p>
+                  <SafeHtml
+                    html={item.description}
+                    className="text-[13px] text-foreground/80 leading-relaxed"
+                  />
                 )
               )}
 

@@ -1,6 +1,6 @@
 {
   "productName": "PathMaid",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "identifier": "com.pathmaid.app",
   "build": {
     "beforeDevCommand": "npm run dev:vite",

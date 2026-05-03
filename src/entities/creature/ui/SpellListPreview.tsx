@@ -6,8 +6,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { ChevronDown } from 'lucide-react'
-import type { SpellcastingSection } from '@/entities/spell'
+import { ChevronDown, Flame, BookMarked, type LucideIcon } from 'lucide-react'
+import { type SpellcastingSection, groupPreparedSpells, dedupeSpontaneousSpells } from '@/entities/spell'
 import { traditionColor, rankLabel } from '../lib/spellcasting-helpers'
 import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
 import { getTraitLabel } from '@/shared/i18n/pf2e-content'
@@ -42,6 +42,56 @@ export function SpellListPreview({ section, creatureName }: {
     () => ranksWithSpells.find((r) => r.rank === activeRank) ?? null,
     [ranksWithSpells, activeRank],
   )
+  // Mirror the combat-view dedup/grouping rules so a prepared caster's
+  // "5× Heal" reads as one row, and spontaneous duplicates collapse.
+  // Cantrips/focus stay verbatim — their per-row identity matters.
+  const displayRows = useMemo(() => {
+    if (!activeBucket) return []
+    if (activeBucket.rank === 0 || section.castType === 'focus') {
+      return activeBucket.spells.map((s) => ({
+        name: s.name,
+        foundryId: s.foundryId,
+        count: 1,
+      }))
+    }
+    if (section.castType === 'prepared') {
+      const slots = activeBucket.spells.map((s, i) => ({
+        name: s.name,
+        foundryId: s.foundryId,
+        slotKey: `${s.name}#${i}`,
+      }))
+      return groupPreparedSpells(slots).map((g) => ({
+        name: g.name,
+        foundryId: g.foundryId,
+        count: g.totalCount,
+      }))
+    }
+    return dedupeSpontaneousSpells(activeBucket.spells).map((s) => ({
+      name: s.name,
+      foundryId: s.foundryId,
+      count: 1,
+    }))
+  }, [activeBucket, section.castType])
+  // Static cast-type cue mirrors the combat-mode SpellRow icons (Flame for slot
+  // consumers, BookMarked for prepared decrement) but без onClick/<button> —
+  // bestiary preview is read-only.
+  const castIndicator = useMemo<{ Icon: LucideIcon; titleKey: string } | null>(() => {
+    switch (section.castType) {
+      case 'prepared':
+        return { Icon: BookMarked, titleKey: 'spellcastingIndicator.prepared' }
+      case 'spontaneous':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.spontaneous' }
+      case 'innate':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.innate' }
+      case 'focus':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.focus' }
+      default:
+        return null
+    }
+  }, [section.castType])
+  // Capital-cased alias so JSX treats the value as a component, not an HTML tag.
+  const IndicatorIcon = castIndicator?.Icon ?? null
+  const indicatorTitle = castIndicator ? t(castIndicator.titleKey) : ''
   return (
     <Collapsible defaultOpen={false}>
       <div className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40">
@@ -99,14 +149,28 @@ export function SpellListPreview({ section, creatureName }: {
 
           {activeBucket && (
             <div className="space-y-1">
-              {activeBucket.spells.map((s, i) => (
-                <SpellCard
-                  key={`${s.name}-${i}`}
-                  name={s.name}
-                  foundryId={s.foundryId}
-                  source={creatureName}
-                  castRank={activeBucket.rank}
-                />
+              {displayRows.map((row, i) => (
+                <div key={`${row.name}-${i}`} className="flex items-center gap-1.5">
+                  {IndicatorIcon && activeBucket.rank > 0 && (
+                    <IndicatorIcon
+                      className="w-3.5 h-3.5 shrink-0 text-muted-foreground"
+                      aria-label={indicatorTitle}
+                    />
+                  )}
+                  <div className="flex-1">
+                    <SpellCard
+                      name={row.name}
+                      foundryId={row.foundryId}
+                      source={creatureName}
+                      castRank={activeBucket.rank}
+                    />
+                  </div>
+                  {row.count > 1 && (
+                    <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded font-mono tabular-nums text-muted-foreground bg-muted/40 border border-border/40">
+                      × {row.count}
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           )}

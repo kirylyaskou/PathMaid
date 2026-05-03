@@ -176,43 +176,118 @@ export async function extractCreatureSpellcasting(entities: RawEntity[]): Promis
   const entries: RawSpellcastingEntry[] = []
   const spellItems: RawCreatureSpell[] = []
 
+  // Spell template entry stored in templateMap. Captured during the same
+  // forward pass as the spellcasting entries; consumed by the second pass
+  // that emits creature_spell_lists rows.
+  type SpellTemplate = {
+    item: Record<string, unknown>
+    sys: Record<string, unknown>
+    stats: Record<string, unknown>
+    traits: string[]
+    isCantrip: boolean
+    locationRaw: string
+  }
+
+  // Per-entry record carrying everything the second pass needs.
+  type EntryRecord = {
+    entry: RawSpellcastingEntry
+    foundryId: string
+    castType: string | null
+    slotsRaw: Record<string, { max?: number; prepared?: Array<{ id?: string }> }>
+  }
+
   for (const entity of entities) {
     if (entity.entity_type !== 'npc') continue
     try {
       const raw = JSON.parse(entity.raw_json)
       const items: unknown[] = raw.items ?? []
 
+      const entryRecords: EntryRecord[] = []
+      const templateMap = new Map<string, SpellTemplate>()
+
       for (const item of items) {
         const it = item as Record<string, unknown>
         if (it.type === 'spellcastingEntry') {
           const sys = (it.system as Record<string, unknown>) ?? {}
           const spelldc = (sys.spelldc as Record<string, unknown>) ?? {}
-          entries.push({
-            id: `${entity.id}:${it._id as string}`,
+          const foundryId = it._id as string
+          const castType = (sys.prepared as Record<string, unknown>)?.value as string ?? null
+          const slotsRaw = (sys.slots as Record<string, { max?: number; prepared?: Array<{ id?: string }> }>) ?? {}
+          const entryRow: RawSpellcastingEntry = {
+            id: `${entity.id}:${foundryId}`,
             creature_id: entity.id,
             entry_name: it.name as string,
             tradition: (sys.tradition as Record<string, unknown>)?.value as string ?? null,
-            cast_type: (sys.prepared as Record<string, unknown>)?.value as string ?? null,
+            cast_type: castType,
             spell_dc: (spelldc.dc as number) ?? null,
             spell_attack: (spelldc.value as number) ?? null,
             slots: sys.slots ? JSON.stringify(sys.slots) : null,
-          })
+          }
+          entries.push(entryRow)
+          entryRecords.push({ entry: entryRow, foundryId, castType, slotsRaw })
         } else if (it.type === 'spell') {
           const sys = (it.system as Record<string, unknown>) ?? {}
           const stats = (it._stats as Record<string, unknown>) ?? {}
           const spellTraits = ((sys.traits as Record<string, unknown>)?.value as string[]) ?? []
           const isCantrip = spellTraits.includes('cantrip')
           const locationRaw = (sys.location as Record<string, unknown>)?.value as string ?? ''
-          spellItems.push({
-            id: `${entity.id}:${it._id as string}`,
-            creature_id: entity.id,
-            entry_id: locationRaw ? `${entity.id}:${locationRaw}` : '',
-            spell_foundry_id: parseCompendiumId(stats.compendiumSource as string | undefined),
-            spell_name: it.name as string,
-            rank_prepared: isCantrip ? 0 : ((sys.level as Record<string, unknown>)?.value as number ?? 0),
-            sort_order: (it.sort as number) ?? 0,
-            frequency_json: extractInnateFrequency(sys),
+          const templateId = it._id as string
+          templateMap.set(templateId, {
+            item: it,
+            sys,
+            stats,
+            traits: spellTraits,
+            isCantrip,
+            locationRaw,
           })
+        }
+      }
+
+      // Second pass: emit creature_spell_lists rows per spellcasting entry.
+      // Prepared casters expand `slots.slotN.prepared[]` so duplicate slot
+      // copies survive the INSERT OR REPLACE downstream (composite id ends
+      // with `:slot${rank}:${idx}`). Other cast types fall back to one row
+      // per template that points at this entry via location.
+      for (const record of entryRecords) {
+        if (record.castType === 'prepared') {
+          for (const [slotKey, slotData] of Object.entries(record.slotsRaw)) {
+            const slotMatch = /^slot(\d+)$/.exec(slotKey)
+            if (!slotMatch) continue
+            const rank = Number(slotMatch[1])
+            if (!Number.isFinite(rank)) continue
+            const prepared = slotData?.prepared ?? []
+            for (let idx = 0; idx < prepared.length; idx++) {
+              const slot = prepared[idx]
+              const templateId = slot?.id
+              if (!templateId) continue
+              const template = templateMap.get(templateId)
+              if (!template) continue
+              spellItems.push({
+                id: `${entity.id}:${record.foundryId}:slot${rank}:${idx}`,
+                creature_id: entity.id,
+                entry_id: `${entity.id}:${record.foundryId}`,
+                spell_foundry_id: parseCompendiumId(template.stats.compendiumSource as string | undefined),
+                spell_name: template.item.name as string,
+                rank_prepared: rank,
+                sort_order: idx,
+                frequency_json: null,
+              })
+            }
+          }
+        } else {
+          for (const [templateId, template] of templateMap) {
+            if (template.locationRaw !== record.foundryId) continue
+            spellItems.push({
+              id: `${entity.id}:${templateId}`,
+              creature_id: entity.id,
+              entry_id: `${entity.id}:${record.foundryId}`,
+              spell_foundry_id: parseCompendiumId(template.stats.compendiumSource as string | undefined),
+              spell_name: template.item.name as string,
+              rank_prepared: template.isCantrip ? 0 : ((template.sys.level as Record<string, unknown>)?.value as number ?? 0),
+              sort_order: (template.item.sort as number) ?? 0,
+              frequency_json: extractInnateFrequency(template.sys),
+            })
+          }
         }
       }
     } catch {

@@ -105,7 +105,7 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
   }, [spell, castRank, localizedDescriptionHtml])
 
   const parsedDamage = useMemo(() => {
-    type DamageEntry = { formula?: string; damage?: string; damageType?: string; type?: string }
+    type DamageEntry = { formula?: string; damage?: string; damageType?: string; type?: string; kinds?: string[] }
     const dmg = parseJsonOrNull<Record<string, DamageEntry>>(spell?.damage)
     if (!dmg || !spell) return null
     const baseRank = spell.rank
@@ -150,11 +150,27 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
         return {
           formula,
           type: d.damageType ?? d.type ?? null,
+          kinds: d.kinds ?? null,
         }
       })
-      .filter((d): d is { formula: string; type: string | null } => d !== null)
+      .filter((d): d is { formula: string; type: string | null; kinds: string[] | null } => d !== null)
     return parts.length > 0 ? parts : null
   }, [spell, heighten, castRank])
+
+  // Damage block dispatch: pure-healing spells (Heal, Breath of Life) carry
+  // `damage.kinds: ["healing"]` in Foundry source. Render them as positive
+  // restoration — green formula, "Healing:" label, no crit button (healing
+  // does not crit). Mixed-kind spells (rare) get a combined label so the DM
+  // sees both intents at once.
+  const damageLabel = useMemo(() => {
+    if (!parsedDamage || parsedDamage.length === 0) return null
+    const allKinds = parsedDamage.map((p) => p.kinds ?? [])
+    const hasHealing = allKinds.some((k) => k.includes('healing'))
+    const hasDamage = allKinds.some((k) => k.includes('damage')) || allKinds.every((k) => k.length === 0)
+    if (hasHealing && !hasDamage) return { key: 'statblock.healing', isHealingOnly: true }
+    if (hasHealing && hasDamage) return { key: 'statblock.damageHealing', isHealingOnly: false }
+    return { key: 'statblock.damage', isHealingOnly: false }
+  }, [parsedDamage])
 
   return (
     <div className="rounded border border-border/30 bg-secondary/30 overflow-hidden">
@@ -190,24 +206,28 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
               <span className="text-muted-foreground">{t('statblock.save')}: <span className="text-foreground capitalize">{getTraitLabel(spell.save_stat.toLowerCase(), locale)}</span></span>
             )}
           </div>
-          {/* Damage */}
+          {/* Damage / Healing — label + colors driven by damageLabel dispatch. */}
           {parsedDamage && (
             <p className="text-xs flex flex-wrap items-center gap-1">
-              <span className="text-muted-foreground">{t('statblock.damage')}:</span>
+              <span className="text-muted-foreground">{t(damageLabel?.key ?? 'statblock.damage')}:</span>
               {parsedDamage.map((d, i) => (
                 <span key={i} className="flex items-center gap-0.5">
                   {i > 0 && <span className="text-muted-foreground">+</span>}
                   <ClickableFormula
                     formula={d.formula!}
-                    label={`${localizedName} ${t('statblock.damage').toLowerCase()}`}
+                    label={`${localizedName} ${t(damageLabel?.key ?? 'statblock.damage').toLowerCase()}`}
                     source={source}
                     combatId={combatId}
-                    className="text-xs"
+                    className={cn("text-xs", damageLabel?.isHealingOnly && "text-green-400")}
                   />
-                  {d.type && <span className={cn("font-mono", damageTypeColor(d.type))}>{getTraitLabel(d.type.toLowerCase(), locale)}</span>}
+                  {d.type && (
+                    <span className={cn("font-mono", damageLabel?.isHealingOnly ? "text-green-400" : damageTypeColor(d.type))}>
+                      {getTraitLabel(d.type.toLowerCase(), locale)}
+                    </span>
+                  )}
                 </span>
               ))}
-              {parsedDamage[0]?.formula && (
+              {!damageLabel?.isHealingOnly && parsedDamage[0]?.formula && (
                 <CritButton
                   formula={parsedDamage[0].formula}
                   label={`${localizedName} crit damage`}

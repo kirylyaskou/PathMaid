@@ -74,6 +74,32 @@ function preprocessActionTokens(html: string): string {
   })
 }
 
+// Foundry pack content sometimes ships raw `<span class="action-glyph">N</span>`
+// markup instead of `[one-action]` tokens or `@Glyph[Action N]` markers. The
+// span survives DOMPurify but lacks the `pf2e-action-cost` styling hook, so
+// the digit renders bare. Normalize before token preprocessors look at it.
+const ACTION_GLYPH_MAP: Record<string, string> = {
+  '1': actionCostLabel('1'),
+  '2': actionCostLabel('2'),
+  '3': actionCostLabel('3'),
+  'r': actionCostLabel('reaction'),
+  'R': actionCostLabel('reaction'),
+  '0': actionCostLabel('free'),
+  'f': actionCostLabel('free'),
+  'F': actionCostLabel('free'),
+}
+
+function preprocessActionGlyphSpans(html: string): string {
+  return html.replace(
+    /<span class="action-glyph">([^<]+)<\/span>/g,
+    (_match, content: string) => {
+      const trimmed = content.trim()
+      const glyph = ACTION_GLYPH_MAP[trimmed] ?? trimmed
+      return `<span class="pf2e-action-cost" aria-label="${trimmed} action(s)">${glyph}</span>`
+    },
+  )
+}
+
 /**
  * Replace Foundry inline-link tokens (`@UUID[ref]{label}`, `@Trait[slug]`,
  * `@Check[…]{label}`, `@Damage[formula]`, generic `@Kind[ref]{label}`)
@@ -160,7 +186,8 @@ export interface SafeHtmlProps {
 
 export function SafeHtml({ html, className, as = 'div' }: SafeHtmlProps) {
   const sanitized = useMemo(() => {
-    const tokensExpanded = preprocessFoundryTokens(html)
+    const glyphsExpanded = preprocessActionGlyphSpans(html)
+    const tokensExpanded = preprocessFoundryTokens(glyphsExpanded)
     const actionsExpanded = preprocessActionTokens(tokensExpanded)
     return DOMPurify.sanitize(actionsExpanded, {
       ALLOWED_TAGS,

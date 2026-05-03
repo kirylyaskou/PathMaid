@@ -1,8 +1,9 @@
+import { useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { SpellRow } from './SpellRow'
 import { RankHeader } from './RankHeader'
-import type { SpellcastingSection } from '@/entities/spell'
+import { type SpellcastingSection, dedupeSpontaneousSpells } from '@/entities/spell'
 import type { SlotInstance } from '../../model/types'
 
 export interface PooledSpellsViewProps {
@@ -47,6 +48,12 @@ export function PooledSpellsView({
   const canSpontCast = used < totalSlots
   const showCast = !isEdit && rank > 0 && !!onCast
 
+  // Spontaneous casters share one rank-pool of slots, so duplicate spell names
+  // in the list contribute nothing — collapse to first occurrence per
+  // `${name}:${foundryId}` so the row list mirrors what the caster can cast.
+  const dedupedDefault = useMemo(() => dedupeSpontaneousSpells(defaultSlots), [defaultSlots])
+  const dedupedAdded = useMemo(() => dedupeSpontaneousSpells(addedSlots), [addedSlots])
+
   return (
     <div>
       <RankHeader
@@ -63,7 +70,7 @@ export function PooledSpellsView({
       />
 
       <div className="space-y-1">
-        {defaultSlots.map((slot, i) => (
+        {dedupedDefault.map((slot, i) => (
           <SpellRow
             key={`def-${i}`}
             name={slot.name}
@@ -82,7 +89,7 @@ export function PooledSpellsView({
           />
         ))}
 
-        {addedSlots.map((slot, i) => (
+        {dedupedAdded.map((slot, i) => (
           <SpellRow
             key={`add-${i}`}
             name={slot.name}

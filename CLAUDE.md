@@ -86,6 +86,29 @@ code-review-graph build                         # full rebuild after major refac
 - `search_graph` — semantic search across codebase
 - `get_community` — module cluster this node belongs to
 
+### Worktree + graph (mandatory — иначе граф пуст)
+`code-review-graph` авто-детектит репо по `.git` и держит `graph.db` внутри текущего корня. Worktree — отдельный checkout → собственный `.code-review-graph/graph.db`, который SessionStart-hook создаёт пустым (Nodes: 0). Поэтому:
+
+**1. На старте работы в worktree — скопировать актуальный граф из main:**
+```bash
+cp "D:/pathmaid/.code-review-graph/graph.db" "<worktree-path>/.code-review-graph/graph.db"
+code-review-graph status   # проверка: должны быть ноды/рёбра, не нули
+```
+
+**2. Во время работы — обновлять локальную копию инкрементально:**
+```bash
+code-review-graph update --skip-flows   # после серии правок
+```
+
+**3. По завершении worktree (перед merge в master / удалением) — вернуть копию в main как новую базу:**
+```bash
+cp "<worktree-path>/.code-review-graph/graph.db" "D:/pathmaid/.code-review-graph/graph.db"
+```
+
+Так main всегда имеет свежий граф, отражающий последнее состояние кода. Без шага 3 — следующая worktree стартует с устаревшего графа и теряет ноды добавленные предыдущей.
+
+**Никогда** не запускать `code-review-graph build` в worktree — полная сборка занимает минуты и дублирует работу. Только копирование + `update`.
+
 ## Workflow
 GSD lifecycle: `gsd_plan_milestone → gsd_plan_slice → gsd_plan_task → gsd_complete_*`
 GSD backend: `.gsd/` (MCP JSON-based) — milestones/slices/tasks tracked via `gsd_*` tools.

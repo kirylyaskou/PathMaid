@@ -1,5 +1,7 @@
-export type { SpellRow, SpellcastingSection, SpellsByRank, SpellListEntry, AddedSpellRef, InnateFrequency } from './model/types'
+export type { SpellRow, SpellcastingSection, SpellsByRank, SpellListEntry, AddedSpellRef, InnateFrequency, GroupedSpellEntry } from './model/types'
 export { SpellInlineCard } from './ui/SpellInlineCard'
 export { SpellReferenceDrawer } from './ui/SpellReferenceDrawer'
 export { TRADITION_COLORS, actionCostLabel, rankLabel, parseDamageDisplay, parseAreaDisplay } from './lib/helpers'
 export { computeHeightenPreview, type HeightenPreviewEntry } from './lib/heighten-preview'
+export { groupPreparedSpells, type GroupableSlot } from './lib/group-prepared-spells'
+export { dedupeSpontaneousSpells } from './lib/dedupe-spontaneous-spells'
