@@ -222,6 +222,12 @@
     "addSlot": "Добавить слот",
     "zeroSlots": "(0 слотов)"
   },
+  "spellcastingIndicator": {
+    "prepared": "Подготовленное заклинание",
+    "spontaneous": "Спонтанная ячейка",
+    "innate": "Врождённое заклинание",
+    "focus": "Фокусное заклинание"
+  },
   "settings": {
     "title": "Настройки",
     "preparingMess": "Подготавливаем бардак",

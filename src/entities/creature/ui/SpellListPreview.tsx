@@ -6,7 +6,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Flame, BookMarked, type LucideIcon } from 'lucide-react'
 import { type SpellcastingSection, groupPreparedSpells, dedupeSpontaneousSpells } from '@/entities/spell'
 import { traditionColor, rankLabel } from '../lib/spellcasting-helpers'
 import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
@@ -72,6 +72,26 @@ export function SpellListPreview({ section, creatureName }: {
       count: 1,
     }))
   }, [activeBucket, section.castType])
+  // Static cast-type cue mirrors the combat-mode SpellRow icons (Flame for slot
+  // consumers, BookMarked for prepared decrement) but без onClick/<button> —
+  // bestiary preview is read-only.
+  const castIndicator = useMemo<{ Icon: LucideIcon; titleKey: string } | null>(() => {
+    switch (section.castType) {
+      case 'prepared':
+        return { Icon: BookMarked, titleKey: 'spellcastingIndicator.prepared' }
+      case 'spontaneous':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.spontaneous' }
+      case 'innate':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.innate' }
+      case 'focus':
+        return { Icon: Flame, titleKey: 'spellcastingIndicator.focus' }
+      default:
+        return null
+    }
+  }, [section.castType])
+  // Capital-cased alias so JSX treats the value as a component, not an HTML tag.
+  const IndicatorIcon = castIndicator?.Icon ?? null
+  const indicatorTitle = castIndicator ? t(castIndicator.titleKey) : ''
   return (
     <Collapsible defaultOpen={false}>
       <div className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary/40">
@@ -131,6 +151,12 @@ export function SpellListPreview({ section, creatureName }: {
             <div className="space-y-1">
               {displayRows.map((row, i) => (
                 <div key={`${row.name}-${i}`} className="flex items-center gap-1.5">
+                  {IndicatorIcon && activeBucket.rank > 0 && (
+                    <IndicatorIcon
+                      className="w-3.5 h-3.5 shrink-0 text-muted-foreground"
+                      aria-label={indicatorTitle}
+                    />
+                  )}
                   <div className="flex-1">
                     <SpellCard
                       name={row.name}

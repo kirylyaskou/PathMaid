@@ -203,6 +203,12 @@
     "addSlot": "Add slot",
     "zeroSlots": "(0 slots)"
   },
+  "spellcastingIndicator": {
+    "prepared": "Prepared spell",
+    "spontaneous": "Spontaneous slot",
+    "innate": "Innate spell",
+    "focus": "Focus spell"
+  },
   "settings": {
     "title": "Settings",
     "preparingMess": "Preparing the mess",
