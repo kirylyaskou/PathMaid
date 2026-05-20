@@ -3,7 +3,7 @@ import { Collapsible, CollapsibleContent } from '@/shared/ui/collapsible'
 import { SectionHeader } from '@/shared/ui/section-header'
 import { CreatureStrikeRow } from './CreatureStrikeRow'
 import type { EffectiveStrike } from '../model/use-effective-strikes'
-import type { AbilityLoc } from '@/shared/i18n/pf2e-content/lib'
+import type { AbilityLoc } from '@/shared/i18n'
 
 interface CreatureStrikesSectionProps {
   strikes: EffectiveStrike[]

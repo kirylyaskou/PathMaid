@@ -4,7 +4,11 @@ import type { ActiveEffect } from './types'
 
 export interface SpellEffectState {
   activeEffects: ActiveEffect[]
-  setEffectsForCombatant: (combatantId: string, effects: ActiveEffect[]) => void
+  setEffectsForCombatant: (
+    combatantId: string,
+    effects: ActiveEffect[],
+    options?: { preserveCustom?: boolean },
+  ) => void
   addEffect: (effect: ActiveEffect) => void
   removeEffect: (id: string) => void
   decrementTurns: (combatantId: string) => { id: string; effectName: string }[]  // returns removed effects
@@ -15,10 +19,11 @@ export interface SpellEffectState {
 export const useEffectStore = create<SpellEffectState>()(
   immer((set) => ({
     activeEffects: [],
-    setEffectsForCombatant: (combatantId, effects) =>
+    setEffectsForCombatant: (combatantId, effects, options) =>
       set((state) => {
+        const preserveCustom = options?.preserveCustom ?? true
         state.activeEffects = state.activeEffects.filter(
-          (e) => e.combatantId !== combatantId
+          (e) => e.combatantId !== combatantId || (preserveCustom && e.source === 'custom')
         )
         state.activeEffects.push(...effects)
       }),

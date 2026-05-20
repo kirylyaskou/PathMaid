@@ -1,6 +1,11 @@
-import { createEncounter, saveEncounterCombatants, listEncounters } from '@/shared/api'
+import {
+  createEncounter,
+  createImportedCustomCreature,
+  saveEncounterCombatants,
+  listEncounters,
+} from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
-import type { MatchedEncounter } from './types'
+import type { EmbeddedCustomCreature, MatchStatus, MatchedEncounter } from './types'
 
 // commit a matched encounter to DB. Creates a new encounter row with
 // a fresh UUID and persists matched combatants only (skipped ones are dropped).
@@ -22,6 +27,22 @@ export interface ImportResult {
   skippedCount: number
 }
 
+async function resolveEmbeddedCustomCreature(
+  embedded: EmbeddedCustomCreature,
+  importedCustomIds: Map<string, MatchStatus>
+): Promise<MatchStatus> {
+  const cached = importedCustomIds.get(embedded.sourceId)
+  if (cached) return cached
+  const { id } = await createImportedCustomCreature(embedded.statBlock)
+  const match: MatchStatus = {
+    status: 'custom',
+    id,
+    level: embedded.statBlock.level ?? embedded.level,
+  }
+  importedCustomIds.set(embedded.sourceId, match)
+  return match
+}
+
 export async function commitMatchedEncounter(
   matched: MatchedEncounter,
   partyLevel: number,
@@ -38,23 +59,28 @@ export async function commitMatchedEncounter(
   await createEncounter(encounterId, encounterName, effPartyLevel, effPartySize)
 
   const rows: EncounterCombatantRow[] = []
+  const importedCustomIds = new Map<string, MatchStatus>()
   let sortIdx = 0
   let skipped = 0
   for (const mc of matched.combatants) {
-    if (mc.match.status === 'skipped') {
+    const match = mc.parsed.embeddedCustomCreature
+      ? await resolveEmbeddedCustomCreature(mc.parsed.embeddedCustomCreature, importedCustomIds)
+      : mc.match
+
+    if (match.status === 'skipped') {
       skipped += 1
       continue
     }
-    const isHazard = mc.match.status === 'hazard'
+    const isHazard = match.status === 'hazard'
     // Prefer source-declared HP; fall back to matched bestiary HP. maxHp tracks
     // separately when the source provides it (Dashboard hp.max).
-    const sourceMatchedHp = mc.match.status === 'custom' ? 0 : (mc.match.hp ?? 0)
+    const sourceMatchedHp = match.status === 'custom' ? 0 : (match.hp ?? 0)
     const maxHp = mc.parsed.hpMax ?? sourceMatchedHp
     const hp = mc.parsed.hp ?? maxHp
     rows.push({
       id: crypto.randomUUID(),
       encounterId,
-      creatureRef: mc.match.status === 'hazard' ? '' : mc.match.id,
+      creatureRef: match.status === 'hazard' ? '' : match.id,
       displayName: mc.parsed.displayName,
       initiative: mc.parsed.initiative ?? 0,
       hp,
@@ -62,10 +88,10 @@ export async function commitMatchedEncounter(
       tempHp: 0,
       isNPC: !isHazard,
       weakEliteTier: (mc.parsed.weakEliteTier ?? 'normal'),
-      creatureLevel: mc.match.level,
+      creatureLevel: match.level,
       sortOrder: sortIdx,
       isHazard,
-      hazardRef: isHazard ? mc.match.id : null,
+      hazardRef: isHazard ? match.id : null,
       hazardType: isHazard ? 'simple' : undefined,
     })
     sortIdx += 1

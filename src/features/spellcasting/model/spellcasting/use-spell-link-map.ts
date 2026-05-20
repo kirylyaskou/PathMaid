@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getSpellByName } from '@/shared/api'
-import { getSpellEffectsForSpells } from '@/shared/api/effects'
-import type { SpellOverrideRow, SpellRow } from '@/shared/api'
+import { getSpellByName, getSpellEffectsForSpells, type SpellOverrideRow, type SpellRow } from '@/shared/api'
 import type { SpellEffectRow } from '@/entities/spell-effect'
 import type { SpellcastingSection } from '@/entities/spell'
 

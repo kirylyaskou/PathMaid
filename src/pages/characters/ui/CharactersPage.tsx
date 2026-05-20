@@ -15,12 +15,12 @@ import {
   getAllCharacters,
   deleteCharacter,
   duplicatePregenAsUserCharacter,
-} from '@/shared/api/characters'
-import type { CharacterRecord } from '@/shared/api/characters'
-import { useCombatantStore } from '@/entities/combatant/model/store'
+  type CharacterRecord,
+} from '@/shared/api'
+import { useCombatantStore } from '@/entities/combatant'
 import { calculatePCMaxHP } from '@engine'
 import type { PathbuilderExport } from '@engine'
-import type { Combatant } from '@/entities/combatant/model/types'
+import type { Combatant } from '@/entities/combatant'
 import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel } from '@/features/characters'
 import { PregenPickerDialog } from '@/features/pregen-picker'
 

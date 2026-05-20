@@ -11,3 +11,9 @@ export type {
 } from './model/battle-form-overrides'
 export { durationToRounds, formatRemainingTurns } from './lib/duration-to-rounds'
 export { mergeResistances } from './lib/merge-resistances'
+export {
+  CUSTOM_PENALTY_TARGETS,
+  createCustomPenaltyEffect,
+  isCustomPenaltyEffect,
+} from './lib/custom-penalty'
+export type { CustomPenaltyTargetId } from './lib/custom-penalty'

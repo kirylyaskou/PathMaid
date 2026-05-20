@@ -16,7 +16,8 @@ import type { BuilderTabsProps } from '../BuilderTabs'
 import type {
   DisplayActionCost,
   CreatureStatBlockData,
-} from '@/entities/creature/model/types'
+} from '@/entities/creature'
+import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 
 type Ability = CreatureStatBlockData['abilities'][number]
 
@@ -33,6 +34,10 @@ function costToString(c: DisplayActionCost | undefined): string {
 
 function newAbility(): Ability {
   return { name: 'New Ability', description: '', traits: [] }
+}
+
+function normalizeEditableDescription(description: string): string {
+  return /<[^>]+>|@UUID\[/.test(description) ? sanitizeFoundryText(description) : description
 }
 
 export function AbilitiesTab({ state, dispatch }: BuilderTabsProps) {
@@ -85,6 +90,10 @@ function AbilityEditor({ ability, onChange, onRemove }: AbilityEditorProps) {
   const { t } = useTranslation('common')
   const [traitInput, setTraitInput] = useState('')
   const traits = ability.traits ?? []
+  const editableDescription = useMemo(
+    () => normalizeEditableDescription(ability.description),
+    [ability.description],
+  )
 
   const actionCostOptions = useMemo(
     () => [
@@ -144,7 +153,7 @@ function AbilityEditor({ ability, onChange, onRemove }: AbilityEditorProps) {
         <Label>{t('customCreatureBuilder.abilitiesTab.description')}</Label>
         <Textarea
           rows={3}
-          value={ability.description}
+          value={editableDescription}
           onChange={(e) => onChange({ ...ability, description: e.target.value })}
         />
       </div>

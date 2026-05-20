@@ -5,6 +5,12 @@ Built with Tauri 2 + React 19. Bestiary, encounter builder, combat tracker, spel
 
 Repository: [github.com/kirylyaskou/PathMaid](https://github.com/kirylyaskou/PathMaid)
 
+## Developer Docs
+
+- [Вводный документ для разработчика](docs/developer-onboarding.md)
+- [Инженерный аудит и план рефакторинга](docs/refactoring-plan.md)
+- [Архитектурные графы рефакторинга](docs/architecture-graphs.md)
+
 ## Licenses
 
 PathMaid bundles game content and community translations subject to multiple licenses. Full license texts and attribution chains are committed under [`LICENSES/`](LICENSES/):

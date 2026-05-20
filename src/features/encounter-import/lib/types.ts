@@ -1,6 +1,16 @@
 // shared types for the import pipeline.
 
+import type { CustomCreatureApiStatBlock } from '@/shared/api'
+
 export type ImportFormat = 'dashboard' | 'pathmaiden' | 'pathmaid-bundle' | 'unknown'
+
+export interface EmbeddedCustomCreature {
+  sourceId: string
+  name: string
+  level: number
+  rarity: string
+  statBlock: CustomCreatureApiStatBlock
+}
 
 export interface ParsedCombatant {
   /** What appears in the initiative list — preserves the GM's local moniker
@@ -25,6 +35,7 @@ export interface ParsedCombatant {
    *  falls back to matched bestiary HP. */
   hpMax?: number
   initiative?: number
+  embeddedCustomCreature?: EmbeddedCustomCreature
 }
 
 export interface ParsedEncounter {

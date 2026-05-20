@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2 } from 'lucide-react'
 import { LevelBadge } from '@/shared/ui/level-badge'
-import type { CustomCreatureRow } from '@/entities/creature/model/custom-creature-types'
+import type { CustomCreatureRow } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 
 interface Props {

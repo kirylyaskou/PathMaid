@@ -2,7 +2,7 @@ import type { Rarity } from '@engine'
 import type { CreatureRow } from '@/shared/api'
 import { mapSize } from '@/shared/lib/size-map'
 import { parseJsonArray } from '@/shared/lib/json'
-import { parseFoundryCharacterDoc } from '@/shared/api/sync/foundry-pc-parser'
+import { parseFoundryCharacterDoc } from '@/shared/api'
 import { resolveFoundryTokens } from '@/shared/lib/foundry-tokens'
 import type {
   Creature,

@@ -3,7 +3,7 @@
 // Pitfall 3: export from the PERSISTED stat block shape — strip `id` and
 // `equipment` here to match what `toDataJson` writes into `data_json`.
 
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+import type { CreatureStatBlockData } from '@/entities/creature'
 
 // Hand-maintained alongside app version.md Pattern 4 option A.
 const FORMAT_VERSION = '1.2.1'

@@ -16,7 +16,7 @@ import { StatRow } from "@/shared/ui/stat-row"
 import { LevelBadge } from "@/shared/ui/level-badge"
 import { NoTranslationBadge } from "@/shared/ui/no-translation-badge"
 import { TraitList } from "@/shared/ui/trait-pill"
-import type { CreatureStatBlockData } from '../model/types'
+import type { CreatureSpellcastingSection, CreatureStatBlockData } from '../model/types'
 import { stripHtml } from '@/shared/lib/html'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { useModifiedStats } from '../model/use-modified-stats'
@@ -31,22 +31,21 @@ import {
   resolveBaseSpeedValue,
   getRecallKnowledgeInfo,
 } from '@engine'
-import type { SpeedType } from '@engine'
+import type { Roll, SpeedType } from '@engine'
 import { mapSize, unmapSize } from '@/shared/lib/size-map'
 import { classifyAbilities } from '../model/classify-abilities'
 import { StatItem } from './StatItem'
 import { SpellListPreview } from './SpellListPreview'
 import { EquipmentBlock } from './EquipmentBlock'
-import { useContentTranslation } from '@/shared/i18n/use-content-translation'
-import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
 import {
+  useContentTranslation,
+  useCurrentLocale,
   getSizeLabel,
   getTraitLabel,
   getSkillLabel,
   getLanguageLabel,
-} from '@/shared/i18n/pf2e-content'
-import type { AbilityLoc } from '@/shared/i18n/pf2e-content/lib'
-import type { SpellcastingSection } from '@/entities/spell'
+  type AbilityLoc,
+} from '@/shared/i18n'
 import type { ReactNode } from 'react'
 import { CreatureSpeedLine } from './CreatureSpeedLine'
 import { CreatureStrikesSection } from './CreatureStrikesSection'
@@ -104,17 +103,24 @@ interface CreatureStatBlockProps {
   creature: CreatureStatBlockData
   className?: string
   encounterContext?: EncounterContext
+  onRoll?: (formula: string, label?: string) => Roll
   /** Inject a live-combat spellcasting renderer (SpellcastingBlock). When
    *  omitted, falls back to SpellListPreview — read-only cards only. Used as
    *  dependency-injection to avoid entities→features FSD violation. */
   renderSpellcasting?: (
-    section: SpellcastingSection,
+    section: CreatureSpellcastingSection,
     creatureLevel: number,
     creatureName: string,
   ) => ReactNode
 }
 
-export function CreatureStatBlock({ creature, className, encounterContext, renderSpellcasting }: CreatureStatBlockProps) {
+export function CreatureStatBlock({
+  creature,
+  className,
+  encounterContext,
+  onRoll,
+  renderSpellcasting,
+}: CreatureStatBlockProps) {
   const { t } = useTranslation()
   // RU content translation overlay. When a vendored pack entry exists we
   // override the display name and surface per-monster RU free-text deltas
@@ -151,12 +157,13 @@ export function CreatureStatBlock({ creature, className, encounterContext, rende
   // attack-roll) surfaces a fortune-aware formula in the toast. Non-attack
   // rolls on the stat-block (saves, perception) use separate useRoll calls in
   // CombatantSavesBar / PCCombatCard.
-  const handleRoll = useRoll(
+  const fallbackRoll = useRoll(
     creature.name,
     encounterContext?.encounterId,
     encounterContext?.combatantId,
     'attack',
   )
+  const handleRoll = onRoll ?? fallbackRoll
 
   // Stat slug list for the condition/spell-effect modifier engine. Speed
   // slugs are appended per declared speed type so effects with

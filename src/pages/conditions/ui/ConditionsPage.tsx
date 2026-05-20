@@ -7,7 +7,7 @@ import type { ConditionRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { SafeHtml } from '@/shared/lib/safe-html'
-import { useContentTranslation } from '@/shared/i18n/use-content-translation'
+import { useContentTranslation } from '@/shared/i18n'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
 

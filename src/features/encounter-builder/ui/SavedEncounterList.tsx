@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, Plus, Trash2, Upload } from 'lucide-react'
+import { Download, MoreHorizontal, Plus, Trash2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Checkbox } from '@/shared/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
@@ -14,6 +20,7 @@ import {
 } from '@/shared/ui/dialog'
 import { useEncounterStore } from '@/entities/encounter'
 import { ImportEncounterDialog, exportEncounter, exportEncountersBundle } from '@/features/encounter-import'
+import { useEncounterBuilderStore } from '../model/store'
 
 export function SavedEncounterList() {
   const { t } = useTranslation('common')
@@ -22,6 +29,8 @@ export function SavedEncounterList() {
   const setSelectedId = useEncounterStore((s) => s.setSelectedId)
   const createNewEncounter = useEncounterStore((s) => s.createNewEncounter)
   const deleteEncounterById = useEncounterStore((s) => s.deleteEncounterById)
+  const partyLevel = useEncounterBuilderStore((s) => s.partyLevel)
+  const partySize = useEncounterBuilderStore((s) => s.partySize)
 
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -114,46 +123,52 @@ export function SavedEncounterList() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50">
+        <span className="min-w-0 truncate text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
           {t('encounterBuilder.encountersHeader')}
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1.5"
-            onClick={() => setImportOpen(true)}
-            title={t('encounterBuilder.importFromJsonTitle')}
-          >
-            <Upload className="w-3 h-3" />
-            {t('encounterBuilder.importBtn')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1.5"
-            onClick={handleOpenExportDialog}
-            title={t('encounterBuilder.exportEncountersAriaTitle')}
-            disabled={encounters.length === 0}
-          >
-            <Download className="w-3 h-3" />
-            {t('encounterBuilder.exportBtn')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs gap-1.5"
+            size="icon"
+            className="h-7 w-7"
             onClick={() => setIsCreating(true)}
+            title={t('encounterBuilder.newEncounter')}
+            aria-label={t('encounterBuilder.newEncounter')}
           >
             <Plus className="w-3 h-3" />
-            {t('encounterBuilder.newEncounter')}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2 text-xs">
+                <MoreHorizontal className="w-3 h-3" />
+                {t('nav.actions')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[150px]">
+              <DropdownMenuItem onSelect={() => setImportOpen(true)}>
+                <Upload className="w-3.5 h-3.5" />
+                {t('encounterBuilder.importBtn')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={encounters.length === 0}
+                onSelect={handleOpenExportDialog}
+              >
+                <Download className="w-3.5 h-3.5" />
+                {t('encounterBuilder.exportBtn')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      <ImportEncounterDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ImportEncounterDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        partyLevel={partyLevel}
+        partySize={partySize}
+      />
 
       {/* Export selection dialog */}
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
@@ -229,13 +244,13 @@ export function SavedEncounterList() {
                 key={enc.id}
                 onClick={() => setSelectedId(enc.id)}
                 title={enc.name}
-                className={`flex items-center px-3 py-2 rounded-md cursor-pointer text-sm transition-colors group ${
+                className={`flex min-w-0 items-center px-3 py-2 rounded-md cursor-pointer text-sm transition-colors group ${
                   selectedId === enc.id
                     ? 'bg-secondary/70 border-l-2 border-primary font-medium'
                     : 'hover:bg-secondary/40 border-l-2 border-transparent'
                 }`}
               >
-                <span className="flex-1 truncate">{enc.name}</span>
+                <span className="min-w-0 flex-1 truncate">{enc.name}</span>
                 {enc.isRunning && (
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
                 )}

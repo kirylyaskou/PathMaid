@@ -1,5 +1,16 @@
-import type { Combatant } from '@/entities/combatant/model/types'
-import type { Creature } from '@/entities/creature/model/types'
+interface StealthCombatantInput {
+  id: string
+  kind: 'npc' | 'pc' | string
+  displayName: string
+  creatureRef?: string | null
+  perception?: number | null
+}
+
+interface StealthCreatureInput {
+  id: string
+  perception: number
+  stealth?: number | null
+}
 
 export interface StealthVsPartyRow {
   /** NPC combatant id */
@@ -39,8 +50,8 @@ export interface PcPerceptionCheck {
  * Pure function — no React, no store access, fully testable.
  */
 export function computeStealthVsParty(
-  combatants: Combatant[],
-  creatures: Creature[],
+  combatants: StealthCombatantInput[],
+  creatures: StealthCreatureInput[],
 ): StealthVsPartyRow[] {
   const creatureById = new Map(creatures.map((c) => [c.id, c]))
 

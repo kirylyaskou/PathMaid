@@ -13,7 +13,7 @@ import {
 } from '@/shared/ui/select'
 import { X, Plus } from 'lucide-react'
 import type { BuilderTabsProps } from '../BuilderTabs'
-import type { AuraEntry, RitualEntry } from '@/entities/creature/model/types'
+import type { AuraEntry, RitualEntry } from '@/entities/creature'
 
 const TRADITIONS = ['arcane', 'divine', 'occult', 'primal'] as const
 

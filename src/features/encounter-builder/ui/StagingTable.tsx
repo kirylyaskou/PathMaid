@@ -8,7 +8,7 @@ import { useCombatantStore } from '@/entities/combatant'
 import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { saveEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterStagingRow } from '@/shared/api'
-import { StagingDeployDialog } from '@/widgets/initiative-list/ui/StagingDeployDialog'
+import { StagingDeployDialog } from './StagingDeployDialog'
 import { logErrorWithToast } from '@/shared/lib/error'
 
 interface StagingTableProps {

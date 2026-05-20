@@ -1,7 +1,7 @@
 import { Swords, X, Eye } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
-import type { CharacterRecord } from '@/shared/api/characters'
+import type { CharacterRecord } from '@/shared/api'
 import { useTranslation } from 'react-i18next'
 
 interface CharacterCardProps {

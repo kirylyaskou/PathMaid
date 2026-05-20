@@ -1,5 +1,7 @@
 import { getDb } from '@/shared/db'
-import { listEncounters, loadEncounterCombatants } from '@/shared/api'
+import { getCustomCreatureById, listEncounters, loadEncounterCombatants } from '@/shared/api'
+import type { CustomCreatureApiStatBlock } from '@/shared/api'
+import type { EmbeddedCustomCreature } from './types'
 
 // 69-01/02: export an encounter as a pathmaiden-v1 JSON payload that round-trips
 // through parseEncounterJson → matchEncounter → commitMatchedEncounter. The
@@ -10,6 +12,7 @@ import { listEncounters, loadEncounterCombatants } from '@/shared/api'
 export interface PathmaidenV1Combatant {
   name: string
   lookupName: string
+  customCreatureId?: string
   level: number
   isHazard: boolean
   weakEliteTier: 'normal' | 'weak' | 'elite'
@@ -23,6 +26,7 @@ export interface PathmaidenV1Encounter {
   partyLevel: number
   partySize: number
   combatants: PathmaidenV1Combatant[]
+  customCreatures?: EmbeddedCustomCreature[]
 }
 
 export interface PathmaidenV1Export {
@@ -37,7 +41,7 @@ export interface PathmaidenV1Export {
  *  repeated dashes. Empty or all-stripped names fall back to `encounter`. */
 export function slugifyEncounterName(name: string): string {
   const trimmed = (name ?? '').trim()
-  if (!trimmed) return 'encounter.pathmaiden'
+  if (!trimmed) return 'encounter.pathmaid'
   // Replace illegal path / FS chars and ASCII control codes with a dash.
   const cleaned = trimmed
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
@@ -45,7 +49,7 @@ export function slugifyEncounterName(name: string): string {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
   const slug = cleaned.length > 0 ? cleaned : 'encounter'
-  return `${slug}.pathmaiden`
+  return `${slug}.pathmaid`
 }
 
 async function lookupCanonicalName(
@@ -76,6 +80,21 @@ async function lookupCanonicalName(
   return custom[0]?.name ?? null
 }
 
+async function buildEmbeddedCustomCreature(
+  creatureRef: string
+): Promise<EmbeddedCustomCreature | null> {
+  if (!creatureRef) return null
+  const custom = await getCustomCreatureById<CustomCreatureApiStatBlock>(creatureRef)
+  if (!custom) return null
+  return {
+    sourceId: custom.id,
+    name: custom.name,
+    level: custom.level,
+    rarity: custom.rarity,
+    statBlock: custom.statBlock,
+  }
+}
+
 export async function exportEncounter(
   encounterId: string
 ): Promise<{ filename: string; content: string }> {
@@ -85,12 +104,15 @@ export async function exportEncounter(
 
   const combatants = await loadEncounterCombatants(encounterId)
   const exported: PathmaidenV1Combatant[] = []
+  const customCreatures = new Map<string, EmbeddedCustomCreature>()
   for (const c of combatants) {
     const canonical = await lookupCanonicalName(c.creatureRef, c.isHazard, c.hazardRef)
+    const embedded = !c.isHazard ? await buildEmbeddedCustomCreature(c.creatureRef) : null
+    if (embedded) customCreatures.set(embedded.sourceId, embedded)
     // Fallback: if no matching row (orphaned ref), reuse the displayName so
     // the import step still has something to match on.
     const lookupName = canonical ?? c.displayName
-    exported.push({
+    const combatant: PathmaidenV1Combatant = {
       name: c.displayName,
       lookupName,
       level: c.creatureLevel,
@@ -99,9 +121,12 @@ export async function exportEncounter(
       hp: c.hp,
       hpMax: c.maxHp,
       initiative: c.initiative,
-    })
+    }
+    if (embedded) combatant.customCreatureId = embedded.sourceId
+    exported.push(combatant)
   }
 
+  const embeddedCustomCreatures = Array.from(customCreatures.values())
   const payload: PathmaidenV1Export = {
     version: 'pathmaiden-v1',
     exportedAt: new Date().toISOString(),
@@ -110,6 +135,7 @@ export async function exportEncounter(
       partyLevel: header.partyLevel,
       partySize: header.partySize,
       combatants: exported,
+      ...(embeddedCustomCreatures.length > 0 ? { customCreatures: embeddedCustomCreatures } : {}),
     },
   }
 

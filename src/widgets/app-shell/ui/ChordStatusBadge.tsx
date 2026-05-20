@@ -1,5 +1,5 @@
 import { useShallow } from 'zustand/react/shallow'
-import { useHotkeyStore } from '@/shared/model/hotkey-store'
+import { useHotkeyStore } from '@/shared/model'
 
 export function ChordStatusBadge() {
   const { cursorMode, pendingCombo } = useHotkeyStore(

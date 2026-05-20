@@ -14,7 +14,7 @@ export interface SpellEffectRow {
 export interface ActiveEffect {
   id: string              // encounter_combatant_effects PK (generated UUID at apply time)
   combatantId: string
-  effectId: string        // FK -> spell_effects.id
+  effectId: string        // FK -> spell_effects.id; custom effects use a synthetic id
   effectName: string      // denormalized for display (already stripped of "Spell Effect: " prefix)
   remainingTurns: number
   rulesJson: string       // raw from spell_effects for engine processing
@@ -26,4 +26,5 @@ export interface ActiveEffect {
   // UIs can distinguish "Fireball @ rank 8" from "Fireball (base 3)".
   level: number
   castAtRank?: number
+  source?: 'custom'
 }

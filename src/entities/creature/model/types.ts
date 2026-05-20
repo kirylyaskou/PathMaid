@@ -1,6 +1,5 @@
 import type { Rarity as EngineRarity } from '@engine'
 import type { DisplaySize } from '@/shared/lib/size-map'
-import type { SpellcastingSection } from '@/entities/spell'
 import type { CreatureItemRow } from '@/shared/api'
 
 export type { Rarity, CreatureSize, ActionCost, WeakEliteTier } from '@engine'
@@ -49,6 +48,35 @@ export interface RitualEntry {
   rank: number // 1..10
 }
 
+export type CreatureInnateFrequency =
+  | { kind: 'at-will' }
+  | { kind: 'per'; max: number; per: 'day' | 'hour' | 'round' }
+
+export interface CreatureSpellListEntry {
+  name: string
+  foundryId: string | null
+  entryId: string
+  hasLinkedEffect?: boolean
+  heightenedFromRank?: number
+  frequency?: CreatureInnateFrequency
+}
+
+export interface CreatureSpellsByRank {
+  rank: number
+  slots: number
+  spells: CreatureSpellListEntry[]
+}
+
+export interface CreatureSpellcastingSection {
+  entryId: string
+  entryName: string
+  tradition: string
+  castType: string
+  spellDc: number
+  spellAttack: number
+  spellsByRank: CreatureSpellsByRank[]
+}
+
 export interface CreatureStatBlockData extends Creature {
   immunities: ImmunityEntry[]
   weaknesses: WeaknessEntry[]
@@ -77,7 +105,7 @@ export interface CreatureStatBlockData extends Creature {
   source: string
   spellDC?: number
   classDC?: number
-  spellcasting?: SpellcastingSection[]
+  spellcasting?: CreatureSpellcastingSection[]
   equipment?: CreatureItemRow[]
 
   // new fields introduced for the custom creature builder.

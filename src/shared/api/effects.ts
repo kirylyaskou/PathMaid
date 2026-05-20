@@ -1,6 +1,18 @@
 import { getDb } from '@/shared/db'
-import type { SpellEffectRow } from '@/entities/spell-effect'
 import { parseSpellEffectGrantItems, type GrantItemInput } from '@engine'
+
+export type SpellEffectCategory = 'spell' | 'alchemical' | 'other'
+
+export interface SpellEffectRow {
+  id: string
+  name: string
+  rules_json: string
+  duration_json: string
+  description: string | null
+  spell_id: string | null
+  level: number
+  category: SpellEffectCategory
+}
 
 // level = COALESCE(spells.rank, 1). Used by parseSpellEffectModifiers to
 // evaluate @item.level in scaling FlatModifier expressions (Heroism etc.).

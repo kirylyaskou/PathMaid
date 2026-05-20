@@ -11,11 +11,9 @@ import type { SpellRow } from '@/entities/spell'
 import { heightenFormula } from '@engine'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
-import { useContentTranslation } from '@/shared/i18n/use-content-translation'
-import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
-import { getTraitLabel } from '@/shared/i18n/pf2e-content'
+import { useContentTranslation, useCurrentLocale, getTraitLabel } from '@/shared/i18n'
 import { SafeHtml } from '@/shared/lib/safe-html'
-import { extractHeightening, applyHeightenedScalings } from '@/entities/spell/lib/heightened-text'
+import { extractHeightening, applyHeightenedScalings } from '@/entities/spell'
 
 type IntervalHeighten = { type: 'interval'; perRanks: number; damage: Record<string, string> }
 type FixedHeightenDamageEntry = { formula?: string; type?: string; damageType?: string; category?: string | null }

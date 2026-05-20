@@ -1,15 +1,55 @@
 import { getDb } from '@/shared/db'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
-import type {
-  CustomCreatureRow,
-  CustomCreatureStatBlock,
-} from '@/entities/creature/model/custom-creature-types'
+
+export interface CustomCreatureApiStatBlock {
+  id: string
+  name: string
+  level: number
+  hp: number
+  ac: number
+  fort: number
+  ref: number
+  will: number
+  perception: number
+  stealth: number | null
+  rarity: string
+  size: string
+  type: string
+  traits: string[]
+  abilityMods?: { str: number; dex: number; con: number; int: number; wis: number; cha: number }
+  immunities?: unknown[]
+  weaknesses?: unknown[]
+  resistances?: unknown[]
+  speeds: Record<string, number | null>
+  strikes: unknown[]
+  abilities: unknown[]
+  skills: unknown[]
+  languages: string[]
+  senses: string[]
+  auras?: unknown[]
+  rituals?: unknown[]
+  equipment?: unknown[]
+  source: string
+}
+
+export interface CustomCreatureRow {
+  id: string
+  name: string
+  level: number
+  rarity: string
+  source_type: 'foundry_clone' | 'scratch'
+  created_at: string
+  updated_at: string
+}
+
+export interface CustomCreatureRecord<TStatBlock = CustomCreatureApiStatBlock> extends CustomCreatureRow {
+  statBlock: TStatBlock
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function toDataJson(data: CreatureStatBlockData): string {
+function toDataJson<TData extends CustomCreatureApiStatBlock>(data: TData): string {
   const { equipment: _eq, id: _id, ...rest } = data
   return JSON.stringify(rest)
 }
@@ -21,12 +61,12 @@ function nowISO(): string {
 function parseStatBlock(row: {
   id: string
   data_json: string
-}): CreatureStatBlockData {
-  const parsed = JSON.parse(row.data_json) as Partial<CreatureStatBlockData>
+}): CustomCreatureApiStatBlock {
+  const parsed = JSON.parse(row.data_json) as Partial<CustomCreatureApiStatBlock>
 
   // backfill new fields so older records read without crashing.
-  const backfilled: CreatureStatBlockData = {
-    ...(parsed as CreatureStatBlockData),
+  const backfilled: CustomCreatureApiStatBlock = {
+    ...(parsed as CustomCreatureApiStatBlock),
     id: row.id,
     abilityMods: parsed.abilityMods ?? { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
     immunities: parsed.immunities ?? [],
@@ -38,7 +78,7 @@ function parseStatBlock(row: {
   return backfilled
 }
 
-function defaultStatBlock(id: string): CreatureStatBlockData {
+function defaultStatBlock(id: string): CustomCreatureApiStatBlock {
   return {
     id,
     name: 'New Creature',
@@ -81,9 +121,9 @@ export async function getAllCustomCreatures(): Promise<CustomCreatureRow[]> {
   )
 }
 
-export async function getCustomCreatureById(
+export async function getCustomCreatureById<TStatBlock extends CustomCreatureApiStatBlock = CustomCreatureApiStatBlock>(
   id: string
-): Promise<CustomCreatureStatBlock | null> {
+): Promise<CustomCreatureRecord<TStatBlock> | null> {
   const db = await getDb()
   const rows = await db.select<(CustomCreatureRow & { data_json: string })[]>(
     'SELECT id, name, level, rarity, source_type, created_at, updated_at, data_json FROM custom_creatures WHERE id = ?',
@@ -99,12 +139,61 @@ export async function getCustomCreatureById(
     source_type: row.source_type,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    statBlock: parseStatBlock(row),
+    statBlock: parseStatBlock(row) as TStatBlock,
   }
 }
 
+export async function getCustomCreatureByName<TStatBlock extends CustomCreatureApiStatBlock = CustomCreatureApiStatBlock>(
+  name: string
+): Promise<CustomCreatureRecord<TStatBlock> | null> {
+  const db = await getDb()
+  const rows = await db.select<(CustomCreatureRow & { data_json: string })[]>(
+    'SELECT id, name, level, rarity, source_type, created_at, updated_at, data_json FROM custom_creatures WHERE name = ? LIMIT 1',
+    [name]
+  )
+  if (rows.length === 0) return null
+  const row = rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    level: row.level,
+    rarity: row.rarity,
+    source_type: row.source_type,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    statBlock: parseStatBlock(row) as TStatBlock,
+  }
+}
+
+export async function createImportedCustomCreature(
+  data: CustomCreatureApiStatBlock,
+  importedAt: Date = new Date()
+): Promise<{ id: string; name: string }> {
+  const db = await getDb()
+  const baseName = data.name.trim() || 'Imported Creature'
+  const date = importedAt.toISOString().slice(0, 10)
+  const existing = await db.select<Array<{ name: string }>>(
+    `SELECT name FROM custom_creatures
+     WHERE name = ? OR name LIKE ?`,
+    [baseName, `${baseName} Copy% - ${date}`]
+  )
+  const taken = new Set(existing.map((row) => row.name))
+  let name = baseName
+  if (taken.has(name)) {
+    name = `${baseName} Copy - ${date}`
+    let n = 2
+    while (taken.has(name)) {
+      name = `${baseName} Copy ${n} - ${date}`
+      n += 1
+    }
+  }
+
+  const id = await createCustomCreature({ ...data, name }, 'foundry_clone')
+  return { id, name }
+}
+
 export async function createCustomCreature(
-  data: CreatureStatBlockData,
+  data: CustomCreatureApiStatBlock,
   sourceType: 'foundry_clone' | 'scratch'
 ): Promise<string> {
   const id = `custom-${crypto.randomUUID()}`
@@ -130,7 +219,7 @@ export async function createCustomCreature(
 
 export async function updateCustomCreature(
   id: string,
-  data: CreatureStatBlockData
+  data: CustomCreatureApiStatBlock
 ): Promise<void> {
   const db = await getDb()
   await db.execute(

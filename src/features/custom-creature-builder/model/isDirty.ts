@@ -1,7 +1,7 @@
 // Deep-compare via JSON stringify. Acceptable performance at CreatureStatBlockData scale
 // (~1-5KB of form state). Production alternative = dequal, but no new deps per CLAUDE.md.
 
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+import type { CreatureStatBlockData } from '@/entities/creature'
 
 export function isDirty(
   current: CreatureStatBlockData,

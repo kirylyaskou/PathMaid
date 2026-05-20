@@ -6,15 +6,21 @@ import { CommandPalette } from './CommandPalette'
 import { ChordStatusBadge } from './ChordStatusBadge'
 import { StealthVsPartyResult } from './StealthVsPartyResult'
 import { RollResultDrawer } from '@/shared/ui/roll-result-drawer'
-import { useHotkeyStore } from '@/shared/model/hotkey-store'
+import { useHotkeyStore } from '@/shared/model'
 import { useShallow } from 'zustand/react/shallow'
 import { useChordEngine } from '../model/use-chord-engine'
-import { StatBlockModal } from '@/entities/creature/ui/StatBlockModal'
-import { SpellReferenceDrawer } from '@/entities/spell/ui/SpellReferenceDrawer'
-import { ItemReferenceDrawer } from '@/entities/item/ui/ItemReferenceDrawer'
-import { FeatReferenceDrawer } from '@/entities/feat/ui/FeatReferenceDrawer'
-import type { GlobalSearchResult } from '@/shared/api/global-search'
-import { PATHS } from '@/shared/routes/paths'
+import { StatBlockModal } from '@/entities/creature'
+import { SpellReferenceDrawer } from '@/entities/spell'
+import { ItemReferenceDrawer } from '@/entities/item'
+import { FeatReferenceDrawer } from '@/entities/feat'
+import type { GlobalSearchResult } from '@/shared/api'
+import { PATHS } from '@/shared/routes'
+
+interface FoundryRefOpenDetail {
+  kind: string
+  id: string
+  name: string
+}
 
 export function AppShell() {
   const [commandOpen, setCommandOpen] = useState(false)
@@ -32,6 +38,25 @@ export function AppShell() {
   useEffect(() => {
     loadHotkeys()
   }, [loadHotkeys])
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<FoundryRefOpenDetail>).detail
+      if (!detail?.id) return
+      if (detail.kind === 'spell' || detail.kind === 'item' || detail.kind === 'feat') {
+        setSelectedResult({
+          id: detail.id,
+          name: detail.name,
+          kind: detail.kind,
+        })
+      } else if (detail.kind === 'action') {
+        navigate(PATHS.ACTIONS)
+        setSelectedResult(null)
+      }
+    }
+    window.addEventListener('pathmaid:open-foundry-ref', handler)
+    return () => window.removeEventListener('pathmaid:open-foundry-ref', handler)
+  }, [navigate])
 
   const handleCloseStealthResult = useCallback(() => {
     setStealthResult(null)

@@ -8,7 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
-import type { CharacterRecord } from '@/shared/api/characters'
+import type { CharacterRecord } from '@/shared/api'
 import { useTranslation } from 'react-i18next'
 
 interface DeleteCharacterDialogProps {

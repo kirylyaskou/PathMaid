@@ -10,10 +10,10 @@ import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
 import { parseJsonArray } from '@/shared/lib/json'
 import { logError } from '@/shared/lib/error'
 import { stripRarityMarker } from '@/shared/lib/display-name'
-import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
+import { useCurrentLocale } from '@/shared/i18n'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
 import { SafeHtml } from '@/shared/lib/safe-html'
-import type { MonsterStructuredLoc } from '@/shared/i18n/pf2e-content/lib'
+import type { MonsterStructuredLoc } from '@/shared/i18n'
 
 function parseStructured(json: string | null): MonsterStructuredLoc | null {
   if (!json) return null

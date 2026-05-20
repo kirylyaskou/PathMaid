@@ -8,7 +8,7 @@ import {
 } from '@/shared/ui/collapsible'
 import { runSanityChecks } from '@engine'
 import type { SanityIssue } from '@engine'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+import type { CreatureStatBlockData } from '@/entities/creature'
 
 interface Props {
   form: CreatureStatBlockData

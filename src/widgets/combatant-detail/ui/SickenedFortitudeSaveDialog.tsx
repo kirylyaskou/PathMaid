@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dices, Keyboard } from 'lucide-react'
-import { fetchCreatureStatBlockData } from '@/entities/creature/model/fetchStatBlock'
+import { fetchCreatureStatBlockData } from '@/entities/creature'
 import {
   Dialog,
   DialogContent,

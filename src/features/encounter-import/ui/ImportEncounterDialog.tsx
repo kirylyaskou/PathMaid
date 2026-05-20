@@ -9,16 +9,17 @@ import { parseEncounterJson, detectFormat } from '../lib/parse-formats'
 import { matchEncounters } from '../lib/match-combatants'
 import { commitMatchedEncounter } from '../lib/import-encounter'
 import type { MatchedEncounter, ImportFormat } from '../lib/types'
-import { useEncounterBuilderStore } from '@/features/encounter-builder'
 import { useEncounterStore } from '@/entities/encounter'
 import { listEncounters } from '@/shared/api'
 import { useTranslation } from 'react-i18next'
 
 type Step = 'pick' | 'preview' | 'committing' | 'done'
 
-export function ImportEncounterDialog({ open, onOpenChange }: {
+export function ImportEncounterDialog({ open, onOpenChange, partyLevel, partySize }: {
   open: boolean
   onOpenChange: (v: boolean) => void
+  partyLevel: number
+  partySize: number
 }) {
   const { t } = useTranslation('common')
   const [step, setStep] = useState<Step>('pick')
@@ -28,8 +29,6 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const partyLevel = useEncounterBuilderStore((s) => s.partyLevel)
-  const partySize = useEncounterBuilderStore((s) => s.partySize)
   const loadEncounters = useEncounterStore((s) => s.loadEncounters)
 
   const reset = useCallback(() => {
@@ -152,7 +151,7 @@ export function ImportEncounterDialog({ open, onOpenChange }: {
             <input
               ref={inputRef}
               type="file"
-              accept="application/json,.json,.pathmaid,.pathmaiden,.pfdashencounters"
+              accept="application/json,.json,.pathmaid,.pathmaid,.pfdashencounters"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]

@@ -1,7 +1,7 @@
 import { Swords } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { rollCritDamage } from '@engine'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRollStore } from '@/shared/model'
 import { cn } from '@/shared/lib/utils'
 
 interface CritButtonProps {

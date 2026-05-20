@@ -1,10 +1,10 @@
 import { cn } from "@/shared/lib/utils"
-import { useCurrentLocale } from "@/shared/i18n"
 import {
+  useCurrentLocale,
   getTraitLabel,
   getTraitDescription,
   getSizeLabel,
-} from "@/shared/i18n/pf2e-content"
+} from "@/shared/i18n"
 import { unmapSize } from "@/shared/lib/size-map"
 import {
   Tooltip,

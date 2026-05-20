@@ -5,12 +5,12 @@ import { Label } from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
 import { X, Plus } from 'lucide-react'
 import type { BuilderTabsProps } from '../BuilderTabs'
-import { normalizeImmunities } from '@/entities/creature/model/iwr-normalize'
+import { normalizeImmunities } from '@/entities/creature'
 import type {
   ImmunityEntry,
   WeaknessEntry,
   ResistanceEntry,
-} from '@/entities/creature/model/types'
+} from '@/entities/creature'
 
 export function IwrTab({ state, dispatch }: BuilderTabsProps) {
   const { t } = useTranslation('common')

@@ -457,6 +457,44 @@
   vertical-align: 0.02em;
 }
 
+.pf2e-uuid-ref {
+  position: relative;
+  color: var(--pf-gold);
+  border-bottom: 1px dotted color-mix(in oklab, var(--pf-gold) 70%, transparent);
+}
+
+.pf2e-uuid-ref[data-ref-resolved="true"] {
+  cursor: pointer;
+}
+
+.pf2e-uuid-ref[data-ref-resolved="true"]:hover {
+  color: var(--pf-gold-bright);
+  border-bottom-style: solid;
+}
+
+.pf2e-uuid-ref-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.35rem);
+  z-index: 60;
+  min-width: max-content;
+  max-width: 18rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pf2e-uuid-ref[data-ref-resolved="true"]:hover .pf2e-uuid-ref-tooltip {
+  display: inline-block;
+}
+
 /* Foundry pack data wraps inline ability blurbs (auras, reactions, free
    actions) in a distinct "boxed" callout inside the stat block. Render as
    a subtle parchment panel with a gold left rule — reads as a sidebar

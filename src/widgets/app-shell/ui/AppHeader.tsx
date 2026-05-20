@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { RollDie20Button } from '@/shared/ui/roll-die20-button'
 import { DicePanel } from '@/shared/ui/DicePanel'
-import { RollHistoryPanel } from '@/widgets/roll-history'
+import { RollHistoryPanel } from './RollHistoryPanel'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 export function AppHeader() {

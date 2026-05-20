@@ -6,9 +6,8 @@ import type { AppliedRoleValues } from '@engine'
 import {
   getCustomCreatureById,
   updateCustomCreature,
-} from '@/shared/api/custom-creatures'
-import { CreatureStatBlock } from '@/entities/creature/ui/CreatureStatBlock'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+} from '@/shared/api'
+import { CreatureStatBlock, type CreatureStatBlockData } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import {
   builderReducer,
@@ -54,7 +53,7 @@ export function BuilderPage({ creatureId }: Props) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const data = await getCustomCreatureById(creatureId)
+      const data = await getCustomCreatureById<CreatureStatBlockData>(creatureId)
       if (cancelled) return
       if (!data) {
         toast.error(t('customCreatureBuilder.page.creatureNotFound'))

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRollStore } from '@/shared/model'
 import { RollResultToast } from './roll-result-toast'
 
 export function RollToastListener() {

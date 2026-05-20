@@ -21,7 +21,7 @@ import {
   getMaxTargets,
   type TargetPickerEffect,
 } from '@/features/cast-apply'
-import { applyEffectToCombatant, applyGrantedEffects } from '@/shared/api/effects'
+import { applyEffectToCombatant, applyGrantedEffects } from '@/shared/api'
 import { useEffectStore, durationToRounds } from '@/entities/spell-effect'
 
 interface EncounterContext {

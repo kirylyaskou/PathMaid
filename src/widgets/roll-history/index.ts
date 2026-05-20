@@ -1,1 +1,1 @@
-export { RollHistoryPanel } from './ui/RollHistoryPanel'
+export { useRoll } from './model/use-roll'

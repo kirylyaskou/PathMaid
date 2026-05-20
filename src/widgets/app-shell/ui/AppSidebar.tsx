@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import { NAV_ITEMS } from '@/shared/config/nav'
+import { NAV_ITEMS } from '@/shared/config'
 
 const STORAGE_KEY = 'sidebar_collapsed'
 

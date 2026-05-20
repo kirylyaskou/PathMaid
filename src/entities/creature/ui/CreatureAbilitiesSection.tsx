@@ -7,13 +7,16 @@ import { SectionHeader } from '@/shared/ui/section-header'
 import { AbilityCard } from '@/shared/ui/ability-card'
 import { highlightGameText } from '../lib/foundry-text'
 import type { ClassifiedAbilities } from '../model/classify-abilities'
-import type { AbilityLoc } from '@/shared/i18n/pf2e-content/lib'
-import { useContentTranslation } from '@/shared/i18n/use-content-translation'
+import { useContentTranslation, type AbilityLoc } from '@/shared/i18n'
 import type { DisplayActionCost } from '../model/types'
 import { SafeHtml } from '@/shared/lib/safe-html'
 
 type AbilityTab = 'offensive' | 'defensive' | 'other'
 type AbilityEntry = ClassifiedAbilities['offensive'][number]
+
+function hasFoundryRichText(description: string): boolean {
+  return /<[^>]+>|@UUID\[/.test(description)
+}
 
 interface CreatureAbilitiesSectionProps {
   classified: ClassifiedAbilities
@@ -81,11 +84,13 @@ function AbilityCardResolved({
     )
   } else {
     // Tier 3 — engine EN raw with clickable formula highlighting.
-    descriptionNode = (
-      <p className="text-sm text-foreground/80 leading-relaxed">
-        {highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
-      </p>
-    )
+    descriptionNode = hasFoundryRichText(ability.description)
+      ? <SafeHtml html={ability.description} className="text-sm text-foreground/80 leading-relaxed" />
+      : (
+        <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+          {highlightGameText(ability.description, (f) => onRoll(f, ability.name))}
+        </p>
+      )
   }
 
   return (

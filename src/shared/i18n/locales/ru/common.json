@@ -375,7 +375,40 @@
       "sectionSenses": "Чувства",
       "sectionDetection": "Обнаружение",
       "sectionAttitudes": "Отношения",
-      "sectionOther": "Другое"
+      "sectionOther": "Другое",
+      "customPenalty": {
+        "button": "Кастомный штраф",
+        "title": "Кастомный штраф",
+        "name": "Название",
+        "namePlaceholder": "например: Грязь, проклятие, плохая опора",
+        "modifierType": "Тип",
+        "penalty": "Штраф",
+        "targets": "Цели",
+        "apply": "Применить штраф -{{penalty}}",
+        "appliedToast": "Применено: {{name}}",
+        "modifierTypes": {
+          "status": "Состояние",
+          "circumstance": "Обстоятельство",
+          "item": "Предмет",
+          "untyped": "Без типа"
+        },
+        "targetsList": {
+          "all": "Все проверки и DC",
+          "ac": "AC",
+          "attack": "Броски атаки",
+          "saving-throw": "Спасброски",
+          "skill-check": "Проверки навыков",
+          "spell-dc": "DC заклинания / класса",
+          "all-speeds": "Все скорости",
+          "land-speed": "Наземная скорость",
+          "str-based": "От Силы",
+          "dex-based": "От Ловкости",
+          "con-based": "От Телосложения",
+          "int-based": "От Интеллекта",
+          "wis-based": "От Мудрости",
+          "cha-based": "От Харизмы"
+        }
+      }
     },
     "effects": {
       "title": "Эффекты заклинаний",

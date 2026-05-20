@@ -12,6 +12,8 @@ import { extractAndInsertIconicPCs } from './sync-iconics-pc'
 import type { RawEntity, SyncProgress } from './types'
 
 export type { SyncProgressCallback } from './types'
+export { parseFoundryCharacterDoc } from './foundry-pc-parser'
+export type { ParsedPc } from './foundry-pc-parser'
 
 export async function syncFoundryData(
   onProgress?: import('./types').SyncProgressCallback

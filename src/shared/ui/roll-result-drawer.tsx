@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRollStore } from '@/shared/model'
 import { DiceCubeAnimation } from './dice-cube-animation'
 import type { Roll } from '@engine'
 

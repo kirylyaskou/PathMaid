@@ -10,8 +10,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/ui/command'
-import { NAV_ITEMS } from '@/shared/config/nav'
-import type { GlobalSearchResult, EntityKind } from '@/shared/api/global-search'
+import { NAV_ITEMS } from '@/shared/config'
+import type { GlobalSearchResult, EntityKind } from '@/shared/api'
 import { useGlobalSearch } from '../model/use-global-search'
 
 interface GlobalSearchModalProps {

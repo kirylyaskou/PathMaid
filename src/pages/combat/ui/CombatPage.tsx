@@ -7,11 +7,13 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/u
 import { Button } from '@/shared/ui/button'
 import { InitiativeList } from '@/widgets/initiative-list'
 import { BestiarySearchPanel } from '@/widgets/bestiary-search'
-import { CombatantDetail } from '@/widgets/combatant-detail'
-import { PersistentDamageDialog } from '@/widgets/combatant-detail/ui/PersistentDamageDialog'
-import { DyingCascadeDialog } from '@/widgets/combatant-detail/ui/DyingCascadeDialog'
-import { SickenedFortitudeSaveDialog } from '@/widgets/combatant-detail/ui/SickenedFortitudeSaveDialog'
-import { StagingDeployDialog } from '@/widgets/initiative-list/ui/StagingDeployDialog'
+import { useRoll } from '@/widgets/roll-history'
+import {
+  CombatantDetail,
+  PersistentDamageDialog,
+  DyingCascadeDialog,
+  SickenedFortitudeSaveDialog,
+} from '@/widgets/combatant-detail'
 import {
   CombatControls, AddPCDialog, QuickAddCombatantForm, createCombatantFromCreature,
   useEncounterTabsStore, snapshotFromGlobalStores, useCombatTrackerStore,
@@ -31,7 +33,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
 import { saveEncounterStagingCombatants, insertEncounterCombatant } from '@/shared/api'
 import type { EncounterStagingRow, EncounterCombatantRow } from '@/shared/api'
-import { StagingTable } from '@/features/encounter-builder/ui/StagingTable'
+import { StagingDeployDialog, StagingTable } from '@/features/encounter-builder'
 import { logErrorWithToast } from '@/shared/lib/error'
 import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
@@ -338,6 +340,12 @@ export function CombatPage() {
         onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
       }
     : undefined
+  const statBlockRoll = useRoll(
+    lastNpcStatBlock?.name,
+    spellcastingEncounter?.encounterId,
+    spellcastingEncounter?.combatantId,
+    'attack',
+  )
 
   // Mount: migrate existing running combat to a tab, then setup auto-save per active tab
   useEffect(() => {
@@ -649,6 +657,7 @@ export function CombatPage() {
                     )}
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={spellcastingEncounter}
+                    onRoll={statBlockRoll}
                     renderSpellcasting={(section, level, name) => (
                       <SpellcastingBlock
                         key={section.entryId}

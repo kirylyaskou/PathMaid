@@ -2,7 +2,7 @@ import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, getManagerState, type ActiveCondition } from '@/entities/condition'
 import { useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
-import { decrementEffectTurns as decrementEffectTurnsApi } from '@/shared/api/effects'
+import { decrementEffectTurns as decrementEffectTurnsApi } from '@/shared/api'
 import { useCombatTrackerStore } from '../model/store'
 import type { ConditionSlug, ConditionInput } from '@engine'
 import { computeStatModifier } from '@engine'
@@ -180,7 +180,11 @@ export function reverseTurn(): void {
   }
 
   // Restore spell effects to pre-turn state
-  useEffectStore.getState().setEffectsForCombatant(combatantId, lastSnapshot.effectsBefore)
+  useEffectStore.getState().setEffectsForCombatant(
+    combatantId,
+    lastSnapshot.effectsBefore,
+    { preserveCustom: false },
+  )
 
   toast('Reversed to previous turn')
 

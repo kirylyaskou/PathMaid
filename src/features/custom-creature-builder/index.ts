@@ -1,4 +1,5 @@
 export { BuilderPage } from './ui/BuilderPage'
+export { CloneFromBestiaryDialog } from './ui/CloneFromBestiaryDialog'
 export { DirtyGuardDialog } from './ui/DirtyGuardDialog'
 export type { BuilderState, BuilderAction } from './model/builderReducer'
 export { builderReducer, makeInitialState } from './model/builderReducer'

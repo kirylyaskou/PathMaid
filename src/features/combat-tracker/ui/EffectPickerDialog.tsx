@@ -10,7 +10,7 @@ import {
   getContextEffectsForEncounter,
   applyEffectToCombatant,
   applyGrantedEffects,
-} from '@/shared/api/effects'
+} from '@/shared/api'
 import type { SpellEffectRow, SpellEffectCategory } from '@/entities/spell-effect'
 import { useEffectStore, durationToRounds } from '@/entities/spell-effect'
 import { useCombatTrackerStore } from '../model/store'

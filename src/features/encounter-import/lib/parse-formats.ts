@@ -1,4 +1,4 @@
-import type { ImportFormat, ParsedEncounter, ParsedCombatant } from './types'
+import type { EmbeddedCustomCreature, ImportFormat, ParsedEncounter, ParsedCombatant } from './types'
 
 // format detection + parsing. Pure functions; no DB access.
 
@@ -59,6 +59,7 @@ interface PathmaidenExport {
       /** Canonical bestiary/custom/hazard name used by the matcher.
        *  Falls back to `name` when absent (legacy exports without lookupName). */
       lookupName?: string
+      customCreatureId?: string
       level?: number
       isHazard?: boolean
       weakEliteTier?: 'normal' | 'weak' | 'elite'
@@ -66,6 +67,7 @@ interface PathmaidenExport {
       hpMax?: number
       initiative?: number
     }>
+    customCreatures?: EmbeddedCustomCreature[]
   }
 }
 
@@ -73,6 +75,17 @@ interface PathmaidBundleExport {
   version: 'pathmaid-bundle-v1'
   exportedAt?: string
   encounters: PathmaidenExport['encounter'][]
+  customCreatures?: EmbeddedCustomCreature[]
+}
+
+function customCreatureMap(customCreatures: EmbeddedCustomCreature[] | undefined): Map<string, EmbeddedCustomCreature> {
+  const map = new Map<string, EmbeddedCustomCreature>()
+  for (const creature of customCreatures ?? []) {
+    if (creature?.sourceId && creature.statBlock) {
+      map.set(creature.sourceId, creature)
+    }
+  }
+  return map
 }
 
 export function detectFormat(json: unknown): ImportFormat {
@@ -148,6 +161,7 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
   const raw = json as PathmaidenExport
   if (raw.version !== 'pathmaiden-v1' || !raw.encounter) return []
   const enc = raw.encounter
+  const embeddedById = customCreatureMap(enc.customCreatures)
   const combatants: ParsedCombatant[] = []
   for (const c of enc.combatants ?? []) {
     if (!c?.name || typeof c.name !== 'string') continue
@@ -156,6 +170,8 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
     // re-import. Legacy exports omitted it; fall back to the display name.
     const lookupName =
       typeof c.lookupName === 'string' && c.lookupName.trim() ? c.lookupName : c.name
+    const embeddedCustomCreature =
+      typeof c.customCreatureId === 'string' ? embeddedById.get(c.customCreatureId) : undefined
     combatants.push({
       displayName: c.name,
       lookupName,
@@ -165,6 +181,7 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
       hp: c.hp,
       hpMax: c.hpMax,
       initiative: c.initiative,
+      embeddedCustomCreature,
     })
   }
   return [
@@ -181,14 +198,20 @@ export function parsePathmaidBundle(json: unknown): ParsedEncounter[] {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return []
   const raw = json as PathmaidBundleExport
   if (raw.version !== 'pathmaid-bundle-v1' || !Array.isArray(raw.encounters)) return []
+  const bundleEmbeddedById = customCreatureMap(raw.customCreatures)
   const out: ParsedEncounter[] = []
   for (const enc of raw.encounters) {
     if (!enc || typeof enc !== 'object') continue
+    const encounterEmbeddedById = customCreatureMap(enc.customCreatures)
     const combatants: ParsedCombatant[] = []
     for (const c of enc.combatants ?? []) {
       if (!c?.name || typeof c.name !== 'string') continue
       const lookupName =
         typeof c.lookupName === 'string' && c.lookupName.trim() ? c.lookupName : c.name
+      const embeddedCustomCreature =
+        typeof c.customCreatureId === 'string'
+          ? encounterEmbeddedById.get(c.customCreatureId) ?? bundleEmbeddedById.get(c.customCreatureId)
+          : undefined
       combatants.push({
         displayName: c.name,
         lookupName,
@@ -198,6 +221,7 @@ export function parsePathmaidBundle(json: unknown): ParsedEncounter[] {
         hp: c.hp,
         hpMax: c.hpMax,
         initiative: c.initiative,
+        embeddedCustomCreature,
       })
     }
     out.push({

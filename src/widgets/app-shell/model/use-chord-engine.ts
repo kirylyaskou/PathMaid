@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useHotkeyStore, parseChord } from '@/shared/model/hotkey-store'
-import { advanceTurn } from '@/features/combat-tracker/lib/turn-manager'
-import { useCombatantStore } from '@/entities/combatant/model/store'
-import { useCreatureStore } from '@/entities/creature/model/store'
+import { useHotkeyStore, parseChord } from '@/shared/model'
+import { advanceTurn } from '@/features/combat-tracker'
+import { useCombatantStore } from '@/entities/combatant'
+import { useCreatureStore } from '@/entities/creature'
 import { computeStealthVsParty } from '@/shared/lib/stealth-vs-party'
 
 /** Milliseconds to wait for the chord suffix key before timing out */

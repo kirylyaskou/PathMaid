@@ -31,9 +31,12 @@
  */
 
 import DOMPurify from 'dompurify'
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { cn } from '@/shared/lib/utils'
 import { actionCostLabel } from '@/shared/lib/pf2e-display'
+import { parseFoundryUuid, resolveFoundryRefs } from '@/shared/api/foundry-refs'
+import type { ResolvedFoundryRef } from '@/shared/api/foundry-refs'
 
 const ALLOWED_TAGS = [
   // Text structure
@@ -50,7 +53,18 @@ const ALLOWED_TAGS = [
   'details', 'summary',
 ]
 
-const ALLOWED_ATTR = ['class', 'data-trait']
+const ALLOWED_ATTR = [
+  'class',
+  'data-trait',
+  'data-uuid',
+  'data-ref-kind',
+  'data-ref-id',
+  'data-ref-name',
+  'data-ref-resolved',
+  'title',
+  'role',
+  'tabindex',
+]
 
 const ACTION_TOKEN_MAP: Record<string, string> = {
   'one-action': actionCostLabel('1'),
@@ -61,6 +75,24 @@ const ACTION_TOKEN_MAP: Record<string, string> = {
 }
 
 const ACTION_TOKEN_REGEX = /\[(one-action|two-actions|three-actions|reaction|free-action)\]/g
+const UUID_TOKEN_REGEX = /@UUID\[([^\]]+)\](?:\{([^}]+)\})?/g
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function escapeAttr(input: string): string {
+  return escapeHtml(input).replace(/`/g, '&#96;')
+}
+
+function collectUuidRefs(html: string): string[] {
+  return [...html.matchAll(UUID_TOKEN_REGEX)].map((match) => match[1] ?? '').filter(Boolean)
+}
 
 /**
  * Replace `[one-action]` style tokens with span-wrapped glyphs.
@@ -100,6 +132,39 @@ function preprocessActionGlyphSpans(html: string): string {
   )
 }
 
+function renderUuidRef(
+  uuid: string,
+  explicitLabel: string | undefined,
+  resolvedRefs: Record<string, ResolvedFoundryRef>,
+): string {
+  const resolved = resolvedRefs[uuid]
+  const parsed = resolved ? null : parseFoundryUuid(uuid)
+  const label = explicitLabel ?? resolved?.label ?? parsed?.name ?? uuid
+  const kind = resolved?.kind ?? parsed?.kind ?? 'unknown'
+  const id = resolved?.id ?? ''
+  const refName = resolved?.name ?? parsed?.name ?? label
+  const resolvedFlag = resolved?.resolved ? 'true' : 'false'
+  const title = resolved?.resolved ? `Open ${refName}` : label
+  const tooltip = resolved?.resolved
+    ? `<span class="pf2e-uuid-ref-tooltip">${escapeHtml(`${resolved.kind}: ${refName}`)}</span>`
+    : ''
+  return [
+    '<span',
+    ' class="pf2e-uuid-ref"',
+    ` data-uuid="${escapeAttr(uuid)}"`,
+    ` data-ref-kind="${escapeAttr(kind)}"`,
+    ` data-ref-id="${escapeAttr(id)}"`,
+    ` data-ref-name="${escapeAttr(refName)}"`,
+    ` data-ref-resolved="${resolvedFlag}"`,
+    ` title="${escapeAttr(title)}"`,
+    resolved?.resolved ? ' role="button" tabindex="0"' : '',
+    '>',
+    escapeHtml(label),
+    tooltip,
+    '</span>',
+  ].join('')
+}
+
 /**
  * Replace Foundry inline-link tokens (`@UUID[ref]{label}`, `@Trait[slug]`,
  * `@Check[…]{label}`, `@Damage[formula]`, generic `@Kind[ref]{label}`)
@@ -129,12 +194,13 @@ const GLYPH_TOKEN_MAP: Record<string, string> = {
   'Free Action': actionCostLabel('free'),
 }
 
-function preprocessFoundryTokens(html: string): string {
+function preprocessFoundryTokens(html: string, resolvedRefs: Record<string, ResolvedFoundryRef>): string {
   let out = html
   // Order matters: greedy `@UUID[…]{label}` BEFORE the generic catch-all so
   // we keep the explicit class. Same for Trait/Check/Damage.
-  out = out.replace(/@UUID\[[^\]]+\]\{([^}]+)\}/g, '<span class="pf2e-uuid-ref">$1</span>')
-  out = out.replace(/@UUID\[[^\]]+\]/g, '')
+  out = out.replace(UUID_TOKEN_REGEX, (_match, uuid: string, label: string | undefined) =>
+    renderUuidRef(uuid, label, resolvedRefs)
+  )
   // `@Glyph[Action 1]` etc. — render as canonical action-cost glyph span.
   // Unknown glyph kinds collapse to the kind text inside a generic span so
   // they don't slip into the catch-all (which would print a literal `$1`).
@@ -185,9 +251,30 @@ export interface SafeHtmlProps {
 }
 
 export function SafeHtml({ html, className, as = 'div' }: SafeHtmlProps) {
+  const [resolvedRefs, setResolvedRefs] = useState<Record<string, ResolvedFoundryRef>>({})
+
+  useEffect(() => {
+    const refs = collectUuidRefs(html)
+    if (refs.length === 0) {
+      setResolvedRefs({})
+      return
+    }
+    let cancelled = false
+    resolveFoundryRefs(refs)
+      .then((resolved) => {
+        if (!cancelled) setResolvedRefs(resolved)
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedRefs({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [html])
+
   const sanitized = useMemo(() => {
     const glyphsExpanded = preprocessActionGlyphSpans(html)
-    const tokensExpanded = preprocessFoundryTokens(glyphsExpanded)
+    const tokensExpanded = preprocessFoundryTokens(glyphsExpanded, resolvedRefs)
     const actionsExpanded = preprocessActionTokens(tokensExpanded)
     return DOMPurify.sanitize(actionsExpanded, {
       ALLOWED_TAGS,
@@ -196,13 +283,28 @@ export function SafeHtml({ html, className, as = 'div' }: SafeHtmlProps) {
       ALLOW_UNKNOWN_PROTOCOLS: false,
       USE_PROFILES: { html: true },
     })
-  }, [html])
+  }, [html, resolvedRefs])
+
+  const handleClick = useCallback((event: MouseEvent<HTMLElement>) => {
+    const target = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('.pf2e-uuid-ref[data-ref-resolved="true"]')
+      : null
+    if (!target) return
+    const detail = {
+      uuid: target.dataset.uuid ?? '',
+      kind: target.dataset.refKind ?? 'unknown',
+      id: target.dataset.refId ?? '',
+      name: target.dataset.refName ?? target.textContent ?? '',
+    }
+    if (!detail.id) return
+    window.dispatchEvent(new CustomEvent('pathmaid:open-foundry-ref', { detail }))
+  }, [])
 
   const Tag = as
   return (
     <Tag
       className={cn('pf2e-safe-html', className)}
-      // eslint-disable-next-line react/no-danger
+      onClick={handleClick}
       dangerouslySetInnerHTML={{ __html: sanitized }}
     />
   )

@@ -1,6 +1,20 @@
 export { useCreatureStore } from './model/store'
 export type { CreatureState } from './model/store'
-export type { Creature, CreatureStatBlockData, Rarity, CreatureSize, ActionCost, WeakEliteTier, DisplaySize, DisplayActionCost } from './model/types'
+export type {
+  Creature,
+  CreatureStatBlockData,
+  Rarity,
+  CreatureSize,
+  ActionCost,
+  WeakEliteTier,
+  DisplaySize,
+  DisplayActionCost,
+  AuraEntry,
+  RitualEntry,
+  ImmunityEntry,
+  WeaknessEntry,
+  ResistanceEntry,
+} from './model/types'
 export type { CustomCreatureRow, CustomCreatureStatBlock } from './model/custom-creature-types'
 export { toCreature, toCreatureStatBlockData, extractIwr } from './model/mappers'
 export { CreatureCard } from './ui/CreatureCard'
@@ -13,6 +27,13 @@ export { SpellCard } from './ui/SpellCard'
 export { SpellListPreview } from './ui/SpellListPreview'
 export { EquipmentBlock } from './ui/EquipmentBlock'
 export { fetchCreatureStatBlockData } from './model/fetchStatBlock'
+export {
+  normalizeImmunities,
+  normalizeWeaknesses,
+  normalizeResistances,
+  formatImmunityWithExceptions,
+  type NormalizedImmunity,
+} from './model/iwr-normalize'
 export { StatBlockModal } from './ui/StatBlockModal'
 export { useModifiedStats, useSpellModifiers } from './model/use-modified-stats'
 export type { StatModifierResult } from './model/use-modified-stats'

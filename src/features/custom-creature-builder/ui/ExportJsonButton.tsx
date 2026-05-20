@@ -2,7 +2,8 @@ import { Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
-import { getCustomCreatureById } from '@/shared/api/custom-creatures'
+import { getCustomCreatureById } from '@/shared/api'
+import type { CreatureStatBlockData } from '@/entities/creature'
 import { exportCreatureJson } from '../model/exportJson'
 
 interface Props {
@@ -18,7 +19,7 @@ export function ExportJsonButton({ creatureId, disabled }: Props) {
 
   async function handleExport() {
     try {
-      const record = await getCustomCreatureById(creatureId)
+      const record = await getCustomCreatureById<CreatureStatBlockData>(creatureId)
       if (!record) {
         toast.error(t('customCreatureBuilder.exportJson.creatureNotFound'))
         return

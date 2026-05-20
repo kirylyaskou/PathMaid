@@ -11,10 +11,8 @@ import { SearchInput } from '@/shared/ui/search-input'
 import { Button } from '@/shared/ui/button'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { LevelBadge } from '@/shared/ui/level-badge'
-import { searchCreatures, fetchCreatureById } from '@/shared/api/creatures'
-import type { CreatureRow } from '@/shared/api/creatures'
-import { toCreatureStatBlockData } from '@/entities/creature/model/mappers'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+import { searchCreatures, type CreatureRow } from '@/shared/api'
+import { fetchCreatureStatBlockData, type CreatureStatBlockData } from '@/entities/creature'
 
 interface Props {
   open: boolean
@@ -75,10 +73,8 @@ export function CloneFromBestiaryDialog({ open, onOpenChange, onClone }: Props) 
   async function handlePick(row: CreatureRow) {
     setCloning(row.id)
     try {
-      // Re-fetch the full row to ensure raw_json is present and mapper has everything it needs.
-      const full = await fetchCreatureById(row.id)
-      if (!full) return
-      const mapped = toCreatureStatBlockData(full)
+      const mapped = await fetchCreatureStatBlockData(row.id)
+      if (!mapped) return
       // Pitfall 8: reset source to 'custom' so exported JSON doesn't carry foreign pack name.
       const normalized: CreatureStatBlockData = {
         ...mapped,

@@ -9,8 +9,7 @@ import {
 import { ChevronDown, Flame, BookMarked, type LucideIcon } from 'lucide-react'
 import { type SpellcastingSection, groupPreparedSpells, dedupeSpontaneousSpells } from '@/entities/spell'
 import { traditionColor, rankLabel } from '../lib/spellcasting-helpers'
-import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
-import { getTraitLabel } from '@/shared/i18n/pf2e-content'
+import { useCurrentLocale, getTraitLabel } from '@/shared/i18n'
 import { SpellCard } from './SpellCard'
 
 /**

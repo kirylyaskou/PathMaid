@@ -128,6 +128,15 @@ export async function getItemById(id: string): Promise<ItemRow | null> {
   return rows[0] ?? null
 }
 
+export async function getItemByName(name: string): Promise<ItemRow | null> {
+  const db = await getDb()
+  const rows = await db.select<ItemRow[]>(
+    `SELECT i.*, (SELECT t.name_loc FROM translations t WHERE t.kind='item' AND t.name_key=i.name COLLATE NOCASE AND t.locale=?) AS name_loc FROM items i WHERE i.name = ? COLLATE NOCASE LIMIT 1`,
+    [getCurrentLocale(), name]
+  )
+  return rows[0] ?? null
+}
+
 export async function getItemsByType(itemType: string): Promise<ItemRow[]> {
   const db = await getDb()
   return await db.select<ItemRow[]>(

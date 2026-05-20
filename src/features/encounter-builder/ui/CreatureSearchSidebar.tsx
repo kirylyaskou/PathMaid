@@ -11,11 +11,16 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { LevelBadge } from '@/shared/ui/level-badge'
-import { StatBlockModal, toCreature, extractIwr, BestiaryResultRow } from '@/entities/creature'
-import type { WeakEliteTier } from '@/entities/creature'
-import { fetchCreatureStatBlockData } from '@/entities/creature/model/fetchStatBlock'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
-import type { CustomCreatureRow } from '@/entities/creature/model/custom-creature-types'
+import {
+  StatBlockModal,
+  toCreature,
+  extractIwr,
+  BestiaryResultRow,
+  fetchCreatureStatBlockData,
+  type WeakEliteTier,
+  type CreatureStatBlockData,
+  type CustomCreatureRow,
+} from '@/entities/creature'
 import { searchCreaturesFiltered, searchHazards, getAllHazards, saveEncounterStagingCombatants, getAllCustomCreatures, fetchDistinctLibrarySources } from '@/shared/api'
 import type { CreatureRow, HazardRow, EncounterStagingRow, LibrarySourceOption } from '@/shared/api'
 import { useEncounterBuilderStore } from '../model/store'

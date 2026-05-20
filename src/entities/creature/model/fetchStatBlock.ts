@@ -1,12 +1,16 @@
 import { fetchCreatureById, getCreatureSpellcasting, getCreatureItems, getCustomCreatureById } from '@/shared/api'
-import type { SpellcastingSection, SpellsByRank, InnateFrequency } from '@/entities/spell'
 import { toCreatureStatBlockData } from './mappers'
-import type { CreatureStatBlockData } from './types'
+import type {
+  CreatureInnateFrequency,
+  CreatureSpellcastingSection,
+  CreatureSpellsByRank,
+  CreatureStatBlockData,
+} from './types'
 
-function parseFrequency(json: string | null): InnateFrequency | undefined {
+function parseFrequency(json: string | null): CreatureInnateFrequency | undefined {
   if (!json) return undefined
   try {
-    const parsed = JSON.parse(json) as InnateFrequency
+    const parsed = JSON.parse(json) as CreatureInnateFrequency
     if (parsed.kind === 'at-will') return { kind: 'at-will' }
     if (parsed.kind === 'per' && typeof parsed.max === 'number' && parsed.max > 0) {
       return { kind: 'per', max: parsed.max, per: parsed.per }
@@ -27,7 +31,7 @@ function parseFrequency(json: string | null): InnateFrequency | undefined {
 export async function fetchCreatureStatBlockData(id: string): Promise<CreatureStatBlockData | null> {
   // prefix-aware routing. Custom IDs are `custom-<uuid>` (see shared/api/custom-creatures.ts).
   if (id.startsWith('custom-')) {
-    const custom = await getCustomCreatureById(id)
+    const custom = await getCustomCreatureById<CreatureStatBlockData>(id)
     return custom?.statBlock ?? null
   }
 
@@ -45,7 +49,7 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
   interface RankSpell {
     name: string
     foundryId: string | null
-    frequency?: InnateFrequency
+    frequency?: CreatureInnateFrequency
   }
   // Group creature spell list items by entry_id → rank
   const spellsByEntry = new Map<string, Map<number, RankSpell[]>>()
@@ -60,13 +64,13 @@ export async function fetchCreatureStatBlockData(id: string): Promise<CreatureSt
     })
   }
 
-  const spellcasting: SpellcastingSection[] = entries.map((entry) => {
+  const spellcasting: CreatureSpellcastingSection[] = entries.map((entry) => {
     const byRank = spellsByEntry.get(entry.id) ?? new Map()
     const slotsRaw = entry.slots
       ? (JSON.parse(entry.slots) as Record<string, { max: number; value: number }>)
       : {}
 
-    const spellsByRank: SpellsByRank[] = Array.from(byRank.entries())
+    const spellsByRank: CreatureSpellsByRank[] = Array.from(byRank.entries())
       .sort(([a], [b]) => a - b)
       .map(([rank, rankSpells]) => {
         const slotKey = `slot${rank}`

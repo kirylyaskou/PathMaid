@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { VALUED_CONDITIONS } from '@engine'
-import { useHotkeyStore } from '@/shared/model/hotkey-store'
-import { upsertHotkey, deleteHotkey, type Hotkey } from '@/shared/api/hotkeys'
-import { eventToCombo, isModifierOnly } from '@/widgets/app-shell/model/use-chord-engine'
+import { useHotkeyStore } from '@/shared/model'
+import { upsertHotkey, deleteHotkey, type Hotkey } from '@/shared/api'
+import { eventToCombo, isModifierOnly } from '@/widgets/app-shell'
 import { Button } from '@/shared/ui/button'
 import {
   Select,

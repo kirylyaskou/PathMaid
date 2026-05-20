@@ -2,7 +2,7 @@ import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingComba
 import type { EncounterConditionRow } from '@/shared/api'
 import { useCombatantStore, kindFromLegacy, type Combatant, type StagingCombatant } from '@/entities/combatant'
 import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
-import { fetchCreatureStatBlockData } from '@/entities/creature/model/fetchStatBlock'
+import { fetchCreatureStatBlockData } from '@/entities/creature'
 import { useCombatTrackerStore } from '../model/store'
 import { rollInitiative } from './initiative'
 import type { ConditionSlug } from '@engine'

@@ -10,9 +10,16 @@ import {
 } from '@/shared/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Textarea } from '@/shared/ui/textarea'
-import { upsertCharacter } from '@/shared/api/characters'
-import type { PathbuilderExport } from '@engine'
+import { Input } from '@/shared/ui/input'
+import { Label } from '@/shared/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/shared/ui/radio-group'
+import { createCustomCreature, upsertCharacter } from '@/shared/api'
 import { useTranslation } from 'react-i18next'
+import { fetchPathbuilderExport, parsePathbuilderExportText } from '../lib/pathbuilder-import'
+import { pathbuilderToCreatureStatBlock } from '../lib/pathbuilder-to-creature'
+
+type ImportMode = 'character' | 'creature'
+type ImportTab = 'file' | 'paste' | 'link'
 
 interface ImportDialogProps {
   open: boolean
@@ -20,31 +27,20 @@ interface ImportDialogProps {
   onSuccess: (name: string) => void
 }
 
-function validateExport(data: unknown): PathbuilderExport {
-  const exp = data as PathbuilderExport
-  if (exp?.success !== true) {
-    throw new Error('File is not a valid Pathbuilder export (success: false)')
-  }
-  if (!exp.build?.name) {
-    throw new Error('Missing build.name field')
-  }
-  if (!exp.build?.class) {
-    throw new Error('Missing build.class field')
-  }
-  return exp
-}
-
 export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProps) {
   const { t } = useTranslation('common')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useState<'file' | 'paste'>('file')
+  const [activeTab, setActiveTab] = useState<ImportTab>('file')
+  const [mode, setMode] = useState<ImportMode>('character')
   const [pasteValue, setPasteValue] = useState('')
+  const [linkValue, setLinkValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [dragOver, setDragOver] = useState(false)
 
   function reset() {
     setPasteValue('')
+    setLinkValue('')
     setError(null)
     setImporting(false)
     setDragOver(false)
@@ -56,34 +52,47 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
     onOpenChange(nextOpen)
   }
 
+  async function persistPathbuilderExport(rawInput: string) {
+    const exp = parsePathbuilderExportText(rawInput)
+    if (mode === 'creature') {
+      const statBlock = await pathbuilderToCreatureStatBlock(exp.build)
+      await createCustomCreature(statBlock, 'foundry_clone')
+    } else {
+      await upsertCharacter(exp.build)
+    }
+    reset()
+    onOpenChange(false)
+    onSuccess(exp.build.name)
+  }
+
   async function importJson(rawInput: string) {
     setError(null)
     setImporting(true)
     try {
-      // Extract first complete JSON object — handles Pathbuilder "Share" format where
-      // chat prefix and/or multiple messages surround the JSON:
-      // "[4/5/2026 10:34 PM] Character Name: {...}\n[timestamp] Name: ..."
-      const start = rawInput.indexOf('{')
-      if (start === -1) throw new Error('No JSON object found in pasted text')
-      let depth = 0, end = -1, inStr = false, esc = false
-      for (let i = start; i < rawInput.length; i++) {
-        const ch = rawInput[i]
-        if (esc) { esc = false; continue }
-        if (ch === '\\' && inStr) { esc = true; continue }
-        if (ch === '"') { inStr = !inStr; continue }
-        if (inStr) continue
-        if (ch === '{') depth++
-        else if (ch === '}') { depth--; if (depth === 0) { end = i; break } }
+      await persistPathbuilderExport(rawInput)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Not a valid Pathbuilder export')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function importLink(rawInput: string) {
+    setError(null)
+    setImporting(true)
+    try {
+      const exp = await fetchPathbuilderExport(rawInput)
+      if (mode === 'creature') {
+        const statBlock = await pathbuilderToCreatureStatBlock(exp.build)
+        await createCustomCreature(statBlock, 'foundry_clone')
+      } else {
+        await upsertCharacter(exp.build)
       }
-      const json = end !== -1 ? rawInput.slice(start, end + 1) : rawInput.slice(start)
-      const parsed = JSON.parse(json)
-      const exp = validateExport(parsed)
-      await upsertCharacter(exp.build)
       reset()
       onOpenChange(false)
       onSuccess(exp.build.name)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Not a valid Pathbuilder export')
+      setError(e instanceof Error ? e.message : 'Failed to import Pathbuilder link')
     } finally {
       setImporting(false)
     }
@@ -110,8 +119,10 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
   function handleImportClick() {
     if (activeTab === 'file') {
       fileInputRef.current?.click()
-    } else {
+    } else if (activeTab === 'paste') {
       importJson(pasteValue)
+    } else {
+      importLink(linkValue)
     }
   }
 
@@ -121,10 +132,39 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
         <DialogHeader>
           <DialogTitle>{t('importCharacter.title')}</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="file" onValueChange={(v) => { setActiveTab(v as 'file' | 'paste'); setError(null) }} className="flex flex-col flex-1 overflow-y-auto min-h-0">
+
+        <div className="space-y-2">
+          <Label>{t('importCharacter.modeLabel', { defaultValue: 'Import as' })}</Label>
+          <RadioGroup
+            value={mode}
+            onValueChange={(value) => setMode(value as ImportMode)}
+            className="grid grid-cols-2 gap-2"
+          >
+            <Label className="rounded-md border border-border/60 px-3 py-2 text-xs">
+              <RadioGroupItem value="character" />
+              {t('importCharacter.modeCharacter', { defaultValue: 'Character' })}
+            </Label>
+            <Label className="rounded-md border border-border/60 px-3 py-2 text-xs">
+              <RadioGroupItem value="creature" />
+              {t('importCharacter.modeCreature', { defaultValue: 'Creature' })}
+            </Label>
+          </RadioGroup>
+        </div>
+
+        <Tabs
+          defaultValue="file"
+          onValueChange={(value) => {
+            setActiveTab(value as ImportTab)
+            setError(null)
+          }}
+          className="flex flex-col flex-1 overflow-y-auto min-h-0"
+        >
           <TabsList className="w-full">
             <TabsTrigger value="file" className="flex-1">{t('importCharacter.tabFile')}</TabsTrigger>
             <TabsTrigger value="paste" className="flex-1">{t('importCharacter.tabPaste')}</TabsTrigger>
+            <TabsTrigger value="link" className="flex-1">
+              {t('importCharacter.tabLink', { defaultValue: 'Link' })}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="file" className="mt-3">
             <div
@@ -158,6 +198,17 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
               value={pasteValue}
               onChange={(e) => setPasteValue(e.target.value)}
             />
+            {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+          </TabsContent>
+          <TabsContent value="link" className="mt-3">
+            <Input
+              placeholder={t('importCharacter.linkPlaceholder', { defaultValue: '1470240' })}
+              value={linkValue}
+              onChange={(e) => setLinkValue(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              {t('importCharacter.linkHint', { defaultValue: 'Enter the Pathbuilder character id. Full json.php?id=... links are also supported.' })}
+            </p>
             {error && <p className="text-xs text-destructive mt-2">{error}</p>}
           </TabsContent>
         </Tabs>

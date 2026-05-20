@@ -43,6 +43,18 @@
     "save": "Save",
     "loading": "Loading…"
   },
+  "about": {
+    "title": "About and Licenses",
+    "version": "PathMaid {{version}} - Pathfinder 2e GM Assistant",
+    "paizoDisclaimer": "This software uses trademarks and/or copyrights owned by Paizo Inc. under Paizo's Community Use Policy. It is not endorsed or approved by Paizo. Pathfinder is a trademark of Paizo Inc.",
+    "translationsAttribution": "Russian translations are provided by the pf2-locale-ru community project.",
+    "vendoredVersion": "Vendored source version: {{sha}}",
+    "section15Heading": "OGL 1.0a - Section 15: COPYRIGHT NOTICE",
+    "section15Toggle": "Show full notice chain",
+    "oglFullHeading": "Open Game License v1.0a (full text)",
+    "oglFullToggle": "Show full text",
+    "githubLink": "Source code on GitHub"
+  },
   "statblock": {
     "iwr": {
       "immunities": "Immunities",
@@ -356,7 +368,40 @@
       "sectionSenses": "Senses",
       "sectionDetection": "Detection",
       "sectionAttitudes": "Attitudes",
-      "sectionOther": "Other"
+      "sectionOther": "Other",
+      "customPenalty": {
+        "button": "Custom Penalty",
+        "title": "Custom Penalty",
+        "name": "Name",
+        "namePlaceholder": "e.g. Mud, Curse, Bad footing",
+        "modifierType": "Type",
+        "penalty": "Penalty",
+        "targets": "Targets",
+        "apply": "Apply -{{penalty}} penalty",
+        "appliedToast": "Applied {{name}}",
+        "modifierTypes": {
+          "status": "Status",
+          "circumstance": "Circumstance",
+          "item": "Item",
+          "untyped": "Untyped"
+        },
+        "targetsList": {
+          "all": "All checks and DCs",
+          "ac": "AC",
+          "attack": "Attack rolls",
+          "saving-throw": "Saving throws",
+          "skill-check": "Skill checks",
+          "spell-dc": "Spell DC / Class DC",
+          "all-speeds": "All speeds",
+          "land-speed": "Land speed",
+          "str-based": "Strength-based",
+          "dex-based": "Dexterity-based",
+          "con-based": "Constitution-based",
+          "int-based": "Intelligence-based",
+          "wis-based": "Wisdom-based",
+          "cha-based": "Charisma-based"
+        }
+      }
     },
     "effects": {
       "title": "Spell Effects",

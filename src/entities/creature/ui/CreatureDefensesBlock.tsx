@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { StatRow } from '@/shared/ui/stat-row'
-import { useCurrentLocale } from '@/shared/i18n/use-current-locale'
-import { getTraitLabel } from '@/shared/i18n/pf2e-content'
-import type { SupportedLocale } from '@/shared/i18n/config'
+import { useCurrentLocale, getTraitLabel, type SupportedLocale } from '@/shared/i18n'
 import type { CreatureStatBlockData } from '../model/types'
 import { normalizeImmunities, formatImmunityWithExceptions } from '../model/iwr-normalize'
 

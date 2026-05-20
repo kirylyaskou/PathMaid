@@ -4,8 +4,8 @@ import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 import { cn } from '@/shared/lib/utils'
-import { useEffectStore, formatRemainingTurns } from '@/entities/spell-effect'
-import { getActiveEffectsForCombatant, removeEffectFromCombatant } from '@/shared/api/effects'
+import { useEffectStore, formatRemainingTurns, isCustomPenaltyEffect } from '@/entities/spell-effect'
+import { getActiveEffectsForCombatant, removeEffectFromCombatant } from '@/shared/api'
 import { useCombatTrackerStore, EffectPickerDialog } from '@/features/combat-tracker'
 import type { ActiveEffect } from '@/entities/spell-effect'
 
@@ -73,6 +73,13 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
   }, [combatantId])
 
   const handleRemove = useCallback(async (effectDbId: string) => {
+    const target = effects.find((effect) => effect.id === effectDbId)
+    if (target && isCustomPenaltyEffect(target)) {
+      useEffectStore.getState().removeEffect(effectDbId)
+      if (openEffectId === effectDbId) setOpenEffectId(null)
+      return
+    }
+
     // re-fetch the combatant's active rows AFTER the DELETE so the
     // FK cascade has already removed any auto-granted children. Then resync
     // the store by name to drop store entries for the removed chain.
@@ -99,7 +106,7 @@ export function EffectsSection({ combatantId }: EffectsSectionProps) {
       useEffectStore.getState().removeEffect(effectDbId)
     }
     if (openEffectId === effectDbId) setOpenEffectId(null)
-  }, [combatantId, openEffectId])
+  }, [combatantId, effects, openEffectId])
 
   const handleToggleDetail = useCallback((effectId: string) => {
     setOpenEffectId((prev) => (prev === effectId ? null : effectId))

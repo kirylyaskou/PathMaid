@@ -235,16 +235,16 @@ export function EncountersPage() {
 
       {/* 3-panel layout wrapped in DndContext */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
+        <ResizablePanelGroup direction="horizontal" className="min-w-0 flex-1 overflow-hidden">
           {/* Left: Saved encounters list */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          <ResizablePanel defaultSize={18} minSize={15} maxSize={28} className="min-w-0 overflow-hidden">
             <SavedEncounterList />
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
           {/* Middle: Creature/hazard search */}
-          <ResizablePanel defaultSize={32} minSize={22} maxSize={45}>
+          <ResizablePanel defaultSize={34} minSize={25} maxSize={45} className="min-w-0 overflow-hidden">
             <CreatureSearchSidebar
               onAddCreature={handleAddCreature}
               onAddHazard={handleAddHazard}
@@ -255,7 +255,7 @@ export function EncountersPage() {
           <ResizableHandle withHandle />
 
           {/* Right: Encounter editor (drop target) */}
-          <ResizablePanel defaultSize={48} minSize={30}>
+          <ResizablePanel defaultSize={48} minSize={27} className="min-w-0 overflow-hidden">
             {selectedId ? (
               <EncounterEditor encounterId={selectedId} partyLevel={partyLevel} />
             ) : (

@@ -1,6 +1,6 @@
 import type { AppliedRoleValues } from '@engine'
 import { getBenchmark, classifyStat } from '@engine'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
+import type { CreatureStatBlockData } from '@/entities/creature'
 
 export interface BuilderState {
   form: CreatureStatBlockData

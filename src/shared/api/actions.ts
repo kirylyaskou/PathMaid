@@ -34,6 +34,15 @@ export async function searchActions(query: string, limit = 100): Promise<ActionR
   )
 }
 
+export async function getActionByName(name: string): Promise<ActionRow | null> {
+  const db = await getDb()
+  const rows = await db.select<ActionRow[]>(
+    'SELECT * FROM actions WHERE name = ? COLLATE NOCASE LIMIT 1',
+    [name]
+  )
+  return rows[0] ?? null
+}
+
 export async function getActionsByCategory(category: string): Promise<ActionRow[]> {
   const db = await getDb()
   return await db.select<ActionRow[]>(

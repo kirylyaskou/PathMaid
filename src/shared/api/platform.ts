@@ -20,7 +20,14 @@ export const RELEASES_LATEST_URL = 'https://github.com/kirylyaskou/PathMaid/rele
  * Source: tauri-apps/plugins-workspace/blob/v2/plugins/os/guest-js/index.ts
  */
 export function getPlatform(): Platform {
-  return platform()
+  try {
+    return platform()
+  } catch {
+    const userAgent = navigator.userAgent.toLowerCase()
+    if (userAgent.includes('mac')) return 'macos'
+    if (userAgent.includes('linux')) return 'linux'
+    return 'windows'
+  }
 }
 
 /**
@@ -32,7 +39,7 @@ export function getPlatform(): Platform {
  * Platform literal from plugin-os is 'macos' (Rust-style), NOT 'darwin' (Node-style).
  */
 export function isDarwin(): boolean {
-  return platform() === 'macos'
+  return getPlatform() === 'macos'
 }
 
 /**
@@ -44,5 +51,9 @@ export function isDarwin(): boolean {
  * Requires capability `opener:default` (already granted).
  */
 export async function openReleasesPage(): Promise<void> {
-  await openUrl(RELEASES_LATEST_URL)
+  try {
+    await openUrl(RELEASES_LATEST_URL)
+  } catch {
+    window.open(RELEASES_LATEST_URL, '_blank', 'noopener,noreferrer')
+  }
 }

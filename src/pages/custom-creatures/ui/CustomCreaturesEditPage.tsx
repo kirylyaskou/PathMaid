@@ -1,5 +1,5 @@
 import { useParams, Navigate } from 'react-router-dom'
-import { BuilderPage } from '@/features/custom-creature-builder/ui/BuilderPage'
+import { BuilderPage } from '@/features/custom-creature-builder'
 import { PATHS } from '@/shared/routes'
 
 export function CustomCreaturesEditPage() {

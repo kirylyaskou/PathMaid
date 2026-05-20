@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { searchAllEntities } from '@/shared/api/global-search'
-import type { GlobalSearchResult } from '@/shared/api/global-search'
+import { searchAllEntities, type GlobalSearchResult } from '@/shared/api'
 
 export function useGlobalSearch(query: string): { results: GlobalSearchResult[]; loading: boolean } {
   const [results, setResults] = useState<GlobalSearchResult[]>([])

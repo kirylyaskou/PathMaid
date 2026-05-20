@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Separator } from '@/shared/ui/separator'
-import { useRollStore } from '@/shared/model/roll-store'
+import { useRollStore } from '@/shared/model'
 import type { Roll } from '@engine'
 
 function formatTime(timestamp: number): string {

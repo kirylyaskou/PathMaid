@@ -30,7 +30,7 @@ import {
   getLanguageLabel,
   getTraitLabel,
   getTraitDescription,
-} from '@/shared/i18n/pf2e-content'
+} from '@/shared/i18n'
 
 interface PragmaColumn {
   cid: number

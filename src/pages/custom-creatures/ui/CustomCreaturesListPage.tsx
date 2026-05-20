@@ -19,13 +19,15 @@ import {
   getAllCustomCreatures,
   createCustomCreature,
   deleteCustomCreature,
-} from '@/shared/api/custom-creatures'
-import { fetchPregenCreatureByName } from '@/shared/api/creatures'
-import type { CustomCreatureRow } from '@/entities/creature/model/custom-creature-types'
-import type { CreatureStatBlockData } from '@/entities/creature/model/types'
-import { toCreatureStatBlockData } from '@/entities/creature/model/mappers'
+  fetchPregenCreatureByName,
+} from '@/shared/api'
+import {
+  toCreatureStatBlockData,
+  type CustomCreatureRow,
+  type CreatureStatBlockData,
+} from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
-import { CloneFromBestiaryDialog } from '@/features/custom-creature-builder/ui/CloneFromBestiaryDialog'
+import { CloneFromBestiaryDialog } from '@/features/custom-creature-builder'
 import { PregenPickerDialog } from '@/features/pregen-picker'
 import type { CharacterRecord } from '@/shared/api'
 import { CustomCreatureListRow } from './CustomCreatureListRow'

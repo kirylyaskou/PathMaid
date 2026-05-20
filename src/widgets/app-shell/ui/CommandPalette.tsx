@@ -1,5 +1,5 @@
-import { GlobalSearchModal } from '@/widgets/global-search-modal/ui'
-import type { GlobalSearchResult } from '@/shared/api/global-search'
+import { GlobalSearchModal } from './GlobalSearchModal'
+import type { GlobalSearchResult } from '@/shared/api'
 
 interface CommandPaletteProps {
   open: boolean

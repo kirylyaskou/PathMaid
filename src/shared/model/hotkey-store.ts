@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { listHotkeys, type Hotkey } from '@/shared/api/hotkeys'
+import { listHotkeys, type Hotkey } from '@/shared/api'
 import type { StealthVsPartyRow } from '@/shared/lib/stealth-vs-party'
 
 export interface ParsedChord {

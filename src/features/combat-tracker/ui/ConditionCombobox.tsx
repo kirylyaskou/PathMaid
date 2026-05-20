@@ -1,13 +1,18 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Plus, Minus, Check, X } from 'lucide-react'
+import { Plus, Minus, Check, X, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { CONDITION_SLUGS, VALUED_CONDITIONS, CONDITION_GROUPS } from '@engine'
-import type { ConditionSlug } from '@engine'
-import { applyCondition } from '@/entities/condition/lib/condition-bridge'
-import { useConditionStore } from '@/entities/condition/model/store'
+import type { ConditionSlug, ModifierType } from '@engine'
+import { applyCondition, useConditionStore } from '@/entities/condition'
+import {
+  CUSTOM_PENALTY_TARGETS,
+  createCustomPenaltyEffect,
+  useEffectStore,
+  type CustomPenaltyTargetId,
+} from '@/entities/spell-effect'
 import { toast } from 'sonner'
 
 interface Props {
@@ -37,6 +42,8 @@ const otherSlugs = CONDITION_SLUGS.filter((s) => !groupedSet.has(s))
 
 const fmt = (s: string) => s.split('-').join(' ')
 const norm = (s: string) => fmt(s).toLowerCase()
+const CUSTOM_MODIFIER_TYPES = ['status', 'circumstance', 'item', 'untyped'] as const satisfies readonly ModifierType[]
+type CustomModifierType = (typeof CUSTOM_MODIFIER_TYPES)[number]
 
 function ConditionPill({
   slug,
@@ -65,6 +72,172 @@ function ConditionPill({
   )
 }
 
+function ModifierTypeButton({
+  type,
+  label,
+  selected,
+  onClick,
+}: {
+  type: CustomModifierType
+  label: string
+  selected: boolean
+  onClick: (type: CustomModifierType) => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={() => onClick(type)}
+      className={`px-2 py-1.5 rounded text-xs capitalize border transition-colors
+        ${selected
+          ? 'border-primary/60 bg-primary/15 text-primary'
+          : 'border-border/30 bg-secondary/20 hover:bg-secondary/40'
+        }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+function CustomTargetButton({
+  id,
+  label,
+  selected,
+  onToggle,
+}: {
+  id: CustomPenaltyTargetId
+  label: string
+  selected: boolean
+  onToggle: (id: CustomPenaltyTargetId) => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={() => onToggle(id)}
+      className={`px-2 py-1.5 rounded text-xs text-left border transition-colors
+        ${selected
+          ? 'border-primary/60 bg-primary/15 text-primary'
+          : 'border-border/30 bg-secondary/20 hover:bg-secondary/40'
+        }`}
+    >
+      {label}
+    </button>
+  )
+}
+
+interface CustomPenaltyFormProps {
+  name: string
+  penalty: number
+  modifierType: CustomModifierType
+  targetIds: CustomPenaltyTargetId[]
+  targetOptions: Array<{ id: CustomPenaltyTargetId; label: string }>
+  modifierLabels: Record<CustomModifierType, string>
+  onBack: () => void
+  onNameChange: (value: string) => void
+  onPenaltyChange: (value: number) => void
+  onModifierTypeChange: (type: CustomModifierType) => void
+  onTargetToggle: (id: CustomPenaltyTargetId) => void
+  onApply: () => void
+}
+
+function CustomPenaltyForm({
+  name,
+  penalty,
+  modifierType,
+  targetIds,
+  targetOptions,
+  modifierLabels,
+  onBack,
+  onNameChange,
+  onPenaltyChange,
+  onModifierTypeChange,
+  onTargetToggle,
+  onApply,
+}: CustomPenaltyFormProps) {
+  const { t } = useTranslation('common')
+  const canApply = penalty > 0 && targetIds.length > 0
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground">
+          &#8592; {t('combatTracker.conditions.back')}
+        </button>
+        <span className="text-sm font-medium">
+          {t('combatTracker.conditions.customPenalty.title')}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {t('combatTracker.conditions.customPenalty.name')}
+        </label>
+        <Input
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder={t('combatTracker.conditions.customPenalty.namePlaceholder')}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="grid grid-cols-[1fr_5rem] gap-2">
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {t('combatTracker.conditions.customPenalty.modifierType')}
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {CUSTOM_MODIFIER_TYPES.map((type) => (
+              <ModifierTypeButton
+                key={type}
+                type={type}
+                label={modifierLabels[type]}
+                selected={modifierType === type}
+                onClick={onModifierTypeChange}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {t('combatTracker.conditions.customPenalty.penalty')}
+          </label>
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            value={penalty}
+            onChange={(e) => onPenaltyChange(Number(e.target.value))}
+            className="h-8 text-sm font-mono"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {t('combatTracker.conditions.customPenalty.targets')}
+        </label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {targetOptions.map((target) => (
+            <CustomTargetButton
+              key={target.id}
+              id={target.id}
+              label={target.label}
+              selected={targetIds.includes(target.id)}
+              onToggle={onTargetToggle}
+            />
+          ))}
+        </div>
+      </div>
+
+      <Button className="w-full h-8 text-xs" onClick={onApply} disabled={!canApply}>
+        <Check className="w-3 h-3 mr-1" />
+        {t('combatTracker.conditions.customPenalty.apply', { penalty })}
+      </Button>
+    </div>
+  )
+}
+
 export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
   const { t } = useTranslation('common')
 
@@ -90,6 +263,11 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [value, setValue] = useState(1)
   const [formula, setFormula] = useState('')
+  const [showCustomPenalty, setShowCustomPenalty] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customPenalty, setCustomPenalty] = useState(1)
+  const [customModifierType, setCustomModifierType] = useState<CustomModifierType>('status')
+  const [customTargetIds, setCustomTargetIds] = useState<CustomPenaltyTargetId[]>(['all'])
 
   const isPersistent = selected?.startsWith('persistent-') ?? false
   const isValued =
@@ -97,13 +275,26 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     !isPersistent &&
     (VALUED_CONDITIONS as readonly string[]).includes(selected)
 
-  const close = useCallback(() => {
-    setOpen(false)
+  const resetCustomPenalty = useCallback(() => {
+    setShowCustomPenalty(false)
+    setCustomName('')
+    setCustomPenalty(1)
+    setCustomModifierType('status')
+    setCustomTargetIds(['all'])
+  }, [])
+
+  const resetConditionDraft = useCallback(() => {
     setSelected(null)
     setValue(1)
     setFormula('')
     setSearch('')
-  }, [])
+    resetCustomPenalty()
+  }, [resetCustomPenalty])
+
+  const close = useCallback(() => {
+    setOpen(false)
+    resetConditionDraft()
+  }, [resetConditionDraft])
 
   useEffect(() => {
     if (!open) return
@@ -116,13 +307,26 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
 
   const handleOpenChange = useCallback((o: boolean) => {
     setOpen(o)
-    if (!o) { setSelected(null); setValue(1); setFormula(''); setSearch('') }
-  }, [])
+    if (!o) resetConditionDraft()
+  }, [resetConditionDraft])
 
   const handleBack = useCallback(() => {
     setSelected(null)
     setValue(1)
     setFormula('')
+    setShowCustomPenalty(false)
+  }, [])
+
+  const handleCustomPenaltyBack = useCallback(() => {
+    resetCustomPenalty()
+  }, [resetCustomPenalty])
+
+  const handleToggleCustomTarget = useCallback((targetId: CustomPenaltyTargetId) => {
+    setCustomTargetIds((prev) =>
+      prev.includes(targetId)
+        ? prev.filter((id) => id !== targetId)
+        : [...prev, targetId],
+    )
   }, [])
 
   const handleSelect = useCallback(
@@ -192,6 +396,52 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     [search, matchesSearch],
   )
 
+  const customTargetOptions = useMemo(
+    () =>
+      CUSTOM_PENALTY_TARGETS.map((target) => ({
+        id: target.id,
+        label: t(`combatTracker.conditions.customPenalty.targetsList.${target.id}`),
+      })),
+    [t],
+  )
+
+  const customModifierLabels = useMemo<Record<CustomModifierType, string>>(
+    () => ({
+      status: t('combatTracker.conditions.customPenalty.modifierTypes.status'),
+      circumstance: t('combatTracker.conditions.customPenalty.modifierTypes.circumstance'),
+      item: t('combatTracker.conditions.customPenalty.modifierTypes.item'),
+      untyped: t('combatTracker.conditions.customPenalty.modifierTypes.untyped'),
+    }),
+    [t],
+  )
+
+  const handleApplyCustomPenalty = useCallback(() => {
+    if (customPenalty <= 0 || customTargetIds.length === 0) return
+    const targetLabels = customTargetOptions
+      .filter((target) => customTargetIds.includes(target.id))
+      .map((target) => target.label)
+    const effect = createCustomPenaltyEffect({
+      combatantId,
+      name: customName,
+      penalty: customPenalty,
+      modifierType: customModifierType,
+      targetIds: customTargetIds,
+      targetLabels,
+    })
+    useEffectStore.getState().addEffect(effect)
+    toast(t('combatTracker.conditions.customPenalty.appliedToast', { name: effect.effectName }))
+    close()
+  }, [
+    close,
+    combatantId,
+    customModifierType,
+    customName,
+    customPenalty,
+    customTargetIds,
+    customTargetOptions,
+    t,
+  ])
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -200,12 +450,27 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
           {t('combatTracker.conditions.addButton')}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg p-0">
+      <DialogContent className="sm:max-w-lg p-0 max-h-[85vh] overflow-y-auto">
         <DialogHeader className="px-4 pt-4 pb-0">
           <DialogTitle className="text-sm">{t('combatTracker.conditions.addButton')}</DialogTitle>
         </DialogHeader>
 
-        {selected && isPersistent ? (
+        {showCustomPenalty ? (
+          <CustomPenaltyForm
+            name={customName}
+            penalty={customPenalty}
+            modifierType={customModifierType}
+            targetIds={customTargetIds}
+            targetOptions={customTargetOptions}
+            modifierLabels={customModifierLabels}
+            onBack={handleCustomPenaltyBack}
+            onNameChange={setCustomName}
+            onPenaltyChange={(next) => setCustomPenalty(Number.isFinite(next) ? Math.max(1, next) : 1)}
+            onModifierTypeChange={setCustomModifierType}
+            onTargetToggle={handleToggleCustomTarget}
+            onApply={handleApplyCustomPenalty}
+          />
+        ) : selected && isPersistent ? (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <button onClick={handleBack} className="text-xs text-muted-foreground hover:text-foreground">
@@ -273,6 +538,16 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
               placeholder={t('combatTracker.conditions.searchPlaceholder')}
               className="h-8 text-xs border-0 border-b rounded-none px-3 focus-visible:ring-0"
             />
+            <div className="p-2 border-b border-border/40">
+              <Button
+                variant="ghost"
+                className="w-full h-8 justify-start gap-2 text-xs"
+                onClick={() => setShowCustomPenalty(true)}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                {t('combatTracker.conditions.customPenalty.button')}
+              </Button>
+            </div>
             {search ? (
               <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
                 {filteredSlugs.length === 0 ? (
