@@ -15,6 +15,7 @@ export interface CustomCreatureApiStatBlock {
   size: string
   type: string
   traits: string[]
+  builderMode?: 'manual' | 'auto'
   abilityMods?: { str: number; dex: number; con: number; int: number; wis: number; cha: number }
   immunities?: unknown[]
   weaknesses?: unknown[]
@@ -68,6 +69,7 @@ function parseStatBlock(row: {
   const backfilled: CustomCreatureApiStatBlock = {
     ...(parsed as CustomCreatureApiStatBlock),
     id: row.id,
+    builderMode: parsed.builderMode ?? 'manual',
     abilityMods: parsed.abilityMods ?? { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
     immunities: parsed.immunities ?? [],
     weaknesses: parsed.weaknesses ?? [],
@@ -94,6 +96,7 @@ function defaultStatBlock(id: string): CustomCreatureApiStatBlock {
     size: 'Medium',
     type: 'npc',
     traits: [],
+    builderMode: 'manual',
     abilityMods: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
     immunities: [],
     weaknesses: [],

@@ -19,7 +19,7 @@ interface CreatureSkillsLineProps {
 export function CreatureSkillsLine({ skills, modStats, onRoll }: CreatureSkillsLineProps) {
   const locale = useCurrentLocale()
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+    <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2 2xl:grid-cols-3">
       {skills.map((skill) => (
         <SkillEntry
           key={skill.name}
@@ -55,8 +55,13 @@ function SkillEntry({
         ? 'text-pf-threat-low decoration-pf-threat-low/50'
         : 'text-primary decoration-primary/50'
   return (
-    <span className={skill.calculated ? 'opacity-40' : ''}>
-      <span className="text-muted-foreground">{displayLabel}</span>{' '}
+    <span
+      className={cn(
+        'flex min-w-0 items-center justify-between gap-2 rounded border border-border/30 bg-secondary/10 px-2 py-1',
+        skill.calculated && 'opacity-40',
+      )}
+    >
+      <span className="truncate text-muted-foreground">{displayLabel}</span>
       <ModifierTooltip
         modifiers={skillMod?.modifiers ?? []}
         netModifier={net}
@@ -66,7 +71,7 @@ function SkillEntry({
           onClick={() => onRoll(formatRollFormula(finalMod), `${skill.name} check`)}
           title={`Roll ${skill.name} check`}
           className={cn(
-            'font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
+            'shrink-0 font-mono font-bold cursor-pointer underline decoration-dotted underline-offset-2 hover:text-pf-gold transition-colors duration-100',
             btnColor,
           )}
         >

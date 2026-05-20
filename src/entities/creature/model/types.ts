@@ -19,6 +19,8 @@ export interface AbilityMods {
   cha: number
 }
 
+export type CustomCreatureBuilderMode = 'manual' | 'auto'
+
 // structured IWR shape. `ImmunityEntry` keeps legacy `string`
 // form in the union so Foundry raw data can be stored verbatim — the normalizer
 // in `iwr-normalize.ts` wraps strings at read time for uniform UI consumption.
@@ -109,6 +111,7 @@ export interface CreatureStatBlockData extends Creature {
   equipment?: CreatureItemRow[]
 
   // new fields introduced for the custom creature builder.
+  builderMode?: CustomCreatureBuilderMode
   abilityMods: AbilityMods
   auras?: AuraEntry[]
   rituals?: RitualEntry[]

@@ -14,6 +14,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import type { Rarity } from '@engine'
 import type { DisplaySize } from '@/shared/lib/size-map'
+import type { CustomCreatureBuilderMode } from '@/entities/creature'
 import type { BuilderTabsProps } from '../BuilderTabs'
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'unique']
@@ -23,6 +24,7 @@ export function ConceptTab({ state, dispatch }: BuilderTabsProps) {
   const { t } = useTranslation('common')
   const { form } = state
   const [traitInput, setTraitInput] = useState('')
+  const builderMode = form.builderMode ?? 'manual'
 
   function addTrait() {
     const t = traitInput.trim()
@@ -42,6 +44,24 @@ export function ConceptTab({ state, dispatch }: BuilderTabsProps) {
   return (
     <div className="p-4 space-y-4">
       <h2 className="text-base font-semibold">{t('customCreatureBuilder.conceptTab.heading')}</h2>
+
+      <div className="space-y-2">
+        <Label>{t('customCreatureBuilder.conceptTab.builderMode')}</Label>
+        <div className="inline-flex rounded-md border border-border/50 bg-secondary/20 p-1">
+          {(['manual', 'auto'] as CustomCreatureBuilderMode[]).map((mode) => (
+            <Button
+              key={mode}
+              type="button"
+              size="sm"
+              variant={builderMode === mode ? 'default' : 'ghost'}
+              className="h-7 px-3 text-xs"
+              onClick={() => dispatch({ type: 'SET_BUILDER_MODE', mode })}
+            >
+              {t(`customCreatureBuilder.conceptTab.builderModes.${mode}`)}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="name">{t('customCreatureBuilder.conceptTab.name')}</Label>

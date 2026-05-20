@@ -45,3 +45,4 @@ vendor/
 coverage/
 .cache/
 tmp/
+tests/tauri/.drivers/

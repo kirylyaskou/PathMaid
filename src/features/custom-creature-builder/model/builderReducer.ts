@@ -1,6 +1,6 @@
 import type { AppliedRoleValues } from '@engine'
 import { getBenchmark, classifyStat } from '@engine'
-import type { CreatureStatBlockData } from '@/entities/creature'
+import { applyAbilityModDelta, type CreatureStatBlockData } from '@/entities/creature'
 
 export interface BuilderState {
   form: CreatureStatBlockData
@@ -11,6 +11,7 @@ export interface BuilderState {
 export type BuilderAction =
   | { type: 'REPLACE_ALL'; form: CreatureStatBlockData }
   | { type: 'SET_FIELD'; path: keyof CreatureStatBlockData; value: unknown }
+  | { type: 'SET_BUILDER_MODE'; mode: 'manual' | 'auto' }
   | { type: 'SET_ABILITY_MOD'; key: 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'; value: number }
   | { type: 'SET_SPEED'; key: string; value: number | null }
   | { type: 'REMOVE_SPEED'; key: string }
@@ -49,7 +50,12 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       return { form: action.form }
     case 'SET_FIELD':
       return { form: { ...state.form, [action.path]: action.value } as CreatureStatBlockData }
+    case 'SET_BUILDER_MODE':
+      return { form: { ...state.form, builderMode: action.mode } }
     case 'SET_ABILITY_MOD':
+      if (state.form.builderMode === 'auto') {
+        return { form: applyAbilityModDelta(state.form, action.key, action.value) }
+      }
       return {
         form: {
           ...state.form,

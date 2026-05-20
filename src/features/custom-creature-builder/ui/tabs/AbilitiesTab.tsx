@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { Button } from '@/shared/ui/button'
+import { SearchInput } from '@/shared/ui/search-input'
 import {
   Select,
   SelectContent,
@@ -18,8 +19,15 @@ import type {
   CreatureStatBlockData,
 } from '@/entities/creature'
 import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { searchActions, searchFeats } from '@/shared/api'
+import {
+  actionToAbilityTemplate,
+  featToAbilityTemplate,
+  type AbilityTemplate,
+} from '../../lib/ability-template'
 
 type Ability = CreatureStatBlockData['abilities'][number]
+const TEMPLATE_RESULT_LIMIT = 6
 
 function parseCost(v: string): DisplayActionCost | undefined {
   if (v === '__none') return undefined
@@ -43,15 +51,21 @@ function normalizeEditableDescription(description: string): string {
 export function AbilitiesTab({ state, dispatch }: BuilderTabsProps) {
   const { t } = useTranslation('common')
   const { form } = state
+  const addAbility = useCallback(
+    (ability: Ability) => dispatch({ type: 'ADD_ABILITY', ability }),
+    [dispatch],
+  )
+
   return (
     <div className="p-4 space-y-4">
       <h2 className="text-base font-semibold">{t('customCreatureBuilder.abilitiesTab.heading')}</h2>
+      <AbilityTemplatePicker onPick={addAbility} />
       {form.abilities.length === 0 && (
         <div className="flex items-center justify-between p-4 rounded-md border border-dashed border-border/50 bg-secondary/20">
           <p className="text-sm text-muted-foreground">{t('customCreatureBuilder.abilitiesTab.noSpecialAbilities')}</p>
           <Button
             size="sm"
-            onClick={() => dispatch({ type: 'ADD_ABILITY', ability: newAbility() })}
+            onClick={() => addAbility(newAbility())}
           >
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             {t('customCreatureBuilder.abilitiesTab.addAbility')}
@@ -70,13 +84,128 @@ export function AbilitiesTab({ state, dispatch }: BuilderTabsProps) {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => dispatch({ type: 'ADD_ABILITY', ability: newAbility() })}
+          onClick={() => addAbility(newAbility())}
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           {t('customCreatureBuilder.abilitiesTab.addAbility')}
         </Button>
       )}
     </div>
+  )
+}
+
+interface AbilityTemplatePickerProps {
+  onPick: (ability: Ability) => void
+}
+
+function AbilityTemplatePicker({ onPick }: AbilityTemplatePickerProps) {
+  const { t } = useTranslation('common')
+  const [query, setQuery] = useState('')
+  const [debounced, setDebounced] = useState('')
+  const [results, setResults] = useState<AbilityTemplate[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(query), 200)
+    return () => clearTimeout(id)
+  }, [query])
+
+  useEffect(() => {
+    const searchTerm = debounced.trim()
+    if (searchTerm.length < 2) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    setResults([])
+    void (async () => {
+      try {
+        const [actions, feats] = await Promise.all([
+          searchActions(searchTerm, TEMPLATE_RESULT_LIMIT),
+          searchFeats(searchTerm, TEMPLATE_RESULT_LIMIT),
+        ])
+        if (cancelled) return
+        setResults([
+          ...actions.map(actionToAbilityTemplate),
+          ...feats.map(featToAbilityTemplate),
+        ])
+      } catch {
+        if (!cancelled) setResults([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [debounced])
+
+  const emptyMessage = useMemo(() => {
+    if (loading) return t('customCreatureBuilder.abilitiesTab.searchingTemplates')
+    if (debounced.trim().length < 2) return t('customCreatureBuilder.abilitiesTab.startTemplateSearch')
+    if (results.length === 0) return t('customCreatureBuilder.abilitiesTab.noTemplatesFound')
+    return null
+  }, [debounced, loading, results.length, t])
+
+  return (
+    <div className="space-y-2 rounded-md border border-border/50 bg-secondary/20 p-3">
+      <Label>{t('customCreatureBuilder.abilitiesTab.templateSearchLabel')}</Label>
+      <SearchInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t('customCreatureBuilder.abilitiesTab.templateSearchPlaceholder')}
+        className="h-8 text-sm bg-background/60"
+        loading={loading}
+      />
+      {emptyMessage && (
+        <p className="text-xs text-muted-foreground py-1">{emptyMessage}</p>
+      )}
+      {results.length > 0 && (
+        <div className="grid gap-1">
+          {results.map((template) => (
+            <AbilityTemplateResult
+              key={`${template.kind}-${template.id}`}
+              template={template}
+              onPick={onPick}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface AbilityTemplateResultProps {
+  template: AbilityTemplate
+  onPick: (ability: Ability) => void
+}
+
+function AbilityTemplateResult({ template, onPick }: AbilityTemplateResultProps) {
+  const { t } = useTranslation('common')
+  const kindLabel = t(`customCreatureBuilder.abilitiesTab.templateKinds.${template.kind}`)
+  const levelLabel = template.level == null
+    ? null
+    : t('customCreatureBuilder.abilitiesTab.templateLevel', { level: template.level })
+
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-2 rounded-md border border-border/40 bg-background/45 px-2 py-1.5 text-left hover:border-primary/50 hover:bg-secondary/50"
+      aria-label={t('customCreatureBuilder.abilitiesTab.addTemplateAriaLabel', { name: template.name })}
+      onClick={() => onPick(template.ability)}
+    >
+      <Plus className="w-3.5 h-3.5 text-primary shrink-0" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{template.name}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">
+          {[kindLabel, levelLabel, template.sourceLabel].filter(Boolean).join(' · ')}
+        </span>
+      </span>
+    </button>
   )
 }
 

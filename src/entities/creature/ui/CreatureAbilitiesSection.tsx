@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Swords, Shield as ShieldIcon, Sparkles } from 'lucide-react'
+import { ChevronDown, Swords, Shield as ShieldIcon, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
-import { Collapsible, CollapsibleContent } from '@/shared/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/collapsible'
 import { SectionHeader } from '@/shared/ui/section-header'
-import { AbilityCard } from '@/shared/ui/ability-card'
+import { ActionIcon } from '@/shared/ui/action-icon'
+import { TraitPill } from '@/shared/ui/trait-pill'
 import { highlightGameText } from '../lib/foundry-text'
 import type { ClassifiedAbilities } from '../model/classify-abilities'
 import { useContentTranslation, type AbilityLoc } from '@/shared/i18n'
@@ -94,9 +95,48 @@ function AbilityCardResolved({
   }
 
   return (
-    <AbilityCard key={cardKey} name={displayName} actionCost={cost} traits={displayTraits}>
+    <CollapsibleAbilityCard
+      key={cardKey}
+      name={displayName}
+      actionCost={cost}
+      traits={displayTraits}
+    >
       {descriptionNode}
-    </AbilityCard>
+    </CollapsibleAbilityCard>
+  )
+}
+
+function CollapsibleAbilityCard({
+  name,
+  actionCost,
+  traits,
+  children,
+}: {
+  name: string
+  actionCost?: DisplayActionCost
+  traits: string[]
+  children: ReactNode
+}) {
+  return (
+    <Collapsible defaultOpen className="group/ability rounded bg-pf-parchment border-l-2 border-primary/30">
+      <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-3 text-left hover:bg-primary/5">
+        {actionCost !== undefined && actionCost !== 0 && (
+          <ActionIcon cost={actionCost} className="text-lg text-primary" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{name}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/ability:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="px-3 pb-3">
+        <div className="pt-1">{children}</div>
+        {traits.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {traits.map((trait) => (
+              <TraitPill key={trait} trait={trait} />
+            ))}
+          </div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 

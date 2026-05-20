@@ -9,6 +9,7 @@ export type {
   WeakEliteTier,
   DisplaySize,
   DisplayActionCost,
+  CustomCreatureBuilderMode,
   AuraEntry,
   RitualEntry,
   ImmunityEntry,
@@ -41,6 +42,7 @@ export { classifyAbilities } from './model/classify-abilities'
 export type { ClassifiedAbilities } from './model/classify-abilities'
 export { useEquipment } from './model/use-equipment'
 export { stripFoundryTags, highlightGameText } from './lib/foundry-text'
+export { applyAbilityModDelta } from './lib/apply-ability-mod-delta'
 export {
   traditionColor,
   rankLabel,

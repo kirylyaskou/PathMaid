@@ -675,6 +675,11 @@
       "rarity": "Редкость",
       "size": "Размер",
       "creatureType": "Тип существа",
+      "builderMode": "Режим редактора",
+      "builderModes": {
+        "manual": "Full manual",
+        "auto": "Auto"
+      },
       "traits": "Черты",
       "description": "Описание",
       "typeInputPlaceholder": "Введите тип существа…",
@@ -754,6 +759,17 @@
       "abilityNamePlaceholder": "Название способности…",
       "addTraitPlaceholder": "Добавить черту…",
       "addTraitButton": "Добавить",
+      "templateSearchLabel": "Поиск фитов и способностей",
+      "templateSearchPlaceholder": "Поиск по названию…",
+      "searchingTemplates": "Поиск…",
+      "startTemplateSearch": "Введите минимум 2 символа",
+      "noTemplatesFound": "Шаблоны не найдены",
+      "templateLevel": "Уровень {{level}}",
+      "addTemplateAriaLabel": "Добавить {{name}}",
+      "templateKinds": {
+        "action": "Способность",
+        "feat": "Фит"
+      },
       "removeAbilityAriaLabel": "Убрать способность",
       "removeTraitAriaLabel": "Убрать черту {{name}}",
       "actionCostOptions": {

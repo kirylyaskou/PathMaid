@@ -83,7 +83,7 @@ function DcDisplay({
   const finalDc = baseDc + net
   const col = net < 0 ? 'text-pf-blood' : net > 0 ? 'text-pf-threat-low' : 'text-primary'
   return (
-    <div className="text-center">
+    <div className="min-w-16">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <ModifierTooltip modifiers={modResult?.modifiers ?? []} netModifier={net} finalDisplay={String(finalDc)}>
         <p className={cn('font-mono font-bold text-lg', col)}>{finalDc}</p>
@@ -440,7 +440,7 @@ export function CreatureStatBlock({
             <StatItem label={t('statblock.perception')} value={creature.perception} modifier colorClass="text-pf-gold-dim" showDc modResult={modStats.get('perception')} onRoll={(f) => handleRoll(f, t('statblock.perception'))} />
           </div>
           {(creature.spellDC != null || creature.classDC != null) && (
-            <div className="flex gap-6 mt-3 pt-3 border-t border-border/40">
+            <div className="flex flex-wrap gap-x-8 gap-y-2 mt-3 px-4 pt-3 border-t border-border/40">
               {creature.spellDC != null && (
                 <DcDisplay label={t('statblock.spellDc')} baseDc={creature.spellDC} modResult={modStats.get('spell-dc')} />
               )}

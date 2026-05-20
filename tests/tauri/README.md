@@ -1,0 +1,35 @@
+# Tauri E2E Tests
+
+These tests run PathMaid in the native Tauri WebView through WebDriver. They do
+not use the browser-only Vite page, so Tauri IPC and the SQLite plugin are
+available during the run.
+
+## Prerequisites
+
+Install `tauri-driver`:
+
+```bash
+cargo install tauri-driver --locked
+```
+
+On Windows, install the Microsoft Edge WebDriver that matches the installed Edge
+version. Put `msedgedriver.exe` in `PATH`, or set:
+
+```bash
+$env:TAURI_NATIVE_DRIVER = 'C:\path\to\msedgedriver.exe'
+```
+
+If `tauri-driver` is not in `PATH` or `C:\Users\<user>\.cargo\bin`, set:
+
+```bash
+$env:TAURI_DRIVER_BIN = 'C:\path\to\tauri-driver.exe'
+```
+
+Run:
+
+```bash
+npm run test:tauri
+```
+
+Set `$env:TAURI_E2E_SKIP_BUILD = '1'` to reuse an existing
+`src-tauri/target/debug/pathmaid.exe`.

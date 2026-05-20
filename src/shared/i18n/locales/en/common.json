@@ -665,6 +665,11 @@
       "rarity": "Rarity",
       "size": "Size",
       "creatureType": "Creature Type",
+      "builderMode": "Builder mode",
+      "builderModes": {
+        "manual": "Full manual",
+        "auto": "Auto"
+      },
       "traits": "Traits",
       "description": "Description",
       "typeInputPlaceholder": "Enter creature type…",
@@ -744,6 +749,17 @@
       "abilityNamePlaceholder": "Ability name…",
       "addTraitPlaceholder": "Add trait…",
       "addTraitButton": "Add",
+      "templateSearchLabel": "Search feats & abilities",
+      "templateSearchPlaceholder": "Search by name…",
+      "searchingTemplates": "Searching…",
+      "startTemplateSearch": "Type at least 2 characters",
+      "noTemplatesFound": "No templates found",
+      "templateLevel": "Level {{level}}",
+      "addTemplateAriaLabel": "Add {{name}}",
+      "templateKinds": {
+        "action": "Ability",
+        "feat": "Feat"
+      },
       "removeAbilityAriaLabel": "Remove ability",
       "removeTraitAriaLabel": "Remove trait {{name}}",
       "actionCostOptions": {
