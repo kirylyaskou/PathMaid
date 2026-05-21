@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="PathMaid is an all-in-one desktop GM screen for Pathfinder 2e."
+    >
+    <title>PathMaid - Let the maid handle the mess</title>
+    <link rel="icon" type="image/png" sizes="128x128" href="./assets/pathmaid-icon-128.png">
+    <link rel="stylesheet" href="./tokens.css">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="PathMaid">
+        <span class="brand-mark" aria-hidden="true">
+          <img src="./assets/pathmaid-icon-128.png" alt="">
+        </span>
+        <span>PathMaid</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#service" data-i18n="nav.service">Benefits</a>
+        <a href="#downloads" data-i18n="nav.downloads">Downloads</a>
+      </nav>
+      <div class="language-switcher" aria-label="Language">
+        <button class="language-button" type="button" data-locale="en" aria-pressed="true">EN</button>
+        <button class="language-button" type="button" data-locale="ru" aria-pressed="false">RU</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero section-band">
+        <div class="hero-copy">
+          <h1 data-i18n="hero.title">Let the maid handle the mess.</h1>
+          <p class="lede" data-i18n="hero.lede">
+            The all-in-one GM screen: bestiary, combat tracker, custom creatures, knowledge base,
+            and cross-platform tools ready for any table.
+          </p>
+          <div class="hero-actions" aria-label="Download PathMaid">
+            <a class="download-button" data-download="windows" href="#" data-i18n="downloads.windows">
+              Download for Windows
+            </a>
+            <a class="download-button" data-download="macos" href="#" data-i18n="downloads.macos">
+              Download for macOS
+            </a>
+            <a class="download-button" data-download="linux" href="#" data-i18n="downloads.linux">
+              Download for Linux
+            </a>
+          </div>
+        </div>
+
+        <figure class="hero-art hero-art-filled" data-asset-slot="hero-character">
+          <img src="./assets/hero-character.png" alt="PathMaid mascot serving potions beside a mimic chest">
+        </figure>
+      </section>
+
+      <section id="features" class="section-band feature-slider-section">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="features.eyebrow">The service menu</p>
+          <h2 data-i18n="features.title">Five ways to make GM life easier by trusting PathMaid</h2>
+        </div>
+        <div class="feature-slider" data-slider>
+          <div class="slider-viewport" aria-live="polite">
+            <article class="slider-slide is-active" data-slide="0">
+              <div class="slide-copy">
+                <h3 data-i18n="features.encyclopedia.title">Universal knowledge base</h3>
+                <p data-i18n="features.encyclopedia.body">
+                  Keep the PF2e reference library in one place and work without internet access.
+                  Creatures, spells, items, conditions, hazards, actions, and rules stay fast to search.
+                </p>
+              </div>
+              <figure class="slide-art asset-slot" data-asset-slot="service-card-encyclopedia">
+                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+                <img
+                  class="slide-art-picture card-ratio"
+                  src="./assets/service-card-encyclopedia.png"
+                  alt="PathMaid mascot presenting a magical PF2e encyclopedia"
+                >
+              </figure>
+            </article>
+            <article class="slider-slide" data-slide="1">
+              <div class="slide-copy">
+                <h3 data-i18n="features.combat.title">The combat tracker you deserve</h3>
+                <p data-i18n="features.combat.body">
+                  Build encounters, apply conditions, track effects, and let PathMaid handle the math
+                  for you. Or at least most of it.
+                </p>
+              </div>
+              <figure class="slide-art asset-slot" data-asset-slot="service-card-combat">
+                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+                <img
+                  class="slide-art-picture card-ratio"
+                  src="./assets/service-card-combat.png"
+                  alt="PathMaid mascot managing initiative order for an encounter"
+                >
+              </figure>
+            </article>
+            <article class="slider-slide" data-slide="2">
+              <div class="slide-copy">
+                <h3 data-i18n="features.pathbuilder.title">Pathbuilder character import</h3>
+                <p data-i18n="features.pathbuilder.body">
+                  Bring player characters into the GM workspace in two clicks and put the facts on the table.
+                </p>
+              </div>
+              <figure class="slide-art asset-slot" data-asset-slot="service-card-pathbuilder">
+                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+                <img
+                  class="slide-art-picture card-ratio"
+                  src="./assets/service-card-pathbuilder.png"
+                  alt="PathMaid mascot pulling a character from a magical device"
+                >
+              </figure>
+            </article>
+            <article class="slider-slide" data-slide="3">
+              <div class="slide-copy">
+                <h3 data-i18n="features.custom.title">Custom creature builder</h3>
+                <p data-i18n="features.custom.body">
+                  Create, defeat, import, and export. Your bestiary has never been easier to shape.
+                </p>
+              </div>
+              <figure class="slide-art asset-slot" data-asset-slot="service-card-custom">
+                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+                <img
+                  class="slide-art-picture card-ratio"
+                  src="./assets/service-card-custom.png"
+                  alt="PathMaid mascot building a custom creature in a fantasy workshop"
+                >
+              </figure>
+            </article>
+            <article class="slider-slide" data-slide="4">
+              <div class="slide-copy">
+                <span class="status-pill" data-i18n="features.campaign.status">In progress</span>
+                <h3 data-i18n="features.campaign.title">Campaign manager</h3>
+                <p data-i18n="features.campaign.body">
+                  Campaign organization is actively evolving, so PathMaid can help keep long,
+                  complicated campaigns in order too.
+                </p>
+              </div>
+              <figure class="slide-art asset-slot" data-asset-slot="service-card-campaign">
+                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+                <img
+                  class="slide-art-picture card-ratio"
+                  src="./assets/service-card-campaign.png"
+                  alt="PathMaid mascot carrying campaign volumes for a game master"
+                >
+              </figure>
+            </article>
+          </div>
+          <div class="slider-controls">
+            <button class="slider-button" type="button" data-slider-prev data-i18n="slider.prev">Previous</button>
+            <div class="slider-dots" aria-label="Feature slides">
+              <button class="slider-dot is-active" type="button" data-slide-to="0" aria-label="Feature 1"></button>
+              <button class="slider-dot" type="button" data-slide-to="1" aria-label="Feature 2"></button>
+              <button class="slider-dot" type="button" data-slide-to="2" aria-label="Feature 3"></button>
+              <button class="slider-dot" type="button" data-slide-to="3" aria-label="Feature 4"></button>
+              <button class="slider-dot" type="button" data-slide-to="4" aria-label="Feature 5"></button>
+            </div>
+            <button class="slider-button" type="button" data-slider-next data-i18n="slider.next">Next</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="service" class="section-band service-section">
+        <div class="section-heading">
+          <h2 data-i18n="service.title">Less prep. More play.</h2>
+        </div>
+        <div class="service-grid">
+          <article class="service-item">
+            <h3 data-i18n="service.clean.title">One clean desk</h3>
+            <p data-i18n="service.clean.body">Stop switching between rules pages, sheets, encounter notes, and Foundry exports mid-scene.</p>
+          </article>
+          <article class="service-item">
+            <h3 data-i18n="service.speed.title">Faster rulings</h3>
+            <p data-i18n="service.speed.body">Searchable current data means fewer pauses while the table waits for a spell, trait, or condition.</p>
+          </article>
+          <article class="service-item">
+            <h3 data-i18n="service.control.title">Everything in your hands</h3>
+            <p data-i18n="service.control.body">You control every important part of the game. The only remaining task is remembering to enjoy it.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-band showcase-section">
+        <div class="showcase-copy">
+          <h2 data-i18n="showcase.title">From prep pile to service tray.</h2>
+          <p data-i18n="showcase.body">
+            PathMaid turns scattered notes, books, imports, and encounter work into a prepared GM desk.
+            The hardest part is simply starting.
+          </p>
+        </div>
+        <figure class="wide-art wide-art-filled" data-asset-slot="feature-wide">
+          <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
+          <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
+          <img
+            src="./assets/feature-wide.png"
+            alt="PathMaid mascot moving from campaign prep to polished service"
+          >
+        </figure>
+      </section>
+
+      <section id="downloads" class="section-band download-section">
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="downloadShelf.eyebrow">Release shelf</p>
+          <h2 data-i18n="downloadShelf.title">Download PathMaid</h2>
+        </div>
+        <div class="download-grid">
+          <article class="download-card">
+            <span class="platform-label">Windows</span>
+            <p data-i18n="downloadShelf.windows">Windows build for your prep desk.</p>
+            <a class="download-link" data-download="windows" href="#" data-i18n="downloads.windows">Download for Windows</a>
+          </article>
+          <article class="download-card">
+            <span class="platform-label">macOS</span>
+            <p data-i18n="downloadShelf.macos">macOS build for your prep desk.</p>
+            <a class="download-link" data-download="macos" href="#" data-i18n="downloads.macos">Download for macOS</a>
+          </article>
+          <article class="download-card">
+            <span class="platform-label">Linux</span>
+            <p data-i18n="downloadShelf.linux">Linux build for your prep desk.</p>
+            <a class="download-link" data-download="linux" href="#" data-i18n="downloads.linux">Download for Linux</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p data-i18n="footer.disclaimer">
+        PathMaid is an independent Pathfinder 2e GM assistant and is not endorsed by Paizo.
+      </p>
+      <a href="https://github.com/" data-i18n="footer.github">GitHub</a>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
