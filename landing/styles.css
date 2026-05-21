@@ -137,10 +137,11 @@ button:focus-visible {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr);
+  grid-template-columns: minmax(0, 42rem) minmax(24rem, 38rem);
   min-height: auto;
   align-items: center;
-  gap: clamp(var(--space-md), 3vw, var(--space-2xl));
+  justify-content: center;
+  gap: clamp(var(--space-lg), 3vw, 3.5rem);
   padding-block: clamp(var(--space-lg), 3.5vw, 3rem);
   border-bottom: var(--rule-hair) solid var(--color-rule);
   background:
@@ -150,7 +151,7 @@ button:focus-visible {
 }
 
 .hero-copy {
-  max-width: 48rem;
+  max-width: 42rem;
 }
 
 .eyebrow {
@@ -269,6 +270,8 @@ h3 {
 }
 
 .slider-slide.is-active {
+  position: relative;
+  inset: auto;
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
@@ -470,8 +473,8 @@ h3 {
 }
 
 .hero-art {
-  width: min(100%, 45rem);
-  justify-self: end;
+  width: min(100%, 38rem);
+  justify-self: start;
 }
 
 .hero-art-filled {
@@ -483,7 +486,7 @@ h3 {
 .hero-art-filled img {
   display: block;
   width: 100%;
-  max-height: min(82svh, 54rem);
+  max-height: min(78svh, 48rem);
   object-fit: contain;
 }
 
@@ -621,6 +624,14 @@ h3 {
   .showcase-section,
   .slider-slide {
     grid-template-columns: 1fr;
+  }
+
+  .slider-slide {
+    position: absolute;
+  }
+
+  .slider-slide.is-active {
+    position: relative;
   }
 
   .hero {
