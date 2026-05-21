@@ -659,7 +659,7 @@
       "counter": "{{warnCount}} предупреждений, {{infoCount}} подсказок"
     },
     "exportJson": {
-      "buttonLabel": "Экспорт JSON",
+      "buttonLabel": "Экспорт .pathmaid",
       "creatureNotFound": "Существо не найдено",
       "exported": "Экспортировано как {{filename}}",
       "failedToExport": "Не удалось экспортировать"
@@ -840,11 +840,27 @@
       "failedClone": "Не удалось клонировать",
       "failedClonePregen": "Не удалось клонировать шаблон",
       "failedDelete": "Не удалось удалить",
-      "noBestiaryTwin": "Нет дубля в бестиарии для {{name}}. Выполните синхронизацию."
+      "noBestiaryTwin": "Нет дубля в бестиарии для {{name}}. Выполните синхронизацию.",
+      "importPathmaid": "Импорт .pathmaid",
+      "importedToast_one": "Импортировано {{count}} существо",
+      "importedToast_few": "Импортировано {{count}} существа",
+      "importedToast_many": "Импортировано {{count}} существ",
+      "importFailedToast_one": "{{count}} файл не импортирован: {{details}}",
+      "importFailedToast_few": "{{count}} файла не импортированы: {{details}}",
+      "importFailedToast_many": "{{count}} файлов не импортировано: {{details}}",
+      "importUnknownError": "Не удалось импортировать",
+      "selectVisibleAriaLabel": "Выбрать видимых своих существ",
+      "selectedCount_one": "Выбрано: {{count}}",
+      "selectedCount_few": "Выбрано: {{count}}",
+      "selectedCount_many": "Выбрано: {{count}}",
+      "exportSelected": "Экспорт выбранных",
+      "exportedBundleToast": "Экспортировано {{count}} существ как {{filename}}",
+      "failedExportBundle": "Не удалось экспортировать выбранных существ"
     },
     "listRow": {
       "editAriaLabel": "Редактировать существо",
-      "deleteAriaLabel": "Удалить существо"
+      "deleteAriaLabel": "Удалить существо",
+      "selectAriaLabel": "Выбрать {{name}}"
     }
   },
   "pages": {

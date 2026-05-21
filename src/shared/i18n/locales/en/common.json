@@ -649,7 +649,7 @@
       "counter": "{{warnCount}} warnings, {{infoCount}} suggestions"
     },
     "exportJson": {
-      "buttonLabel": "Export JSON",
+      "buttonLabel": "Export .pathmaid",
       "creatureNotFound": "Creature not found",
       "exported": "Exported as {{filename}}",
       "failedToExport": "Failed to export"
@@ -830,11 +830,24 @@
       "failedClone": "Failed to clone",
       "failedClonePregen": "Failed to clone pregen",
       "failedDelete": "Failed to delete",
-      "noBestiaryTwin": "No bestiary twin found for {{name}}. Run sync to refresh Paizo data."
+      "noBestiaryTwin": "No bestiary twin found for {{name}}. Run sync to refresh Paizo data.",
+      "importPathmaid": "Import .pathmaid",
+      "importedToast_one": "Imported {{count}} custom creature",
+      "importedToast_other": "Imported {{count}} custom creatures",
+      "importFailedToast_one": "{{count}} file failed: {{details}}",
+      "importFailedToast_other": "{{count}} files failed: {{details}}",
+      "importUnknownError": "Import failed",
+      "selectVisibleAriaLabel": "Select visible custom creatures",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "exportSelected": "Export selected",
+      "exportedBundleToast": "Exported {{count}} custom creatures as {{filename}}",
+      "failedExportBundle": "Failed to export selected creatures"
     },
     "listRow": {
       "editAriaLabel": "Edit creature",
-      "deleteAriaLabel": "Delete creature"
+      "deleteAriaLabel": "Delete creature",
+      "selectAriaLabel": "Select {{name}}"
     }
   },
   "pages": {

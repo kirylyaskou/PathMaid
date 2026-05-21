@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Hammer, Plus, Copy as CloneIcon, UserPlus } from 'lucide-react'
+import { Download, Hammer, Plus, Copy as CloneIcon, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/shared/ui/button'
 import { SearchInput } from '@/shared/ui/search-input'
+import { Checkbox } from '@/shared/ui/checkbox'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ import {
 } from '@/shared/ui/alert-dialog'
 import {
   getAllCustomCreatures,
+  getCustomCreatureById,
   createCustomCreature,
   deleteCustomCreature,
   fetchPregenCreatureByName,
@@ -27,7 +29,11 @@ import {
   type CreatureStatBlockData,
 } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
-import { CloneFromBestiaryDialog } from '@/features/custom-creature-builder'
+import {
+  CloneFromBestiaryDialog,
+  ImportCustomCreatureButton,
+  downloadCustomCreatureBundlePathmaid,
+} from '@/features/custom-creature-builder'
 import { PregenPickerDialog } from '@/features/pregen-picker'
 import type { CharacterRecord } from '@/shared/api'
 import { CustomCreatureListRow } from './CustomCreatureListRow'
@@ -42,6 +48,8 @@ export function CustomCreaturesListPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [cloneOpen, setCloneOpen] = useState(false)
   const [pregenOpen, setPregenOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [exportingSelected, setExportingSelected] = useState(false)
 
   // Debounce search 200ms (UI-SPEC micro-interactions)
   useEffect(() => {
@@ -68,6 +76,54 @@ export function CustomCreaturesListPage() {
     if (!q) return rows
     return rows.filter((r) => r.name.toLowerCase().includes(q))
   }, [rows, debouncedQuery])
+
+  const selectedRows = useMemo(
+    () => rows.filter((row) => selectedIds.has(row.id)),
+    [rows, selectedIds]
+  )
+
+  const visibleIds = useMemo(() => filtered.map((row) => row.id), [filtered])
+  const selectedCount = selectedRows.length
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
+
+  const handleRowSelectedChange = useCallback((id: string, selected: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (selected) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const handleToggleVisibleSelection = useCallback((selected: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      for (const id of visibleIds) {
+        if (selected) next.add(id)
+        else next.delete(id)
+      }
+      return next
+    })
+  }, [visibleIds])
+
+  async function handleExportSelected() {
+    if (selectedRows.length === 0) return
+    setExportingSelected(true)
+    try {
+      const statBlocks: CreatureStatBlockData[] = []
+      for (const row of selectedRows) {
+        const record = await getCustomCreatureById<CreatureStatBlockData>(row.id)
+        if (!record) throw new Error(t('customCreatureBuilder.exportJson.creatureNotFound'))
+        statBlocks.push(record.statBlock)
+      }
+      const filename = downloadCustomCreatureBundlePathmaid(statBlocks)
+      toast(t('customCreatureBuilder.listPage.exportedBundleToast', { filename, count: statBlocks.length }))
+    } catch (e) {
+      toast.error(`${t('customCreatureBuilder.listPage.failedExportBundle')}: ${(e as Error).message}`)
+    } finally {
+      setExportingSelected(false)
+    }
+  }
 
   async function handleNewCreature() {
     try {
@@ -136,6 +192,7 @@ export function CustomCreaturesListPage() {
       <div className="flex items-center justify-between px-6 pt-6 pb-4">
         <h1 className="text-base font-semibold">{t('customCreatureBuilder.listPage.heading')}</h1>
         <div className="flex items-center gap-2">
+          <ImportCustomCreatureButton onImported={reload} />
           <Button variant="outline" size="sm" onClick={() => setPregenOpen(true)}>
             <UserPlus className="w-3.5 h-3.5 mr-1.5" />
             {t('customCreatureBuilder.listPage.usePregen')}
@@ -153,12 +210,33 @@ export function CustomCreaturesListPage() {
 
       {/* Search */}
       <div className="px-6 pb-3">
-        <SearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('customCreatureBuilder.listPage.searchPlaceholder')}
-          className="h-8 text-sm max-w-md"
-        />
+        <div className="flex items-center gap-3">
+          <SearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('customCreatureBuilder.listPage.searchPlaceholder')}
+            className="h-8 text-sm max-w-md"
+          />
+          {rows.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={allVisibleSelected}
+                onCheckedChange={(checked) => handleToggleVisibleSelection(checked === true)}
+                aria-label={t('customCreatureBuilder.listPage.selectVisibleAriaLabel')}
+              />
+              <span>{t('customCreatureBuilder.listPage.selectedCount', { count: selectedCount })}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleExportSelected()}
+                disabled={selectedCount === 0 || exportingSelected}
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                {t('customCreatureBuilder.listPage.exportSelected')}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Body */}
@@ -176,6 +254,7 @@ export function CustomCreaturesListPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <ImportCustomCreatureButton onImported={reload} />
               <Button variant="outline" size="sm" onClick={handleCloneFromBestiary}>
                 {t('customCreatureBuilder.listPage.cloneFromBestiaryEmpty')}
               </Button>
@@ -195,6 +274,8 @@ export function CustomCreaturesListPage() {
                 key={row.id}
                 row={row}
                 onDelete={(id, name) => setDeleteTarget({ id, name })}
+                selected={selectedIds.has(row.id)}
+                onSelectedChange={handleRowSelectedChange}
               />
             ))}
           </div>

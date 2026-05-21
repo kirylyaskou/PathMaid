@@ -2,19 +2,27 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2 } from 'lucide-react'
 import { LevelBadge } from '@/shared/ui/level-badge'
+import { Checkbox } from '@/shared/ui/checkbox'
 import type { CustomCreatureRow } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 
 interface Props {
   row: CustomCreatureRow
   onDelete: (id: string, name: string) => void
+  selected?: boolean
+  onSelectedChange?: (id: string, selected: boolean) => void
 }
 
-export function CustomCreatureListRow({ row, onDelete }: Props) {
+export function CustomCreatureListRow({ row, onDelete, selected = false, onSelectedChange }: Props) {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/30 hover:bg-secondary/50 group">
+      <Checkbox
+        checked={selected}
+        onCheckedChange={(checked) => onSelectedChange?.(row.id, checked === true)}
+        aria-label={t('customCreatureBuilder.listRow.selectAriaLabel', { name: row.name })}
+      />
       <Link
         to={PATHS.CUSTOM_CREATURE_EDIT(row.id)}
         className="flex items-center gap-2 flex-1 min-w-0"
