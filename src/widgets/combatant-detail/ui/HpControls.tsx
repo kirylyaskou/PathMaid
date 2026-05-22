@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { useEffectStore, mergeResistances } from '@/entities/spell-effect'
-import { parseSpellEffectResistances } from '@engine'
 import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X, Skull, HeartPulse, Sparkles } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Separator } from '@/shared/ui/separator'
@@ -21,6 +20,8 @@ import {
   type ImmunityType,
   type WeaknessType,
   type ResistanceType,
+  parseSpellEffectResistances,
+  parseSpellEffectWeaknesses,
 } from '@engine'
 import { useModifiedStats } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
@@ -43,6 +44,12 @@ interface DamageEntry {
   amount: number
 }
 
+interface WeaknessEntry {
+  type: string
+  value: number
+  exceptions?: string[]
+}
+
 const MATERIAL_TYPE_SET = new Set(MATERIAL_EFFECTS as readonly string[])
 
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
@@ -62,6 +69,13 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     if (effectResistances.length === 0) return iwrResistances
     return mergeResistances(iwrResistances ?? [], effectResistances)
   }, [rawEffects, iwrResistances])
+
+  const mergedWeaknesses = useMemo<WeaknessEntry[]>(() => {
+    const effectWeaknesses = rawEffects.flatMap((e) =>
+      parseSpellEffectWeaknesses(e.rulesJson)
+    )
+    return [...(iwrWeaknesses ?? []), ...effectWeaknesses]
+  }, [rawEffects, iwrWeaknesses])
 
   const [hpInput, setHpInput] = useState(0)
   const [damageEntries, setDamageEntries] = useState<DamageEntry[]>([])
@@ -122,14 +136,14 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const isMagical = useMemo(() => materials.includes('magic'), [materials])
 
   const iwrPreviews = useMemo(() => {
-    if (!iwrImmunities?.length && !iwrWeaknesses?.length && !mergedResistances?.length) return null
+    if (!iwrImmunities?.length && mergedWeaknesses.length === 0 && !mergedResistances?.length) return null
     const activeEntries = damageEntries.filter((e) => e.amount > 0)
     if (activeEntries.length === 0) return null
 
     const immunities = (iwrImmunities || [])
       .filter((t) => (IMMUNITY_TYPES as readonly string[]).includes(t))
       .map((t) => createImmunity(t as ImmunityType))
-    const weaknesses = (iwrWeaknesses || []).map((w) =>
+    const weaknesses = mergedWeaknesses.map((w) =>
       createWeakness(w.type as WeaknessType, w.value, { exceptions: w.exceptions as DamageType[] | undefined })
     )
     const resistances = (mergedResistances || []).map((r) =>
@@ -141,7 +155,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
       amount,
       result: applyIWR({ type: damageType, amount, materials: mats, magical: isMagical }, immunities, weaknesses, resistances),
     }))
-  }, [damageEntries, mats, isMagical, iwrImmunities, iwrWeaknesses, mergedResistances])
+  }, [damageEntries, mats, isMagical, iwrImmunities, mergedWeaknesses, mergedResistances])
 
   const handleDamage = useCallback(() => {
     if (!canDamage) return

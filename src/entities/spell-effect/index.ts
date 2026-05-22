@@ -14,6 +14,8 @@ export { mergeResistances } from './lib/merge-resistances'
 export {
   CUSTOM_PENALTY_TARGETS,
   createCustomPenaltyEffect,
+  createCustomNarrativeEffect,
+  createCustomWeaknessEffect,
   isCustomPenaltyEffect,
 } from './lib/custom-penalty'
-export type { CustomPenaltyTargetId } from './lib/custom-penalty'
+export type { CustomNarrativeKind, CustomPenaltyTargetId } from './lib/custom-penalty'

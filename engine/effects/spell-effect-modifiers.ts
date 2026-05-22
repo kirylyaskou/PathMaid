@@ -251,6 +251,26 @@ export function parseSpellEffectResistances(
     .filter((r) => r.type && r.value > 0)
 }
 
+export function parseSpellEffectWeaknesses(
+  rulesJson: string,
+): { type: string; value: number }[] {
+  let rules: unknown[]
+  try {
+    rules = JSON.parse(rulesJson)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(rules)) return []
+
+  return rules
+    .filter((r) => (r as Record<string, unknown>).key === 'Weakness')
+    .map((r) => {
+      const rec = r as Record<string, unknown>
+      return { type: String(rec.type ?? ''), value: Number(rec.value ?? 0) }
+    })
+    .filter((r) => r.type && r.value > 0)
+}
+
 // ─── RollOption + RollTwice Parsers (Phase 65, D-65-01 / D-65-02) ─────────────
 // RollOption: the effect posts a named "flag" (e.g. "bit-of-luck") into the
 // combatant's current-roll-context. It has no direct numeric effect; it gates

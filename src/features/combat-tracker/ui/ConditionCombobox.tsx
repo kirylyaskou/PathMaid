@@ -4,14 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { CONDITION_SLUGS, VALUED_CONDITIONS, CONDITION_GROUPS } from '@engine'
+import { CONDITION_SLUGS, VALUED_CONDITIONS, CONDITION_GROUPS, DAMAGE_TYPES } from '@engine'
 import type { ConditionSlug, ModifierType } from '@engine'
 import { applyCondition, useConditionStore } from '@/entities/condition'
 import {
   CUSTOM_PENALTY_TARGETS,
   createCustomPenaltyEffect,
+  createCustomNarrativeEffect,
+  createCustomWeaknessEffect,
   useEffectStore,
   type CustomPenaltyTargetId,
+  type CustomNarrativeKind,
 } from '@/entities/spell-effect'
 import { toast } from 'sonner'
 
@@ -44,6 +47,7 @@ const fmt = (s: string) => s.split('-').join(' ')
 const norm = (s: string) => fmt(s).toLowerCase()
 const CUSTOM_MODIFIER_TYPES = ['status', 'circumstance', 'item', 'untyped'] as const satisfies readonly ModifierType[]
 type CustomModifierType = (typeof CUSTOM_MODIFIER_TYPES)[number]
+type CustomEffectMode = 'penalty' | 'buff' | 'debuff' | 'weakness'
 
 function ConditionPill({
   slug,
@@ -126,9 +130,34 @@ function CustomTargetButton({
   )
 }
 
+function CustomModeButton({
+  label,
+  description,
+  onClick,
+}: {
+  label: string
+  description: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded border border-border/30 bg-secondary/20 px-3 py-2 text-left transition-colors hover:border-primary/50 hover:bg-secondary/40"
+    >
+      <span className="block text-xs font-semibold">{label}</span>
+      <span className="mt-0.5 block text-[11px] text-muted-foreground">{description}</span>
+    </button>
+  )
+}
+
 interface CustomPenaltyFormProps {
+  mode: CustomEffectMode
   name: string
   penalty: number
+  rounds: number
+  weaknessType: string
+  weaknessValue: number
   modifierType: CustomModifierType
   targetIds: CustomPenaltyTargetId[]
   targetOptions: Array<{ id: CustomPenaltyTargetId; label: string }>
@@ -136,14 +165,21 @@ interface CustomPenaltyFormProps {
   onBack: () => void
   onNameChange: (value: string) => void
   onPenaltyChange: (value: number) => void
+  onRoundsChange: (value: number) => void
+  onWeaknessTypeChange: (value: string) => void
+  onWeaknessValueChange: (value: number) => void
   onModifierTypeChange: (type: CustomModifierType) => void
   onTargetToggle: (id: CustomPenaltyTargetId) => void
   onApply: () => void
 }
 
 function CustomPenaltyForm({
+  mode,
   name,
   penalty,
+  rounds,
+  weaknessType,
+  weaknessValue,
   modifierType,
   targetIds,
   targetOptions,
@@ -151,12 +187,30 @@ function CustomPenaltyForm({
   onBack,
   onNameChange,
   onPenaltyChange,
+  onRoundsChange,
+  onWeaknessTypeChange,
+  onWeaknessValueChange,
   onModifierTypeChange,
   onTargetToggle,
   onApply,
 }: CustomPenaltyFormProps) {
   const { t } = useTranslation('common')
-  const canApply = penalty > 0 && targetIds.length > 0
+  const canApply =
+    rounds > 0 &&
+    (
+      mode === 'buff' ||
+      mode === 'debuff' ||
+      (mode === 'penalty' && penalty > 0 && targetIds.length > 0) ||
+      (mode === 'weakness' && weaknessType.trim().length > 0 && weaknessValue > 0)
+    )
+  const isNarrative = mode === 'buff' || mode === 'debuff'
+  const titleKey = mode === 'penalty'
+    ? 'customPenalty.title'
+    : mode === 'weakness'
+      ? 'customPenalty.weaknessTitle'
+      : mode === 'buff'
+        ? 'customPenalty.buffTitle'
+        : 'customPenalty.debuffTitle'
 
   return (
     <div className="p-4 space-y-3">
@@ -165,74 +219,129 @@ function CustomPenaltyForm({
           &#8592; {t('combatTracker.conditions.back')}
         </button>
         <span className="text-sm font-medium">
-          {t('combatTracker.conditions.customPenalty.title')}
+          {t(`combatTracker.conditions.${titleKey}`)}
         </span>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {t('combatTracker.conditions.customPenalty.name')}
-        </label>
-        <Input
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder={t('combatTracker.conditions.customPenalty.namePlaceholder')}
-          className="h-8 text-sm"
-        />
       </div>
 
       <div className="grid grid-cols-[1fr_5rem] gap-2">
         <div className="space-y-1">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('combatTracker.conditions.customPenalty.modifierType')}
+            {t('combatTracker.conditions.customPenalty.name')}
           </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {CUSTOM_MODIFIER_TYPES.map((type) => (
-              <ModifierTypeButton
-                key={type}
-                type={type}
-                label={modifierLabels[type]}
-                selected={modifierType === type}
-                onClick={onModifierTypeChange}
-              />
-            ))}
-          </div>
+          <Input
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder={isNarrative
+              ? t('combatTracker.conditions.customPenalty.narrativeNamePlaceholder')
+              : t('combatTracker.conditions.customPenalty.namePlaceholder')}
+            className="h-8 text-sm"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {t('combatTracker.conditions.customPenalty.penalty')}
+            {t('combatTracker.conditions.customPenalty.rounds')}
           </label>
           <Input
             type="number"
             min={1}
             step={1}
-            value={penalty}
-            onChange={(e) => onPenaltyChange(Number(e.target.value))}
+            value={rounds}
+            onChange={(e) => onRoundsChange(Number(e.target.value))}
             className="h-8 text-sm font-mono"
           />
         </div>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {t('combatTracker.conditions.customPenalty.targets')}
-        </label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {targetOptions.map((target) => (
-            <CustomTargetButton
-              key={target.id}
-              id={target.id}
-              label={target.label}
-              selected={targetIds.includes(target.id)}
-              onToggle={onTargetToggle}
+      {mode === 'penalty' && (
+        <div className="grid grid-cols-[1fr_5rem] gap-2">
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('combatTracker.conditions.customPenalty.modifierType')}
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {CUSTOM_MODIFIER_TYPES.map((type) => (
+                <ModifierTypeButton
+                  key={type}
+                  type={type}
+                  label={modifierLabels[type]}
+                  selected={modifierType === type}
+                  onClick={onModifierTypeChange}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('combatTracker.conditions.customPenalty.penalty')}
+            </label>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={penalty}
+              onChange={(e) => onPenaltyChange(Number(e.target.value))}
+              className="h-8 text-sm font-mono"
             />
-          ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {mode === 'penalty' && (
+        <div className="space-y-1">
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {t('combatTracker.conditions.customPenalty.targets')}
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {targetOptions.map((target) => (
+              <CustomTargetButton
+                key={target.id}
+                id={target.id}
+                label={target.label}
+                selected={targetIds.includes(target.id)}
+                onToggle={onTargetToggle}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {mode === 'weakness' && (
+        <div className="grid grid-cols-[1fr_5rem] gap-2">
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('combatTracker.conditions.customPenalty.weaknessType')}
+            </label>
+            <select
+              value={weaknessType}
+              onChange={(e) => onWeaknessTypeChange(e.target.value)}
+              className="h-8 w-full rounded-md border border-input bg-background px-3 text-sm capitalize"
+            >
+              {DAMAGE_TYPES.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {t('combatTracker.conditions.customPenalty.weaknessValue')}
+            </label>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={weaknessValue}
+              onChange={(e) => onWeaknessValueChange(Number(e.target.value))}
+              className="h-8 text-sm font-mono"
+            />
+          </div>
+        </div>
+      )}
 
       <Button className="w-full h-8 text-xs" onClick={onApply} disabled={!canApply}>
         <Check className="w-3 h-3 mr-1" />
-        {t('combatTracker.conditions.customPenalty.apply', { penalty })}
+        {mode === 'penalty'
+          ? t('combatTracker.conditions.customPenalty.apply', { penalty })
+          : t('combatTracker.conditions.customPenalty.applyCustom')}
       </Button>
     </div>
   )
@@ -263,9 +372,12 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
   const [value, setValue] = useState(1)
   const [formula, setFormula] = useState('')
-  const [showCustomPenalty, setShowCustomPenalty] = useState(false)
+  const [customMode, setCustomMode] = useState<CustomEffectMode | null>(null)
   const [customName, setCustomName] = useState('')
   const [customPenalty, setCustomPenalty] = useState(1)
+  const [customRounds, setCustomRounds] = useState(1)
+  const [customWeaknessType, setCustomWeaknessType] = useState<string>(DAMAGE_TYPES[0] ?? 'fire')
+  const [customWeaknessValue, setCustomWeaknessValue] = useState(1)
   const [customModifierType, setCustomModifierType] = useState<CustomModifierType>('status')
   const [customTargetIds, setCustomTargetIds] = useState<CustomPenaltyTargetId[]>(['all'])
 
@@ -276,9 +388,12 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     (VALUED_CONDITIONS as readonly string[]).includes(selected)
 
   const resetCustomPenalty = useCallback(() => {
-    setShowCustomPenalty(false)
+    setCustomMode(null)
     setCustomName('')
     setCustomPenalty(1)
+    setCustomRounds(1)
+    setCustomWeaknessType(DAMAGE_TYPES[0] ?? 'fire')
+    setCustomWeaknessValue(1)
     setCustomModifierType('status')
     setCustomTargetIds(['all'])
   }, [])
@@ -314,7 +429,7 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     setSelected(null)
     setValue(1)
     setFormula('')
-    setShowCustomPenalty(false)
+    setCustomMode(null)
   }, [])
 
   const handleCustomPenaltyBack = useCallback(() => {
@@ -415,30 +530,81 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
     [t],
   )
 
+  const customModeOptions = useMemo(
+    () => [
+      {
+        mode: 'penalty' as const,
+        label: t('combatTracker.conditions.customPenalty.button'),
+        description: t('combatTracker.conditions.customPenalty.penaltyDescription'),
+      },
+      {
+        mode: 'buff' as const,
+        label: t('combatTracker.conditions.customPenalty.buffButton'),
+        description: t('combatTracker.conditions.customPenalty.buffDescription'),
+      },
+      {
+        mode: 'debuff' as const,
+        label: t('combatTracker.conditions.customPenalty.debuffButton'),
+        description: t('combatTracker.conditions.customPenalty.debuffDescription'),
+      },
+      {
+        mode: 'weakness' as const,
+        label: t('combatTracker.conditions.customPenalty.weaknessButton'),
+        description: t('combatTracker.conditions.customPenalty.weaknessDescription'),
+      },
+    ],
+    [t],
+  )
+
+  const handleSelectCustomMode = useCallback((mode: CustomEffectMode) => {
+    setSelected(null)
+    setCustomMode(mode)
+  }, [])
+
   const handleApplyCustomPenalty = useCallback(() => {
-    if (customPenalty <= 0 || customTargetIds.length === 0) return
+    if (!customMode || customRounds <= 0) return
     const targetLabels = customTargetOptions
       .filter((target) => customTargetIds.includes(target.id))
       .map((target) => target.label)
-    const effect = createCustomPenaltyEffect({
-      combatantId,
-      name: customName,
-      penalty: customPenalty,
-      modifierType: customModifierType,
-      targetIds: customTargetIds,
-      targetLabels,
-    })
+    const effect = customMode === 'penalty'
+      ? createCustomPenaltyEffect({
+          combatantId,
+          name: customName,
+          penalty: customPenalty,
+          modifierType: customModifierType,
+          targetIds: customTargetIds,
+          targetLabels,
+          remainingTurns: customRounds,
+        })
+      : customMode === 'weakness'
+        ? createCustomWeaknessEffect({
+            combatantId,
+            name: customName,
+            weaknessType: customWeaknessType,
+            value: customWeaknessValue,
+            remainingTurns: customRounds,
+          })
+        : createCustomNarrativeEffect({
+            combatantId,
+            name: customName,
+            kind: customMode as CustomNarrativeKind,
+            remainingTurns: customRounds,
+          })
     useEffectStore.getState().addEffect(effect)
     toast(t('combatTracker.conditions.customPenalty.appliedToast', { name: effect.effectName }))
     close()
   }, [
     close,
     combatantId,
+    customMode,
     customModifierType,
     customName,
     customPenalty,
+    customRounds,
     customTargetIds,
     customTargetOptions,
+    customWeaknessType,
+    customWeaknessValue,
     t,
   ])
 
@@ -455,10 +621,14 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
           <DialogTitle className="text-sm">{t('combatTracker.conditions.addButton')}</DialogTitle>
         </DialogHeader>
 
-        {showCustomPenalty ? (
+        {customMode ? (
           <CustomPenaltyForm
+            mode={customMode}
             name={customName}
             penalty={customPenalty}
+            rounds={customRounds}
+            weaknessType={customWeaknessType}
+            weaknessValue={customWeaknessValue}
             modifierType={customModifierType}
             targetIds={customTargetIds}
             targetOptions={customTargetOptions}
@@ -466,6 +636,9 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
             onBack={handleCustomPenaltyBack}
             onNameChange={setCustomName}
             onPenaltyChange={(next) => setCustomPenalty(Number.isFinite(next) ? Math.max(1, next) : 1)}
+            onRoundsChange={(next) => setCustomRounds(Number.isFinite(next) ? Math.max(1, Math.trunc(next)) : 1)}
+            onWeaknessTypeChange={setCustomWeaknessType}
+            onWeaknessValueChange={(next) => setCustomWeaknessValue(Number.isFinite(next) ? Math.max(1, Math.trunc(next)) : 1)}
             onModifierTypeChange={setCustomModifierType}
             onTargetToggle={handleToggleCustomTarget}
             onApply={handleApplyCustomPenalty}
@@ -538,15 +711,21 @@ export function ConditionCombobox({ combatantId, existingSlugs }: Props) {
               placeholder={t('combatTracker.conditions.searchPlaceholder')}
               className="h-8 text-xs border-0 border-b rounded-none px-3 focus-visible:ring-0"
             />
-            <div className="p-2 border-b border-border/40">
-              <Button
-                variant="ghost"
-                className="w-full h-8 justify-start gap-2 text-xs"
-                onClick={() => setShowCustomPenalty(true)}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                {t('combatTracker.conditions.customPenalty.button')}
-              </Button>
+            <div className="p-2 border-b border-border/40 space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <SlidersHorizontal className="w-3 h-3" />
+                {t('combatTracker.conditions.customPenalty.customEffects')}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {customModeOptions.map((option) => (
+                  <CustomModeButton
+                    key={option.mode}
+                    label={option.label}
+                    description={option.description}
+                    onClick={() => handleSelectCustomMode(option.mode)}
+                  />
+                ))}
+              </div>
             </div>
             {search ? (
               <div className="p-2 grid grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">

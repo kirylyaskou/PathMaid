@@ -4,6 +4,8 @@ type Ability = CreatureStatBlockData['abilities'][number]
 
 const OFFENSIVE_NAME = /strike|attack|bite|claw|breath|slam|gore|tail|tongue|spit|charge|rage|pounce|swallow|constrict|grab\b|trample|maul/i
 const DEFENSIVE_NAME = /shield|block|parry|evasion|deflect|resist|ward|defense|defen[sc]e|regenerat|fortify|hardness|absorb/i
+const HB_ATTACK_TRAIT = 'hb-attack'
+const HB_DEF_TRAIT = 'hb-def'
 
 export interface ClassifiedAbilities {
   offensive: Ability[]
@@ -34,11 +36,19 @@ export function classifyAbilities(
       if (troopDefensesName && nameLower === troopDefensesName) continue
       if (/^(troop|swarm)\s+formation$/i.test(a.name)) continue
     }
+    const traits = (a.traits ?? []).map((trait) => trait.trim().toLowerCase())
+    if (traits.includes(HB_ATTACK_TRAIT)) {
+      offensive.push(a)
+      continue
+    }
+    if (traits.includes(HB_DEF_TRAIT)) {
+      defensive.push(a)
+      continue
+    }
     if (a.actionCost === 'reaction') {
       reactions.push(a)
       continue
     }
-    const traits = a.traits ?? []
     if (traits.includes('attack') || traits.includes('offensive') || OFFENSIVE_NAME.test(a.name)) {
       offensive.push(a)
       continue

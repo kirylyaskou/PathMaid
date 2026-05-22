@@ -184,6 +184,7 @@ export type {
 export {
   parseSpellEffectModifiers,
   parseSpellEffectResistances,
+  parseSpellEffectWeaknesses,
   parseSpellEffectRollOptions,
   parseSpellEffectRollTwice,
 } from './effects/spell-effect-modifiers'
