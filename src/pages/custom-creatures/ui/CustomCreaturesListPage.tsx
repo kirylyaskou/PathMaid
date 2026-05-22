@@ -32,6 +32,7 @@ import { PATHS } from '@/shared/routes'
 import {
   CloneFromBestiaryDialog,
   ImportCustomCreatureButton,
+  ImportMonsterToolsJsonButton,
   ImportStatblockOcrButton,
   downloadCustomCreatureBundlePathmaid,
 } from '@/features/custom-creature-builder'
@@ -194,6 +195,7 @@ export function CustomCreaturesListPage() {
         <h1 className="text-base font-semibold">{t('customCreatureBuilder.listPage.heading')}</h1>
         <div className="flex items-center gap-2">
           <ImportStatblockOcrButton onImported={reload} />
+          <ImportMonsterToolsJsonButton onImported={reload} />
           <ImportCustomCreatureButton onImported={reload} />
           <Button variant="outline" size="sm" onClick={() => setPregenOpen(true)}>
             <UserPlus className="w-3.5 h-3.5 mr-1.5" />
@@ -257,6 +259,7 @@ export function CustomCreaturesListPage() {
             </div>
             <div className="flex items-center gap-2">
               <ImportStatblockOcrButton onImported={reload} />
+              <ImportMonsterToolsJsonButton onImported={reload} />
               <ImportCustomCreatureButton onImported={reload} />
               <Button variant="outline" size="sm" onClick={handleCloneFromBestiary}>
                 {t('customCreatureBuilder.listPage.cloneFromBestiaryEmpty')}

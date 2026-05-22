@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -52,12 +53,36 @@ def input_images(path: Path, tmp_dir: Path) -> list[Path]:
     return [path]
 
 
+def seed_model_cache_from_bundle() -> None:
+    bundled = os.environ.get("PATHMAID_BUNDLED_OCR_CACHE")
+    cache_home = os.environ.get("PADDLE_PDX_CACHE_HOME")
+    if not bundled or not cache_home:
+        return
+
+    source = Path(bundled) / "official_models"
+    target = Path(cache_home) / "official_models"
+    if not source.exists() or (target.exists() and any(target.iterdir())):
+        return
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp_target = target.with_name(f".official_models.tmp.{os.getpid()}")
+    if temp_target.exists():
+        shutil.rmtree(temp_target)
+
+    shutil.copytree(source, temp_target)
+    if target.exists():
+        shutil.rmtree(target)
+    temp_target.rename(target)
+
+
 def create_ocr(lang: str):
+    seed_model_cache_from_bundle()
     try:
         from paddleocr import PaddleOCR
     except Exception as exc:
+        requirements = os.environ.get("PATHMAID_OCR_REQUIREMENTS", "src-tauri/ocr/requirements.txt")
         raise RuntimeError(
-            "PaddleOCR is not installed. Run: python -m pip install -r src-tauri/ocr/requirements.txt"
+            f"PaddleOCR is not installed. Run: python -m pip install -r {requirements}"
         ) from exc
 
     try:

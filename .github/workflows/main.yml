@@ -23,6 +23,7 @@ jobs:
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            const isPrerelease = tag.includes('-');
             const body = `## Downloads
 
             Platform binaries are listed under **Assets** below:
@@ -46,7 +47,7 @@ jobs:
               name: `pathmaid ${tag}`,
               body: body,
               draft: true,
-              prerelease: false,
+              prerelease: isPrerelease,
             });
             core.setOutput('release_id', data.id);
 
@@ -91,6 +92,46 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build OCR sidecar
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r src-tauri/ocr/requirements.txt pyinstaller
+          PADDLE_PDX_CACHE_HOME="$(python -c 'from pathlib import Path; print(Path("src-tauri/ocr-models").resolve())')"
+          export PADDLE_PDX_CACHE_HOME
+          export PADDLE_PDX_MODEL_SOURCE="BOS"
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+
+          image = Image.new("RGB", (320, 80), "white")
+          draw = ImageDraw.Draw(image)
+          draw.text((16, 24), "PathMaid OCR warmup", fill="black")
+          Path("target").mkdir(exist_ok=True)
+          image.save("target/pathmaid-ocr-warmup.png")
+          PY
+          python src-tauri/ocr/paddle_ocr.py --input target/pathmaid-ocr-warmup.png --lang en > target/pathmaid-ocr-warmup.json
+          test -d src-tauri/ocr-models/official_models
+          python -m PyInstaller \
+            --clean \
+            --onefile \
+            --name pathmaid-ocr \
+            --collect-all paddle \
+            --collect-all paddleocr \
+            --collect-all paddlex \
+            src-tauri/ocr/paddle_ocr.py
+          mkdir -p src-tauri/ocr-bin
+          if [ -f dist/pathmaid-ocr.exe ]; then
+            cp dist/pathmaid-ocr.exe src-tauri/ocr-bin/pathmaid-ocr.exe
+          else
+            cp dist/pathmaid-ocr src-tauri/ocr-bin/pathmaid-ocr
+            chmod +x src-tauri/ocr-bin/pathmaid-ocr
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -111,10 +152,12 @@ jobs:
           RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         with:
           script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const isPrerelease = tag.includes('-');
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: process.env.RELEASE_ID,
               draft: false,
-              make_latest: 'true',
+              make_latest: isPrerelease ? 'false' : 'true',
             });

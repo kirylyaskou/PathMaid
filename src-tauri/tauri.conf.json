@@ -1,6 +1,6 @@
 {
   "productName": "PathMaid",
-  "version": "1.9.3",
+  "version": "1.9.4-test.0",
   "identifier": "com.pathmaid.app",
   "build": {
     "beforeDevCommand": "npm run dev:vite",
@@ -27,6 +27,12 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "resources": [
+      "ocr-bin/",
+      "ocr-models/",
+      "ocr/paddle_ocr.py",
+      "ocr/requirements.txt"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
