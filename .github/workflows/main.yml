@@ -116,14 +116,41 @@ jobs:
           PY
           python src-tauri/ocr/paddle_ocr.py --input target/pathmaid-ocr-warmup.png --lang en > target/pathmaid-ocr-warmup.json
           test -d src-tauri/ocr-models/official_models
-          python -m PyInstaller \
-            --clean \
-            --onefile \
-            --name pathmaid-ocr \
-            --collect-all paddle \
-            --collect-all paddleocr \
-            --collect-all paddlex \
-            src-tauri/ocr/paddle_ocr.py
+          python - <<'PY'
+          import importlib.metadata
+          import subprocess
+          import sys
+
+          import paddlex
+
+          deps_all = set(paddlex.utils.deps.DEP_SPECS.keys())
+          deps_need = sorted({
+              dist.metadata["Name"]
+              for dist in importlib.metadata.distributions()
+              if dist.metadata["Name"] in deps_all
+          })
+
+          cmd = [
+              sys.executable,
+              "-m",
+              "PyInstaller",
+              "--clean",
+              "--onefile",
+              "--name",
+              "pathmaid-ocr",
+              "--collect-data",
+              "paddlex",
+              "--collect-binaries",
+              "paddle",
+              "--collect-all",
+              "paddleocr",
+          ]
+          for dep in deps_need:
+              cmd += ["--copy-metadata", dep]
+          cmd.append("src-tauri/ocr/paddle_ocr.py")
+          print("PyInstaller command:", " ".join(cmd))
+          subprocess.run(cmd, check=True)
+          PY
           mkdir -p src-tauri/ocr-bin
           if [ -f dist/pathmaid-ocr.exe ]; then
             cp dist/pathmaid-ocr.exe src-tauri/ocr-bin/pathmaid-ocr.exe

@@ -62,6 +62,10 @@ function textField(record: Record<string, unknown>, key: string): string {
 
 function numberField(record: Record<string, unknown>, key: string): number | null {
   const value = record[key]
+  return numberValue(value)
+}
+
+function numberValue(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value)
@@ -89,10 +93,22 @@ function normalizeTraits(raw: string): string[] {
   return splitCsv(raw).map((trait) => trait.toLowerCase())
 }
 
-function parseSpeeds(raw: string): Record<string, number | null> {
+function speedEntries(value: unknown): string[] {
+  if (typeof value === 'string') return splitCsv(value)
+  if (typeof value === 'number' && Number.isFinite(value)) return [`${value} feet`]
+  if (!isRecord(value)) return []
+
+  const note = noteField(value, 'note') || textField(value, 'type') || textField(value, 'name')
+  const speed = numberValue(value.value) ?? numberValue(value.speed)
+  if (speed === null) return []
+
+  return [`${note ? `${note} ` : ''}${speed} feet`]
+}
+
+function parseSpeeds(value: unknown): Record<string, number | null> {
   const speeds: Record<string, number | null> = {}
-  for (const entry of splitCsv(raw)) {
-    const match = /^(?:(\w+)\s+)?(\d+)\s+feet/i.exec(entry)
+  for (const entry of speedEntries(value)) {
+    const match = /^(?:(\w+)\s+)?(\d+)\s*(?:feet|ft\.?)?/i.exec(entry)
     if (!match) continue
     const key = match[1]?.toLowerCase() ?? 'land'
     speeds[key] = Number(match[2])
@@ -327,7 +343,7 @@ export function parseMonsterToolsJsonToPathmaid(text: string): ParseResult {
     immunities: parseImmunities(parsed),
     weaknesses: parseIwrField(parsed, 'weakness'),
     resistances: parseIwrField(parsed, 'resistance'),
-    speeds: parseSpeeds(textField(parsed, 'speed')),
+    speeds: parseSpeeds(parsed.speed),
     strikes: parseStrikes(parsed.strikes),
     abilities: parseSpecials(parsed.specials),
     skills,
