@@ -51,7 +51,7 @@ export interface CustomCreatureRecord<TStatBlock = CustomCreatureApiStatBlock> e
 // ---------------------------------------------------------------------------
 
 function toDataJson<TData extends CustomCreatureApiStatBlock>(data: TData): string {
-  const { equipment: _eq, id: _id, ...rest } = data
+  const { id: _id, ...rest } = data
   return JSON.stringify(rest)
 }
 
@@ -76,6 +76,7 @@ function parseStatBlock(row: {
     resistances: parsed.resistances ?? [],
     auras: parsed.auras ?? undefined,   // optional — preserve undefined distinction from []
     rituals: parsed.rituals ?? undefined,
+    equipment: parsed.equipment ?? [],
   }
   return backfilled
 }
@@ -109,6 +110,7 @@ function defaultStatBlock(id: string): CustomCreatureApiStatBlock {
     senses: [],
     auras: [],
     rituals: [],
+    equipment: [],
     source: 'custom',
   }
 }

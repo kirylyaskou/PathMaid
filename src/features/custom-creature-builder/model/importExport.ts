@@ -11,7 +11,7 @@ interface CustomCreatureEnvelope {
     exportedAt: string
     pathmaidVersion: string
   }
-  data: Omit<CreatureStatBlockData, 'id' | 'equipment'>
+  data: Omit<CreatureStatBlockData, 'id'>
 }
 
 interface CustomCreatureBundleEnvelope {
@@ -44,10 +44,9 @@ function slugify(input: string): string {
   )
 }
 
-function stripPersistedFields(statBlock: CreatureStatBlockData): Omit<CreatureStatBlockData, 'id' | 'equipment'> {
-  const { id: _id, equipment: _equipment, ...data } = statBlock
+function stripPersistedFields(statBlock: CreatureStatBlockData): Omit<CreatureStatBlockData, 'id'> {
+  const { id: _id, ...data } = statBlock
   void _id
-  void _equipment
   return data
 }
 
@@ -148,13 +147,12 @@ function parseCustomCreatureEnvelope(envelope: unknown): ParsedCustomCreatureImp
     throw new Error('Custom creature is missing a numeric level.')
   }
 
-  const { id: _id, equipment: _equipment, ...statBlockData } = data
+  const { id: _id, ...statBlockData } = data
   void _id
-  void _equipment
 
   return {
     statBlock: {
-      ...(statBlockData as Omit<CreatureStatBlockData, 'id' | 'equipment'>),
+      ...(statBlockData as Omit<CreatureStatBlockData, 'id'>),
       id: '',
       source: typeof statBlockData.source === 'string' ? statBlockData.source : 'custom',
     },

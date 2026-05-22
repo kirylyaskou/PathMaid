@@ -588,6 +588,7 @@
       "perceptionSkills": "Восприятие и навыки",
       "speedsSenses": "Скорости и чувства",
       "strikes": "Удары",
+      "inventory": "Инвентарь",
       "spellcasting": "Заклинания",
       "abilities": "Способности",
       "iwr": "ИСС",
@@ -739,6 +740,16 @@
       "removeStrikeAriaLabel": "Убрать удар",
       "removeDamageRowAriaLabel": "Убрать строку урона",
       "removeTraitAriaLabel": "Убрать черту {{name}}"
+    },
+    "inventoryTab": {
+      "heading": "Инвентарь",
+      "searchPlaceholder": "Поиск предметов...",
+      "searching": "Поиск...",
+      "startSearch": "Введите минимум 2 символа",
+      "noItemsFound": "Предметы не найдены",
+      "noItemsAdded": "Предметы инвентаря не добавлены",
+      "quantityAriaLabel": "Количество для {{name}}",
+      "removeItemAriaLabel": "Убрать {{name}}"
     },
     "spellcastingTab": {
       "heading": "Заклинания",

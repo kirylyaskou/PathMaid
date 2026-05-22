@@ -578,6 +578,7 @@
       "perceptionSkills": "Perception & Skills",
       "speedsSenses": "Speeds & Senses",
       "strikes": "Strikes",
+      "inventory": "Inventory",
       "spellcasting": "Spellcasting",
       "abilities": "Abilities",
       "iwr": "IWR",
@@ -729,6 +730,16 @@
       "removeStrikeAriaLabel": "Remove strike",
       "removeDamageRowAriaLabel": "Remove damage row",
       "removeTraitAriaLabel": "Remove trait {{name}}"
+    },
+    "inventoryTab": {
+      "heading": "Inventory",
+      "searchPlaceholder": "Search items...",
+      "searching": "Searching...",
+      "startSearch": "Type at least 2 characters",
+      "noItemsFound": "No items found",
+      "noItemsAdded": "No inventory items added",
+      "quantityAriaLabel": "Quantity for {{name}}",
+      "removeItemAriaLabel": "Remove {{name}}"
     },
     "spellcastingTab": {
       "heading": "Spellcasting",

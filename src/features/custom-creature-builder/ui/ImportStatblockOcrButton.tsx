@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog'
 import { createImportedCustomCreature, recognizeStatblockFile, type StatblockOcrResult } from '@/shared/api'
+import { errorMessage } from '@/shared/lib/error'
 import { parseCustomCreaturePathmaidText } from '../model/importExport'
 import { parseOcrStatblockToPathmaid } from '../model/statblockOcrImport'
 
@@ -42,7 +43,7 @@ export function ImportStatblockOcrButton({ onImported }: Props) {
       setPathmaidText(parsed.pathmaidText)
       setWarnings(parsed.warnings)
     } catch (e) {
-      toast.error(`OCR failed: ${(e as Error).message}`)
+      toast.error(`OCR failed: ${errorMessage(e)}`)
     } finally {
       setRecognizing(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -60,7 +61,7 @@ export function ImportStatblockOcrButton({ onImported }: Props) {
       toast(`Imported ${parsed.length} OCR creature${parsed.length === 1 ? '' : 's'}.`)
       setResult(null)
     } catch (e) {
-      toast.error(`Import failed: ${(e as Error).message}`)
+      toast.error(`Import failed: ${errorMessage(e)}`)
     } finally {
       setImporting(false)
     }

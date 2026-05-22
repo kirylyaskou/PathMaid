@@ -5,8 +5,8 @@ import {
   SKILL_ABILITY,
 } from '@engine'
 import type { PathbuilderBuild, PathbuilderProficiencies } from '@engine'
-import type { CreatureStatBlockData } from '@/entities/creature'
-import { getFeatByName, getSpellByName } from '@/shared/api'
+import { formatEquipmentDamageFormula, type CreatureStatBlockData } from '@/entities/creature'
+import { getFeatByName, getItemByName, getSpellByName, type ItemRow } from '@/shared/api'
 
 const WEAPON_PROF_MAP: Record<string, keyof PathbuilderProficiencies> = {
   simple: 'simple',
@@ -31,6 +31,99 @@ function normalizeCastType(input: string): string {
   if (value.includes('innate')) return 'innate'
   if (value.includes('spontaneous')) return 'spontaneous'
   return 'prepared'
+}
+
+function slugify(input: string): string {
+  return input.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'item'
+}
+
+function pathbuilderWeaponDamageFormula(
+  weapon: PathbuilderBuild['weapons'][number],
+  strMod: number,
+): string {
+  const dice = STRIKING_DICE[weapon.str] ?? 1
+  const bonus = strMod === 0 ? '' : strMod > 0 ? `+${strMod}` : String(strMod)
+  return `${dice}${weapon.die}${bonus}`
+}
+
+function catalogTraitsOrRunes(item: ItemRow | null, runes: string[]): string | null {
+  if (item?.traits) return item.traits
+  return runes.length > 0 ? JSON.stringify(runes) : null
+}
+
+async function findCatalogItem(name: string): Promise<ItemRow | null> {
+  return getItemByName(name).catch(() => null)
+}
+
+async function buildEquipment(
+  build: PathbuilderBuild,
+  strMod: number,
+): Promise<CreatureStatBlockData['equipment']> {
+  const equipment: NonNullable<CreatureStatBlockData['equipment']> = []
+  const seenNames = new Set<string>()
+  let sortOrder = 0
+
+  for (const [index, weapon] of (build.weapons ?? []).entries()) {
+    const catalog = await findCatalogItem(weapon.name)
+    seenNames.add(weapon.name.toLowerCase())
+    equipment.push({
+      id: `pathbuilder-weapon-${index}-${slugify(weapon.name)}`,
+      creature_id: '',
+      item_name: weapon.name,
+      item_type: catalog?.item_type ?? 'weapon',
+      foundry_item_id: catalog?.id ?? null,
+      quantity: weapon.qty ?? 1,
+      bulk: catalog?.bulk ?? null,
+      damage_formula:
+        formatEquipmentDamageFormula(catalog?.damage_formula, catalog?.damage_type, catalog?.description) ??
+        formatEquipmentDamageFormula(pathbuilderWeaponDamageFormula(weapon, strMod), weapon.damageType),
+      ac_bonus: catalog?.ac_bonus ?? null,
+      traits: catalogTraitsOrRunes(catalog, weapon.runes ?? []),
+      sort_order: sortOrder,
+    })
+    sortOrder += 1
+  }
+
+  for (const [index, armor] of (build.armor ?? []).entries()) {
+    const catalog = await findCatalogItem(armor.name)
+    seenNames.add(armor.name.toLowerCase())
+    equipment.push({
+      id: `pathbuilder-armor-${index}-${slugify(armor.name)}`,
+      creature_id: '',
+      item_name: armor.name,
+      item_type: catalog?.item_type ?? 'armor',
+      foundry_item_id: catalog?.id ?? null,
+      quantity: armor.qty ?? 1,
+      bulk: catalog?.bulk ?? null,
+      damage_formula: catalog?.damage_formula ?? null,
+      ac_bonus: catalog?.ac_bonus ?? null,
+      traits: catalogTraitsOrRunes(catalog, armor.runes ?? []),
+      sort_order: sortOrder,
+    })
+    sortOrder += 1
+  }
+
+  for (const [index, entry] of (build.equipment ?? []).entries()) {
+    const [name, quantity] = entry
+    if (!name || seenNames.has(name.toLowerCase())) continue
+    const catalog = await findCatalogItem(name)
+    equipment.push({
+      id: `pathbuilder-equipment-${index}-${slugify(name)}`,
+      creature_id: '',
+      item_name: name,
+      item_type: catalog?.item_type ?? 'equipment',
+      foundry_item_id: catalog?.id ?? null,
+      quantity: quantity ?? 1,
+      bulk: catalog?.bulk ?? null,
+      damage_formula: catalog?.damage_formula ?? null,
+      ac_bonus: catalog?.ac_bonus ?? null,
+      traits: catalog?.traits ?? null,
+      sort_order: sortOrder,
+    })
+    sortOrder += 1
+  }
+
+  return equipment
 }
 
 async function buildAbilityCards(build: PathbuilderBuild): Promise<CreatureStatBlockData['abilities']> {
@@ -148,14 +241,11 @@ export async function pathbuilderToCreatureStatBlock(build: PathbuilderBuild): P
     const profKey = WEAPON_PROF_MAP[weapon.prof] ?? 'simple'
     const prof = proficiencies[profKey] ?? 0
     const attackMod = proficiencyModifier(prof, abilities.str, level) + (weapon.pot ?? 0)
-    const dice = STRIKING_DICE[weapon.str] ?? 1
-    const strMod = abilityMods.str
-    const bonus = strMod === 0 ? '' : strMod > 0 ? `+${strMod}` : String(strMod)
     return {
       name: weapon.name,
       modifier: attackMod,
       damage: [{
-        formula: `${dice}${weapon.die}${bonus}`,
+        formula: pathbuilderWeaponDamageFormula(weapon, abilityMods.str),
         type: weapon.damageType || 'untyped',
       }],
       traits: weapon.runes ?? [],
@@ -178,6 +268,7 @@ export async function pathbuilderToCreatureStatBlock(build: PathbuilderBuild): P
     buildAbilityCards(build),
     buildSpellcasting(build, spellAttack),
   ])
+  const equipment = await buildEquipment(build, abilityMods.str)
 
   return {
     id: '',
@@ -213,5 +304,6 @@ export async function pathbuilderToCreatureStatBlock(build: PathbuilderBuild): P
       : undefined,
     auras: [],
     rituals: [],
+    equipment,
   }
 }

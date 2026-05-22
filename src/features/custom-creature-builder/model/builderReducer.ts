@@ -1,10 +1,12 @@
 import type { AppliedRoleValues } from '@engine'
 import { getBenchmark, classifyStat } from '@engine'
-import { applyAbilityModDelta, type CreatureStatBlockData } from '@/entities/creature'
+import { applyAbilityModDelta, buildEquipmentStrikes, type CreatureStatBlockData } from '@/entities/creature'
 
 export interface BuilderState {
   form: CreatureStatBlockData
 }
+
+type EquipmentItem = NonNullable<CreatureStatBlockData['equipment']>[number]
 
 // Individual-field patch actions keep intent explicit and deep-update safe.
 // All action types are string-literal discriminated for exhaustive switching.
@@ -41,8 +43,42 @@ export type BuilderAction =
   | { type: 'ADD_SPELLCASTING_ENTRY'; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
   | { type: 'UPDATE_SPELLCASTING_ENTRY'; index: number; entry: NonNullable<CreatureStatBlockData['spellcasting']>[number] }
   | { type: 'REMOVE_SPELLCASTING_ENTRY'; index: number }
+  | { type: 'ADD_EQUIPMENT_ITEM'; item: EquipmentItem }
+  | { type: 'UPDATE_EQUIPMENT_ITEM'; index: number; item: EquipmentItem }
+  | { type: 'REMOVE_EQUIPMENT_ITEM'; index: number }
   | { type: 'APPLY_ROLE_VALUES'; values: AppliedRoleValues }
   | { type: 'SET_LEVEL_AND_RESCALE'; level: number }
+
+function fallbackStrikeModifier(form: CreatureStatBlockData): number {
+  if (form.strikes.length > 0) {
+    return form.strikes.reduce((max, strike) => Math.max(max, strike.modifier), 0)
+  }
+  return getBenchmark('attackBonus', form.level, 'moderate')
+}
+
+function equipmentItemToStrikeInput(item: EquipmentItem) {
+  return {
+    id: item.foundry_item_id ?? item.id,
+    name: item.item_name,
+    itemType: item.item_type,
+    damageFormula: item.damage_formula,
+    traits: item.traits,
+  }
+}
+
+function appendEquipmentStrike(
+  form: CreatureStatBlockData,
+  item: EquipmentItem,
+): CreatureStatBlockData['strikes'] {
+  return [
+    ...form.strikes,
+    ...buildEquipmentStrikes(
+      [equipmentItemToStrikeInput(item)],
+      form.strikes,
+      fallbackStrikeModifier(form),
+    ),
+  ]
+}
 
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
@@ -229,6 +265,38 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
           spellcasting: (state.form.spellcasting ?? []).filter((_, i) => i !== action.index),
         },
       }
+    case 'ADD_EQUIPMENT_ITEM': {
+      const equipment = [...(state.form.equipment ?? []), action.item]
+      return {
+        form: {
+          ...state.form,
+          equipment,
+          strikes: appendEquipmentStrike(state.form, action.item),
+        },
+      }
+    }
+    case 'UPDATE_EQUIPMENT_ITEM':
+      return {
+        form: {
+          ...state.form,
+          equipment: (state.form.equipment ?? []).map((item, i) =>
+            i === action.index ? action.item : item,
+          ),
+        },
+      }
+    case 'REMOVE_EQUIPMENT_ITEM': {
+      const item = (state.form.equipment ?? [])[action.index]
+      const strikeId = item?.foundry_item_id ?? item?.id
+      return {
+        form: {
+          ...state.form,
+          equipment: (state.form.equipment ?? []).filter((_, i) => i !== action.index),
+          strikes: strikeId
+            ? state.form.strikes.filter((strike) => strike.id !== strikeId)
+            : state.form.strikes,
+        },
+      }
+    }
     case 'APPLY_ROLE_VALUES': {
       const v = action.values
       const form = state.form

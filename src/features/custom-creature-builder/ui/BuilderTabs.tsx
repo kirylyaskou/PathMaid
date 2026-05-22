@@ -9,6 +9,7 @@ import { DefenseTab } from './tabs/DefenseTab'
 import { PerceptionSkillsTab } from './tabs/PerceptionSkillsTab'
 import { SpeedsSensesTab } from './tabs/SpeedsSensesTab'
 import { StrikesTab } from './tabs/StrikesTab'
+import { InventoryTab } from './tabs/InventoryTab'
 import { SpellcastingTab } from './tabs/SpellcastingTab'
 import { AbilitiesTab } from './tabs/AbilitiesTab'
 import { IwrTab } from './tabs/IwrTab'
@@ -27,6 +28,7 @@ export type BuilderTabId =
   | 'perception-skills'
   | 'speeds-senses'
   | 'strikes'
+  | 'inventory'
   | 'spellcasting'
   | 'abilities'
   | 'iwr'
@@ -44,6 +46,7 @@ export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
       { id: 'perception-skills' as BuilderTabId, label: t('customCreatureBuilder.tabs.perceptionSkills') },
       { id: 'speeds-senses' as BuilderTabId, label: t('customCreatureBuilder.tabs.speedsSenses') },
       { id: 'strikes' as BuilderTabId, label: t('customCreatureBuilder.tabs.strikes') },
+      { id: 'inventory' as BuilderTabId, label: t('customCreatureBuilder.tabs.inventory') },
       { id: 'spellcasting' as BuilderTabId, label: t('customCreatureBuilder.tabs.spellcasting') },
       { id: 'abilities' as BuilderTabId, label: t('customCreatureBuilder.tabs.abilities') },
       { id: 'iwr' as BuilderTabId, label: t('customCreatureBuilder.tabs.iwr') },
@@ -82,6 +85,9 @@ export function BuilderTabs({ state, dispatch }: BuilderTabsProps) {
       </TabsContent>
       <TabsContent value="strikes" className="flex-1 overflow-y-auto">
         <StrikesTab state={state} dispatch={dispatch} />
+      </TabsContent>
+      <TabsContent value="inventory" className="flex-1 overflow-y-auto">
+        <InventoryTab state={state} dispatch={dispatch} />
       </TabsContent>
       <TabsContent value="spellcasting" className="flex-1 overflow-y-auto">
         <SpellcastingTab state={state} dispatch={dispatch} />

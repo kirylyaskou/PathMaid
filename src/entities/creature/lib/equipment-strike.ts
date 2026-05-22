@@ -14,6 +14,38 @@ interface ParsedDamage {
   type: string
 }
 
+export function formatEquipmentDamageFormula(
+  damageFormula: string | null | undefined,
+  damageType: string | null | undefined,
+  description: string | null | undefined = null,
+): string | null {
+  const formula = damageFormula?.trim()
+  if (!formula) return null
+  const upgradedFormula = applyStrikingDice(formula, description)
+  if (!damageType) return upgradedFormula
+  if (/\s+[a-z][a-z-]*$/i.test(upgradedFormula)) return upgradedFormula
+  return `${upgradedFormula} ${damageType}`
+}
+
+function applyStrikingDice(formula: string, description: string | null | undefined): string {
+  const strikingDice = strikingDiceFromDescription(description)
+  if (!strikingDice) return formula
+  const match = formula.match(/^(\d+)d(\d+)(.*)$/i)
+  if (!match) return formula
+  const currentDice = Number(match[1])
+  if (!Number.isFinite(currentDice) || currentDice >= strikingDice) return formula
+  return `${strikingDice}d${match[2]}${match[3] ?? ''}`
+}
+
+function strikingDiceFromDescription(description: string | null | undefined): number | null {
+  if (!description) return null
+  const text = description.replace(/<[^>]*>/g, ' ').toLowerCase()
+  if (/\bmajor\s+striking\b/.test(text)) return 4
+  if (/\bgreater\s+striking\b/.test(text)) return 3
+  if (/\bstriking\b/.test(text)) return 2
+  return null
+}
+
 export function parseInlineDamageFormula(description: string | null | undefined): ParsedDamage | null {
   if (!description) return null
   const match = description.match(/@Damage\[\(?([0-9]+d[0-9]+(?:[+-][0-9]+)?)\)?\[([a-z,-]+)\]/i)
@@ -66,7 +98,8 @@ export function buildEquipmentStrikes(
     if (existingNames.has(normalizeName(item.name))) return []
 
     const parsedDamage =
-      parseInlineDamageFormula(item.descriptionLoc) ?? parseStoredDamage(item.damageFormula)
+      parseStoredDamage(formatEquipmentDamageFormula(item.damageFormula, null, item.descriptionLoc)) ??
+      parseInlineDamageFormula(item.descriptionLoc)
     if (!parsedDamage?.formula) return []
 
     return [{

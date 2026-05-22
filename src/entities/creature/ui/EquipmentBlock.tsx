@@ -12,7 +12,7 @@ import { Input } from '@/shared/ui/input'
 import type { CreatureItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
-import { parseInlineDamageFormula, type EquipmentAttackItem } from '../lib/equipment-strike'
+import { formatEquipmentDamageFormula, parseInlineDamageFormula, type EquipmentAttackItem } from '../lib/equipment-strike'
 
 interface EncounterContext {
   encounterId: string
@@ -50,8 +50,8 @@ function EquipmentItemRow({
   const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
   const qty = item.qty > 1 ? ` ×${item.qty}` : ''
   const stat =
-    parseInlineDamageFormula(item.descriptionLoc)?.formula ??
     item.damageFormula ??
+    parseInlineDamageFormula(item.descriptionLoc)?.formula ??
     (item.acBonus !== null ? `AC +${item.acBonus}` : null)
   return (
     <div className={cn('group flex items-center gap-2 text-sm', isRemoved && 'opacity-40 line-through')}>
@@ -90,8 +90,11 @@ function getLocalItemId(id: string): string {
 function getDisplayDamageFormula(
   description: string | null | undefined,
   damageFormula: string | null,
+  damageType: string | null,
 ): string | null {
-  return parseInlineDamageFormula(description)?.formula ?? damageFormula
+  return formatEquipmentDamageFormula(damageFormula, damageType, description) ??
+    parseInlineDamageFormula(description)?.formula ??
+    null
 }
 
 export function EquipmentBlock({
@@ -222,9 +225,9 @@ export function EquipmentBlock({
                       >
                         <span className={cn('px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0', ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
                         <span className="flex-1 truncate">{r.name}</span>
-                        {getDisplayDamageFormula(r.description, r.damage_formula) && (
+                        {getDisplayDamageFormula(r.description, r.damage_formula, r.damage_type) && (
                           <span className="font-mono text-muted-foreground shrink-0">
-                            {getDisplayDamageFormula(r.description, r.damage_formula)}
+                            {getDisplayDamageFormula(r.description, r.damage_formula, r.damage_type)}
                           </span>
                         )}
                       </button>

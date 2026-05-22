@@ -43,6 +43,8 @@ export type { ClassifiedAbilities } from './model/classify-abilities'
 export { useEquipment } from './model/use-equipment'
 export { stripFoundryTags, highlightGameText } from './lib/foundry-text'
 export { applyAbilityModDelta } from './lib/apply-ability-mod-delta'
+export { buildEquipmentStrikes, formatEquipmentDamageFormula, parseInlineDamageFormula } from './lib/equipment-strike'
+export type { EquipmentAttackItem } from './lib/equipment-strike'
 export {
   traditionColor,
   rankLabel,
