@@ -13,6 +13,7 @@ interface RawSpell {
   damage: string | null
   area: string | null
   range_text: string | null
+  target_text: string | null
   duration_text: string | null
   action_cost: string | null
   save_stat: string | null
@@ -133,6 +134,7 @@ export async function extractAndInsertSpells(entities: RawEntity[]): Promise<voi
         damage: Object.keys(damageObj).length ? JSON.stringify(damageObj) : null,
         area: areaObj ? JSON.stringify(areaObj) : null,
         range_text: sys.range?.value || null,
+        target_text: sys.target?.value || null,
         duration_text: sys.duration?.value || null,
         action_cost: sys.time?.value || null,
         save_stat: defenseObj?.save?.statistic ?? null,
@@ -148,16 +150,16 @@ export async function extractAndInsertSpells(entities: RawEntity[]): Promise<voi
   for (let i = 0; i < spells.length; i += BATCH_SIZE) {
     const batch = spells.slice(i, i + BATCH_SIZE)
     const placeholders = batch
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const values = batch.flatMap((s) => [
       s.id, s.name, s.rank, s.traditions, s.traits,
       s.description, s.damage, s.area, s.range_text,
-      s.duration_text, s.action_cost, s.save_stat,
+      s.target_text, s.duration_text, s.action_cost, s.save_stat,
       s.source_book, s.source_pack, s.heightened_json,
     ])
     await db.execute(
-      `INSERT OR REPLACE INTO spells (id, name, rank, traditions, traits, description, damage, area, range_text, duration_text, action_cost, save_stat, source_book, source_pack, heightened_json) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO spells (id, name, rank, traditions, traits, description, damage, area, range_text, target_text, duration_text, action_cost, save_stat, source_book, source_pack, heightened_json) VALUES ${placeholders}`,
       values
     )
   }

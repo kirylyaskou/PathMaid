@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Shield } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/ui/resizable'
@@ -38,6 +38,8 @@ import { logErrorWithToast } from '@/shared/lib/error'
 import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
+
+const SEARCH_PANEL_COLLAPSED_KEY = 'combat_search_panel_collapsed'
 
 function toRowsInline(encounterId: string, staging: StagingCombatant[]): EncounterStagingRow[] {
   return staging.map((sc, i) => ({
@@ -240,8 +242,15 @@ export function CombatPage() {
   const { t } = useTranslation('common')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showSelector, setShowSelector] = useState(false)
+  const [searchPanelCollapsed, setSearchPanelCollapsed] = useState(() => {
+    try { return localStorage.getItem(SEARCH_PANEL_COLLAPSED_KEY) === 'true' } catch { return false }
+  })
   const { lastNpcStatBlock, statBlockLoading, selectedPcBuild, pcBuildLoading, loadForCombatant, refreshShieldBonus } =
     useCombatDetailLoader()
+
+  useEffect(() => {
+    try { localStorage.setItem(SEARCH_PANEL_COLLAPSED_KEY, String(searchPanelCollapsed)) } catch {}
+  }, [searchPanelCollapsed])
 
   // require 8px of movement before dnd-kit starts a
   // drag, so clicks on the "+ Add" button inside <DraggableBestiaryRow> are
@@ -561,9 +570,39 @@ export function CombatPage() {
           <ResizablePanelGroup direction="horizontal" className="flex-1">
 
             {/* Left panel — Bestiary search */}
-            <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
-              <BestiarySearchPanel encounterId={isEncounterBacked ? combatId ?? undefined : undefined} />
-            </ResizablePanel>
+            {searchPanelCollapsed ? (
+              <ResizablePanel defaultSize={3} minSize={3} maxSize={3}>
+                <div className="flex h-full flex-col items-center border-r border-border/50 bg-background/80 py-2">
+                  <button
+                    type="button"
+                    aria-label="Expand bestiary search panel"
+                    title="Expand bestiary search panel"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    onClick={() => setSearchPanelCollapsed(false)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  <span className="mt-3 [writing-mode:vertical-rl] rotate-180 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Bestiary
+                  </span>
+                </div>
+              </ResizablePanel>
+            ) : (
+              <ResizablePanel defaultSize={22} minSize={16} maxSize={32}>
+                <div className="relative h-full">
+                  <button
+                    type="button"
+                    aria-label="Collapse bestiary search panel"
+                    title="Collapse bestiary search panel"
+                    className="absolute right-1 top-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    onClick={() => setSearchPanelCollapsed(true)}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  <BestiarySearchPanel encounterId={isEncounterBacked ? combatId ?? undefined : undefined} />
+                </div>
+              </ResizablePanel>
+            )}
 
             <ResizableHandle withHandle />
 

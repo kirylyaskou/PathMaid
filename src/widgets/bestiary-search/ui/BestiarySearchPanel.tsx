@@ -9,6 +9,12 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/shared/ui/collapsible'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
+import {
   toCreature,
   extractIwr,
   BestiaryResultRow,
@@ -81,6 +87,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
   const [creatureType, setCreatureType] = useState('__all__')
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(true)
   const [selectedTier, setSelectedTier] = useState<WeakEliteTier>('normal')
   // library source filter. `null` = All sources (default).
   // Otherwise a token returned by fetchDistinctLibrarySources — either the
@@ -269,7 +276,20 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
       {/* Bestiary tab */}
       {activeTab === 'bestiary' && (
         <>
-          <div className="p-2 border-b border-border/50 space-y-1.5 shrink-0">
+          <Collapsible
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            className="shrink-0 border-b border-border/50"
+          >
+            <CollapsibleTrigger className="flex h-8 w-full items-center justify-between px-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground">
+              <span className="flex items-center gap-1.5">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {t('bestiarySearch.searchFilters')}
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-2 space-y-1.5">
             {/* Search input */}
             <SearchInput
               value={query}
@@ -335,7 +355,9 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
                 </SelectContent>
               </Select>
             )}
-          </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
           {/* Results */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-2 space-y-1.5">

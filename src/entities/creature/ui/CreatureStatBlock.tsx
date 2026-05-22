@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useState } from "react"
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { useRoll } from '@/shared/hooks'
@@ -53,6 +53,7 @@ import { CreatureAbilitiesSection } from './CreatureAbilitiesSection'
 import { CreatureSkillsLine } from './CreatureSkillsLine'
 import { CreatureDefensesBlock } from './CreatureDefensesBlock'
 import { useEffectiveStrikes, type EffectiveStrike } from '../model/use-effective-strikes'
+import { buildEquipmentStrikes, type EquipmentAttackItem } from '../lib/equipment-strike'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
@@ -67,6 +68,28 @@ type EngineSize = (typeof SIZE_ORDER)[number]
 
 const capitalize = (s: string): string =>
   s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1)
+
+function getLocalItemId(id: string): string {
+  const parts = id.split(':')
+  return parts[parts.length - 1] ?? id
+}
+
+function areEquipmentAttackItemsEqual(
+  a: readonly EquipmentAttackItem[] | undefined,
+  b: readonly EquipmentAttackItem[],
+): boolean {
+  if (!a || a.length !== b.length) return false
+  return a.every((item, index) => {
+    const next = b[index]
+    return Boolean(next) &&
+      item.id === next.id &&
+      item.name === next.name &&
+      item.itemType === next.itemType &&
+      item.damageFormula === next.damageFormula &&
+      item.traits === next.traits &&
+      item.descriptionLoc === next.descriptionLoc
+  })
+}
 
 /** Renders a DC value (Spell DC / Class DC) with condition modifier tinting.
  *  Caller passes localized `label` string. */
@@ -133,6 +156,10 @@ export function CreatureStatBlock({
     creature.level,
   )
   const locale = useCurrentLocale()
+  const [effectiveEquipmentAttackItems, setEffectiveEquipmentAttackItems] = useState<{
+    creatureId: string
+    items: EquipmentAttackItem[]
+  } | null>(null)
 
   // Stable references for sub-components — re-derived only when structured changes.
   const structured = translation?.structured ?? null
@@ -152,6 +179,33 @@ export function CreatureStatBlock({
     }
     return m.size > 0 ? m : undefined
   }, [structured])
+
+  const baseEquipmentAttackItems = useMemo<EquipmentAttackItem[]>(
+    () =>
+      (creature.equipment ?? []).map((item) => {
+        const localId = getLocalItemId(item.id)
+        return {
+          id: localId,
+          name: item.item_name,
+          itemType: item.item_type,
+          damageFormula: item.damage_formula,
+          traits: item.traits,
+          descriptionLoc: itemsLocById?.get(localId)?.description,
+        }
+      }),
+    [creature.equipment, itemsLocById],
+  )
+
+  const handleEquipmentAttackItemsChange = useCallback(
+    (items: EquipmentAttackItem[]) => {
+      setEffectiveEquipmentAttackItems((prev) =>
+        prev?.creatureId === creature.id && areEquipmentAttackItemsEqual(prev.items, items)
+          ? prev
+          : { creatureId: creature.id, items },
+      )
+    },
+    [creature.id],
+  )
 
   // Tag this hook as an "attack" roll site so Sure Strike (RollTwice selector:
   // attack-roll) surfaces a fortune-aware formula in the toast. Non-attack
@@ -308,10 +362,27 @@ export function CreatureStatBlock({
   )
   const isSpecialFormation = isTroop || isSwarm
 
-  const hasStrikes = creature.strikes.length > 0 && !isSpecialFormation
+  const fallbackStrikeModifier = useMemo(
+    () => creature.strikes.reduce((max, strike) => Math.max(max, strike.modifier), 0),
+    [creature.strikes],
+  )
+  const equipmentAttackItems =
+    effectiveEquipmentAttackItems?.creatureId === creature.id
+      ? effectiveEquipmentAttackItems.items
+      : baseEquipmentAttackItems
+  const equipmentStrikes = useMemo(
+    () => buildEquipmentStrikes(equipmentAttackItems, creature.strikes, fallbackStrikeModifier),
+    [creature.strikes, equipmentAttackItems, fallbackStrikeModifier],
+  )
+  const displayStrikes = useMemo(
+    () => [...creature.strikes, ...equipmentStrikes],
+    [creature.strikes, equipmentStrikes],
+  )
+
+  const hasStrikes = displayStrikes.length > 0 && !isSpecialFormation
 
   const effectiveStrikes = useEffectiveStrikes(
-    creature.strikes,
+    displayStrikes,
     battleFormStrikes,
     adjustStrikeInputs,
     sizeShift,
@@ -534,6 +605,8 @@ export function CreatureStatBlock({
             <EquipmentBlock
               items={creature.equipment ?? []}
               {...(encounterContext ? { encounterContext } : {})}
+              itemsLocById={itemsLocById}
+              onAttackItemsChange={handleEquipmentAttackItemsChange}
             />
             <Separator />
           </>

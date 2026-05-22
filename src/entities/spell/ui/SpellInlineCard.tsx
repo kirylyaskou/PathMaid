@@ -95,6 +95,9 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
               {spell.range_text && (
                 <span>{t('entities.spell.range')} <span className="text-foreground">{spell.range_text}</span></span>
               )}
+              {spell.target_text && (
+                <span>{t('entities.spell.target')} <span className="text-foreground">{spell.target_text}</span></span>
+              )}
               {areaDisplay && (
                 <span>{t('entities.spell.area')} <span className="text-foreground">{areaDisplay}</span></span>
               )}

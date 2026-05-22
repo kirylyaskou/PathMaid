@@ -138,10 +138,10 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
                     <span className="text-sm">{spellLoc?.range ?? spell.range_text}</span>
                   </div>
                 )}
-                {spellLoc?.target && (
+                {(spellLoc?.target || spell.target_text) && (
                   <div className="flex flex-col">
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('entities.spell.target')}</span>
-                    <span className="text-sm">{spellLoc.target}</span>
+                    <span className="text-sm">{spellLoc?.target ?? spell.target_text}</span>
                   </div>
                 )}
                 {areaDisplay && (

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import {
@@ -11,6 +12,7 @@ import { Input } from '@/shared/ui/input'
 import type { CreatureItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
+import { parseInlineDamageFormula, type EquipmentAttackItem } from '../lib/equipment-strike'
 
 interface EncounterContext {
   encounterId: string
@@ -24,6 +26,7 @@ interface EquipmentItemRowProps {
     type: string
     qty: number
     damageFormula: string | null
+    descriptionLoc?: string
     acBonus: number | null
     bulk?: string | null
   }
@@ -46,7 +49,10 @@ function EquipmentItemRow({
 }: EquipmentItemRowProps) {
   const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
   const qty = item.qty > 1 ? ` ×${item.qty}` : ''
-  const stat = item.damageFormula ?? (item.acBonus !== null ? `AC +${item.acBonus}` : null)
+  const stat =
+    parseInlineDamageFormula(item.descriptionLoc)?.formula ??
+    item.damageFormula ??
+    (item.acBonus !== null ? `AC +${item.acBonus}` : null)
   return (
     <div className={cn('group flex items-center gap-2 text-sm', isRemoved && 'opacity-40 line-through')}>
       <span className={cn('px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0', typeColor)}>
@@ -76,12 +82,28 @@ function EquipmentItemRow({
   )
 }
 
+function getLocalItemId(id: string): string {
+  const parts = id.split(':')
+  return parts[parts.length - 1] ?? id
+}
+
+function getDisplayDamageFormula(
+  description: string | null | undefined,
+  damageFormula: string | null,
+): string | null {
+  return parseInlineDamageFormula(description)?.formula ?? damageFormula
+}
+
 export function EquipmentBlock({
   items,
   encounterContext,
+  itemsLocById,
+  onAttackItemsChange,
 }: {
   items: CreatureItemRow[]
   encounterContext?: EncounterContext
+  itemsLocById?: Map<string, { description?: string }>
+  onAttackItemsChange?: (items: EquipmentAttackItem[]) => void
 }) {
   const { t } = useTranslation()
   const {
@@ -93,6 +115,30 @@ export function EquipmentBlock({
     removedIds: _removedIds,
     addedItems, visibleBase, totalCount,
   } = useEquipment(items, encounterContext)
+
+  useEffect(() => {
+    if (!onAttackItemsChange) return
+    onAttackItemsChange([
+      ...visibleBase.map((item) => {
+        const localId = getLocalItemId(item.id)
+        return {
+          id: localId,
+          name: item.item_name,
+          itemType: item.item_type,
+          damageFormula: item.damage_formula,
+          traits: item.traits,
+          descriptionLoc: itemsLocById?.get(localId)?.description,
+        }
+      }),
+      ...addedItems.map((item) => ({
+        id: item.itemFoundryId ?? item.id,
+        name: item.itemName,
+        itemType: item.itemType,
+        damageFormula: item.damageFormula,
+      })),
+    ])
+  }, [addedItems, itemsLocById, onAttackItemsChange, visibleBase])
+
   if (totalCount === 0 && !encounterContext) return null
 
   const interactive = Boolean(encounterContext)
@@ -109,7 +155,15 @@ export function EquipmentBlock({
             {visibleBase.map((item) => (
               <EquipmentItemRow
                 key={item.id}
-                item={{ name: item.item_name, type: item.item_type, qty: item.quantity, damageFormula: item.damage_formula, acBonus: item.ac_bonus, bulk: item.bulk }}
+                item={{
+                  name: item.item_name,
+                  type: item.item_type,
+                  qty: item.quantity,
+                  damageFormula: item.damage_formula,
+                  descriptionLoc: itemsLocById?.get(getLocalItemId(item.id))?.description,
+                  acBonus: item.ac_bonus,
+                  bulk: item.bulk,
+                }}
                 onRemove={interactive ? () => handleRemove(item) : undefined}
                 foundryItemId={item.foundry_item_id}
                 onItemClick={(id) => setDrawerItemId(id)}
@@ -119,10 +173,18 @@ export function EquipmentBlock({
             {overrides.filter((o) => o.isRemoved).map((o) => {
               const base = items.find((i) => (i.foundry_item_id ?? i.item_name) === (o.itemFoundryId ?? o.itemName))
               if (!base) return null
+              const localId = getLocalItemId(base.id)
               return (
                 <EquipmentItemRow
                   key={o.id}
-                  item={{ name: o.itemName, type: o.itemType, qty: o.quantity, damageFormula: o.damageFormula, acBonus: o.acBonus }}
+                  item={{
+                    name: o.itemName,
+                    type: o.itemType,
+                    qty: o.quantity,
+                    damageFormula: o.damageFormula,
+                    descriptionLoc: itemsLocById?.get(localId)?.description,
+                    acBonus: o.acBonus,
+                  }}
                   isRemoved
                   onRestore={() => handleRestoreBase(base)}
                   foundryItemId={o.itemFoundryId}
@@ -160,7 +222,11 @@ export function EquipmentBlock({
                       >
                         <span className={cn('px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0', ITEM_TYPE_COLORS[r.item_type] ?? '')}>{r.item_type[0].toUpperCase()}</span>
                         <span className="flex-1 truncate">{r.name}</span>
-                        {r.damage_formula && <span className="font-mono text-muted-foreground shrink-0">{r.damage_formula}</span>}
+                        {getDisplayDamageFormula(r.description, r.damage_formula) && (
+                          <span className="font-mono text-muted-foreground shrink-0">
+                            {getDisplayDamageFormula(r.description, r.damage_formula)}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>

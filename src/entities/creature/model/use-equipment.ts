@@ -7,6 +7,7 @@ import {
 } from '@/shared/api'
 import type { CreatureItemRow, EncounterItemRow, ItemRow } from '@/shared/api'
 import { logError } from '@/shared/lib/error'
+import { parseInlineDamageFormula } from '../lib/equipment-strike'
 
 interface EncounterContext {
   encounterId: string
@@ -76,7 +77,7 @@ export function useEquipment(
       itemFoundryId: catalogItem.id,
       itemType: catalogItem.item_type,
       quantity: 1,
-      damageFormula: catalogItem.damage_formula,
+      damageFormula: parseInlineDamageFormula(catalogItem.description)?.formula ?? catalogItem.damage_formula,
       acBonus: catalogItem.ac_bonus,
       isRemoved: false,
     }

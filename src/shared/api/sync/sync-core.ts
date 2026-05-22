@@ -57,8 +57,10 @@ export function parseDamageFormula(damage: Record<string, unknown>): { formula: 
   const die = damage.die as string | undefined
   const damageType = damage.damageType as string | undefined
   if (!dice || !die) return { formula: null, type: damageType ?? null }
+  const modifier = typeof damage.modifier === 'number' ? damage.modifier : 0
+  const modifierText = modifier === 0 ? '' : modifier > 0 ? `+${modifier}` : String(modifier)
   return {
-    formula: `${dice}${die} ${damageType ?? ''}`.trim(),
+    formula: `${dice}${die}${modifierText}`,
     type: damageType ?? null,
   }
 }

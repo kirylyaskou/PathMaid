@@ -11,7 +11,7 @@ import type { SpellRow } from '@/entities/spell'
 import { heightenFormula } from '@engine'
 import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasting-helpers'
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
-import { useContentTranslation, useCurrentLocale, getTraitLabel } from '@/shared/i18n'
+import { useContentTranslation, useCurrentLocale, getTraitLabel, type SpellStructuredLoc } from '@/shared/i18n'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { extractHeightening, applyHeightenedScalings } from '@/entities/spell'
 
@@ -47,6 +47,14 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
   const { data: spellTranslation } = useContentTranslation('spell', name, null)
   const localizedName = spellTranslation?.nameLoc ?? name
   const localizedDescriptionHtml = spellTranslation?.textLoc ?? null
+  const spellLoc = useMemo<SpellStructuredLoc | null>(() => {
+    if (!spellTranslation?.structuredJson) return null
+    try {
+      return JSON.parse(spellTranslation.structuredJson) as SpellStructuredLoc
+    } catch {
+      return null
+    }
+  }, [spellTranslation?.structuredJson])
 
   const loadSpell = useCallback(async () => {
     if (spell || loading) return
@@ -191,14 +199,20 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
             {spell.action_cost && (
               <span className="font-mono text-primary">{actionCostLabel(spell.action_cost)}</span>
             )}
-            {spell.range_text && (
-              <span className="text-muted-foreground">{t('statblock.range')}: <span className="text-foreground">{spell.range_text}</span></span>
+            {(spellLoc?.range || spell.range_text) && (
+              <span className="text-muted-foreground">{t('statblock.range')}: <span className="text-foreground">{spellLoc?.range ?? spell.range_text}</span></span>
+            )}
+            {(spellLoc?.target || spell.target_text) && (
+              <span className="text-muted-foreground">{t('entities.spell.target')}: <span className="text-foreground">{spellLoc?.target ?? spell.target_text}</span></span>
             )}
             {parsedArea && (
               <span className="text-muted-foreground">{t('statblock.area')}: <span className="text-foreground">{t('statblock.areaTemplate', { value: parsedArea.value, type: parsedArea.type })}</span></span>
             )}
-            {spell.duration_text && (
-              <span className="text-muted-foreground">{t('statblock.duration')}: <span className="text-foreground">{spell.duration_text}</span></span>
+            {(spellLoc?.duration || spell.duration_text) && (
+              <span className="text-muted-foreground">{t('statblock.duration')}: <span className="text-foreground">{spellLoc?.duration ?? spell.duration_text}</span></span>
+            )}
+            {spellLoc?.time && (
+              <span className="text-muted-foreground">{t('entities.spell.cast')}: <span className="text-foreground">{spellLoc.time}</span></span>
             )}
             {spell.save_stat && (
               <span className="text-muted-foreground">{t('statblock.save')}: <span className="text-foreground capitalize">{getTraitLabel(spell.save_stat.toLowerCase(), locale)}</span></span>

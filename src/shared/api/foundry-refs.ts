@@ -1,6 +1,6 @@
 import { getActionByName } from './actions'
 import { getFeatByName } from './feats'
-import { getItemByName } from './items'
+import { getItemById, getItemByName } from './items'
 import { getSpellByName } from './spells'
 
 export type FoundryRefKind = 'spell' | 'feat' | 'item' | 'action' | 'unknown'
@@ -113,6 +113,17 @@ async function resolveByKind(kind: FoundryRefKind, name: string): Promise<Resolv
     }
   }
   if (kind === 'item') {
+    const rowById = /^[A-Za-z0-9]{16,}$/.test(name) ? await getItemById(name) : null
+    if (rowById) {
+      return {
+        uuid: '',
+        kind,
+        id: rowById.id,
+        name: rowById.name,
+        label: rowById.name_loc ?? rowById.name,
+        resolved: true,
+      }
+    }
     const row = await getItemByName(name)
     if (!row) return null
     return {

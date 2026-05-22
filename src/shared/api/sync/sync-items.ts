@@ -44,6 +44,21 @@ interface RawCreatureItem {
   sort_order: number
 }
 
+interface ItemLookupRow {
+  id: string
+  name: string
+}
+
+function normalizeItemName(name: string): string {
+  return name.replace(/\(\*\)$/g, '').trim().toLowerCase()
+}
+
+function parseInlineDamageFormula(description: string | null | undefined): string | null {
+  if (!description) return null
+  const match = description.match(/@Damage\[\(?([0-9]+d[0-9]+(?:[+-][0-9]+)?)\)?\[[a-z,-]+\]/i)
+  return match?.[1] ?? null
+}
+
 export async function extractAndInsertItems(entities: RawEntity[]): Promise<void> {
   const db = await getDb()
 
@@ -58,6 +73,7 @@ export async function extractAndInsertItems(entities: RawEntity[]): Promise<void
       const sys = raw.system ?? {}
       const traits = sys.traits?.value
       const { formula: damageFormula, type: damageType } = parseDamageFormula(sys.damage ?? {})
+      const inlineDamageFormula = parseInlineDamageFormula(sys.description?.value)
 
       const embeddedSpell = sys.spell as Record<string, unknown> | undefined
       const spellStats = embeddedSpell?._stats as Record<string, unknown> | undefined
@@ -79,7 +95,7 @@ export async function extractAndInsertItems(entities: RawEntity[]): Promise<void
         description: sys.description?.value ?? null,
         source_book: sys.publication?.title || null,
         source_pack: entity.source_pack,
-        damage_formula: damageFormula,
+        damage_formula: inlineDamageFormula ?? damageFormula,
         damage_type: damageType,
         weapon_category: sys.category ?? null,
         weapon_group: sys.group ?? null,
@@ -125,6 +141,9 @@ export async function extractCreatureItems(entities: RawEntity[]): Promise<void>
   const db = await getDb()
 
   await db.execute('DELETE FROM creature_items', [])
+  const catalogRows = await db.select<ItemLookupRow[]>('SELECT id, name FROM items', [])
+  const catalogNameById = new Map(catalogRows.map((row) => [row.id, row.name]))
+  const catalogIdByName = new Map(catalogRows.map((row) => [normalizeItemName(row.name), row.id]))
 
   const SKIP_TYPES = new Set(['spellcastingEntry', 'spell', 'melee', 'ranged', 'action', 'lore'])
   const creatureItems: RawCreatureItem[] = []
@@ -145,14 +164,23 @@ export async function extractCreatureItems(entities: RawEntity[]): Promise<void>
         const stats = (it._stats as Record<string, unknown>) ?? {}
         const traits = (sys.traits as Record<string, unknown>)?.value
         const { formula: damageFormula } = parseDamageFormula((sys.damage as Record<string, unknown>) ?? {})
+        const descriptionValue = (sys.description as Record<string, unknown> | undefined)?.value as string | undefined
+        const inlineDamageFormula = parseInlineDamageFormula(descriptionValue)
         const acBonus = (sys.acBonus as number) ?? null
         const sourceId = stats.compendiumSource as string | undefined
-        const foundryItemId = parseCompendiumId(sourceId) ?? (it._id as string | undefined) ?? null
+        const sourceItemId = parseCompendiumId(sourceId)
+        const sourceName = sourceItemId ? catalogNameById.get(sourceItemId) : undefined
+        const itemName = it.name as string
+        const itemNameKey = normalizeItemName(itemName)
+        const foundryItemId =
+          sourceName && normalizeItemName(sourceName) === itemNameKey
+            ? sourceItemId
+            : catalogIdByName.get(itemNameKey) ?? sourceItemId ?? (it._id as string | undefined) ?? null
 
         creatureItems.push({
           id: `${entity.id}:${it._id as string}`,
           creature_id: entity.id,
-          item_name: it.name as string,
+          item_name: itemName,
           item_type: itemType,
           foundry_item_id: foundryItemId,
           quantity: (sys.quantity as number) ?? 1,
@@ -160,7 +188,7 @@ export async function extractCreatureItems(entities: RawEntity[]): Promise<void>
             typeof (sys.bulk as Record<string, unknown>)?.value === 'number'
             ? String((sys.bulk as Record<string, unknown>).value)
             : null,
-          damage_formula: damageFormula,
+          damage_formula: inlineDamageFormula ?? damageFormula,
           ac_bonus: acBonus,
           traits: Array.isArray(traits) && traits.length ? JSON.stringify(traits) : null,
           sort_order: (it.sort as number) ?? 0,

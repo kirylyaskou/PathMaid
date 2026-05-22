@@ -8,6 +8,7 @@ export interface SpellRow {
   damage: string | null       // JSON object
   area: string | null         // JSON {type, value}
   range_text: string | null
+  target_text: string | null
   duration_text: string | null
   action_cost: string | null  // "1" | "2" | "3" | "free" | "reaction"
   save_stat: string | null    // "will" | "fortitude" | "reflex"

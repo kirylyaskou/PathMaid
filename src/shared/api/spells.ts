@@ -12,6 +12,7 @@ export interface SpellRow {
   damage: string | null
   area: string | null
   range_text: string | null
+  target_text: string | null
   duration_text: string | null
   action_cost: string | null
   save_stat: string | null
