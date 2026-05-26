@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useState, type MouseEvent } from 'react'
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 import {
   buildCampaignGraph,
   type CampaignGraphNode,
@@ -47,12 +54,18 @@ function graphNodeLabel(node: CampaignGraphNode): string {
   return `${node.title.slice(0, 13)}...`
 }
 
-function readNodeId(event: MouseEvent<SVGGElement | HTMLButtonElement>): string | null {
+function readNodeId(
+  event:
+    | FocusEvent<SVGGElement>
+    | KeyboardEvent<SVGGElement>
+    | MouseEvent<SVGGElement | HTMLButtonElement>,
+): string | null {
   return event.currentTarget.dataset.nodeId ?? null
 }
 
 export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
 
   const graph = useMemo(() => buildCampaignGraph(nodes, links), [links, nodes])
   const graphNodeById = useMemo(
@@ -68,12 +81,44 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     setSelectedNodeId(readNodeId(event))
   }, [])
 
+  const handleFocusNode = useCallback((event: FocusEvent<SVGGElement>) => {
+    const nodeId = readNodeId(event)
+
+    setFocusedNodeId(nodeId)
+    setSelectedNodeId(nodeId)
+  }, [])
+
+  const handleBlurNode = useCallback(() => {
+    setFocusedNodeId(null)
+  }, [])
+
   const handleOpenNode = useCallback(
     (event: MouseEvent<SVGGElement>) => {
       const nodeId = readNodeId(event)
 
       if (nodeId) {
         onOpen(nodeId)
+      }
+    },
+    [onOpen],
+  )
+
+  const handleNodeKeyDown = useCallback(
+    (event: KeyboardEvent<SVGGElement>) => {
+      const nodeId = readNodeId(event)
+
+      if (!nodeId) {
+        return
+      }
+
+      if (event.key === 'Enter') {
+        onOpen(nodeId)
+        return
+      }
+
+      if (event.key === ' ' || event.key === 'Spacebar') {
+        event.preventDefault()
+        setSelectedNodeId(nodeId)
       }
     },
     [onOpen],
@@ -124,6 +169,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
           {graph.nodes.map((node) => {
             const radius = graphNodeRadius(node)
             const selected = node.id === selectedNodeId
+            const focused = node.id === focusedNodeId
 
             return (
               <g
@@ -131,10 +177,24 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
                 data-node-id={node.id}
                 tabIndex={0}
                 role="button"
-                className="cursor-pointer outline-none"
+                aria-label={`Select ${node.title} ${node.kind} node`}
+                className="cursor-pointer"
                 onClick={handleSelectNode}
                 onDoubleClick={handleOpenNode}
+                onFocus={handleFocusNode}
+                onBlur={handleBlurNode}
+                onKeyDown={handleNodeKeyDown}
               >
+                {focused ? (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={radius + 7}
+                    fill="none"
+                    stroke="#facc15"
+                    strokeWidth="3"
+                  />
+                ) : null}
                 <circle
                   cx={node.x}
                   cy={node.y}

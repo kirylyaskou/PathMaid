@@ -99,6 +99,14 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
     [togglePin],
   )
 
+  const handleSetEditorMode = useCallback(() => {
+    setMode('editor')
+  }, [setMode])
+
+  const handleSetGraphMode = useCallback(() => {
+    setMode('graph')
+  }, [setMode])
+
   const createInParent = useCallback(
     (parentId: string, kind: CreateCampaignNodeKind) => {
       const parent = findNodeById(nodes, parentId)
@@ -140,7 +148,7 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
             type="button"
             variant={mode === 'editor' ? 'secondary' : 'outline'}
             size="sm"
-            onClick={() => setMode('editor')}
+            onClick={handleSetEditorMode}
           >
             <PencilLine className="h-4 w-4" />
             Editor
@@ -149,7 +157,7 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
             type="button"
             variant={mode === 'graph' ? 'secondary' : 'outline'}
             size="sm"
-            onClick={() => setMode('graph')}
+            onClick={handleSetGraphMode}
           >
             <GitGraph className="h-4 w-4" />
             Graph
