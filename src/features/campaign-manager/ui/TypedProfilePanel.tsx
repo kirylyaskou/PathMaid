@@ -7,6 +7,7 @@ import {
 } from '@/shared/api'
 import { Button } from '@/shared/ui/button'
 import { useCampaignManagerStore } from '../model/store'
+import { CampaignAssetImage } from './CampaignAssetImage'
 
 function extensionFromFileName(fileName: string): string {
   const dotIndex = fileName.lastIndexOf('.')
@@ -84,9 +85,15 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
         <p className="capitalize">Kind: {node.kind}</p>
         <div className="space-y-2 rounded-md border border-border/50 p-3">
-          <p className="break-all text-xs">
-            {document.coverAssetId ? `Cover: ${document.coverAssetId}` : 'No cover image'}
-          </p>
+          {document.coverAssetId ? (
+            <CampaignAssetImage
+              assetId={document.coverAssetId}
+              alt={`${node.title} cover`}
+              className="aspect-[4/3] w-full rounded-md object-cover"
+            />
+          ) : (
+            <p className="text-xs">No cover image</p>
+          )}
           <input
             ref={coverInputRef}
             type="file"

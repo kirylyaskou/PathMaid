@@ -4,6 +4,7 @@ import {
   createCampaign,
   createCampaignNode,
   deleteCampaign,
+  ensureCampaignStarterNote,
   getCampaignDocument,
   getCampaignTable,
   listCampaignLinks,
@@ -209,12 +210,18 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
       try {
         await markCampaignOpened(id)
-        const [nodes, pins, links] = await Promise.all([
+        const [initialNodes, pins, links] = await Promise.all([
           listCampaignNodes(id),
           listCampaignPins(id),
           listCampaignLinks(id),
         ])
+        let nodes = initialNodes
         firstOpenableNodeId = nodes.find(isOpenableCampaignNode)?.id ?? null
+
+        if (!firstOpenableNodeId) {
+          firstOpenableNodeId = await ensureCampaignStarterNote(id)
+          nodes = await listCampaignNodes(id)
+        }
 
         if (requestId !== openCampaignRequestSequence) {
           return

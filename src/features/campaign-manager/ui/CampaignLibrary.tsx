@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/shared/ui/card'
 import { createCampaignAsset, saveCampaignAssetBytes, setCampaignCover } from '@/shared/api'
 import { useCampaignManagerStore } from '../model/store'
 import type { Campaign } from '@/entities/campaign'
+import { CampaignAssetImage } from './CampaignAssetImage'
 import { CampaignWorkspace } from './CampaignWorkspace'
 
 const DESCRIPTION_FALLBACK = 'No description yet.'
@@ -51,6 +52,13 @@ function CampaignCard({
   return (
     <Card className="relative overflow-hidden rounded-md py-0">
       <div className="h-1.5" style={{ backgroundColor: campaign.accentColor }} />
+      {campaign.coverAssetId ? (
+        <CampaignAssetImage
+          assetId={campaign.coverAssetId}
+          alt={`${campaign.name} cover`}
+          className="h-28 w-full object-cover"
+        />
+      ) : null}
       <CardContent className="flex min-h-32 flex-col gap-3 p-4">
         <div className="flex items-start gap-3">
           <button className="min-w-0 flex-1 text-left" onClick={onOpen}>

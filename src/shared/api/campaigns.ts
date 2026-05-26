@@ -299,6 +299,44 @@ function defaultTable(now: string): UpdateCampaignTableInput & { updatedAt: stri
   }
 }
 
+function noteBucketNodeId(campaignId: string): string {
+  return `campaign-node-${campaignId}-notes`
+}
+
+function starterNoteNodeId(campaignId: string): string {
+  return `campaign-node-${campaignId}-session-notes`
+}
+
+async function createStarterNote(
+  db: Awaited<ReturnType<typeof getDb>>,
+  campaignId: string,
+  now: string,
+): Promise<string> {
+  const nodeId = starterNoteNodeId(campaignId)
+  await db.execute(
+    `INSERT OR IGNORE INTO campaign_nodes (${NODE_COLUMNS})
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      nodeId,
+      campaignId,
+      noteBucketNodeId(campaignId),
+      'note',
+      'notes',
+      'Session Notes',
+      0,
+      0,
+      now,
+      now,
+    ],
+  )
+  await db.execute(
+    `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [nodeId, '', '{}', null, '[]', now],
+  )
+  return nodeId
+}
+
 export async function listCampaigns(): Promise<Campaign[]> {
   const db = await getDb()
   const rows = await db.select<CampaignRow[]>(
@@ -350,12 +388,32 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
       )
     }
 
+    await createStarterNote(db, id, now)
+
     await db.execute('COMMIT', [])
     return id
   } catch (error) {
     await db.execute('ROLLBACK', [])
     throw error
   }
+}
+
+export async function ensureCampaignStarterNote(campaignId: string): Promise<string> {
+  const db = await getDb()
+  const rows = await db.select<Array<{ id: string }>>(
+    `SELECT id
+     FROM campaign_nodes
+     WHERE campaign_id = ? AND kind IN ('note', 'table', 'npc', 'item', 'location')
+     ORDER BY sort_order ASC, title ASC
+     LIMIT 1`,
+    [campaignId],
+  )
+  if (rows[0]?.id) {
+    return rows[0].id
+  }
+
+  const now = nowISO()
+  return createStarterNote(db, campaignId, now)
 }
 
 export async function updateCampaign(
