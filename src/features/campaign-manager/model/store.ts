@@ -76,6 +76,7 @@ const LINK_REFRESH_DELAY_MS = 250
 
 let openCampaignRequestSequence = 0
 let openNodeRequestSequence = 0
+let loadingRequestSequence = 0
 
 const saveDocumentLatest = createKeyedLatestTask<DocumentSaveTask, string>(
   AUTOSAVE_DELAY_MS,
@@ -148,6 +149,8 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
       loading: false,
 
     loadCampaigns: async () => {
+      const loadingRequestId = ++loadingRequestSequence
+
       set((state) => {
         state.loading = true
       })
@@ -158,9 +161,11 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
           state.campaigns = campaigns
         })
       } finally {
-        set((state) => {
-          state.loading = false
-        })
+        if (loadingRequestId === loadingRequestSequence) {
+          set((state) => {
+            state.loading = false
+          })
+        }
       }
     },
 
@@ -185,6 +190,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
     openCampaign: async (id) => {
       const requestId = ++openCampaignRequestSequence
+      const loadingRequestId = ++loadingRequestSequence
       openNodeRequestSequence += 1
 
       set((state) => {
@@ -217,7 +223,10 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
           state.mode = 'editor'
         })
       } finally {
-        if (requestId === openCampaignRequestSequence) {
+        if (
+          requestId === openCampaignRequestSequence &&
+          loadingRequestId === loadingRequestSequence
+        ) {
           set((state) => {
             state.loading = false
           })
@@ -273,6 +282,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
     createNode: async (input) => {
       const campaignRequestId = openCampaignRequestSequence
+      const openNodeRequestId = openNodeRequestSequence
       const id = await createCampaignNode(input)
       const nodes = await listCampaignNodes(input.campaignId)
       const activeCampaignId = get().activeCampaignId
@@ -288,7 +298,10 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.nodes = nodes
       })
 
-      if (get().activeCampaignId === input.campaignId) {
+      if (
+        get().activeCampaignId === input.campaignId &&
+        openNodeRequestId === openNodeRequestSequence
+      ) {
         await get().openNode(id)
       }
 
