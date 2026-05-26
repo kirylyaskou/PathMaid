@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { useCampaignManagerStore } from '../model/store'
 import { MarkdownFileEditor } from './MarkdownFileEditor'
+import { TableFileEditor } from './TableFileEditor'
 import { TypedProfilePanel } from './TypedProfilePanel'
 
 interface CurrentFileCardProps {
@@ -62,9 +63,15 @@ export function CurrentFileCard({
         </CardHeader>
         <CardContent className="min-h-0 flex-1 p-0">
           {activeNode.kind === 'table' ? (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-              {activeTable ? 'Table editor is added in the table task.' : 'Loading file...'}
-            </div>
+            activeTable ? (
+              <div className="flex h-full min-h-0 p-4">
+                <TableFileEditor node={activeNode} table={activeTable} />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                Loading file...
+              </div>
+            )
           ) : activeDocument ? (
             <div className="flex h-full min-h-0">
               <div className="min-w-0 flex-1 p-4">
