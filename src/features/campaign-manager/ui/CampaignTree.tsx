@@ -49,6 +49,33 @@ function canCreateChild(node: CampaignTreeNode): boolean {
   return node.kind === 'bucket' || node.kind === 'folder'
 }
 
+interface CampaignTreeRowLabelProps {
+  node: CampaignTreeNode
+  openable: boolean
+  onOpen: (nodeId: string) => void
+}
+
+function CampaignTreeRowLabel({ node, openable, onOpen }: CampaignTreeRowLabelProps) {
+  const Icon = iconForNode(node)
+  const className = 'flex min-w-0 flex-1 items-center gap-2 text-left'
+
+  if (!openable) {
+    return (
+      <div className={className}>
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{node.title}</span>
+      </div>
+    )
+  }
+
+  return (
+    <button type="button" className={className} onClick={() => onOpen(node.id)}>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{node.title}</span>
+    </button>
+  )
+}
+
 function CampaignTreeRows({
   treeNodes,
   activeNodeId,
@@ -59,7 +86,6 @@ function CampaignTreeRows({
   return (
     <>
       {treeNodes.map((node) => {
-        const Icon = iconForNode(node)
         const openable = isOpenableCampaignNode(node)
         const isActive = node.id === activeNodeId
         const indent = `${depth * 0.875}rem`
@@ -74,21 +100,7 @@ function CampaignTreeRows({
               )}
               style={{ paddingLeft: `calc(0.375rem + ${indent})` }}
             >
-              <button
-                type="button"
-                className={cn(
-                  'flex min-w-0 flex-1 items-center gap-2 text-left',
-                  !openable && 'cursor-default',
-                )}
-                onClick={() => {
-                  if (openable) {
-                    onOpen(node.id)
-                  }
-                }}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{node.title}</span>
-              </button>
+              <CampaignTreeRowLabel node={node} openable={openable} onOpen={onOpen} />
               {canCreateChild(node) ? (
                 <Button
                   type="button"

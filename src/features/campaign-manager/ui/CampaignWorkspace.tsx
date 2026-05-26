@@ -168,20 +168,22 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
           </div>
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[18rem_minmax(0,1fr)_17rem]">
-          <CampaignTree
-            nodes={nodes}
-            activeNodeId={activeNodeId}
-            onOpen={handleOpen}
-            onCreate={createInParent}
-          />
-          <CurrentFileCard
-            nodes={nodes}
-            activeNodeId={activeNodeId}
-            pins={pins}
-            onTogglePin={handleTogglePin}
-          />
-          <RefsRail nodes={nodes} links={links} activeNodeId={activeNodeId} onOpen={handleOpen} />
+        <div className="min-h-0 flex-1 overflow-x-auto">
+          <div className="grid h-full min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
+            <CampaignTree
+              nodes={nodes}
+              activeNodeId={activeNodeId}
+              onOpen={handleOpen}
+              onCreate={createInParent}
+            />
+            <CurrentFileCard
+              nodes={nodes}
+              activeNodeId={activeNodeId}
+              pins={pins}
+              onTogglePin={handleTogglePin}
+            />
+            <RefsRail nodes={nodes} links={links} activeNodeId={activeNodeId} onOpen={handleOpen} />
+          </div>
         </div>
       )}
     </div>
