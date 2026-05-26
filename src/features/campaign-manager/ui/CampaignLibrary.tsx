@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Card, CardContent } from '@/shared/ui/card'
+import { createCampaignAsset, saveCampaignAssetBytes, setCampaignCover } from '@/shared/api'
 import { useCampaignManagerStore } from '../model/store'
 import type { Campaign } from '@/entities/campaign'
 import { CampaignWorkspace } from './CampaignWorkspace'
@@ -12,12 +13,33 @@ const DESCRIPTION_FALLBACK = 'No description yet.'
 
 interface CampaignCardProps {
   campaign: Campaign
+  isUploadingCover: boolean
   onOpen: () => void
   onDelete: () => void
+  onUploadCover: (campaignId: string, file: File) => void
 }
 
-function CampaignCard({ campaign, onOpen, onDelete }: CampaignCardProps) {
+function CampaignCard({
+  campaign,
+  isUploadingCover,
+  onOpen,
+  onDelete,
+  onUploadCover,
+}: CampaignCardProps) {
   const description = campaign.description.trim() || DESCRIPTION_FALLBACK
+  const coverInputRef = useRef<HTMLInputElement | null>(null)
+  const handleCoverChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      event.target.value = ''
+      if (!file || isUploadingCover) {
+        return
+      }
+
+      onUploadCover(campaign.id, file)
+    },
+    [campaign.id, isUploadingCover, onUploadCover],
+  )
 
   return (
     <Card className="relative overflow-hidden rounded-md py-0">
@@ -36,9 +58,27 @@ function CampaignCard({ campaign, onOpen, onDelete }: CampaignCardProps) {
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
-        <Button variant="outline" size="sm" className="mt-auto w-fit" onClick={onOpen}>
-          Open
-        </Button>
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <Button variant="outline" size="sm" className="w-fit" onClick={onOpen}>
+            Open
+          </Button>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleCoverChange}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isUploadingCover}
+            onClick={() => coverInputRef.current?.click()}
+          >
+            Cover
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
@@ -47,6 +87,7 @@ function CampaignCard({ campaign, onOpen, onDelete }: CampaignCardProps) {
 export function CampaignLibrary() {
   const [newCampaignName, setNewCampaignName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [uploadingCampaignCoverId, setUploadingCampaignCoverId] = useState<string | null>(null)
   const isCreatingRef = useRef(false)
   const {
     campaigns,
@@ -101,6 +142,42 @@ export function CampaignLibrary() {
     [handleCreate],
   )
 
+  const handleUploadCampaignCover = useCallback(
+    async (campaignId: string, file: File) => {
+      if (uploadingCampaignCoverId) {
+        return
+      }
+
+      setUploadingCampaignCoverId(campaignId)
+
+      try {
+        const assetId = `campaign-asset-${crypto.randomUUID()}`
+        const extension = file.name.split('.').pop() || 'bin'
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const relativePath = await saveCampaignAssetBytes({
+          campaignId,
+          assetId,
+          extension,
+          bytes,
+        })
+
+        await createCampaignAsset({
+          id: assetId,
+          campaignId,
+          kind: 'campaign-cover',
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          relativePath,
+        })
+        await setCampaignCover(campaignId, assetId)
+        await loadCampaigns()
+      } finally {
+        setUploadingCampaignCoverId(null)
+      }
+    },
+    [loadCampaigns, uploadingCampaignCoverId],
+  )
+
   if (activeCampaignId) {
     return <CampaignWorkspace onBack={closeCampaign} />
   }
@@ -137,8 +214,12 @@ export function CampaignLibrary() {
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
+                isUploadingCover={uploadingCampaignCoverId !== null}
                 onOpen={() => void openCampaign(campaign.id)}
                 onDelete={() => void deleteExistingCampaign(campaign.id)}
+                onUploadCover={(campaignId, file) => {
+                  void handleUploadCampaignCover(campaignId, file)
+                }}
               />
             ))}
           </div>

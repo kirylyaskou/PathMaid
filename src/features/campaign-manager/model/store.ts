@@ -69,6 +69,7 @@ interface CampaignManagerState {
   createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
   patchTable: (nodeId: string, table: CampaignTable) => void
+  refreshDocument: (nodeId: string) => Promise<void>
   togglePin: (nodeId: string) => Promise<void>
   refreshLinksForNode: (nodeId: string) => Promise<void>
 }
@@ -359,6 +360,22 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
       saveTableLatest({ nodeId, table: nextTable })
       refreshLinksLatest({ nodeId })
+    },
+
+    refreshDocument: async (nodeId) => {
+      const node = findNodeById(get().nodes, nodeId)
+      if (!node || node.kind === 'table') {
+        return
+      }
+
+      const document = await getCampaignDocument(nodeId)
+      if (!document || get().activeCampaignId !== node.campaignId) {
+        return
+      }
+
+      set((state) => {
+        state.documents[nodeId] = document
+      })
     },
 
     togglePin: async (nodeId) => {

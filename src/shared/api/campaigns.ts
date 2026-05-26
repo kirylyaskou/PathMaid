@@ -374,6 +374,18 @@ export async function updateCampaign(
   )
 }
 
+export async function setCampaignCover(
+  campaignId: string,
+  assetId: string | null,
+): Promise<void> {
+  const now = nowISO()
+  const db = await getDb()
+  await db.execute(
+    'UPDATE campaigns SET cover_asset_id = ?, updated_at = ? WHERE id = ?',
+    [assetId, now, campaignId],
+  )
+}
+
 export async function markCampaignOpened(campaignId: string): Promise<void> {
   const now = nowISO()
   const db = await getDb()
@@ -514,6 +526,18 @@ export async function updateCampaignDocument(
       nowISO(),
       nodeId,
     ],
+  )
+}
+
+export async function setCampaignDocumentCover(
+  nodeId: string,
+  assetId: string | null,
+): Promise<void> {
+  const now = nowISO()
+  const db = await getDb()
+  await db.execute(
+    'UPDATE campaign_documents SET cover_asset_id = ?, updated_at = ? WHERE node_id = ?',
+    [assetId, now, nodeId],
   )
 }
 
