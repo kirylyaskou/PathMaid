@@ -62,6 +62,7 @@ interface CampaignManagerState {
   createNewCampaign: (name: string) => Promise<string>
   deleteExistingCampaign: (id: string) => Promise<void>
   openCampaign: (id: string) => Promise<void>
+  closeCampaign: () => void
   setMode: (mode: CampaignManagerMode) => void
   openNode: (nodeId: string) => Promise<void>
   createNode: (input: CreateNodeInput) => Promise<string>
@@ -236,6 +237,17 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
       if (requestId === openCampaignRequestSequence && firstOpenableNodeId) {
         await get().openNode(firstOpenableNodeId)
       }
+    },
+
+    closeCampaign: () => {
+      openCampaignRequestSequence += 1
+      openNodeRequestSequence += 1
+      loadingRequestSequence += 1
+
+      set((state) => {
+        Object.assign(state, emptyWorkspace())
+        state.loading = false
+      })
     },
 
     setMode: (mode) =>

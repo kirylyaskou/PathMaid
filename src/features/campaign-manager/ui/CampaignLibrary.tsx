@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
@@ -45,6 +45,8 @@ function CampaignCard({ campaign, onOpen, onDelete }: CampaignCardProps) {
 
 export function CampaignLibrary() {
   const [newCampaignName, setNewCampaignName] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const isCreatingRef = useRef(false)
   const {
     campaigns,
     activeCampaignId,
@@ -53,6 +55,7 @@ export function CampaignLibrary() {
     createNewCampaign,
     deleteExistingCampaign,
     openCampaign,
+    closeCampaign,
   } = useCampaignManagerStore(
     useShallow((state) => ({
       campaigns: state.campaigns,
@@ -62,6 +65,7 @@ export function CampaignLibrary() {
       createNewCampaign: state.createNewCampaign,
       deleteExistingCampaign: state.deleteExistingCampaign,
       openCampaign: state.openCampaign,
+      closeCampaign: state.closeCampaign,
     })),
   )
 
@@ -76,13 +80,21 @@ export function CampaignLibrary() {
 
   const handleCreate = useCallback(async () => {
     const title = newCampaignName.trim()
-    if (!title) {
+    if (!title || isCreatingRef.current) {
       return
     }
 
-    const id = await createNewCampaign(title)
-    setNewCampaignName('')
-    await openCampaign(id)
+    isCreatingRef.current = true
+    setIsCreating(true)
+
+    try {
+      const id = await createNewCampaign(title)
+      setNewCampaignName('')
+      await openCampaign(id)
+    } finally {
+      isCreatingRef.current = false
+      setIsCreating(false)
+    }
   }, [createNewCampaign, newCampaignName, openCampaign])
 
   const handleSubmit = useCallback(
@@ -94,8 +106,8 @@ export function CampaignLibrary() {
   )
 
   const handleBackToLibrary = useCallback(() => {
-    useCampaignManagerStore.setState({ activeCampaignId: null })
-  }, [])
+    closeCampaign()
+  }, [closeCampaign])
 
   if (activeCampaignId) {
     return (
@@ -131,8 +143,9 @@ export function CampaignLibrary() {
             onChange={(event) => setNewCampaignName(event.target.value)}
             placeholder="New campaign name"
             className="w-64"
+            disabled={isCreating}
           />
-          <Button size="sm" type="submit" disabled={!newCampaignName.trim()}>
+          <Button size="sm" type="submit" disabled={!newCampaignName.trim() || isCreating}>
             <Plus className="h-4 w-4" /> New
           </Button>
         </form>
