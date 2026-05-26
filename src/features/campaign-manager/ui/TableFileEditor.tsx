@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { memo, useCallback, useEffect, useState, type KeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { CampaignNode, CampaignTable, CampaignTableColumn, CampaignTableRow } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
@@ -244,11 +244,16 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
 }
 
 export function TableFileEditor({ node, table }: TableFileEditorProps) {
+  const latestTableRef = useRef(table)
   const { patchTable } = useCampaignManagerStore(
     useShallow((state) => ({
       patchTable: state.patchTable,
     })),
   )
+
+  useEffect(() => {
+    latestTableRef.current = table
+  }, [table])
 
   const addColumn = useCallback(() => {
     const id = `col-${crypto.randomUUID()}`
@@ -282,18 +287,20 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
 
   const setCell = useCallback(
     (rowId: string, columnId: string, value: string) => {
+      const latestTable = latestTableRef.current
+
       patchTable(node.id, {
-        ...table,
+        ...latestTable,
         cells: {
-          ...table.cells,
+          ...latestTable.cells,
           [rowId]: {
-            ...(table.cells[rowId] ?? {}),
+            ...(latestTable.cells[rowId] ?? {}),
             [columnId]: value,
           },
         },
       })
     },
-    [node.id, patchTable, table],
+    [node.id, patchTable],
   )
 
   const setColumnTitle = useCallback(
@@ -323,15 +330,17 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
 
   const setRowHeight = useCallback(
     (rowId: string, height: number) => {
+      const latestTable = latestTableRef.current
+
       patchTable(node.id, {
-        ...table,
+        ...latestTable,
         rowSizes: {
-          ...table.rowSizes,
+          ...latestTable.rowSizes,
           [rowId]: height,
         },
       })
     },
-    [node.id, patchTable, table],
+    [node.id, patchTable],
   )
 
   return (
