@@ -14,6 +14,7 @@ import {
   markCampaignOpened,
   replaceCampaignLinks,
   setCampaignPins,
+  updateCampaignNodeTitle,
   updateCampaignDocument,
   updateCampaignTable,
   type CreateNodeInput,
@@ -68,6 +69,7 @@ interface CampaignManagerState {
   setMode: (mode: CampaignManagerMode) => void
   openNode: (nodeId: string) => Promise<void>
   createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
+  renameNode: (nodeId: string, title: string) => Promise<void>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
   patchDocumentCover: (nodeId: string, assetId: string | null) => void
   patchTable: (nodeId: string, table: CampaignTable) => void
@@ -81,7 +83,7 @@ interface CampaignManagerCreateNodeInput extends CreateNodeInput {
 }
 
 const AUTOSAVE_DELAY_MS = 600
-const LINK_REFRESH_DELAY_MS = 250
+const LINK_REFRESH_DELAY_MS = 900
 
 let openCampaignRequestSequence = 0
 let openNodeRequestSequence = 0
@@ -334,12 +336,30 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
       return id
     },
 
+    renameNode: async (nodeId, title) => {
+      const nextTitle = title.trim()
+      const node = findNodeById(get().nodes, nodeId)
+      if (!node || node.isSystem || !nextTitle || node.title === nextTitle) {
+        return
+      }
+
+      await updateCampaignNodeTitle(nodeId, nextTitle)
+
+      set((state) => {
+        const target = state.nodes.find((candidate) => candidate.id === nodeId)
+        if (target) {
+          target.title = nextTitle
+        }
+      })
+    },
+
     patchDocumentMarkdown: (nodeId, markdown) => {
       const current = get().documents[nodeId]
       if (!current) {
         return
       }
 
+      const shouldRefreshLinks = current.markdown.includes('[[') || markdown.includes('[[')
       const nextDocument: CampaignDocument = { ...current, markdown }
 
       set((state) => {
@@ -347,7 +367,9 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
       })
 
       saveDocumentLatest({ nodeId, markdown })
-      refreshLinksLatest({ nodeId })
+      if (shouldRefreshLinks) {
+        refreshLinksLatest({ nodeId })
+      }
     },
 
     patchDocumentCover: (nodeId, assetId) => {

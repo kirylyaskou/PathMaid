@@ -17,7 +17,7 @@ interface CampaignTreeProps {
   nodes: CampaignNode[]
   activeNodeId: string | null
   onOpen: (nodeId: string) => void
-  onCreate: (parentId: string, kind: CreateCampaignNodeKind) => void
+  onCreate: (parentId: string, kind?: CreateCampaignNodeKind) => void
 }
 
 interface CampaignTreeRowsProps extends Omit<CampaignTreeProps, 'nodes'> {
@@ -39,10 +39,6 @@ function iconForNode(node: CampaignTreeNode) {
   }
 
   return FileText
-}
-
-function defaultChildKind(node: CampaignTreeNode): CreateCampaignNodeKind {
-  return node.bucket === 'tables' ? 'table' : 'note'
 }
 
 function canCreateChild(node: CampaignTreeNode): boolean {
@@ -107,7 +103,7 @@ function CampaignTreeRows({
                   variant="ghost"
                   size="icon-sm"
                   className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={() => onCreate(node.id, defaultChildKind(node))}
+                  onClick={() => onCreate(node.id)}
                   aria-label={`Create child in ${node.title}`}
                 >
                   <Plus className="h-3.5 w-3.5" />

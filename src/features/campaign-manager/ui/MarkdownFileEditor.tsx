@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   findNodeById,
@@ -24,6 +24,8 @@ interface MarkdownFileEditorProps {
   node: CampaignNode
   document: CampaignDocument
 }
+
+const MARKDOWN_COMMIT_DELAY_MS = 180
 
 function bucketForLinkedKind(kind: LinkableCampaignNodeKind, node: CampaignNode): CampaignBucket {
   if (kind === 'note') {
@@ -61,9 +63,39 @@ function topLevelBucketNode(
   )
 }
 
+function wikiTokenSelection(markdown: string, cursor: number): TextSelection | null {
+  const closedBeforeCursor = markdown.slice(Math.max(0, cursor - 2), cursor) === ']]'
+  const closeIndex = closedBeforeCursor ? cursor - 2 : markdown.indexOf(']]', cursor)
+  const openIndex = markdown.lastIndexOf('[[', closedBeforeCursor ? closeIndex : cursor)
+
+  if (openIndex < 0) {
+    return null
+  }
+
+  const end = closeIndex < 0 ? cursor : closeIndex + 2
+  const textEnd = closeIndex < 0 ? cursor : closeIndex
+  if (textEnd <= openIndex + 2) {
+    return null
+  }
+
+  const text = markdown.slice(openIndex + 2, textEnd)
+  if (text.includes('[[') || text.includes(']]') || text.includes('\n')) {
+    return null
+  }
+
+  return {
+    start: openIndex,
+    end,
+    text,
+  }
+}
+
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isCreatePendingRef = useRef(false)
+  const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestDraftRef = useRef(document.markdown)
+  const [draft, setDraft] = useState(document.markdown)
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0, text: '' })
   const [isCreatePending, setIsCreatePending] = useState(false)
   const { patchDocumentMarkdown, createNode, nodes } = useCampaignManagerStore(
@@ -74,6 +106,54 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     })),
   )
 
+  useEffect(() => {
+    setDraft(document.markdown)
+    latestDraftRef.current = document.markdown
+    setSelection({ start: 0, end: 0, text: '' })
+  }, [node.id])
+
+  useEffect(() => {
+    if (document.markdown !== latestDraftRef.current) {
+      setDraft(document.markdown)
+      latestDraftRef.current = document.markdown
+    }
+  }, [document.markdown])
+
+  useEffect(
+    () => () => {
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current)
+      }
+      if (latestDraftRef.current !== document.markdown) {
+        patchDocumentMarkdown(node.id, latestDraftRef.current)
+      }
+    },
+    [document.markdown, node.id, patchDocumentMarkdown],
+  )
+
+  const commitMarkdown = useCallback(
+    (markdown: string) => {
+      latestDraftRef.current = markdown
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current)
+      }
+
+      commitTimerRef.current = setTimeout(() => {
+        commitTimerRef.current = null
+        patchDocumentMarkdown(node.id, latestDraftRef.current)
+      }, MARKDOWN_COMMIT_DELAY_MS)
+    },
+    [node.id, patchDocumentMarkdown],
+  )
+
+  const flushMarkdown = useCallback(() => {
+    if (commitTimerRef.current) {
+      clearTimeout(commitTimerRef.current)
+      commitTimerRef.current = null
+    }
+    patchDocumentMarkdown(node.id, latestDraftRef.current)
+  }, [node.id, patchDocumentMarkdown])
+
   const handleSelect = useCallback(() => {
     const textarea = textareaRef.current
 
@@ -83,26 +163,32 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
+    if (start === end) {
+      setSelection(wikiTokenSelection(draft, start) ?? { start: 0, end: 0, text: '' })
+      return
+    }
 
     setSelection({
       start,
       end,
-      text: document.markdown.slice(start, end),
+      text: draft.slice(start, end),
     })
-  }, [document.markdown])
+  }, [draft])
 
   const replaceSelectedText = useCallback(
     (replacement: string) => {
       const nextMarkdown =
-        document.markdown.slice(0, selection.start) +
+        draft.slice(0, selection.start) +
         replacement +
-        document.markdown.slice(selection.end)
+        draft.slice(selection.end)
 
-      patchDocumentMarkdown(node.id, nextMarkdown)
+      setDraft(nextMarkdown)
+      latestDraftRef.current = nextMarkdown
+      flushMarkdown()
       setSelection({ start: 0, end: 0, text: '' })
       textareaRef.current?.focus()
     },
-    [document.markdown, node.id, patchDocumentMarkdown, selection.end, selection.start],
+    [draft, flushMarkdown, selection.end, selection.start],
   )
 
   const handleLink = useCallback(() => {
@@ -167,9 +253,16 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      patchDocumentMarkdown(node.id, event.target.value)
+      const nextMarkdown = event.target.value
+      setDraft(nextMarkdown)
+      commitMarkdown(nextMarkdown)
+
+      const nextSelection = wikiTokenSelection(nextMarkdown, event.target.selectionStart)
+      if (nextSelection) {
+        setSelection(nextSelection)
+      }
     },
-    [node.id, patchDocumentMarkdown],
+    [commitMarkdown],
   )
 
   return (
@@ -185,12 +278,13 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       />
       <Textarea
         ref={textareaRef}
-        value={document.markdown}
+        value={draft}
         disabled={isCreatePending}
         onChange={handleChange}
         onSelect={handleSelect}
+        onBlur={flushMarkdown}
         placeholder="Write markdown here. Select text to add links or create campaign files."
-        className="min-h-0 flex-1 resize-none font-mono text-sm leading-6"
+        className="h-full min-h-0 flex-1 resize-none font-mono text-sm leading-6"
       />
     </div>
   )

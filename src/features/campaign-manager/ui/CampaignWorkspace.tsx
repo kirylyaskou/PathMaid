@@ -50,6 +50,26 @@ function bucketForKind(kind: CreateCampaignNodeKind, parent: CampaignNode): Camp
   return parent.bucket
 }
 
+function defaultChildKind(parent: CampaignNode): CreateCampaignNodeKind {
+  if (parent.bucket === 'tables') {
+    return 'table'
+  }
+
+  if (parent.bucket === 'npcs') {
+    return 'npc'
+  }
+
+  if (parent.bucket === 'items') {
+    return 'item'
+  }
+
+  if (parent.bucket === 'locations') {
+    return 'location'
+  }
+
+  return 'note'
+}
+
 export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
   const {
     campaigns,
@@ -108,13 +128,14 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
   }, [setMode])
 
   const createInParent = useCallback(
-    (parentId: string, kind: CreateCampaignNodeKind) => {
+    (parentId: string, requestedKind?: CreateCampaignNodeKind) => {
       const parent = findNodeById(nodes, parentId)
 
       if (!activeCampaignId || !parent) {
         return
       }
 
+      const kind = requestedKind ?? defaultChildKind(parent)
       void createNode({
         campaignId: activeCampaignId,
         parentId,
@@ -127,7 +148,7 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
   )
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Button type="button" variant="outline" size="sm" onClick={onBack}>
@@ -170,8 +191,8 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
       {mode === 'graph' ? (
         <GraphMode nodes={nodes} links={links} onOpen={handleOpen} />
       ) : (
-        <div className="min-h-0 flex-1 overflow-x-auto">
-          <div className="grid h-full min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="grid h-full min-h-0 min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
             <CampaignTree
               nodes={nodes}
               activeNodeId={activeNodeId}
