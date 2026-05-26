@@ -11,6 +11,13 @@ import { CampaignWorkspace } from './CampaignWorkspace'
 
 const DESCRIPTION_FALLBACK = 'No description yet.'
 
+function extensionFromFileName(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf('.')
+  return dotIndex >= 0 && dotIndex < fileName.length - 1
+    ? fileName.slice(dotIndex + 1)
+    : 'bin'
+}
+
 interface CampaignCardProps {
   campaign: Campaign
   isUploadingCover: boolean
@@ -152,7 +159,7 @@ export function CampaignLibrary() {
 
       try {
         const assetId = `campaign-asset-${crypto.randomUUID()}`
-        const extension = file.name.split('.').pop() || 'bin'
+        const extension = extensionFromFileName(file.name)
         const bytes = new Uint8Array(await file.arrayBuffer())
         const relativePath = await saveCampaignAssetBytes({
           campaignId,
