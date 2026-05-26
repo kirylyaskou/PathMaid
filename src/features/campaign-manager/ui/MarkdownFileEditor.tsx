@@ -26,6 +26,10 @@ interface MarkdownFileEditorProps {
 }
 
 function bucketForLinkedKind(kind: LinkableCampaignNodeKind, node: CampaignNode): CampaignBucket {
+  if (kind === 'note') {
+    return 'notes'
+  }
+
   if (kind === 'npc') {
     return 'npcs'
   }
