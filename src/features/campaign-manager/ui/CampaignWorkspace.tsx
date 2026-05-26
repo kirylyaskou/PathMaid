@@ -11,6 +11,7 @@ import { Button } from '@/shared/ui/button'
 import { useCampaignManagerStore } from '../model/store'
 import { CampaignTree } from './CampaignTree'
 import { CurrentFileCard } from './CurrentFileCard'
+import { GraphMode } from './GraphMode'
 import { PinnedFileRail } from './PinnedFileRail'
 import { RefsRail } from './RefsRail'
 
@@ -159,14 +160,7 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
       <PinnedFileRail nodes={nodes} pins={pins} activeNodeId={activeNodeId} onOpen={handleOpen} />
 
       {mode === 'graph' ? (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="max-w-sm text-center">
-            <div className="text-sm font-medium">Graph Mode is added later.</div>
-            <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setMode('editor')}>
-              Return to Editor
-            </Button>
-          </div>
-        </div>
+        <GraphMode nodes={nodes} links={links} onOpen={handleOpen} />
       ) : (
         <div className="min-h-0 flex-1 overflow-x-auto">
           <div className="grid h-full min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
