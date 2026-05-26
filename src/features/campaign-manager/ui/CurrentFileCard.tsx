@@ -1,8 +1,12 @@
 import { Pin, PinOff } from 'lucide-react'
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { findNodeById, type CampaignNode } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { useCampaignManagerStore } from '../model/store'
+import { MarkdownFileEditor } from './MarkdownFileEditor'
+import { TypedProfilePanel } from './TypedProfilePanel'
 
 interface CurrentFileCardProps {
   nodes: CampaignNode[]
@@ -19,6 +23,14 @@ export function CurrentFileCard({
 }: CurrentFileCardProps) {
   const activeNode = useMemo(() => findNodeById(nodes, activeNodeId), [activeNodeId, nodes])
   const isPinned = activeNode ? pins.includes(activeNode.id) : false
+  const { documents, tables } = useCampaignManagerStore(
+    useShallow((state) => ({
+      documents: state.documents,
+      tables: state.tables,
+    })),
+  )
+  const activeDocument = activeNode && activeNode.kind !== 'table' ? documents[activeNode.id] : null
+  const activeTable = activeNode?.kind === 'table' ? tables[activeNode.id] : null
 
   if (!activeNode) {
     return (
@@ -48,8 +60,23 @@ export function CurrentFileCard({
             <PinIcon className="h-4 w-4" />
           </Button>
         </CardHeader>
-        <CardContent className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-          Editor for this file is added by markdown/table tasks.
+        <CardContent className="min-h-0 flex-1 p-0">
+          {activeNode.kind === 'table' ? (
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              {activeTable ? 'Table editor is added in the table task.' : 'Loading file...'}
+            </div>
+          ) : activeDocument ? (
+            <div className="flex h-full min-h-0">
+              <div className="min-w-0 flex-1 p-4">
+                <MarkdownFileEditor node={activeNode} document={activeDocument} />
+              </div>
+              <TypedProfilePanel node={activeNode} document={activeDocument} />
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              Loading file...
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
