@@ -23,6 +23,7 @@ import {
   findNodeById,
   isOpenableCampaignNode,
   type Campaign,
+  type CampaignBucket,
   type CampaignDocument,
   type CampaignLink,
   type CampaignNode,
@@ -65,11 +66,15 @@ interface CampaignManagerState {
   closeCampaign: () => void
   setMode: (mode: CampaignManagerMode) => void
   openNode: (nodeId: string) => Promise<void>
-  createNode: (input: CreateNodeInput) => Promise<string>
+  createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
   patchTable: (nodeId: string, table: CampaignTable) => void
   togglePin: (nodeId: string) => Promise<void>
   refreshLinksForNode: (nodeId: string) => Promise<void>
+}
+
+interface CampaignManagerCreateNodeInput extends CreateNodeInput {
+  bucket?: CampaignBucket
 }
 
 const AUTOSAVE_DELAY_MS = 600

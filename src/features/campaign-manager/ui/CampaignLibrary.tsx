@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Card, CardContent } from '@/shared/ui/card'
 import { useCampaignManagerStore } from '../model/store'
 import type { Campaign } from '@/entities/campaign'
+import { CampaignWorkspace } from './CampaignWorkspace'
 
 const DESCRIPTION_FALLBACK = 'No description yet.'
 
@@ -69,11 +70,6 @@ export function CampaignLibrary() {
     })),
   )
 
-  const activeCampaign = useMemo(
-    () => campaigns.find((campaign) => campaign.id === activeCampaignId) ?? null,
-    [activeCampaignId, campaigns],
-  )
-
   useEffect(() => {
     void loadCampaigns()
   }, [loadCampaigns])
@@ -105,29 +101,8 @@ export function CampaignLibrary() {
     [handleCreate],
   )
 
-  const handleBackToLibrary = useCallback(() => {
-    closeCampaign()
-  }, [closeCampaign])
-
   if (activeCampaignId) {
-    return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/40 px-4 py-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold">
-              {activeCampaign?.name ?? 'Campaign workspace'}
-            </h1>
-            <p className="text-xs text-muted-foreground">Campaign workspace is being prepared.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleBackToLibrary}>
-            <ArrowLeft className="h-4 w-4" /> Back to library
-          </Button>
-        </div>
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-          The campaign workspace is being prepared.
-        </div>
-      </div>
-    )
+    return <CampaignWorkspace onBack={closeCampaign} />
   }
 
   return (
