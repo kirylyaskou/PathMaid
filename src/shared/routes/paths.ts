@@ -3,6 +3,7 @@ export const PATHS = {
   COMBAT: '/combat',
   BESTIARY: '/bestiary',
   ENCOUNTERS: '/encounters',
+  CAMPAIGNS: '/campaigns',
   CONDITIONS: '/conditions',
   SPELLS: '/spells',
   ITEMS: '/items',

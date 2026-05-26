@@ -7,6 +7,7 @@ const DashboardPage  = lazy(() => import('@/pages/dashboard').then(m => ({ defau
 const CombatPage     = lazy(() => import('@/pages/combat').then(m => ({ default: m.CombatPage })))
 const BestiaryPage   = lazy(() => import('@/pages/bestiary').then(m => ({ default: m.BestiaryPage })))
 const EncountersPage = lazy(() => import('@/pages/encounters').then(m => ({ default: m.EncountersPage })))
+const CampaignsPage  = lazy(() => import('@/pages/campaigns').then(m => ({ default: m.CampaignsPage })))
 const ActionsPage    = lazy(() => import('@/pages/actions').then(m => ({ default: m.ActionsPage })))
 const ConditionsPage = lazy(() => import('@/pages/conditions').then(m => ({ default: m.ConditionsPage })))
 const HazardsPage    = lazy(() => import('@/pages/hazards').then(m => ({ default: m.HazardsPage })))
@@ -47,6 +48,7 @@ const router = createHashRouter([
           { path: 'combat', element: <CombatPage /> },
           { path: 'bestiary', element: <BestiaryPage /> },
           { path: 'encounters', element: <EncountersPage /> },
+          { path: 'campaigns', element: <CampaignsPage /> },
           { path: 'actions', element: <ActionsPage /> },
           { path: 'conditions', element: <ConditionsPage /> },
           { path: 'hazards', element: <HazardsPage /> },
