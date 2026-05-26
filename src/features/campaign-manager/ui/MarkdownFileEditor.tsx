@@ -63,7 +63,9 @@ function topLevelBucketNode(
 
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const isCreatePendingRef = useRef(false)
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0, text: '' })
+  const [isCreatePending, setIsCreatePending] = useState(false)
   const { patchDocumentMarkdown, createNode, nodes } = useCampaignManagerStore(
     useShallow((state) => ({
       patchDocumentMarkdown: state.patchDocumentMarkdown,
@@ -104,11 +106,19 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   )
 
   const handleLink = useCallback(() => {
+    if (isCreatePendingRef.current) {
+      return
+    }
+
     replaceSelectedText(formatCampaignWikiLink(selection.text))
   }, [replaceSelectedText, selection.text])
 
   const createLinked = useCallback(
-    (kind: LinkableCampaignNodeKind) => {
+    async (kind: LinkableCampaignNodeKind) => {
+      if (isCreatePendingRef.current) {
+        return
+      }
+
       const title = selection.text.trim()
 
       if (title.length === 0) {
@@ -119,32 +129,40 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       const parent = topLevelBucketNode(nodes, node.campaignId, bucket)
       const fallbackParent = node.parentId ? findNodeById(nodes, node.parentId) : node
 
-      void createNode({
-        campaignId: node.campaignId,
-        parentId: parent?.id ?? fallbackParent?.id ?? node.id,
-        kind,
-        bucket,
-        title,
-      })
-      replaceSelectedText(formatCampaignWikiLink(title))
+      isCreatePendingRef.current = true
+      setIsCreatePending(true)
+
+      try {
+        await createNode({
+          campaignId: node.campaignId,
+          parentId: parent?.id ?? fallbackParent?.id ?? node.id,
+          kind,
+          bucket,
+          title,
+        })
+        replaceSelectedText(formatCampaignWikiLink(title))
+      } finally {
+        isCreatePendingRef.current = false
+        setIsCreatePending(false)
+      }
     },
     [createNode, node, nodes, replaceSelectedText, selection.text],
   )
 
   const handleCreateNote = useCallback(() => {
-    createLinked('note')
+    void createLinked('note')
   }, [createLinked])
 
   const handleCreateNpc = useCallback(() => {
-    createLinked('npc')
+    void createLinked('npc')
   }, [createLinked])
 
   const handleCreateItem = useCallback(() => {
-    createLinked('item')
+    void createLinked('item')
   }, [createLinked])
 
   const handleCreateLocation = useCallback(() => {
-    createLinked('location')
+    void createLinked('location')
   }, [createLinked])
 
   const handleChange = useCallback(
@@ -158,6 +176,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <SelectionActionMenu
         selectedText={selection.text}
+        isPending={isCreatePending}
         onLink={handleLink}
         onCreateNote={handleCreateNote}
         onCreateNpc={handleCreateNpc}
