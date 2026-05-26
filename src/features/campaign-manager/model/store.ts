@@ -68,6 +68,7 @@ interface CampaignManagerState {
   openNode: (nodeId: string) => Promise<void>
   createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
+  patchDocumentCover: (nodeId: string, assetId: string | null) => void
   patchTable: (nodeId: string, table: CampaignTable) => void
   refreshDocument: (nodeId: string) => Promise<void>
   togglePin: (nodeId: string) => Promise<void>
@@ -340,6 +341,17 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
       saveDocumentLatest({ nodeId, markdown })
       refreshLinksLatest({ nodeId })
+    },
+
+    patchDocumentCover: (nodeId, assetId) => {
+      const current = get().documents[nodeId]
+      if (!current) {
+        return
+      }
+
+      set((state) => {
+        state.documents[nodeId] = { ...current, coverAssetId: assetId }
+      })
     },
 
     patchTable: (nodeId, table) => {

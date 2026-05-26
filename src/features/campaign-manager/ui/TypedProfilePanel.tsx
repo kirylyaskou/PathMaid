@@ -23,7 +23,7 @@ interface TypedProfilePanelProps {
 export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
   const [isUploadingCover, setIsUploadingCover] = useState(false)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
-  const refreshDocument = useCampaignManagerStore((state) => state.refreshDocument)
+  const patchDocumentCover = useCampaignManagerStore((state) => state.patchDocumentCover)
 
   const uploadCover = useCallback(
     async (file: File) => {
@@ -53,12 +53,12 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
           relativePath,
         })
         await setCampaignDocumentCover(node.id, assetId)
-        await refreshDocument(node.id)
+        patchDocumentCover(node.id, assetId)
       } finally {
         setIsUploadingCover(false)
       }
     },
-    [isUploadingCover, node.campaignId, node.id, refreshDocument],
+    [isUploadingCover, node.campaignId, node.id, patchDocumentCover],
   )
 
   const handleCoverChange = useCallback(
