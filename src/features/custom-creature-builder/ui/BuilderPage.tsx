@@ -160,7 +160,7 @@ export function BuilderPage({ creatureId }: Props) {
         </div>
         <div className="flex flex-col min-h-0 overflow-y-auto">
           {/* Live preview — renders form state directly per UI-SPEC. */}
-          <CreatureStatBlock creature={state.form} />
+          <CreatureStatBlock creature={state.form} enablePdfExport />
           <DesignReviewPanel form={state.form} />
         </div>
       </div>

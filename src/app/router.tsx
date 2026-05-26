@@ -12,6 +12,12 @@ const ConditionsPage = lazy(() => import('@/pages/conditions').then(m => ({ defa
 const HazardsPage    = lazy(() => import('@/pages/hazards').then(m => ({ default: m.HazardsPage })))
 const SpellsPage     = lazy(() => import('@/pages/spells').then(m => ({ default: m.SpellsPage })))
 const ItemsPage      = lazy(() => import('@/pages/items').then(m => ({ default: m.ItemsPage })))
+const CustomItemsListPage = lazy(() =>
+  import('@/pages/custom-items').then(m => ({ default: m.CustomItemsListPage }))
+)
+const CustomItemsEditPage = lazy(() =>
+  import('@/pages/custom-items').then(m => ({ default: m.CustomItemsEditPage }))
+)
 const CharactersPage = lazy(() => import('@/pages/characters').then(m => ({ default: m.CharactersPage })))
 const CustomCreaturesListPage = lazy(() =>
   import('@/pages/custom-creatures').then(m => ({ default: m.CustomCreaturesListPage }))
@@ -46,6 +52,8 @@ const router = createHashRouter([
           { path: 'hazards', element: <HazardsPage /> },
           { path: 'spells', element: <SpellsPage /> },
           { path: 'items', element: <ItemsPage /> },
+          { path: 'custom-items', element: <CustomItemsListPage /> },
+          { path: 'custom-items/:id/edit', element: <CustomItemsEditPage /> },
           { path: 'characters', element: <CharactersPage /> },
           { path: 'custom-creatures', element: <CustomCreaturesListPage /> },
           { path: 'custom-creatures/:id/edit', element: <CustomCreaturesEditPage /> },

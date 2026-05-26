@@ -12,6 +12,7 @@
     "actions": "Actions",
     "spells": "Spells",
     "items": "Items",
+    "customItems": "Custom Items",
     "conditions": "Conditions",
     "hazards": "Hazards",
     "customCreatures": "Custom Creatures",

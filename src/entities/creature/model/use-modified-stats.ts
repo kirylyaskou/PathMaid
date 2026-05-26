@@ -48,6 +48,7 @@ export type { StatModifierResult, InactiveModifier }
 export function useModifiedStats(
   combatantId: string | undefined,
   statSlugs: string[],
+  extraModifiers: SpellEffectModifierInput[] = [],
 ): Map<string, StatModifierResult> {
   // Subscribe to only this combatant's raw ActiveCondition objects (stable immer refs).
   // IMPORTANT: do NOT .map() inside the selector — that creates new ConditionInput objects
@@ -134,7 +135,8 @@ export function useModifiedStats(
       !combatantId ||
       (conditions.length === 0 &&
         activeSpellModifiers.length === 0 &&
-        inactiveSpellModifiers.length === 0)
+        inactiveSpellModifiers.length === 0 &&
+        extraModifiers.length === 0)
     ) {
       return result
     }
@@ -144,7 +146,9 @@ export function useModifiedStats(
         conditions,
         statSlug,
         statSlugs,
-        activeSpellModifiers.length > 0 ? activeSpellModifiers : undefined,
+        activeSpellModifiers.length > 0 || extraModifiers.length > 0
+          ? [...activeSpellModifiers, ...extraModifiers]
+          : undefined,
       )
 
       // Collect inactive modifiers whose selector targets this stat so the
@@ -171,7 +175,7 @@ export function useModifiedStats(
     }
 
     return result
-  }, [combatantId, conditions, activeSpellModifiers, inactiveSpellModifiers, slugsKey])
+  }, [combatantId, conditions, activeSpellModifiers, inactiveSpellModifiers, extraModifiers, slugsKey])
 }
 
 // ─── Predicate Summary Helper ─────────────────────────────────────────────────

@@ -38,6 +38,7 @@ export {
 export { StatBlockModal } from './ui/StatBlockModal'
 export { useModifiedStats, useSpellModifiers } from './model/use-modified-stats'
 export type { StatModifierResult } from './model/use-modified-stats'
+export { useCustomItemOverlays } from './model/use-custom-item-overlays'
 export { classifyAbilities } from './model/classify-abilities'
 export type { ClassifiedAbilities } from './model/classify-abilities'
 export { useEquipment } from './model/use-equipment'
@@ -45,6 +46,7 @@ export { stripFoundryTags, highlightGameText } from './lib/foundry-text'
 export { applyAbilityModDelta } from './lib/apply-ability-mod-delta'
 export { buildEquipmentStrikes, formatEquipmentDamageFormula, parseInlineDamageFormula } from './lib/equipment-strike'
 export type { EquipmentAttackItem } from './lib/equipment-strike'
+export { buildCreaturePdfDocument, creaturePdfFilename } from './lib/creature-pdf-document'
 export {
   traditionColor,
   rankLabel,

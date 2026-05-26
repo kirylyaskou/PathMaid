@@ -12,6 +12,7 @@
     "actions": "Действия",
     "spells": "Заклинания",
     "items": "Предметы",
+    "customItems": "Свои предметы",
     "conditions": "Состояния",
     "hazards": "Опасности",
     "customCreatures": "Свои существа",

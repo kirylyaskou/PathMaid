@@ -566,3 +566,37 @@
 .pf2e-degree--success      { color: var(--pf-degree-success); }
 .pf2e-degree--failure      { color: var(--pf-degree-failure); }
 .pf2e-degree--crit-failure { color: var(--pf-degree-crit-failure); }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .custom-item-print-root,
+  .custom-item-print-root * {
+    visibility: visible;
+  }
+
+  .custom-item-print-root {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    background: white;
+    padding: 0;
+  }
+
+  .custom-item-print-surface {
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .creature-statblock-actions {
+    display: none !important;
+  }
+}

@@ -14,10 +14,8 @@ import { Input } from '@/shared/ui/input'
 import { removeCondition, setConditionValue } from '@/entities/condition'
 import type { PendingSickenedSave } from '@/features/combat-tracker'
 
-// PF2e CRB: Sickened end-of-turn recovery.
-// Attempt a Fortitude save vs DC 15.
-// Critical success: reduce sickened value by 2 (remove if value <= 2).
-// Success: reduce sickened value by 1 (remove if value <= 1).
+// Retch action: attempt a Fortitude save against the configured DC.
+// Any successful outcome reduces sickened by 1.
 // Failure / Critical failure: no change.
 
 const DEFAULT_DC = 15
@@ -35,14 +33,7 @@ function applyOutcome(
   sickenedValue: number,
   outcome: SaveOutcome,
 ): void {
-  if (outcome === 'critical-success') {
-    const newValue = sickenedValue - 2
-    if (newValue <= 0) {
-      removeCondition(combatantId, 'sickened')
-    } else {
-      setConditionValue(combatantId, 'sickened', newValue)
-    }
-  } else if (outcome === 'success') {
+  if (outcome === 'critical-success' || outcome === 'success') {
     if (sickenedValue <= 1) {
       removeCondition(combatantId, 'sickened')
     } else {
@@ -114,9 +105,9 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
   }
 
   const outcomeLabel: Record<SaveOutcome, string> = {
-    'critical-success': pending.sickenedValue <= 2
+    'critical-success': pending.sickenedValue <= 1
       ? 'Critical Success — Sickened removed'
-      : `Critical Success — Sickened ${pending.sickenedValue} → ${pending.sickenedValue - 2}`,
+      : `Critical Success — Sickened ${pending.sickenedValue} → ${pending.sickenedValue - 1}`,
     'success': pending.sickenedValue <= 1
       ? 'Success — Sickened removed'
       : `Success — Sickened ${pending.sickenedValue} → ${pending.sickenedValue - 1}`,
@@ -134,7 +125,7 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Fortitude Save — {pending.combatantName}
+            Retch — {pending.combatantName}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {t('combatantDetail.sickenedValue', { value: pending.sickenedValue })}
@@ -144,7 +135,7 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
         <div className="space-y-4">
           <div className="px-2 py-1.5 rounded bg-secondary/30 flex items-center justify-between text-sm">
             <span className="font-medium">{t('combatantDetail.sickenedValue', { value: pending.sickenedValue })}</span>
-            <span className="text-xs text-muted-foreground">end-of-turn recovery</span>
+            <span className="text-xs text-muted-foreground">Retch action</span>
           </div>
 
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
@@ -201,7 +192,7 @@ export function SickenedFortitudeSaveDialog({ pending, onClose }: SickenedFortit
 
               {rollMode === 'auto' && (
                 <Button className="w-full" onClick={handleAutoRoll}>
-                  Roll Fortitude Save
+                  Roll Retch Save
                 </Button>
               )}
 

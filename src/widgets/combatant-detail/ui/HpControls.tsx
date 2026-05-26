@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { Separator } from '@/shared/ui/separator'
 import { cn } from '@/shared/lib/utils'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
+import { useCombatTrackerStore } from '@/features/combat-tracker'
 import type { Combatant } from '@/entities/combatant'
 import {
   applyIWR,
@@ -23,7 +24,7 @@ import {
   parseSpellEffectResistances,
   parseSpellEffectWeaknesses,
 } from '@engine'
-import { useModifiedStats } from '@/entities/creature'
+import { useCustomItemOverlays, useModifiedStats } from '@/entities/creature'
 import type { CreatureStatBlockData } from '@/entities/creature'
 import { damageTypeChip } from '@/shared/lib/damage-colors'
 import { useCombatantHp } from '../model/use-combatant-hp'
@@ -52,9 +53,44 @@ interface WeaknessEntry {
 
 const MATERIAL_TYPE_SET = new Set(MATERIAL_EFFECTS as readonly string[])
 
+const EMPTY_CREATURE: CreatureStatBlockData = {
+  id: 'empty',
+  name: 'Empty',
+  level: 0,
+  hp: 0,
+  ac: 0,
+  fort: 0,
+  ref: 0,
+  will: 0,
+  perception: 0,
+  stealth: null,
+  traits: [],
+  rarity: 'common',
+  size: 'Medium',
+  type: 'npc',
+  immunities: [],
+  weaknesses: [],
+  resistances: [],
+  speeds: {},
+  strikes: [],
+  abilities: [],
+  skills: [],
+  languages: [],
+  senses: [],
+  source: 'custom',
+  abilityMods: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 },
+}
+
 export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResistances, creature }: HpControlsProps) {
   const { t } = useTranslation('common')
   const combatantId = combatant.id
+  const combatId = useCombatTrackerStore((s) => s.combatId)
+  const isEncounterBacked = useCombatTrackerStore((s) => s.isEncounterBacked)
+  const customItemOverlay = useCustomItemOverlays(
+    creature ?? EMPTY_CREATURE,
+    isEncounterBacked && combatId ? { encounterId: combatId, combatantId } : undefined,
+    0,
+  )
 
   // Get active effects for IWR resistance overlay
   const rawEffects = useEffectStore(
@@ -62,13 +98,14 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   )
 
   const mergedResistances = useMemo(() => {
-    if (rawEffects.length === 0) return iwrResistances
+    if (rawEffects.length === 0 && customItemOverlay.resistanceOverlays.length === 0) return iwrResistances
     const effectResistances = rawEffects.flatMap((e) =>
       parseSpellEffectResistances(e.rulesJson)
     )
-    if (effectResistances.length === 0) return iwrResistances
-    return mergeResistances(iwrResistances ?? [], effectResistances)
-  }, [rawEffects, iwrResistances])
+    const overlays = [...effectResistances, ...customItemOverlay.resistanceOverlays]
+    if (overlays.length === 0) return iwrResistances
+    return mergeResistances(iwrResistances ?? [], overlays)
+  }, [customItemOverlay.resistanceOverlays, rawEffects, iwrResistances])
 
   const mergedWeaknesses = useMemo<WeaknessEntry[]>(() => {
     const effectWeaknesses = rawEffects.flatMap((e) =>
@@ -88,7 +125,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
     useCombatantHp(combatant.id)
 
   const statSlugs = useMemo(() => ['ac', 'fortitude', 'reflex', 'will', 'perception', 'stealth'], [])
-  const modifiedStats = useModifiedStats(combatant.id, statSlugs)
+  const modifiedStats = useModifiedStats(combatant.id, statSlugs, customItemOverlay.flatModifiers)
 
   function getModified(base: number, statSlug: string): number {
     return base + (modifiedStats.get(statSlug)?.netModifier ?? 0)

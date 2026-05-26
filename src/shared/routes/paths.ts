@@ -9,6 +9,8 @@ export const PATHS = {
   CHARACTERS: '/characters',
   CUSTOM_CREATURES: '/custom-creatures',
   CUSTOM_CREATURE_EDIT: (id: string) => `/custom-creatures/${id}/edit`,
+  CUSTOM_ITEMS: '/custom-items',
+  CUSTOM_ITEM_EDIT: (id: string) => `/custom-items/${id}/edit`,
   SETTINGS: '/settings',
   HAZARDS: '/hazards',
   ACTIONS: '/actions',

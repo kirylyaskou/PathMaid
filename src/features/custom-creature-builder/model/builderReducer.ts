@@ -7,6 +7,7 @@ export interface BuilderState {
 }
 
 type EquipmentItem = NonNullable<CreatureStatBlockData['equipment']>[number]
+type CustomItemRef = NonNullable<CreatureStatBlockData['customItemRefs']>[number]
 
 // Individual-field patch actions keep intent explicit and deep-update safe.
 // All action types are string-literal discriminated for exhaustive switching.
@@ -46,6 +47,9 @@ export type BuilderAction =
   | { type: 'ADD_EQUIPMENT_ITEM'; item: EquipmentItem }
   | { type: 'UPDATE_EQUIPMENT_ITEM'; index: number; item: EquipmentItem }
   | { type: 'REMOVE_EQUIPMENT_ITEM'; index: number }
+  | { type: 'ADD_CUSTOM_ITEM_REF'; item: CustomItemRef }
+  | { type: 'UPDATE_CUSTOM_ITEM_REF'; index: number; item: CustomItemRef }
+  | { type: 'REMOVE_CUSTOM_ITEM_REF'; index: number }
   | { type: 'APPLY_ROLE_VALUES'; values: AppliedRoleValues }
   | { type: 'SET_LEVEL_AND_RESCALE'; level: number }
 
@@ -297,6 +301,29 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
         },
       }
     }
+    case 'ADD_CUSTOM_ITEM_REF':
+      return {
+        form: {
+          ...state.form,
+          customItemRefs: [...(state.form.customItemRefs ?? []), action.item],
+        },
+      }
+    case 'UPDATE_CUSTOM_ITEM_REF':
+      return {
+        form: {
+          ...state.form,
+          customItemRefs: (state.form.customItemRefs ?? []).map((item, i) =>
+            i === action.index ? action.item : item,
+          ),
+        },
+      }
+    case 'REMOVE_CUSTOM_ITEM_REF':
+      return {
+        form: {
+          ...state.form,
+          customItemRefs: (state.form.customItemRefs ?? []).filter((_, i) => i !== action.index),
+        },
+      }
     case 'APPLY_ROLE_VALUES': {
       const v = action.values
       const form = state.form

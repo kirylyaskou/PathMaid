@@ -26,7 +26,7 @@ export interface NpcCombatant extends CombatantBase {
   ac?: number
   // Session-only Perception for Quick Add creatures (not stored in DB, not tied to creatureRef).
   perception?: number
-  // Base Fortitude modifier from stat block — used for Sickened end-of-turn save dialog.
+  // Base Fortitude modifier from stat block, used by the Sickened retch dialog.
   fort?: number
   // Shield Raised toggle (session-only). shieldAcBonus holds the actual bonus from item data.
   shieldRaised?: boolean

@@ -33,7 +33,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'flex flex-col h-full bg-sidebar border-r border-sidebar-border transition-all duration-200',
+          'relative z-50 flex h-full shrink-0 flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200',
           collapsed ? 'w-16' : 'w-56'
         )}
       >

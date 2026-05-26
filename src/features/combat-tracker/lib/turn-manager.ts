@@ -1,11 +1,10 @@
 import { useCombatantStore } from '@/entities/combatant'
-import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, getManagerState, type ActiveCondition } from '@/entities/condition'
+import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, type ActiveCondition } from '@/entities/condition'
 import { useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
 import { decrementEffectTurns as decrementEffectTurnsApi } from '@/shared/api'
 import { useCombatTrackerStore } from '../model/store'
-import type { ConditionSlug, ConditionInput } from '@engine'
-import { computeStatModifier } from '@engine'
+import type { ConditionSlug } from '@engine'
 import { toast } from 'sonner'
 
 interface TurnSnapshot {
@@ -70,31 +69,6 @@ export function advanceTurn(): void {
         const names = removed.map((r) => r.effectName).join(', ')
         toast(`${combatant?.displayName ?? 'Combatant'}: ${names} expired`)
       }
-    }
-
-    // Sickened Fortitude save — set pending state for dialog (PF2e: DC 15, not auto-decrement)
-    const allManagerStates = getManagerState(endingCombatantId)
-    const sickenedState = allManagerStates.find((c) => c.slug === 'sickened')
-    if (sickenedState) {
-      const combatant = combatants.find((cb) => cb.id === endingCombatantId)
-      const baseFort = (combatant && 'fort' in combatant ? (combatant.fort as number | undefined) : undefined) ?? 0
-      const conditions = useConditionStore
-        .getState()
-        .activeConditions.filter((c) => c.combatantId === endingCombatantId)
-        .map((c): ConditionInput => ({ slug: c.slug as ConditionInput['slug'], value: c.value ?? 1 }))
-      const condMod = conditions.length > 0
-        ? computeStatModifier(conditions, 'fortitude', ['fortitude']).netModifier
-        : 0
-
-      const creatureRef = (combatant && 'creatureRef' in combatant) ? (combatant as { creatureRef: string }).creatureRef : undefined
-      tracker.setPendingSickenedSave({
-        combatantId: endingCombatantId,
-        combatantName: combatant?.displayName ?? 'Combatant',
-        sickenedValue: sickenedState.value,
-        baseFort,
-        condMod,
-        creatureRef,
-      })
     }
 
     // Persistent damage flat-checks — set pending state for dialog

@@ -29,6 +29,7 @@ export interface CustomCreatureApiStatBlock {
   auras?: unknown[]
   rituals?: unknown[]
   equipment?: unknown[]
+  customItemRefs?: unknown[]
   source: string
 }
 
@@ -77,6 +78,7 @@ function parseStatBlock(row: {
     auras: parsed.auras ?? undefined,   // optional — preserve undefined distinction from []
     rituals: parsed.rituals ?? undefined,
     equipment: parsed.equipment ?? [],
+    customItemRefs: parsed.customItemRefs ?? [],
   }
   return backfilled
 }
@@ -111,6 +113,7 @@ function defaultStatBlock(id: string): CustomCreatureApiStatBlock {
     auras: [],
     rituals: [],
     equipment: [],
+    customItemRefs: [],
     source: 'custom',
   }
 }

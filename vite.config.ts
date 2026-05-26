@@ -15,6 +15,8 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
+      '@engine': path.resolve(__dirname, 'engine/index.ts'),
       '@vendor': path.resolve(__dirname, 'vendor'),
     },
   },
@@ -23,6 +25,9 @@ export default defineConfig({
     strictPort: true,
     host: process.env.TAURI_DEV_HOST || false,
     port: 5173,
+  },
+  worker: {
+    format: 'es',
   },
   envPrefix: ['VITE_', 'TAURI_ENV_'],
   build: {

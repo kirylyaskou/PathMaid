@@ -1,11 +1,13 @@
 import { useMemo, useCallback, useState } from "react"
 import { useTranslation } from 'react-i18next'
+import { Loader2, Printer } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useRoll } from '@/shared/hooks'
 import { formatRollFormula } from '@/shared/lib/format'
 import { ModifierTooltip } from '@/shared/ui/ModifierTooltip'
 import { cn } from "@/shared/lib/utils"
 import { Card, CardContent, CardHeader } from "@/shared/ui/card"
+import { Button } from "@/shared/ui/button"
 import { Separator } from "@/shared/ui/separator"
 import {
   Collapsible,
@@ -20,6 +22,7 @@ import type { CreatureSpellcastingSection, CreatureStatBlockData } from '../mode
 import { stripHtml } from '@/shared/lib/html'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import { useModifiedStats } from '../model/use-modified-stats'
+import { useCustomItemOverlays } from '../model/use-custom-item-overlays'
 import { useEffectiveSpeeds } from '../model/use-effective-speeds'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { useBattleFormOverridesStore, useEffectStore } from '@/entities/spell-effect'
@@ -54,6 +57,7 @@ import { CreatureSkillsLine } from './CreatureSkillsLine'
 import { CreatureDefensesBlock } from './CreatureDefensesBlock'
 import { useEffectiveStrikes, type EffectiveStrike } from '../model/use-effective-strikes'
 import { buildEquipmentStrikes, type EquipmentAttackItem } from '../lib/equipment-strike'
+import { logErrorWithToast } from '@/shared/lib/error'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
 
@@ -127,6 +131,7 @@ interface CreatureStatBlockProps {
   className?: string
   encounterContext?: EncounterContext
   onRoll?: (formula: string, label?: string) => Roll
+  enablePdfExport?: boolean
   /** Inject a live-combat spellcasting renderer (SpellcastingBlock). When
    *  omitted, falls back to SpellListPreview — read-only cards only. Used as
    *  dependency-injection to avoid entities→features FSD violation. */
@@ -138,10 +143,11 @@ interface CreatureStatBlockProps {
 }
 
 export function CreatureStatBlock({
-  creature,
+  creature: baseCreature,
   className,
   encounterContext,
   onRoll,
+  enablePdfExport = false,
   renderSpellcasting,
 }: CreatureStatBlockProps) {
   const { t } = useTranslation()
@@ -152,14 +158,32 @@ export function CreatureStatBlock({
   // English-driven engine values — those are the source of truth.
   const { data: translation } = useContentTranslation(
     'monster',
-    creature.name,
-    creature.level,
+    baseCreature.name,
+    baseCreature.level,
   )
   const locale = useCurrentLocale()
   const [effectiveEquipmentAttackItems, setEffectiveEquipmentAttackItems] = useState<{
     creatureId: string
     items: EquipmentAttackItem[]
   } | null>(null)
+  const [inventoryVersion, setInventoryVersion] = useState(0)
+  const [pdfGenerating, setPdfGenerating] = useState(false)
+
+  const effectiveEncounterContext = useMemo(() => {
+    if (!encounterContext) return undefined
+    return {
+      ...encounterContext,
+      onInventoryChanged: () => {
+        encounterContext.onInventoryChanged?.()
+        setInventoryVersion((version) => version + 1)
+      },
+    }
+  }, [encounterContext])
+
+  const {
+    creature,
+    flatModifiers: customItemModifiers,
+  } = useCustomItemOverlays(baseCreature, effectiveEncounterContext, inventoryVersion)
 
   // Stable references for sub-components — re-derived only when structured changes.
   const structured = translation?.structured ?? null
@@ -240,7 +264,7 @@ export function CreatureStatBlock({
     },
     [creature.skills, creature.speeds],
   )
-  const modStats = useModifiedStats(encounterContext?.combatantId, allStatSlugs)
+  const modStats = useModifiedStats(encounterContext?.combatantId, allStatSlugs, customItemModifiers)
 
   // Per-strike MAP counter — clickable MAP numbers drive mapIndex on the
   // selected combatant so strike rolls from the stat block land at the
@@ -428,11 +452,127 @@ export function CreatureStatBlock({
     [creature.abilities, isSpecialFormation, troopDefenses],
   )
 
+  const handlePdfDownload = useCallback(() => {
+    if (!enablePdfExport || pdfGenerating) return
+    setPdfGenerating(true)
+    const displayName = translation?.nameLoc ?? creature.name
+    const sizeTypeLine = `${getSizeLabel(unmapSize(effectiveSize), locale)} ${getTraitLabel((recallKnowledge.type || creature.type).toLowerCase(), locale)}`
+    const traitLabels = translation?.traitsLoc
+      ? translation.traitsLoc.split(/,\s*/).filter(Boolean)
+      : [
+          ...(creature.rarity !== 'common' ? [getTraitLabel(creature.rarity, locale)] : []),
+          getSizeLabel(unmapSize(effectiveSize), locale),
+          ...creature.traits.map((trait) => getTraitLabel(trait.toLowerCase(), locale)),
+        ]
+
+    void (async () => {
+      const { downloadCreaturePdf } = await import('../lib/creature-pdf-download')
+      return downloadCreaturePdf(creature, {
+        locale,
+        displayName,
+        sizeTypeLine,
+        traitLabels,
+        itemsLocById,
+        speeds: effectiveSpeeds.map((speed) => ({
+          type: speed.type,
+          final: speed.final,
+        })),
+        strikes: effectiveStrikes,
+        statValues: {
+          ac: (battleFormAcOverride ?? creature.ac) + ((mapCombatant && isNpc(mapCombatant) && mapCombatant.shieldRaised) ? derivedShieldAcBonus : 0) + (modStats.get('ac')?.netModifier ?? 0),
+          fort: creature.fort + (modStats.get('fortitude')?.netModifier ?? 0),
+          ref: creature.ref + (modStats.get('reflex')?.netModifier ?? 0),
+          will: creature.will + (modStats.get('will')?.netModifier ?? 0),
+          perception: creature.perception + (modStats.get('perception')?.netModifier ?? 0),
+          spellDc: creature.spellDC != null ? creature.spellDC + (modStats.get('spell-dc')?.netModifier ?? 0) : undefined,
+          classDc: creature.classDC != null ? creature.classDC + (modStats.get('spell-dc')?.netModifier ?? 0) : undefined,
+        },
+        labels: {
+          recallKnowledgeDc: t('statblock.recallKnowledgeDc', { dc: recallKnowledge.dc }).replace(String(recallKnowledge.dc), '').trim(),
+          senses: t('statblock.senses'),
+          hp: t('statblock.hp'),
+          ac: t('statblock.ac'),
+          fort: t('statblock.fort'),
+          ref: t('statblock.ref'),
+          will: t('statblock.will'),
+          perception: t('statblock.perception'),
+          spellDc: t('statblock.spellDc'),
+          classDc: t('statblock.classDc'),
+          speed: t('statblock.speed'),
+          immunities: t('statblock.iwr.immunities'),
+          resistances: t('statblock.iwr.resistances'),
+          weaknesses: t('statblock.iwr.weaknesses'),
+          strikes: t('statblock.strikes'),
+          damage: t('statblock.damage'),
+          reach: t('statblock.reach'),
+          range: t('statblock.range'),
+          abilities: t('statblock.abilities'),
+          offensive: t('statblock.offensive'),
+          defensive: t('statblock.defensive'),
+          other: t('statblock.other'),
+          reactions: t('statblock.reactions'),
+          spellcasting: t('statblock.spellcasting'),
+          dc: t('statblock.dc'),
+          attack: t('statblock.attack'),
+          skills: t('statblock.skills'),
+          languages: t('statblock.languages'),
+          equipment: t('statblock.equipment'),
+          source: t('statblock.source'),
+        },
+      })
+    })()
+      .catch(logErrorWithToast('creature-pdf-export'))
+      .finally(() => setPdfGenerating(false))
+  }, [
+    battleFormAcOverride,
+    creature,
+    derivedShieldAcBonus,
+    effectiveSize,
+    effectiveSpeeds,
+    effectiveStrikes,
+    itemsLocById,
+    locale,
+    mapCombatant,
+    modStats,
+    recallKnowledge,
+    t,
+    translation,
+    enablePdfExport,
+    pdfGenerating,
+  ])
+
+  const showNoTranslationBadge = locale === 'ru' && translation === null
+  const showStatBlockActions = showNoTranslationBadge || enablePdfExport
+
   return (
-    <Card className={cn("overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold relative", className)}>
-      {locale === 'ru' && translation === null && (
-        <div className="absolute top-2 right-2 z-10">
-          <NoTranslationBadge />
+    <Card
+      className={cn(
+        "creature-statblock-card overflow-hidden card-grimdark border-border/50 border-l-[3px] border-l-pf-gold relative",
+        className,
+      )}
+    >
+      {showStatBlockActions && (
+        <div className="creature-statblock-actions absolute top-2 right-2 z-10 flex items-center gap-2">
+          {showNoTranslationBadge && <NoTranslationBadge />}
+          {enablePdfExport && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 bg-background/85 text-xs backdrop-blur"
+              onClick={handlePdfDownload}
+              disabled={pdfGenerating}
+              title="Download PDF"
+              aria-label="Download creature PDF"
+            >
+              {pdfGenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Printer className="h-3.5 w-3.5" />
+              )}
+              PDF
+            </Button>
+          )}
         </div>
       )}
       <CardHeader className="-mt-6 pb-2 stat-block-header border-b border-primary/20">
@@ -600,11 +740,12 @@ export function CreatureStatBlock({
           </>
         )}
 
-        {(creature.equipment && creature.equipment.length > 0 || encounterContext) && (
+        {((creature.equipment && creature.equipment.length > 0) || (creature.customItemRefs && creature.customItemRefs.length > 0) || encounterContext) && (
           <>
             <EquipmentBlock
               items={creature.equipment ?? []}
-              {...(encounterContext ? { encounterContext } : {})}
+              customItemRefs={creature.customItemRefs}
+              {...(effectiveEncounterContext ? { encounterContext: effectiveEncounterContext } : {})}
               itemsLocById={itemsLocById}
               onAttackItemsChange={handleEquipmentAttackItemsChange}
             />

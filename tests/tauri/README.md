@@ -33,3 +33,19 @@ npm run test:tauri
 
 Set `$env:TAURI_E2E_SKIP_BUILD = '1'` to reuse an existing
 `src-tauri/target/debug/pathmaid.exe`.
+
+## Playwright native-app mode
+
+Playwright tests launch the real debug Tauri binary and connect to the WebView2
+remote debugging port. They do not use Vite's browser page.
+
+Run:
+
+```bash
+pnpm test:playwright
+```
+
+This mode is Windows-only because it relies on WebView2 CDP. Set
+`$env:TAURI_E2E_SKIP_BUILD = '1'` to reuse an existing debug binary.
+Set `$env:TAURI_APP_BINARY = 'D:\pathmaid\src-tauri\target\release\pathmaid.exe'`
+to run against a specific already-built native executable.

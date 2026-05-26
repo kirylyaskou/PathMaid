@@ -97,9 +97,9 @@ export function BestiaryPage() {
     filters.source != null
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
+    <ResizablePanelGroup direction="horizontal" className="h-full min-w-0 overflow-hidden">
       {/* Left — Search + Filter + List */}
-      <ResizablePanel defaultSize={40} minSize={30} maxSize={55}>
+      <ResizablePanel defaultSize={40} minSize={30} maxSize={55} className="min-w-0 overflow-hidden">
         <div className="flex flex-col h-full">
           {/* Search */}
           <div className="p-3 border-b border-border/50">
@@ -146,11 +146,11 @@ export function BestiaryPage() {
       <ResizableHandle withHandle />
 
       {/* Right — Stat block detail */}
-      <ResizablePanel defaultSize={60} minSize={40}>
+      <ResizablePanel defaultSize={60} minSize={40} className="min-w-0 overflow-hidden">
         {statBlock ? (
           <ScrollArea className="h-full">
             <div className="p-4">
-              <CreatureStatBlock creature={statBlock} />
+              <CreatureStatBlock creature={statBlock} enablePdfExport />
             </div>
           </ScrollArea>
         ) : statBlockError ? (

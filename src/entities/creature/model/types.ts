@@ -1,6 +1,6 @@
 import type { Rarity as EngineRarity } from '@engine'
 import type { DisplaySize } from '@/shared/lib/size-map'
-import type { CreatureItemRow } from '@/shared/api'
+import type { CreatureItemRow, CustomItemRef } from '@/shared/api'
 
 export type { Rarity, CreatureSize, ActionCost, WeakEliteTier } from '@engine'
 export type { DisplaySize } from '@/shared/lib/size-map'
@@ -109,6 +109,7 @@ export interface CreatureStatBlockData extends Creature {
   classDC?: number
   spellcasting?: CreatureSpellcastingSection[]
   equipment?: CreatureItemRow[]
+  customItemRefs?: CustomItemRef[]
 
   // new fields introduced for the custom creature builder.
   builderMode?: CustomCreatureBuilderMode

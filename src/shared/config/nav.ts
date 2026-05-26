@@ -30,6 +30,7 @@ export const NAV_ITEMS = [
   { href: '/actions',          icon: Zap,             label: 'Actions',          labelKey: 'nav.actions',         section: 'reference' },
   { href: '/spells',           icon: Sparkles,        label: 'Spells',           labelKey: 'nav.spells',          section: 'reference' },
   { href: '/items',            icon: Package,         label: 'Items',            labelKey: 'nav.items',           section: 'reference' },
+  { href: '/custom-items',     icon: Package,         label: 'Custom Items',     labelKey: 'nav.customItems',     section: 'reference' },
   { href: '/conditions',       icon: Activity,        label: 'Conditions',       labelKey: 'nav.conditions',      section: 'reference' },
   { href: '/hazards',          icon: AlertTriangle,   label: 'Hazards',          labelKey: 'nav.hazards',         section: 'reference' },
   { href: '/custom-creatures', icon: Hammer,          label: 'Custom Creatures', labelKey: 'nav.customCreatures', section: 'reference' },

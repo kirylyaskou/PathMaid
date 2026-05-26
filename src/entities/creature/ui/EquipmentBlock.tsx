@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/lib/utils'
 import {
@@ -9,7 +9,7 @@ import { X, Backpack } from 'lucide-react'
 import { SectionHeader } from '@/shared/ui/section-header'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
-import type { CreatureItemRow } from '@/shared/api'
+import { getCustomItemsByIds, type CreatureItemRow, type CustomItemRef, type CustomItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
 import { formatEquipmentDamageFormula, parseInlineDamageFormula, type EquipmentAttackItem } from '../lib/equipment-strike'
@@ -19,6 +19,8 @@ interface EncounterContext {
   combatantId: string
   onInventoryChanged?: () => void
 }
+
+const EMPTY_CUSTOM_REFS = [] as const
 
 interface EquipmentItemRowProps {
   item: {
@@ -82,9 +84,50 @@ function EquipmentItemRow({
   )
 }
 
+interface CustomEquipmentItemRowProps {
+  item: CustomItemRow
+  quantity: number
+  onRemove?: () => void
+  onRestore?: () => void
+  isRemoved?: boolean
+  interactive: boolean
+}
+
 function getLocalItemId(id: string): string {
   const parts = id.split(':')
   return parts[parts.length - 1] ?? id
+}
+
+function CustomEquipmentItemRow({
+  item,
+  quantity,
+  onRemove,
+  onRestore,
+  isRemoved,
+  interactive,
+}: CustomEquipmentItemRowProps) {
+  const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+  const qty = quantity > 1 ? ` ×${quantity}` : ''
+  const stat =
+    formatEquipmentDamageFormula(item.damage_formula, item.damage_type, item.description) ??
+    (item.ac_bonus !== null ? `AC +${item.ac_bonus}` : null)
+  return (
+    <div className={cn('group flex items-center gap-2 text-sm', isRemoved && 'opacity-40 line-through')}>
+      <span className={cn('px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0', typeColor)}>
+        C
+      </span>
+      <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
+      {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
+      {interactive && onRemove && !isRemoved && (
+        <IconButton intent="danger" showOnHover onClick={onRemove} className="ml-auto shrink-0">
+          <X className="w-3 h-3" />
+        </IconButton>
+      )}
+      {interactive && onRestore && isRemoved && (
+        <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
+      )}
+    </div>
+  )
 }
 
 function getDisplayDamageFormula(
@@ -102,26 +145,67 @@ export function EquipmentBlock({
   encounterContext,
   itemsLocById,
   onAttackItemsChange,
+  customItemRefs,
 }: {
   items: CreatureItemRow[]
+  customItemRefs?: CustomItemRef[]
   encounterContext?: EncounterContext
   itemsLocById?: Map<string, { description?: string }>
   onAttackItemsChange?: (items: EquipmentAttackItem[]) => void
 }) {
   const { t } = useTranslation()
+  const [customItems, setCustomItems] = useState<CustomItemRow[]>([])
   const {
     overrides,
     addQuery, setAddQuery,
-    addResults,
+    addResults, customAddResults,
     drawerItemId, setDrawerItemId,
-    handleRemove, handleRestoreBase, handleAddItem, handleRemoveAdded,
-    removedIds: _removedIds,
-    addedItems, visibleBase, totalCount,
+    handleRemove, handleRestoreBase, handleAddItem, handleAddCustomItem, handleRemoveAdded,
+    handleRemoveBaseCustom, handleRestoreBaseCustom, handleRemoveAddedCustom,
+    removedIds: _removedIds, removedCustomItemIds,
+    addedItems, addedCustomItems, visibleBase, totalCount: baseTotalCount,
   } = useEquipment(items, encounterContext)
 
+  const customRefs = customItemRefs ?? EMPTY_CUSTOM_REFS
+  const customIds = useMemo(
+    () => Array.from(new Set([
+      ...customRefs.map((ref) => ref.customItemId),
+      ...addedCustomItems.map((ref) => ref.customItemId),
+    ])),
+    [addedCustomItems, customRefs],
+  )
+
   useEffect(() => {
-    if (!onAttackItemsChange) return
-    onAttackItemsChange([
+    if (customIds.length === 0) {
+      setCustomItems([])
+      return
+    }
+    let cancelled = false
+    void getCustomItemsByIds(customIds)
+      .then((rows) => {
+        if (!cancelled) setCustomItems(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setCustomItems([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [customIds])
+
+  const customById = useMemo(
+    () => new Map(customItems.map((item) => [item.id, item])),
+    [customItems],
+  )
+
+  const visibleBaseCustomRefs = useMemo(
+    () => customRefs.filter((ref) => !removedCustomItemIds.has(ref.customItemId)),
+    [customRefs, removedCustomItemIds],
+  )
+  const totalCount = baseTotalCount + visibleBaseCustomRefs.length
+
+  const attackItems = useMemo(
+    () => [
       ...visibleBase.map((item) => {
         const localId = getLocalItemId(item.id)
         return {
@@ -139,8 +223,38 @@ export function EquipmentBlock({
         itemType: item.itemType,
         damageFormula: item.damageFormula,
       })),
-    ])
-  }, [addedItems, itemsLocById, onAttackItemsChange, visibleBase])
+      ...visibleBaseCustomRefs.flatMap((ref) => {
+        const item = customById.get(ref.customItemId)
+        return item
+          ? [{
+              id: item.id,
+              name: item.name,
+              itemType: item.item_type,
+              damageFormula: formatEquipmentDamageFormula(item.damage_formula, item.damage_type, item.description),
+              traits: item.traits,
+            }]
+          : []
+      }),
+      ...addedCustomItems.flatMap((ref) => {
+        const item = customById.get(ref.customItemId)
+        return item
+          ? [{
+              id: item.id,
+              name: item.name,
+              itemType: item.item_type,
+              damageFormula: formatEquipmentDamageFormula(item.damage_formula, item.damage_type, item.description),
+              traits: item.traits,
+            }]
+          : []
+      }),
+    ],
+    [addedCustomItems, addedItems, customById, itemsLocById, visibleBase, visibleBaseCustomRefs],
+  )
+
+  useEffect(() => {
+    if (!onAttackItemsChange) return
+    onAttackItemsChange(attackItems)
+  }, [attackItems, onAttackItemsChange])
 
   if (totalCount === 0 && !encounterContext) return null
 
@@ -196,6 +310,34 @@ export function EquipmentBlock({
                 />
               )
             })}
+            {customRefs.filter((ref) => removedCustomItemIds.has(ref.customItemId)).map((ref) => {
+              const item = customById.get(ref.customItemId)
+              if (!item) return null
+              const overrideId = `${encounterContext?.encounterId}:${encounterContext?.combatantId}:custom:${ref.customItemId}`
+              return (
+                <CustomEquipmentItemRow
+                  key={ref.id}
+                  item={item}
+                  quantity={ref.quantity}
+                  isRemoved
+                  onRestore={() => handleRestoreBaseCustom(overrideId)}
+                  interactive={interactive}
+                />
+              )
+            })}
+            {visibleBaseCustomRefs.map((ref) => {
+              const item = customById.get(ref.customItemId)
+              if (!item) return null
+              return (
+                <CustomEquipmentItemRow
+                  key={ref.id}
+                  item={item}
+                  quantity={ref.quantity}
+                  onRemove={interactive ? () => handleRemoveBaseCustom(ref.customItemId) : undefined}
+                  interactive={interactive}
+                />
+              )
+            })}
             {addedItems.map((o) => (
               <EquipmentItemRow
                 key={o.id}
@@ -206,6 +348,19 @@ export function EquipmentBlock({
                 interactive={interactive}
               />
             ))}
+            {addedCustomItems.map((ref) => {
+              const item = customById.get(ref.customItemId)
+              if (!item) return null
+              return (
+                <CustomEquipmentItemRow
+                  key={ref.id}
+                  item={item}
+                  quantity={ref.quantity}
+                  onRemove={() => handleRemoveAddedCustom(ref)}
+                  interactive={interactive}
+                />
+              )
+            })}
 
             {encounterContext && (
               <div className="relative mt-2">
@@ -215,8 +370,19 @@ export function EquipmentBlock({
                   onChange={(e) => setAddQuery(e.target.value)}
                   className="text-xs h-8 bg-secondary/40 border-border/50"
                 />
-                {addResults.length > 0 && (
+                {(addResults.length > 0 || customAddResults.length > 0) && (
                   <div className="absolute z-10 left-0 right-0 top-full mt-0.5 rounded border border-border bg-popover shadow-md max-h-40 overflow-y-auto">
+                    {customAddResults.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => handleAddCustomItem(r)}
+                        className="w-full flex items-center gap-2 px-2 py-1 text-xs text-left hover:bg-secondary/60 transition-colors"
+                      >
+                        <span className={cn('px-1 py-0.5 text-[9px] rounded border uppercase tracking-wider font-semibold shrink-0', ITEM_TYPE_COLORS[r.item_type] ?? '')}>C</span>
+                        <span className="flex-1 truncate">{r.name}</span>
+                        <span className="text-muted-foreground shrink-0">Custom</span>
+                      </button>
+                    ))}
                     {addResults.map((r) => (
                       <button
                         key={r.id}

@@ -5,10 +5,18 @@ import { Input } from '@/shared/ui/input'
 import { SearchInput } from '@/shared/ui/search-input'
 import { formatEquipmentDamageFormula } from '@/entities/creature'
 import { ITEM_TYPE_COLORS } from '@/entities/item'
-import { searchItems, type CreatureItemRow, type ItemRow } from '@/shared/api'
+import {
+  getCustomItemsByIds,
+  searchCustomItems,
+  searchItems,
+  type CreatureItemRow,
+  type CustomItemRow,
+  type ItemRow,
+} from '@/shared/api'
 import type { BuilderTabsProps } from '../BuilderTabs'
 
 const SEARCH_LIMIT = 8
+const EMPTY_CUSTOM_REFS = [] as const
 
 function toCreatureItem(
   item: ItemRow,
@@ -98,13 +106,74 @@ function SearchResult({ item, onAdd }: SearchResultProps) {
   )
 }
 
+interface CustomSearchResultProps {
+  item: CustomItemRow
+  onAdd: (item: CustomItemRow) => void
+}
+
+function CustomSearchResult({ item, onAdd }: CustomSearchResultProps) {
+  const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-left hover:border-primary/60 hover:bg-primary/10"
+      onClick={() => onAdd(item)}
+    >
+      <Plus className="h-3.5 w-3.5 shrink-0 text-primary" />
+      <span className={`rounded border px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${typeColor}`}>
+        C
+      </span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium">{item.name}</span>
+      <span className="shrink-0 text-xs text-muted-foreground">Custom</span>
+    </button>
+  )
+}
+
+interface CustomInventoryRowProps {
+  item: CustomItemRow
+  quantity: number
+  onQuantityChange: (quantity: number) => void
+  onRemove: () => void
+}
+
+function CustomInventoryRow({ item, quantity, onQuantityChange, onRemove }: CustomInventoryRowProps) {
+  const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
+
+  return (
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_5rem_auto] items-center gap-2 rounded-md border border-primary/25 bg-primary/5 px-3 py-2">
+      <span className={`rounded border px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${typeColor}`}>
+        C
+      </span>
+      <span className="truncate text-sm font-medium">{item.name}</span>
+      <Input
+        type="number"
+        min={1}
+        value={quantity}
+        className="h-7 font-mono text-xs"
+        onChange={(e) => onQuantityChange(Math.max(1, Number(e.target.value) || 1))}
+      />
+      <button
+        type="button"
+        className="p-1 text-muted-foreground hover:text-destructive"
+        onClick={onRemove}
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+}
+
 export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
   const { t } = useTranslation('common')
   const { form } = state
   const equipment = form.equipment ?? []
+  const customItemRefs = form.customItemRefs ?? EMPTY_CUSTOM_REFS
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [results, setResults] = useState<ItemRow[]>([])
+  const [customResults, setCustomResults] = useState<CustomItemRow[]>([])
+  const [customItems, setCustomItems] = useState<CustomItemRow[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -124,10 +193,19 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
     setLoading(true)
     void (async () => {
       try {
-        const rows = await searchItems(searchTerm)
-        if (!cancelled) setResults(rows.slice(0, SEARCH_LIMIT))
+        const [rows, customRows] = await Promise.all([
+          searchItems(searchTerm),
+          searchCustomItems(searchTerm),
+        ])
+        if (!cancelled) {
+          setResults(rows.slice(0, SEARCH_LIMIT))
+          setCustomResults(customRows.slice(0, SEARCH_LIMIT))
+        }
       } catch {
-        if (!cancelled) setResults([])
+        if (!cancelled) {
+          setResults([])
+          setCustomResults([])
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -138,12 +216,31 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
     }
   }, [debounced])
 
+  useEffect(() => {
+    const ids = customItemRefs.map((ref) => ref.customItemId)
+    if (ids.length === 0) {
+      setCustomItems([])
+      return
+    }
+    let cancelled = false
+    void getCustomItemsByIds(ids)
+      .then((rows) => {
+        if (!cancelled) setCustomItems(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setCustomItems([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [customItemRefs])
+
   const emptyMessage = useMemo(() => {
     if (loading) return t('customCreatureBuilder.inventoryTab.searching')
     if (debounced.trim().length < 2) return t('customCreatureBuilder.inventoryTab.startSearch')
-    if (results.length === 0) return t('customCreatureBuilder.inventoryTab.noItemsFound')
+    if (results.length === 0 && customResults.length === 0) return t('customCreatureBuilder.inventoryTab.noItemsFound')
     return null
-  }, [debounced, loading, results.length, t])
+  }, [customResults.length, debounced, loading, results.length, t])
 
   function addItem(item: ItemRow) {
     const existingIndex = equipment.findIndex((it) => it.foundry_item_id === item.id)
@@ -163,6 +260,34 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
     })
   }
 
+  function addCustomItem(item: CustomItemRow) {
+    const existingIndex = customItemRefs.findIndex((ref) => ref.customItemId === item.id)
+    if (existingIndex >= 0) {
+      const existing = customItemRefs[existingIndex]
+      if (!existing) return
+      dispatch({
+        type: 'UPDATE_CUSTOM_ITEM_REF',
+        index: existingIndex,
+        item: { ...existing, quantity: existing.quantity + 1 },
+      })
+      return
+    }
+    dispatch({
+      type: 'ADD_CUSTOM_ITEM_REF',
+      item: {
+        id: `${form.id || 'custom'}:custom-item:${item.id}:${crypto.randomUUID()}`,
+        customItemId: item.id,
+        quantity: 1,
+        sortOrder: customItemRefs.length,
+      },
+    })
+  }
+
+  const customById = useMemo(
+    () => new Map(customItems.map((item) => [item.id, item])),
+    [customItems],
+  )
+
   return (
     <div className="p-4 space-y-4">
       <h2 className="text-base font-semibold">{t('customCreatureBuilder.inventoryTab.heading')}</h2>
@@ -177,8 +302,11 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
         {emptyMessage && (
           <p className="py-1 text-xs text-muted-foreground">{emptyMessage}</p>
         )}
-        {results.length > 0 && (
+        {(results.length > 0 || customResults.length > 0) && (
           <div className="grid gap-1">
+            {customResults.map((item) => (
+              <CustomSearchResult key={item.id} item={item} onAdd={addCustomItem} />
+            ))}
             {results.map((item) => (
               <SearchResult key={item.id} item={item} onAdd={addItem} />
             ))}
@@ -186,7 +314,7 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
         )}
       </div>
 
-      {equipment.length === 0 ? (
+      {equipment.length === 0 && customItemRefs.length === 0 ? (
         <div className="flex items-center justify-between rounded-md border border-dashed border-border/50 bg-secondary/20 p-4">
           <p className="text-sm text-muted-foreground">{t('customCreatureBuilder.inventoryTab.noItemsAdded')}</p>
           <Package className="h-5 w-5 text-muted-foreground/60" />
@@ -207,6 +335,25 @@ export function InventoryTab({ state, dispatch }: BuilderTabsProps) {
               onRemove={() => dispatch({ type: 'REMOVE_EQUIPMENT_ITEM', index })}
             />
           ))}
+          {customItemRefs.map((ref, index) => {
+            const item = customById.get(ref.customItemId)
+            if (!item) return null
+            return (
+              <CustomInventoryRow
+                key={ref.id}
+                item={item}
+                quantity={ref.quantity}
+                onQuantityChange={(quantity) =>
+                  dispatch({
+                    type: 'UPDATE_CUSTOM_ITEM_REF',
+                    index,
+                    item: { ...ref, quantity },
+                  })
+                }
+                onRemove={() => dispatch({ type: 'REMOVE_CUSTOM_ITEM_REF', index })}
+              />
+            )
+          })}
         </div>
       )}
     </div>

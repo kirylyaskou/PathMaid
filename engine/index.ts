@@ -229,6 +229,23 @@ export {
 export type { BaseSpeedInput, SpeedType } from './effects/base-speed'
 export type { BattleFormStrikeOverride } from './effects/battle-form-types'
 
+// Custom Items
+export {
+  parseCustomItemRules,
+  getCustomItemResistances,
+  getCustomItemFlatModifiers,
+  getCustomItemAbilityDeltas,
+  getCustomItemGrantedAbilities,
+  getCustomItemGrantedSpells,
+} from './items/custom-item-rules'
+export type {
+  CustomItemRule,
+  CustomItemAbilityKey,
+  CustomItemActionCost,
+  CustomItemGrantedAbility,
+  CustomItemGrantedSpell,
+} from './items/custom-item-rules'
+
 export {
   parseSpellEffectNotes,
   getActiveRollNotes,

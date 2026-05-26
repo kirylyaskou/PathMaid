@@ -1,5 +1,6 @@
 import { Lock, Unlock, Link, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { ReactNode } from 'react'
 import { cn } from '@/shared/lib/utils'
 import type { ActiveCondition } from '../model/types'
 import { CONDITION_GROUPS } from '@engine'
@@ -24,6 +25,12 @@ interface ConditionBadgeProps {
   onRemove?: () => void
   onToggleLock?: () => void
   onInfo?: () => void
+  extraAction?: {
+    ariaLabel: string
+    title: string
+    content: ReactNode
+    onClick: () => void
+  }
   className?: string
 }
 
@@ -32,6 +39,7 @@ export function ConditionBadge({
   onRemove,
   onToggleLock,
   onInfo,
+  extraAction,
   className,
 }: ConditionBadgeProps) {
   const { t } = useTranslation('common')
@@ -55,6 +63,19 @@ export function ConditionBadge({
       <span className="capitalize">{condition.slug.replace('-', ' ')}</span>
       {condition.value !== undefined && condition.value > 0 && (
         <span className="font-mono font-semibold">{condition.value}</span>
+      )}
+      {extraAction && (
+        <button
+          className="ml-0.5 text-base leading-none transition-transform hover:scale-110"
+          onClick={(e) => {
+            e.stopPropagation()
+            extraAction.onClick()
+          }}
+          title={extraAction.title}
+          aria-label={extraAction.ariaLabel}
+        >
+          {extraAction.content}
+        </button>
       )}
       {onInfo && (
         <button

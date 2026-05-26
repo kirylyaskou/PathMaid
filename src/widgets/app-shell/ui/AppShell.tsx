@@ -79,11 +79,11 @@ export function AppShell() {
   }, [navigate])
 
   return (
-    <div className="flex flex-1 overflow-hidden bg-background">
+    <div className="relative flex flex-1 overflow-hidden bg-background">
       <AppSidebar onSearchOpen={() => setCommandOpen(true)} />
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="relative z-0 flex min-w-0 flex-col flex-1 overflow-hidden">
         <AppHeader />
-        <main className="flex-1 overflow-auto">
+        <main className="relative z-0 isolate min-w-0 flex-1 overflow-auto">
           <Outlet />
         </main>
       </div>

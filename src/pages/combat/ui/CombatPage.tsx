@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
@@ -342,13 +342,24 @@ export function CombatPage() {
   const splitMode = useEncounterTabsStore((s) => s.splitMode)
   const setActiveTab = useEncounterTabsStore((s) => s.setActiveTab)
   const selectedCombatant = selectedId ? combatants.find((x) => x.id === selectedId) : null
-  const spellcastingEncounter = combatId && selectedId
-    ? {
+  const selectedNpcTier: WeakEliteTier =
+    selectedCombatant && selectedCombatant.kind === 'npc'
+      ? selectedCombatant.weakEliteTier ?? 'normal'
+      : 'normal'
+  const spellcastingEncounter = useMemo(
+    () => combatId && selectedId
+      ? {
         encounterId: combatId,
         combatantId: selectedId,
         onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
       }
-    : undefined
+      : undefined,
+    [combatId, refreshShieldBonus, selectedId],
+  )
+  const displayedNpcStatBlock = useMemo(
+    () => lastNpcStatBlock ? applyTierToStatBlock(lastNpcStatBlock, selectedNpcTier) : null,
+    [lastNpcStatBlock, selectedNpcTier],
+  )
   const statBlockRoll = useRoll(
     lastNpcStatBlock?.name,
     spellcastingEncounter?.encounterId,
@@ -677,7 +688,7 @@ export function CombatPage() {
             <ResizableHandle withHandle />
 
             {/* Right panel — Creature stat card / PC build */}
-            <ResizablePanel defaultSize={40} minSize={28}>
+            <ResizablePanel defaultSize={40} minSize={28} className="min-w-0 overflow-hidden">
               <div className="h-full overflow-y-auto">
                 {/* PC selected */}
                 {selectedPcBuild && selectedCombatant && (
@@ -688,12 +699,9 @@ export function CombatPage() {
                     stat values per Monster Core pg. 6-7. HP is already baked
                     in at add-time via getHpAdjustment so applyTierToStatBlock
                     deliberately skips it. */}
-                {!selectedPcBuild && lastNpcStatBlock && (
+                {!selectedPcBuild && displayedNpcStatBlock && (
                   <CreatureStatBlock
-                    creature={applyTierToStatBlock(
-                      lastNpcStatBlock,
-                      (selectedCombatant && selectedCombatant.kind === 'npc' && selectedCombatant.weakEliteTier) || 'normal',
-                    )}
+                    creature={displayedNpcStatBlock}
                     className="rounded-none border-x-0 border-t-0"
                     encounterContext={spellcastingEncounter}
                     onRoll={statBlockRoll}

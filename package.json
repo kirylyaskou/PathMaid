@@ -1,6 +1,6 @@
 {
   "name": "pathmaid",
-  "version": "1.9.5",
+  "version": "1.9.6",
   "description": "Pathfinder 2e DM Assistant",
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "lint:arch": "steiger src/",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:playwright": "playwright test -c playwright.config.ts",
     "test:tauri": "node ./tests/tauri/preflight.mjs && wdio run ./tests/tauri/wdio.conf.js"
   },
   "dependencies": {
@@ -64,6 +65,7 @@
     "immer": "^11.1.4",
     "lucide-react": "^0.564.0",
     "next-themes": "^0.4.6",
+    "pdfmake": "^0.2.20",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-i18next": "^17.0.4",
@@ -76,10 +78,12 @@
   },
   "devDependencies": {
     "@feature-sliced/steiger-plugin": "^0.5.7",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.2.2",
     "@tauri-apps/cli": "^2",
     "@types/dompurify": "^3.2.0",
     "@types/node": "^22",
+    "@types/pdfmake": "^0.2.12",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/sql.js": "^1.4.11",

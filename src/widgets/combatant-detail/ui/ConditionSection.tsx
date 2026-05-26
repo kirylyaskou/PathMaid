@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
+import { useCombatantStore } from '@/entities/combatant'
 import { useConditionStore, ConditionBadge, removeCondition, setConditionLocked } from '@/entities/condition'
-import { ConditionCombobox } from '@/features/combat-tracker'
+import { ConditionCombobox, useCombatTrackerStore } from '@/features/combat-tracker'
 import { getConditionBySlug } from '@/shared/api'
 import type { ConditionRow } from '@/shared/api'
-import type { ConditionSlug } from '@engine'
+import { computeStatModifier, type ConditionInput, type ConditionSlug } from '@engine'
 import { useShallow } from 'zustand/react/shallow'
 import { toast } from 'sonner'
 import { cn } from '@/shared/lib/utils'
@@ -81,6 +82,10 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
   const conditions = useConditionStore(
     useShallow((s) => s.activeConditions.filter((c) => c.combatantId === combatantId))
   )
+  const combatant = useCombatantStore(
+    useShallow((s) => s.combatants.find((c) => c.id === combatantId))
+  )
+  const setPendingSickenedSave = useCombatTrackerStore((s) => s.setPendingSickenedSave)
   const [detailRow, setDetailRow] = useState<ConditionRow | 'not-found' | null>(null)
   const [openConditionSlug, setOpenConditionSlug] = useState<string | null>(null)
 
@@ -117,6 +122,39 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
     }
   }, [])
 
+  const handleSickenedSave = useCallback(
+    (sickenedValue: number) => {
+      const conditionInputs = conditions.map((c): ConditionInput => ({
+        slug: c.slug as ConditionInput['slug'],
+        value: c.value ?? 1,
+      }))
+      const condMod = conditionInputs.length > 0
+        ? computeStatModifier(conditionInputs, 'fortitude', ['fortitude']).netModifier
+        : 0
+      const baseFort = combatant && 'fort' in combatant ? (combatant.fort ?? 0) : 0
+
+      setPendingSickenedSave({
+        combatantId,
+        combatantName: combatant?.displayName ?? 'Combatant',
+        sickenedValue,
+        baseFort,
+        condMod,
+        creatureRef: combatant?.creatureRef,
+      })
+    },
+    [combatant, combatantId, conditions, setPendingSickenedSave],
+  )
+
+  const createSickenedAction = useCallback(
+    (sickenedValue: number) => ({
+      ariaLabel: 'Retch',
+      title: 'Retch - Fortitude save to reduce sickened',
+      content: '🤮',
+      onClick: () => handleSickenedSave(sickenedValue),
+    }),
+    [handleSickenedSave],
+  )
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -137,6 +175,7 @@ export function ConditionSection({ combatantId }: ConditionSectionProps) {
               onRemove={() => handleRemove(c.slug)}
               onToggleLock={() => handleToggleLock(c.slug, !!c.isLocked)}
               onInfo={() => handleInfo(c.slug)}
+              extraAction={c.slug === 'sickened' ? createSickenedAction(c.value ?? 1) : undefined}
             />
           ))}
         </div>
