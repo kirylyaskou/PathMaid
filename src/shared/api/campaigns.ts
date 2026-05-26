@@ -1,5 +1,4 @@
 import {
-  createBucketNodes,
   type Campaign,
   type CampaignAsset,
   type CampaignBucket,
@@ -14,7 +13,7 @@ import {
   type CampaignTableColumn,
   type CampaignTableRow,
   type CampaignTableSizes,
-} from '@/entities/campaign'
+} from '@/shared/api/campaign-types'
 import { getDb } from '@/shared/db'
 
 export interface CreateCampaignInput {
@@ -163,6 +162,18 @@ const LINK_COLUMNS = `
 const PIN_COLUMNS = 'campaign_id, node_id, sort_order, created_at'
 
 const ASSET_COLUMNS = 'id, campaign_id, kind, file_name, mime_type, relative_path, created_at'
+
+const CAMPAIGN_BUCKET_ROWS: Array<{
+  bucket: CampaignBucket
+  title: string
+  sortOrder: number
+}> = [
+  { bucket: 'notes', title: 'Notes', sortOrder: 0 },
+  { bucket: 'tables', title: 'Tables', sortOrder: 1 },
+  { bucket: 'npcs', title: 'NPCs', sortOrder: 2 },
+  { bucket: 'items', title: 'Items', sortOrder: 3 },
+  { bucket: 'locations', title: 'Locations', sortOrder: 4 },
+]
 
 function nowISO(): string {
   return new Date().toISOString()
@@ -320,21 +331,21 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
       ],
     )
 
-    for (const node of createBucketNodes(id, now)) {
+    for (const node of CAMPAIGN_BUCKET_ROWS) {
       await db.execute(
         `INSERT INTO campaign_nodes (${NODE_COLUMNS})
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          node.id,
-          node.campaignId,
-          node.parentId,
-          node.kind,
+          `campaign-node-${id}-${node.bucket}`,
+          id,
+          null,
+          'bucket',
           node.bucket,
           node.title,
           node.sortOrder,
-          node.isSystem ? 1 : 0,
-          node.createdAt,
-          node.updatedAt,
+          1,
+          now,
+          now,
         ],
       )
     }
