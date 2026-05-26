@@ -28,7 +28,7 @@ import {
   type CampaignNode,
   type CampaignTable,
 } from '@/entities/campaign'
-import { createDebouncedTask } from './autosave'
+import { createKeyedLatestTask } from './autosave'
 
 type CampaignManagerMode = 'editor' | 'graph'
 
@@ -40,6 +40,10 @@ interface DocumentSaveTask {
 interface TableSaveTask {
   nodeId: string
   table: CampaignTable
+}
+
+interface LinkRefreshTask {
+  nodeId: string
 }
 
 interface CampaignManagerState {
@@ -68,30 +72,23 @@ interface CampaignManagerState {
 }
 
 const AUTOSAVE_DELAY_MS = 600
+const LINK_REFRESH_DELAY_MS = 250
 
-const documentSavers = new Map<string, (value: DocumentSaveTask) => void>()
-const tableSavers = new Map<string, (value: TableSaveTask) => void>()
+let openCampaignRequestSequence = 0
+let openNodeRequestSequence = 0
 
-function getDocumentSaver(nodeId: string): (value: DocumentSaveTask) => void {
-  const existing = documentSavers.get(nodeId)
-  if (existing) {
-    return existing
-  }
-
-  const saver = createDebouncedTask<DocumentSaveTask>(AUTOSAVE_DELAY_MS, async (value) => {
+const saveDocumentLatest = createKeyedLatestTask<DocumentSaveTask, string>(
+  AUTOSAVE_DELAY_MS,
+  (value) => value.nodeId,
+  async (value) => {
     await updateCampaignDocument(value.nodeId, { markdown: value.markdown })
-  })
-  documentSavers.set(nodeId, saver)
-  return saver
-}
+  },
+)
 
-function getTableSaver(nodeId: string): (value: TableSaveTask) => void {
-  const existing = tableSavers.get(nodeId)
-  if (existing) {
-    return existing
-  }
-
-  const saver = createDebouncedTask<TableSaveTask>(AUTOSAVE_DELAY_MS, async (value) => {
+const saveTableLatest = createKeyedLatestTask<TableSaveTask, string>(
+  AUTOSAVE_DELAY_MS,
+  (value) => value.nodeId,
+  async (value) => {
     await updateCampaignTable(value.nodeId, {
       columns: value.table.columns,
       rows: value.table.rows,
@@ -99,10 +96,8 @@ function getTableSaver(nodeId: string): (value: TableSaveTask) => void {
       columnSizes: value.table.columnSizes,
       rowSizes: value.table.rowSizes,
     })
-  })
-  tableSavers.set(nodeId, saver)
-  return saver
-}
+  },
+)
 
 function emptyWorkspace() {
   return {
@@ -118,10 +113,39 @@ function emptyWorkspace() {
 }
 
 export const useCampaignManagerStore = create<CampaignManagerState>()(
-  immer((set, get) => ({
-    campaigns: [],
-    ...emptyWorkspace(),
-    loading: false,
+  immer((set, get) => {
+    const refreshLinksLatest = createKeyedLatestTask<LinkRefreshTask, string>(
+      LINK_REFRESH_DELAY_MS,
+      (value) => value.nodeId,
+      async (value) => {
+        const campaignId = get().activeCampaignId
+        const node = findNodeById(get().nodes, value.nodeId)
+        if (!campaignId || !node || !isOpenableCampaignNode(node)) {
+          return
+        }
+
+        const extractedLinks =
+          node.kind === 'table'
+            ? extractTableLinks(get().tables[value.nodeId]?.cells ?? {}, get().nodes)
+            : extractMarkdownLinks(get().documents[value.nodeId]?.markdown ?? '', get().nodes)
+
+        await replaceCampaignLinks(campaignId, value.nodeId, extractedLinks)
+        const links = await listCampaignLinks(campaignId)
+
+        if (get().activeCampaignId !== campaignId) {
+          return
+        }
+
+        set((state) => {
+          state.links = links
+        })
+      },
+    )
+
+    return {
+      campaigns: [],
+      ...emptyWorkspace(),
+      loading: false,
 
     loadCampaigns: async () => {
       set((state) => {
@@ -152,12 +176,17 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.campaigns = state.campaigns.filter((campaign) => campaign.id !== id)
 
         if (state.activeCampaignId === id) {
+          openCampaignRequestSequence += 1
+          openNodeRequestSequence += 1
           Object.assign(state, emptyWorkspace())
         }
       })
     },
 
     openCampaign: async (id) => {
+      const requestId = ++openCampaignRequestSequence
+      openNodeRequestSequence += 1
+
       set((state) => {
         state.loading = true
       })
@@ -173,6 +202,10 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         ])
         firstOpenableNodeId = nodes.find(isOpenableCampaignNode)?.id ?? null
 
+        if (requestId !== openCampaignRequestSequence) {
+          return
+        }
+
         set((state) => {
           state.activeCampaignId = id
           state.nodes = nodes
@@ -184,12 +217,14 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
           state.mode = 'editor'
         })
       } finally {
-        set((state) => {
-          state.loading = false
-        })
+        if (requestId === openCampaignRequestSequence) {
+          set((state) => {
+            state.loading = false
+          })
+        }
       }
 
-      if (firstOpenableNodeId) {
+      if (requestId === openCampaignRequestSequence && firstOpenableNodeId) {
         await get().openNode(firstOpenableNodeId)
       }
     },
@@ -205,10 +240,13 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         return
       }
 
+      const campaignId = node.campaignId
+      const requestId = ++openNodeRequestSequence
+
       if (node.kind === 'table') {
         if (!get().tables[nodeId]) {
           const table = await getCampaignTable(nodeId)
-          if (table) {
+          if (table && canApplyOpenNode(get(), requestId, campaignId, nodeId)) {
             set((state) => {
               state.tables[nodeId] = table
             })
@@ -216,11 +254,15 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         }
       } else if (!get().documents[nodeId]) {
         const document = await getCampaignDocument(nodeId)
-        if (document) {
+        if (document && canApplyOpenNode(get(), requestId, campaignId, nodeId)) {
           set((state) => {
             state.documents[nodeId] = document
           })
         }
+      }
+
+      if (!canApplyOpenNode(get(), requestId, campaignId, nodeId)) {
+        return
       }
 
       set((state) => {
@@ -230,14 +272,26 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
     },
 
     createNode: async (input) => {
+      const campaignRequestId = openCampaignRequestSequence
       const id = await createCampaignNode(input)
       const nodes = await listCampaignNodes(input.campaignId)
+      const activeCampaignId = get().activeCampaignId
+
+      if (
+        activeCampaignId !== input.campaignId ||
+        campaignRequestId !== openCampaignRequestSequence
+      ) {
+        return id
+      }
 
       set((state) => {
         state.nodes = nodes
       })
 
-      await get().openNode(id)
+      if (get().activeCampaignId === input.campaignId) {
+        await get().openNode(id)
+      }
+
       return id
     },
 
@@ -253,8 +307,8 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.documents[nodeId] = nextDocument
       })
 
-      getDocumentSaver(nodeId)({ nodeId, markdown })
-      void get().refreshLinksForNode(nodeId)
+      saveDocumentLatest({ nodeId, markdown })
+      refreshLinksLatest({ nodeId })
     },
 
     patchTable: (nodeId, table) => {
@@ -273,8 +327,8 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.tables[nodeId] = nextTable
       })
 
-      getTableSaver(nodeId)({ nodeId, table: nextTable })
-      void get().refreshLinksForNode(nodeId)
+      saveTableLatest({ nodeId, table: nextTable })
+      refreshLinksLatest({ nodeId })
     },
 
     togglePin: async (nodeId) => {
@@ -295,23 +349,23 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
     },
 
     refreshLinksForNode: async (nodeId) => {
-      const campaignId = get().activeCampaignId
-      const node = findNodeById(get().nodes, nodeId)
-      if (!campaignId || !node || !isOpenableCampaignNode(node)) {
-        return
-      }
-
-      const extractedLinks =
-        node.kind === 'table'
-          ? extractTableLinks(get().tables[nodeId]?.cells ?? {}, get().nodes)
-          : extractMarkdownLinks(get().documents[nodeId]?.markdown ?? '', get().nodes)
-
-      await replaceCampaignLinks(campaignId, nodeId, extractedLinks)
-      const links = await listCampaignLinks(campaignId)
-
-      set((state) => {
-        state.links = links
-      })
+      refreshLinksLatest({ nodeId })
     },
-  })),
+    }
+  }),
 )
+
+function canApplyOpenNode(
+  state: CampaignManagerState,
+  requestId: number,
+  campaignId: string,
+  nodeId: string,
+): boolean {
+  const node = findNodeById(state.nodes, nodeId)
+  return (
+    requestId === openNodeRequestSequence &&
+    state.activeCampaignId === campaignId &&
+    node?.campaignId === campaignId &&
+    isOpenableCampaignNode(node)
+  )
+}
