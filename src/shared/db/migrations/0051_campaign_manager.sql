@@ -20,9 +20,18 @@ CREATE TABLE IF NOT EXISTS campaign_nodes (
   is_system INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  CHECK (
+    (kind != 'table' OR bucket = 'tables')
+    AND (kind != 'npc' OR bucket = 'npcs')
+    AND (kind != 'item' OR bucket = 'items')
+    AND (kind != 'location' OR bucket = 'locations')
+  ),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (parent_id) REFERENCES campaign_nodes(id) ON DELETE CASCADE
+  FOREIGN KEY (campaign_id, parent_id) REFERENCES campaign_nodes(campaign_id, id) ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_campaign_nodes_campaign_id
+  ON campaign_nodes(campaign_id, id);
 
 CREATE INDEX IF NOT EXISTS idx_campaign_nodes_campaign_parent
   ON campaign_nodes(campaign_id, parent_id, sort_order);
@@ -61,8 +70,8 @@ CREATE TABLE IF NOT EXISTS campaign_links (
   created_from TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (source_node_id) REFERENCES campaign_nodes(id) ON DELETE CASCADE,
-  FOREIGN KEY (target_node_id) REFERENCES campaign_nodes(id) ON DELETE CASCADE
+  FOREIGN KEY (campaign_id, source_node_id) REFERENCES campaign_nodes(campaign_id, id) ON DELETE CASCADE,
+  FOREIGN KEY (campaign_id, target_node_id) REFERENCES campaign_nodes(campaign_id, id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_campaign_links_unique
@@ -78,7 +87,7 @@ CREATE TABLE IF NOT EXISTS campaign_pins (
   created_at TEXT NOT NULL,
   PRIMARY KEY (campaign_id, node_id),
   FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
-  FOREIGN KEY (node_id) REFERENCES campaign_nodes(id) ON DELETE CASCADE
+  FOREIGN KEY (campaign_id, node_id) REFERENCES campaign_nodes(campaign_id, id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS campaign_assets (
