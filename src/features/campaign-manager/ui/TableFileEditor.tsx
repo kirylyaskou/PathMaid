@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { useCallback } from 'react'
+import { memo, useCallback, useEffect, useState, type KeyboardEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { CampaignNode, CampaignTable, CampaignTableColumn, CampaignTableRow } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
@@ -26,19 +26,115 @@ interface TableHeaderRowProps {
 interface TableBodyRowProps {
   row: CampaignTableRow
   columns: CampaignTableColumn[]
-  cells: CampaignTable['cells']
+  rowCells: Record<string, string>
   rowHeight: number
   columnSizes: Record<string, number>
   onCellChange: (rowId: string, columnId: string, value: string) => void
   onRowHeightChange: (rowId: string, height: number) => void
 }
 
-function parseMinimumNumber(value: string, minimum: number): number {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? Math.max(minimum, parsed) : minimum
+interface SizeInputProps {
+  value: number
+  minimum: number
+  ariaLabel: string
+  className: string
+  onCommit: (value: number) => void
 }
 
-function TableHeaderRow({
+function parseMinimumNumber(value: string, minimum: number): number | null {
+  if (value.trim().length === 0) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? Math.max(minimum, parsed) : null
+}
+
+function columnsAreEqual(previous: CampaignTableColumn[], next: CampaignTableColumn[]): boolean {
+  return (
+    previous.length === next.length &&
+    previous.every((column, index) => {
+      const nextColumn = next[index]
+      return nextColumn?.id === column.id && nextColumn.title === column.title
+    })
+  )
+}
+
+function columnSizesAreEqual(
+  columns: CampaignTableColumn[],
+  previous: Record<string, number>,
+  next: Record<string, number>,
+): boolean {
+  return columns.every(
+    (column) =>
+      (previous[column.id] ?? DEFAULT_COLUMN_WIDTH) === (next[column.id] ?? DEFAULT_COLUMN_WIDTH),
+  )
+}
+
+function rowCellsAreEqual(
+  columns: CampaignTableColumn[],
+  previous: Record<string, string>,
+  next: Record<string, string>,
+): boolean {
+  return columns.every((column) => (previous[column.id] ?? '') === (next[column.id] ?? ''))
+}
+
+const SizeInput = memo(function SizeInput({
+  value,
+  minimum,
+  ariaLabel,
+  className,
+  onCommit,
+}: SizeInputProps) {
+  const [draft, setDraft] = useState(String(value))
+
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  const commitDraft = useCallback(() => {
+    const nextValue = parseMinimumNumber(draft, minimum)
+
+    if (nextValue === null) {
+      setDraft(String(value))
+      return
+    }
+
+    setDraft(String(nextValue))
+
+    if (nextValue !== value) {
+      onCommit(nextValue)
+    }
+  }, [draft, minimum, onCommit, value])
+
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setDraft(event.target.value)
+  }, [])
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        commitDraft()
+      }
+    },
+    [commitDraft],
+  )
+
+  return (
+    <Input
+      type="number"
+      min={minimum}
+      value={draft}
+      onChange={handleChange}
+      onBlur={commitDraft}
+      onKeyDown={handleKeyDown}
+      aria-label={ariaLabel}
+      className={className}
+    />
+  )
+})
+
+const TableHeaderRow = memo(function TableHeaderRow({
   columns,
   columnSizes,
   onColumnTitleChange,
@@ -65,18 +161,12 @@ function TableHeaderRow({
                 aria-label={`Column title ${column.title}`}
                 className="h-8 bg-background text-sm font-medium"
               />
-              <Input
-                type="number"
-                min={MIN_COLUMN_WIDTH}
+              <SizeInput
                 value={width}
-                onChange={(event) =>
-                  onColumnWidthChange(
-                    column.id,
-                    parseMinimumNumber(event.target.value, MIN_COLUMN_WIDTH),
-                  )
-                }
-                aria-label={`Column width ${column.title}`}
+                minimum={MIN_COLUMN_WIDTH}
+                ariaLabel={`Column width ${column.title}`}
                 className="h-8 w-20 bg-background px-2 text-right text-xs"
+                onCommit={(value) => onColumnWidthChange(column.id, value)}
               />
             </div>
           </th>
@@ -84,12 +174,12 @@ function TableHeaderRow({
       })}
     </tr>
   )
-}
+}, areHeaderPropsEqual)
 
-function TableBodyRow({
+const TableBodyRow = memo(function TableBodyRow({
   row,
   columns,
-  cells,
+  rowCells,
   rowHeight,
   columnSizes,
   onCellChange,
@@ -100,15 +190,12 @@ function TableBodyRow({
       <th className="sticky left-0 z-10 w-36 min-w-36 border-r border-border/70 bg-background p-2 text-left align-middle shadow-[1px_0_0_hsl(var(--border))]">
         <div className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.title}</span>
-          <Input
-            type="number"
-            min={MIN_ROW_HEIGHT}
+          <SizeInput
             value={rowHeight}
-            onChange={(event) =>
-              onRowHeightChange(row.id, parseMinimumNumber(event.target.value, MIN_ROW_HEIGHT))
-            }
-            aria-label={`Row height ${row.title}`}
+            minimum={MIN_ROW_HEIGHT}
+            ariaLabel={`Row height ${row.title}`}
             className="h-8 w-16 bg-background px-2 text-right text-xs"
+            onCommit={(value) => onRowHeightChange(row.id, value)}
           />
         </div>
       </th>
@@ -122,7 +209,7 @@ function TableBodyRow({
             style={{ width, minWidth: width }}
           >
             <Input
-              value={cells[row.id]?.[column.id] ?? ''}
+              value={rowCells[column.id] ?? ''}
               onChange={(event) => onCellChange(row.id, column.id, event.target.value)}
               aria-label={`${row.title} ${column.title}`}
               className="h-8 border-transparent bg-transparent px-2 text-sm shadow-none focus-visible:border-ring"
@@ -131,6 +218,28 @@ function TableBodyRow({
         )
       })}
     </tr>
+  )
+}, areBodyRowPropsEqual)
+
+function areHeaderPropsEqual(previous: TableHeaderRowProps, next: TableHeaderRowProps): boolean {
+  return (
+    previous.onColumnTitleChange === next.onColumnTitleChange &&
+    previous.onColumnWidthChange === next.onColumnWidthChange &&
+    columnsAreEqual(previous.columns, next.columns) &&
+    columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes)
+  )
+}
+
+function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowProps): boolean {
+  return (
+    previous.row.id === next.row.id &&
+    previous.row.title === next.row.title &&
+    previous.rowHeight === next.rowHeight &&
+    previous.onCellChange === next.onCellChange &&
+    previous.onRowHeightChange === next.onRowHeightChange &&
+    columnsAreEqual(previous.columns, next.columns) &&
+    columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes) &&
+    rowCellsAreEqual(next.columns, previous.rowCells, next.rowCells)
   )
 }
 
@@ -253,7 +362,7 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
                 key={row.id}
                 row={row}
                 columns={table.columns}
-                cells={table.cells}
+                rowCells={table.cells[row.id] ?? {}}
                 rowHeight={table.rowSizes[row.id] ?? DEFAULT_ROW_HEIGHT}
                 columnSizes={table.columnSizes}
                 onCellChange={setCell}
