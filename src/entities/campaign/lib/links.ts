@@ -17,7 +17,9 @@ interface ParsedWikiLink {
 }
 
 function parseWikiLinks(text: string): ParsedWikiLink[] {
-  return [...text.matchAll(WIKI_LINK_PATTERN)]
+  const pattern = new RegExp(WIKI_LINK_PATTERN.source, WIKI_LINK_PATTERN.flags)
+
+  return [...text.matchAll(pattern)]
     .map((match) => {
       const rawContent = match[1] ?? ''
       const [targetTitle, label] = rawContent.split('|')
