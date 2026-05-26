@@ -186,6 +186,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       <Textarea
         ref={textareaRef}
         value={document.markdown}
+        disabled={isCreatePending}
         onChange={handleChange}
         onSelect={handleSelect}
         placeholder="Write markdown here. Select text to add links or create campaign files."
