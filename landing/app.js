@@ -1,7 +1,16 @@
-const DOWNLOADS = {
-  windows: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_x64-setup.exe',
-  macos: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_aarch64.dmg',
-  linux: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_amd64.AppImage',
+const RELEASE_API_URL = 'https://api.github.com/repos/kirylyaskou/PathMaid/releases/latest'
+const RELEASE_PAGE_URL = 'https://github.com/kirylyaskou/PathMaid/releases/latest'
+
+const FALLBACK_DOWNLOADS = {
+  windows: RELEASE_PAGE_URL,
+  macos: RELEASE_PAGE_URL,
+  linux: RELEASE_PAGE_URL,
+}
+
+const DOWNLOAD_ASSETS = {
+  windows: (name) => /_x64-setup\.exe$/i.test(name) || /_x64_en-US\.msi$/i.test(name),
+  macos: (name) => /\.dmg$/i.test(name),
+  linux: (name) => /\.AppImage$/i.test(name),
 }
 
 const STRINGS = {
@@ -111,11 +120,37 @@ function applyLocale(locale) {
   })
 }
 
-function applyDownloads() {
+function setDownloadLinks(downloads) {
   document.querySelectorAll('[data-download]').forEach((node) => {
     const platform = node.getAttribute('data-download')
-    node.setAttribute('href', DOWNLOADS[platform] ?? '#')
+    node.setAttribute('href', downloads[platform] ?? RELEASE_PAGE_URL)
   })
+}
+
+async function applyDownloads() {
+  setDownloadLinks(FALLBACK_DOWNLOADS)
+
+  try {
+    const response = await fetch(RELEASE_API_URL, {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+    if (!response.ok) return
+
+    const release = await response.json()
+    const assets = Array.isArray(release.assets) ? release.assets : []
+    const downloads = { ...FALLBACK_DOWNLOADS }
+
+    Object.entries(DOWNLOAD_ASSETS).forEach(([platform, matches]) => {
+      const asset = assets.find((candidate) => matches(candidate.name ?? ''))
+      if (asset?.browser_download_url) {
+        downloads[platform] = asset.browser_download_url
+      }
+    })
+
+    setDownloadLinks(downloads)
+  } catch {
+    setDownloadLinks(FALLBACK_DOWNLOADS)
+  }
 }
 
 document.querySelectorAll('.language-button').forEach((button) => {

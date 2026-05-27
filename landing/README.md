@@ -6,15 +6,7 @@ Open `index.html` directly, or serve the folder with any static host.
 
 ## Release Links
 
-Update direct download links in `app.js`:
-
-```js
-const DOWNLOADS = {
-  windows: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_x64-setup.exe',
-  macos: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_aarch64.dmg',
-  linux: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_amd64.AppImage',
-}
-```
+Download buttons resolve assets from the latest GitHub release at runtime. If the GitHub API is temporarily unavailable, buttons fall back to the latest release page.
 
 ## Asset Sizes
 
