@@ -1,4 +1,5 @@
 import { getDb } from '@/shared/db'
+import { normalizeTraitList } from '@/shared/lib/trait-normalize'
 
 export interface CustomCreatureApiStatBlock {
   id: string
@@ -52,7 +53,7 @@ export interface CustomCreatureRecord<TStatBlock = CustomCreatureApiStatBlock> e
 // ---------------------------------------------------------------------------
 
 function toDataJson<TData extends CustomCreatureApiStatBlock>(data: TData): string {
-  const { id: _id, ...rest } = data
+  const { id: _id, ...rest } = normalizeCustomCreatureTraits(data)
   return JSON.stringify(rest)
 }
 
@@ -80,7 +81,23 @@ function parseStatBlock(row: {
     equipment: parsed.equipment ?? [],
     customItemRefs: parsed.customItemRefs ?? [],
   }
-  return backfilled
+  return normalizeCustomCreatureTraits(backfilled)
+}
+
+function normalizeCustomCreatureTraits<TData extends CustomCreatureApiStatBlock>(data: TData): TData {
+  return {
+    ...data,
+    traits: normalizeTraitList(data.traits),
+    strikes: data.strikes.map((strike) => {
+      if (!strike || typeof strike !== 'object') return strike
+      const candidate = strike as { traits?: unknown }
+      if (!Array.isArray(candidate.traits)) return strike
+      return {
+        ...candidate,
+        traits: normalizeTraitList(candidate.traits.filter((trait): trait is string => typeof trait === 'string')),
+      }
+    }),
+  }
 }
 
 function defaultStatBlock(id: string): CustomCreatureApiStatBlock {

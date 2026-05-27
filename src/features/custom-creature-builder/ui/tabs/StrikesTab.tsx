@@ -1,18 +1,29 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/shared/ui/command'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Button } from '@/shared/ui/button'
-import { X, Plus } from 'lucide-react'
+import { ChevronsUpDown, X, Plus } from 'lucide-react'
 import { getBenchmark } from '@engine'
 import type { Tier } from '@engine'
 import type { CreatureStatBlockData } from '@/entities/creature'
+import { getTraitLabel, getTraitSlugs, useCurrentLocale } from '@/shared/i18n'
+import { normalizeTraitList, normalizeTraitSlug } from '@/shared/lib/trait-normalize'
+import { cn } from '@/shared/lib/utils'
 import type { BuilderTabsProps } from '../BuilderTabs'
 import { BenchmarkHint } from '../BenchmarkHint'
 import { TIER_COLORS, TIER_LABEL, TIER_ORDER } from '../../lib/tier-colors'
@@ -24,6 +35,13 @@ const EMPTY_STRIKE: Strike = {
   modifier: 0,
   damage: [{ formula: '1d4', type: 'slashing' }],
   traits: [],
+}
+
+const TRAIT_OPTIONS = getTraitSlugs()
+const TRAIT_OPTION_SET = new Set(TRAIT_OPTIONS)
+
+function isAllowedStrikeTrait(slug: string): boolean {
+  return TRAIT_OPTION_SET.has(slug) || /^(?:reach|range|thrown)-\d+$/.test(slug)
 }
 
 export function StrikesTab({ state, dispatch }: BuilderTabsProps) {
@@ -48,7 +66,6 @@ export function StrikesTab({ state, dispatch }: BuilderTabsProps) {
         <StrikeEditor
           key={i}
           strike={strike}
-          index={i}
           level={form.level}
           onChange={(s) => dispatch({ type: 'UPDATE_STRIKE', index: i, strike: s })}
           onRemove={() => dispatch({ type: 'REMOVE_STRIKE', index: i })}
@@ -75,7 +92,6 @@ export function StrikesTab({ state, dispatch }: BuilderTabsProps) {
 
 interface StrikeEditorProps {
   strike: Strike
-  index: number
   level: number
   onChange: (s: Strike) => void
   onRemove: () => void
@@ -83,16 +99,22 @@ interface StrikeEditorProps {
 
 function StrikeEditor({ strike, level, onChange, onRemove }: StrikeEditorProps) {
   const { t } = useTranslation('common')
-  const [traitInput, setTraitInput] = useState('')
+  const locale = useCurrentLocale()
+  const [traitsOpen, setTraitsOpen] = useState(false)
+  const traits = useMemo(() => normalizeTraitList(strike.traits), [strike.traits])
+  const availableTraits = useMemo(
+    () => TRAIT_OPTIONS.filter((trait) => !traits.includes(trait)),
+    [traits],
+  )
 
-  function addTrait() {
-    const val = traitInput.trim()
-    if (!val || strike.traits.includes(val)) return
-    onChange({ ...strike, traits: [...strike.traits, val] })
-    setTraitInput('')
+  function addTrait(value: string) {
+    const trait = normalizeTraitSlug(value)
+    if (!isAllowedStrikeTrait(trait) || traits.includes(trait)) return
+    onChange({ ...strike, traits: [...traits, trait] })
+    setTraitsOpen(false)
   }
-  function removeTrait(idx: number) {
-    onChange({ ...strike, traits: strike.traits.filter((_, i) => i !== idx) })
+  function removeTrait(slug: string) {
+    onChange({ ...strike, traits: traits.filter((trait) => trait !== slug) })
   }
   function updateDamage(rowIdx: number, patch: Partial<Strike['damage'][number]>) {
     onChange({
@@ -228,34 +250,58 @@ function StrikeEditor({ strike, level, onChange, onRemove }: StrikeEditorProps) 
 
       <div className="space-y-2">
         <Label>{t('customCreatureBuilder.strikesTab.traits')}</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            value={traitInput}
-            onChange={(e) => setTraitInput(e.target.value)}
-            placeholder={t('customCreatureBuilder.strikesTab.addTraitPlaceholder')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                addTrait()
-              }
-            }}
-          />
-          <Button size="sm" variant="outline" onClick={addTrait}>
-            {t('customCreatureBuilder.strikesTab.addTraitButton')}
-          </Button>
-        </div>
-        {strike.traits.length > 0 && (
+        <Popover open={traitsOpen} onOpenChange={setTraitsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors',
+                'hover:border-primary/60 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                'text-muted-foreground',
+              )}
+            >
+              <span>{t('customCreatureBuilder.strikesTab.addTraitPlaceholder')}</span>
+              <ChevronsUpDown className="size-4 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command>
+              <CommandInput placeholder={t('customCreatureBuilder.strikesTab.addTraitPlaceholder')} />
+              <CommandList className="max-h-[260px]">
+                <CommandEmpty>{t('spells.noTraits')}</CommandEmpty>
+                {availableTraits.map((trait) => {
+                  const label = getTraitLabel(trait, locale)
+                  return (
+                    <CommandItem
+                      key={trait}
+                      value={`${trait} ${label}`}
+                      onSelect={() => addTrait(trait)}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="font-mono text-xs">{trait}</span>
+                      {label !== trait && (
+                        <span className="truncate text-xs text-muted-foreground">{label}</span>
+                      )}
+                    </CommandItem>
+                  )
+                })}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {traits.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {strike.traits.map((trait, ti) => (
+            {traits.map((trait) => (
               <span
-                key={`${trait}-${ti}`}
+                key={trait}
                 className="inline-flex items-center gap-1 text-xs rounded bg-secondary/50 border border-border/50 px-2 py-0.5"
+                title={getTraitLabel(trait, locale)}
               >
                 {trait}
                 <button
                   type="button"
                   aria-label={t('customCreatureBuilder.strikesTab.removeTraitAriaLabel', { name: trait })}
-                  onClick={() => removeTrait(ti)}
+                  onClick={() => removeTrait(trait)}
                   className="hover:text-destructive"
                 >
                   <X className="w-3 h-3" />

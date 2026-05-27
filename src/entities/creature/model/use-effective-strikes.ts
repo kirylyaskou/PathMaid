@@ -4,6 +4,7 @@ import type { CreatureStatBlockData } from './types'
 import type { StatModifierResult } from './use-modified-stats'
 import { applyStrikeDamageAdjustments, type StrikeDamage } from '../lib/strike-damage'
 import { baseReachFromDisplaySize, reachFromTraits } from '../lib/reach'
+import { normalizeTraitList } from '@/shared/lib/trait-normalize'
 
 type AdjustStrikeInput = Parameters<typeof applyAdjustStrikes>[1][number]
 type CreatureStrike = CreatureStatBlockData['strikes'][number]
@@ -87,9 +88,10 @@ export function useEffectiveStrikes(
     const effectiveBaseReach = baseReachFromDisplaySize(effectiveSize)
 
     return source.map((strike) => {
-      const isAgile = strike.traits.includes('agile')
+      const traits = normalizeTraitList(strike.traits)
+      const isAgile = traits.includes('agile')
       const isRanged =
-        strike.traits.includes('ranged') || strike.traits.some((t) => /^range\s/i.test(t))
+        traits.includes('ranged') || traits.some((t) => /^range(?:\s|-)/i.test(t))
       // Melee strikes pick up str-based condition penalties (enfeebled) via virtual slug.
       const strikeSlug = isRanged ? 'strike-attack' : 'melee-strike-attack'
       const strikeModResult = modStats.get(strikeSlug)
@@ -116,7 +118,7 @@ export function useEffectiveStrikes(
           )
         : strike.damage
 
-      const traitReach = reachFromTraits(strike.traits, effectiveBaseReach)
+      const traitReach = reachFromTraits(traits, effectiveBaseReach)
       const resolvedReach =
         typeof strike.reach === 'number'
           ? strike.reach
@@ -137,6 +139,7 @@ export function useEffectiveStrikes(
 
       return {
         ...strike,
+        traits,
         isAgile,
         isRanged,
         modifiedMod,

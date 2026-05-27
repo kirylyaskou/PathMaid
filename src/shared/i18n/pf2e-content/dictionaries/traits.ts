@@ -165,6 +165,10 @@ export function getTraitLabel(slug: string, locale: SupportedLocale): string {
   return TRAIT_LABELS.get(slug) ?? slug
 }
 
+export function getTraitSlugs(): string[] {
+  return [...TRAIT_LABELS.keys()].sort((a, b) => a.localeCompare(b))
+}
+
 export function getTraitDescription(
   slug: string,
   locale: SupportedLocale,

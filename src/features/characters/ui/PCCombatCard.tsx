@@ -59,6 +59,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // All skill slugs for useModifiedStats
 const ALL_STAT_SLUGS = [
+  'ac',
   'fortitude', 'reflex', 'will', 'perception',
   'strike-attack',   // virtual: attack rolls — receives 'attack' selector effects
   'spell-attack',    // virtual: spell attack roll
@@ -224,6 +225,9 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
   const basePerception = proficiencyModifier(proficiencies.perception, abilities.wis, level)
   const percResult = modStats.get('perception')
   const finalPerception = basePerception + (percResult?.netModifier ?? 0)
+  const baseAc = 10 + (build.acTotal?.acProfBonus ?? 0) + (build.acTotal?.acAbilityBonus ?? 0) + (build.acTotal?.acItemBonus ?? 0)
+  const acResult = modStats.get('ac')
+  const finalAc = baseAc + (acResult?.netModifier ?? 0)
 
   // Skills
   const profs = proficiencies as unknown as Record<string, number>
@@ -282,7 +286,7 @@ export function PCCombatCard({ build, combatant, encounterId }: PCCombatCardProp
         {/* Core stats */}
         <div className="flex flex-nowrap border-b border-border/40">
           <StatCell label="HP" value={`${combatant.hp}/${combatant.maxHp}`} highlight />
-          <StatCell label="AC" value={'—'} colorClass="text-pf-gold" />
+          <StatCell label="AC" value={finalAc} colorClass="text-pf-gold" modResult={acResult} />
           {saveData.map((s) => {
             const modResult = modStats.get(s.key)
             const net = modResult?.netModifier ?? 0

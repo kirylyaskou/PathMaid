@@ -77,11 +77,14 @@ function readNodeId(
 export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const stopGraphNodeDragRef = useRef<(() => void) | null>(null)
+  const stopGraphPanRef = useRef<(() => void) | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
   const [filterQuery, setFilterQuery] = useState('')
   const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
+  const [panning, setPanning] = useState(false)
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>(
     {},
   )
@@ -138,11 +141,11 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
       const svgY = ((clientY - rect.top) / rect.height) * graph.height
 
       return {
-        x: graph.centerX + (svgX - graph.centerX) / zoom,
-        y: graph.centerY + (svgY - graph.centerY) / zoom,
+        x: graph.centerX + (svgX - pan.x - graph.centerX) / zoom,
+        y: graph.centerY + (svgY - pan.y - graph.centerY) / zoom,
       }
     },
-    [graph.centerX, graph.centerY, graph.height, graph.width, zoom],
+    [graph.centerX, graph.centerY, graph.height, graph.width, pan.x, pan.y, zoom],
   )
 
   const startGraphNodeDrag = useCallback(
@@ -150,6 +153,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
       const svg = svgRef.current
 
       stopGraphNodeDragRef.current?.()
+      stopGraphPanRef.current?.()
       setSelectedNodeId(nodeId)
       setDraggedNodeId(nodeId)
 
@@ -181,9 +185,50 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     [clientPointToGraphPoint],
   )
 
+  const startGraphPan = useCallback(
+    (clientX: number, clientY: number) => {
+      const svg = svgRef.current
+
+      stopGraphPanRef.current?.()
+      stopGraphNodeDragRef.current?.()
+
+      if (!svg) {
+        return
+      }
+
+      const rect = svg.getBoundingClientRect()
+      const startPan = pan
+      setPanning(true)
+
+      const handleWindowMouseMove = (moveEvent: globalThis.MouseEvent) => {
+        const deltaX = ((moveEvent.clientX - clientX) / rect.width) * graph.width
+        const deltaY = ((moveEvent.clientY - clientY) / rect.height) * graph.height
+
+        setPan({
+          x: startPan.x + deltaX,
+          y: startPan.y + deltaY,
+        })
+      }
+      const handleWindowMouseUp = () => {
+        stopGraphPanRef.current?.()
+        setPanning(false)
+      }
+      stopGraphPanRef.current = () => {
+        window.removeEventListener('mousemove', handleWindowMouseMove)
+        window.removeEventListener('mouseup', handleWindowMouseUp)
+        stopGraphPanRef.current = null
+      }
+
+      window.addEventListener('mousemove', handleWindowMouseMove)
+      window.addEventListener('mouseup', handleWindowMouseUp)
+    },
+    [graph.height, graph.width, pan],
+  )
+
   useEffect(
     () => () => {
       stopGraphNodeDragRef.current?.()
+      stopGraphPanRef.current?.()
     },
     [],
   )
@@ -205,6 +250,23 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
       startGraphNodeDrag(nodeId, event.clientX, event.clientY)
     },
     [startGraphNodeDrag],
+  )
+
+  const handleGraphMouseDown = useCallback(
+    (event: MouseEvent<SVGSVGElement>) => {
+      if (event.button !== 0) {
+        return
+      }
+
+      const target = event.target
+      if (target instanceof Element && target.closest('g[role="button"][data-node-id]')) {
+        return
+      }
+
+      event.preventDefault()
+      startGraphPan(event.clientX, event.clientY)
+    },
+    [startGraphPan],
   )
 
   const handleFocusNode = useCallback((event: FocusEvent<SVGGElement>) => {
@@ -274,6 +336,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
 
   const handleResetZoom = useCallback(() => {
     setZoom(1)
+    setPan({ x: 0, y: 0 })
   }, [])
 
   const handleClearFilter = useCallback(() => {
@@ -291,13 +354,14 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
           role="img"
           aria-label="Campaign document graph"
           viewBox={`0 0 ${graph.width} ${graph.height}`}
-          className={`h-full min-h-0 w-full touch-none rounded-md border border-border/50 bg-slate-950 ${draggedNodeId ? 'cursor-grabbing' : ''}`}
+          className={`h-full min-h-0 w-full touch-none rounded-md border border-border/50 bg-slate-950 ${draggedNodeId || panning ? 'cursor-grabbing' : 'cursor-grab'}`}
           onWheel={handleWheelZoom}
           onMouseDownCapture={handleGraphMouseDownCapture}
+          onMouseDown={handleGraphMouseDown}
         >
           <rect width={graph.width} height={graph.height} fill="#020617" />
           <g
-            transform={`translate(${graph.centerX} ${graph.centerY}) scale(${zoom}) translate(${-graph.centerX} ${-graph.centerY})`}
+            transform={`translate(${pan.x} ${pan.y}) translate(${graph.centerX} ${graph.centerY}) scale(${zoom}) translate(${-graph.centerX} ${-graph.centerY})`}
           >
             {graph.edges.map((edge) => {
               const source = graphNodeById.get(edge.sourceNodeId)

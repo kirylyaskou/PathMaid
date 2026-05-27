@@ -46,6 +46,11 @@ interface MarkdownEditorLinkPart extends ActiveWikiLink {
 
 type MarkdownEditorPart = MarkdownEditorTextPart | MarkdownEditorLinkPart
 
+interface LinkGuess {
+  node: CampaignNode
+  score: number
+}
+
 interface MarkdownFileEditorProps {
   node: CampaignNode
   document: CampaignDocument
@@ -98,6 +103,64 @@ function linkTitleFromSelection(text: string): string {
   const wikiMatch = trimmed.match(/^\[\[([^\]\n]+)\]\](?:\([^\)\n]+\))?$/)
   const rawTitle = wikiMatch?.[1] ?? trimmed
   return (rawTitle.split('|')[0] ?? rawTitle).trim()
+}
+
+function normalizeLinkGuessText(value: string): string {
+  return linkTitleFromSelection(value).toLowerCase()
+}
+
+function graphNeighborIds(nodeId: string, links: { sourceNodeId: string; targetNodeId: string }[]): Set<string> {
+  const neighbors = new Set<string>()
+
+  for (const link of links) {
+    if (link.sourceNodeId === nodeId) {
+      neighbors.add(link.targetNodeId)
+    } else if (link.targetNodeId === nodeId) {
+      neighbors.add(link.sourceNodeId)
+    }
+  }
+
+  return neighbors
+}
+
+function campaignLinkGuesses(
+  sourceNode: CampaignNode,
+  nodes: CampaignNode[],
+  links: { sourceNodeId: string; targetNodeId: string }[],
+  draft: string,
+): CampaignNode[] {
+  const query = normalizeLinkGuessText(draft)
+  const neighborIds = graphNeighborIds(sourceNode.id, links)
+
+  return nodes
+    .filter(
+      (candidate) =>
+        candidate.id !== sourceNode.id &&
+        candidate.campaignId === sourceNode.campaignId &&
+        isOpenableCampaignNode(candidate),
+    )
+    .map((candidate): LinkGuess => {
+      const title = candidate.title.toLowerCase()
+      let score = 0
+      let textScore = 0
+
+      if (query.length > 0) {
+        if (title === query) textScore = 120
+        else if (title.startsWith(query)) textScore = 90
+        else if (title.includes(query)) textScore = 65
+      }
+
+      score += textScore
+      if (neighborIds.has(candidate.id)) score += 45
+      if (candidate.bucket === sourceNode.bucket) score += 10
+      if (candidate.kind === sourceNode.kind) score += 4
+
+      return { node: candidate, score: query.length === 0 || textScore > 0 ? score : 0 }
+    })
+    .filter((guess) => guess.score > 0)
+    .sort((left, right) => right.score - left.score || left.node.title.localeCompare(right.node.title))
+    .slice(0, 6)
+    .map((guess) => guess.node)
 }
 
 function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink | null {
@@ -340,7 +403,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   const [selection, setSelection] = useState<TextSelection>(emptySelection())
   const [formulaDraft, setFormulaDraft] = useState('')
   const [isCreatePending, setIsCreatePending] = useState(false)
-  const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes } =
+  const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes, links } =
     useCampaignManagerStore(
       useShallow((state) => ({
         patchDocumentMarkdown: state.patchDocumentMarkdown,
@@ -348,10 +411,15 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         openNode: state.openNode,
         refreshLinksForNode: state.refreshLinksForNode,
         nodes: state.nodes,
+        links: state.links,
       })),
     )
   const editorParts = useMemo(() => markdownEditorParts(draft, nodes), [draft, nodes])
   const selectedLink = activeWikiLink(selection, nodes)
+  const formulaGuesses = useMemo(
+    () => (selectedLink ? campaignLinkGuesses(node, nodes, links, formulaDraft) : []),
+    [formulaDraft, links, node, nodes, selectedLink],
+  )
 
   const updateSelection = useCallback((nextSelection: TextSelection) => {
     selectionRef.current = nextSelection
@@ -497,20 +565,45 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       return
     }
 
-    replaceSelectedText(formulaDraft, {
+    const guessedTitle = formulaGuesses[0]?.title
+    const replacement = guessedTitle ? formatCampaignWikiLink(guessedTitle) : formulaDraft
+
+    replaceSelectedText(replacement, {
       start: selectedLink.start,
       end: selectedLink.end,
       text: selectedLink.raw,
     })
-  }, [formulaDraft, replaceSelectedText, selectedLink])
+  }, [formulaDraft, formulaGuesses, replaceSelectedText, selectedLink])
+
+  const handleFormulaGuessPick = useCallback(
+    (targetNode: CampaignNode) => {
+      if (!selectedLink) {
+        return
+      }
+
+      replaceSelectedText(formatCampaignWikiLink(targetNode.title), {
+        start: selectedLink.start,
+        end: selectedLink.end,
+        text: selectedLink.raw,
+      })
+    },
+    [replaceSelectedText, selectedLink],
+  )
 
   const handleFormulaKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === 'Enter') {
+        const guessedNode = formulaGuesses[0]
+        if (guessedNode) {
+          event.preventDefault()
+          handleFormulaGuessPick(guessedNode)
+          return
+        }
+
         event.currentTarget.blur()
       }
     },
-    [],
+    [formulaGuesses, handleFormulaGuessPick],
   )
 
   const handleLink = useCallback(() => {
@@ -629,7 +722,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onCreateLocation={handleCreateLocation}
       />
       {selectedLink ? (
-        <div className="flex shrink-0 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
+        <div className="relative flex shrink-0 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
           <span className="text-xs text-muted-foreground">Formula</span>
           <Input
             value={formulaDraft}
@@ -639,6 +732,26 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
             className="h-7 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-input"
             aria-label="Edit wiki link formula"
           />
+          {formulaGuesses.length > 0 ? (
+            <div className="absolute top-full right-3 left-16 z-20 mt-1 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
+              {formulaGuesses.map((guess) => (
+                <button
+                  key={guess.id}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    handleFormulaGuessPick(guess)
+                  }}
+                >
+                  <span className="truncate font-medium">{guess.title}</span>
+                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {guess.kind}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div
