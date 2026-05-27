@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { toast } from 'sonner'
 import type { CampaignDocument, CampaignNode } from '@/entities/campaign'
 import {
   createCampaignAsset,
@@ -23,8 +24,26 @@ interface TypedProfilePanelProps {
 
 export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
   const [isUploadingCover, setIsUploadingCover] = useState(false)
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
   const coverInputRef = useRef<HTMLInputElement | null>(null)
+  const coverPreviewUrlRef = useRef<string | null>(null)
   const patchDocumentCover = useCampaignManagerStore((state) => state.patchDocumentCover)
+
+  const revokeCoverPreview = useCallback(() => {
+    if (coverPreviewUrlRef.current) {
+      URL.revokeObjectURL(coverPreviewUrlRef.current)
+      coverPreviewUrlRef.current = null
+    }
+    setCoverPreviewUrl(null)
+  }, [])
+
+  useEffect(() => revokeCoverPreview, [revokeCoverPreview])
+
+  useEffect(() => {
+    if (document.coverAssetId) {
+      revokeCoverPreview()
+    }
+  }, [document.coverAssetId, revokeCoverPreview])
 
   const uploadCover = useCallback(
     async (file: File) => {
@@ -33,6 +52,10 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       }
 
       setIsUploadingCover(true)
+      revokeCoverPreview()
+      const previewUrl = URL.createObjectURL(file)
+      coverPreviewUrlRef.current = previewUrl
+      setCoverPreviewUrl(previewUrl)
 
       try {
         const assetId = `campaign-asset-${crypto.randomUUID()}`
@@ -55,11 +78,16 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
         })
         await setCampaignDocumentCover(node.id, assetId)
         patchDocumentCover(node.id, assetId)
+        toast('Cover image uploaded')
+      } catch (error) {
+        revokeCoverPreview()
+        console.error('Campaign cover upload failed', error)
+        toast.error('Failed to upload cover image')
       } finally {
         setIsUploadingCover(false)
       }
     },
-    [isUploadingCover, node.campaignId, node.id, patchDocumentCover],
+    [isUploadingCover, node.campaignId, node.id, patchDocumentCover, revokeCoverPreview],
   )
 
   const handleCoverChange = useCallback(
@@ -85,7 +113,13 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
         <p className="capitalize">Kind: {node.kind}</p>
         <div className="space-y-2 rounded-md border border-border/50 p-3">
-          {document.coverAssetId ? (
+          {coverPreviewUrl ? (
+            <img
+              src={coverPreviewUrl}
+              alt={`${node.title} cover preview`}
+              className="aspect-[4/3] w-full rounded-md object-cover"
+            />
+          ) : document.coverAssetId ? (
             <CampaignAssetImage
               assetId={document.coverAssetId}
               alt={`${node.title} cover`}
