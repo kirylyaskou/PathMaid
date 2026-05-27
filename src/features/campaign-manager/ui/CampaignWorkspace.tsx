@@ -1,5 +1,6 @@
 import { ArrowLeft, GitGraph, PencilLine } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
   findNodeById,
@@ -142,6 +143,8 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
         kind,
         bucket: bucketForKind(kind, parent),
         title: DEFAULT_TITLES[kind],
+      }).catch(() => {
+        toast.error('Failed to create campaign file')
       })
     },
     [activeCampaignId, createNode, nodes],

@@ -127,31 +127,35 @@ function emptyWorkspace() {
 
 export const useCampaignManagerStore = create<CampaignManagerState>()(
   immer((set, get) => {
+    const refreshLinksNow = async (nodeId: string): Promise<void> => {
+      const campaignId = get().activeCampaignId
+      const node = findNodeById(get().nodes, nodeId)
+      if (!campaignId || !node || !isOpenableCampaignNode(node)) {
+        return
+      }
+
+      const extractedLinks =
+        node.kind === 'table'
+          ? extractTableLinks(get().tables[nodeId]?.cells ?? {}, get().nodes)
+          : extractMarkdownLinks(get().documents[nodeId]?.markdown ?? '', get().nodes)
+
+      await replaceCampaignLinks(campaignId, nodeId, extractedLinks)
+      const links = await listCampaignLinks(campaignId)
+
+      if (get().activeCampaignId !== campaignId) {
+        return
+      }
+
+      set((state) => {
+        state.links = links
+      })
+    }
+
     const refreshLinksLatest = createKeyedLatestTask<LinkRefreshTask, string>(
       LINK_REFRESH_DELAY_MS,
       (value) => value.nodeId,
       async (value) => {
-        const campaignId = get().activeCampaignId
-        const node = findNodeById(get().nodes, value.nodeId)
-        if (!campaignId || !node || !isOpenableCampaignNode(node)) {
-          return
-        }
-
-        const extractedLinks =
-          node.kind === 'table'
-            ? extractTableLinks(get().tables[value.nodeId]?.cells ?? {}, get().nodes)
-            : extractMarkdownLinks(get().documents[value.nodeId]?.markdown ?? '', get().nodes)
-
-        await replaceCampaignLinks(campaignId, value.nodeId, extractedLinks)
-        const links = await listCampaignLinks(campaignId)
-
-        if (get().activeCampaignId !== campaignId) {
-          return
-        }
-
-        set((state) => {
-          state.links = links
-        })
+        await refreshLinksNow(value.nodeId)
       },
     )
 
@@ -440,7 +444,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
     },
 
     refreshLinksForNode: async (nodeId) => {
-      refreshLinksLatest({ nodeId })
+      await refreshLinksNow(nodeId)
     },
     }
   }),

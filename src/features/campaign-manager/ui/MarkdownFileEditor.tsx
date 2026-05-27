@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
   findNodeById,
@@ -9,7 +10,6 @@ import {
   type CampaignNode,
   type CampaignNodeKind,
 } from '@/entities/campaign'
-import { Button } from '@/shared/ui/button'
 import { Textarea } from '@/shared/ui/textarea'
 import { useCampaignManagerStore } from '../model/store'
 import { SelectionActionMenu } from './SelectionActionMenu'
@@ -21,6 +21,22 @@ interface TextSelection {
   end: number
   text: string
 }
+
+interface MarkdownPreviewTextPart {
+  kind: 'text'
+  key: string
+  text: string
+}
+
+interface MarkdownPreviewLinkPart {
+  kind: 'link'
+  key: string
+  targetTitle: string
+  label: string
+  node: CampaignNode | null
+}
+
+type MarkdownPreviewPart = MarkdownPreviewTextPart | MarkdownPreviewLinkPart
 
 interface MarkdownFileEditorProps {
   node: CampaignNode
@@ -93,23 +109,51 @@ function wikiTokenSelection(markdown: string, cursor: number): TextSelection | n
   }
 }
 
-function markdownLinkTitles(markdown: string): string[] {
-  const seen = new Set<string>()
-  const titles: string[] = []
+function emptySelection(): TextSelection {
+  return { start: 0, end: 0, text: '' }
+}
+
+function markdownPreviewParts(markdown: string, nodes: CampaignNode[]): MarkdownPreviewPart[] {
+  const titleMap = nodesByTitle(nodes)
+  const parts: MarkdownPreviewPart[] = []
+  let cursor = 0
 
   for (const match of markdown.matchAll(WIKI_LINK_PATTERN)) {
-    const raw = match[1] ?? ''
-    const title = raw.split('|')[0]?.trim() ?? ''
-    const key = title.toLowerCase()
-    if (!title || seen.has(key)) {
-      continue
+    const index = match.index ?? 0
+    if (index > cursor) {
+      parts.push({
+        kind: 'text',
+        key: `text-${cursor}`,
+        text: markdown.slice(cursor, index),
+      })
     }
 
-    seen.add(key)
-    titles.push(title)
+    const raw = match[1] ?? ''
+    const [targetTitleRaw, labelRaw] = raw.split('|')
+    const targetTitle = targetTitleRaw?.trim() ?? ''
+    const label = (labelRaw ?? targetTitleRaw ?? '').trim()
+    if (targetTitle) {
+      parts.push({
+        kind: 'link',
+        key: `link-${index}-${targetTitle}`,
+        targetTitle,
+        label,
+        node: titleMap.get(targetTitle.toLowerCase()) ?? null,
+      })
+    }
+
+    cursor = index + match[0].length
   }
 
-  return titles
+  if (cursor < markdown.length) {
+    parts.push({
+      kind: 'text',
+      key: `text-${cursor}`,
+      text: markdown.slice(cursor),
+    })
+  }
+
+  return parts
 }
 
 function linkTitleFromSelection(text: string): string {
@@ -119,14 +163,68 @@ function linkTitleFromSelection(text: string): string {
   return (rawTitle.split('|')[0] ?? rawTitle).trim()
 }
 
+interface MarkdownPreviewProps {
+  parts: MarkdownPreviewPart[]
+  placeholder: string
+  onEdit: () => void
+  onOpen: (nodeId: string) => void
+}
+
+function MarkdownPreview({ parts, placeholder, onEdit, onOpen }: MarkdownPreviewProps) {
+  return (
+    <div
+      role="textbox"
+      tabIndex={0}
+      aria-label="Markdown preview"
+      className="h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-6 whitespace-pre-wrap"
+      onClick={onEdit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          onEdit()
+        }
+      }}
+    >
+      {parts.length === 0 ? (
+        <span className="text-muted-foreground">{placeholder}</span>
+      ) : (
+        parts.map((part) => {
+          if (part.kind === 'text') {
+            return <span key={part.key}>{part.text}</span>
+          }
+
+          return (
+            <button
+              key={part.key}
+              type="button"
+              disabled={!part.node}
+              title={part.node ? part.targetTitle : `${part.targetTitle} is not created yet`}
+              className="inline rounded-sm px-0.5 text-amber-300 underline decoration-amber-400 underline-offset-4 hover:bg-amber-400/10 disabled:cursor-default disabled:text-amber-300/60 disabled:decoration-amber-400/40"
+              onClick={(event) => {
+                event.stopPropagation()
+                if (part.node) {
+                  onOpen(part.node.id)
+                }
+              }}
+            >
+              {part.label}
+            </button>
+          )
+        })
+      )}
+    </div>
+  )
+}
+
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isCreatePendingRef = useRef(false)
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestDraftRef = useRef(document.markdown)
+  const selectionRef = useRef<TextSelection>(emptySelection())
   const [draft, setDraft] = useState(document.markdown)
-  const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0, text: '' })
+  const [selection, setSelection] = useState<TextSelection>(emptySelection())
   const [isCreatePending, setIsCreatePending] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes } =
     useCampaignManagerStore(
       useShallow((state) => ({
@@ -137,19 +235,19 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         nodes: state.nodes,
       })),
     )
-  const renderedLinks = useMemo(() => {
-    const nodeTitleMap = nodesByTitle(nodes)
-    return markdownLinkTitles(draft).map((title) => ({
-      title,
-      node: nodeTitleMap.get(title.toLowerCase()) ?? null,
-    }))
-  }, [draft, nodes])
+  const previewParts = useMemo(() => markdownPreviewParts(draft, nodes), [draft, nodes])
+
+  const updateSelection = useCallback((nextSelection: TextSelection) => {
+    selectionRef.current = nextSelection
+    setSelection(nextSelection)
+  }, [])
 
   useEffect(() => {
     setDraft(document.markdown)
     latestDraftRef.current = document.markdown
-    setSelection({ start: 0, end: 0, text: '' })
-  }, [node.id])
+    updateSelection(emptySelection())
+    setIsEditing(false)
+  }, [node.id, updateSelection])
 
   useEffect(() => {
     if (document.markdown !== latestDraftRef.current) {
@@ -157,6 +255,16 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       latestDraftRef.current = document.markdown
     }
   }, [document.markdown])
+
+  useEffect(() => {
+    if (!isEditing) {
+      return
+    }
+
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+    })
+  }, [isEditing])
 
   useEffect(
     () => () => {
@@ -203,32 +311,33 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     if (start === end) {
-      setSelection(wikiTokenSelection(draft, start) ?? { start: 0, end: 0, text: '' })
+      updateSelection(wikiTokenSelection(draft, start) ?? emptySelection())
       return
     }
 
-    setSelection({
+    updateSelection({
       start,
       end,
       text: draft.slice(start, end),
     })
-  }, [draft])
+  }, [draft, updateSelection])
 
   const replaceSelectedText = useCallback(
     (replacement: string) => {
+      const currentSelection = selectionRef.current
       const nextMarkdown =
-        draft.slice(0, selection.start) +
+        draft.slice(0, currentSelection.start) +
         replacement +
-        draft.slice(selection.end)
+        draft.slice(currentSelection.end)
 
       setDraft(nextMarkdown)
       latestDraftRef.current = nextMarkdown
       flushMarkdown()
       void refreshLinksForNode(node.id)
-      setSelection({ start: 0, end: 0, text: '' })
-      textareaRef.current?.focus()
+      updateSelection(emptySelection())
+      setIsEditing(false)
     },
-    [draft, flushMarkdown, node.id, refreshLinksForNode, selection.end, selection.start],
+    [draft, flushMarkdown, node.id, refreshLinksForNode, updateSelection],
   )
 
   const handleLink = useCallback(() => {
@@ -236,11 +345,11 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       return
     }
 
-    const title = linkTitleFromSelection(selection.text)
+    const title = linkTitleFromSelection(selectionRef.current.text)
     if (title) {
       replaceSelectedText(formatCampaignWikiLink(title))
     }
-  }, [replaceSelectedText, selection.text])
+  }, [replaceSelectedText])
 
   const createLinked = useCallback(
     async (kind: LinkableCampaignNodeKind) => {
@@ -248,7 +357,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         return
       }
 
-      const title = linkTitleFromSelection(selection.text)
+      const title = linkTitleFromSelection(selectionRef.current.text)
 
       if (title.length === 0) {
         return
@@ -271,12 +380,14 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
           openAfterCreate: false,
         })
         replaceSelectedText(formatCampaignWikiLink(title))
+      } catch {
+        toast.error('Failed to create campaign file')
       } finally {
         isCreatePendingRef.current = false
         setIsCreatePending(false)
       }
     },
-    [createNode, node, nodes, replaceSelectedText, selection.text],
+    [createNode, node, nodes, replaceSelectedText],
   )
 
   const handleCreateNote = useCallback(() => {
@@ -303,11 +414,23 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
 
       const nextSelection = wikiTokenSelection(nextMarkdown, event.target.selectionStart)
       if (nextSelection) {
-        setSelection(nextSelection)
+        updateSelection(nextSelection)
       }
     },
-    [commitMarkdown],
+    [commitMarkdown, updateSelection],
   )
+
+  const handleEdit = useCallback(() => {
+    setIsEditing(true)
+  }, [])
+
+  const handleBlur = useCallback(() => {
+    flushMarkdown()
+    if (latestDraftRef.current.includes('[[')) {
+      void refreshLinksForNode(node.id)
+    }
+    setIsEditing(false)
+  }, [flushMarkdown, node.id, refreshLinksForNode])
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -320,36 +443,25 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onCreateItem={handleCreateItem}
         onCreateLocation={handleCreateLocation}
       />
-      {renderedLinks.length > 0 ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {renderedLinks.map(({ title, node: targetNode }) => (
-            <Button
-              key={title}
-              type="button"
-              variant={targetNode ? 'secondary' : 'outline'}
-              size="sm"
-              disabled={!targetNode}
-              onClick={() => {
-                if (targetNode) {
-                  void openNode(targetNode.id)
-                }
-              }}
-            >
-              {title}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      <Textarea
-        ref={textareaRef}
-        value={draft}
-        disabled={isCreatePending}
-        onChange={handleChange}
-        onSelect={handleSelect}
-        onBlur={flushMarkdown}
-        placeholder="Write markdown here. Select text to add links or create campaign files."
-        className="h-full min-h-0 flex-1 resize-none overflow-y-auto field-sizing-fixed font-mono text-sm leading-6"
-      />
+      {isEditing ? (
+        <Textarea
+          ref={textareaRef}
+          value={draft}
+          disabled={isCreatePending}
+          onChange={handleChange}
+          onSelect={handleSelect}
+          onBlur={handleBlur}
+          placeholder="Write markdown here. Select text to add links or create campaign files."
+          className="h-full min-h-0 flex-1 resize-none overflow-y-auto field-sizing-fixed font-mono text-sm leading-6"
+        />
+      ) : (
+        <MarkdownPreview
+          parts={previewParts}
+          placeholder="Write markdown here. Select text to add links or create campaign files."
+          onEdit={handleEdit}
+          onOpen={openNode}
+        />
+      )}
     </div>
   )
 }

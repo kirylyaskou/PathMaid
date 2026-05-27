@@ -103,9 +103,16 @@ function CampaignTreeRows({
                   variant="ghost"
                   size="icon-sm"
                   className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={(event) => {
+                  onMouseDown={(event) => {
+                    event.preventDefault()
                     event.stopPropagation()
                     onCreate(node.id)
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (event.detail === 0) {
+                      onCreate(node.id)
+                    }
                   }}
                   aria-label={`Create child in ${node.title}`}
                 >
