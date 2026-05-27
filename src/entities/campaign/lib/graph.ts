@@ -21,6 +21,12 @@ export interface CampaignGraph {
   edges: CampaignGraphEdge[]
 }
 
+export interface FilteredCampaignGraphInput {
+  nodes: CampaignNode[]
+  links: CampaignLink[]
+  matchingNodeIds: Set<string>
+}
+
 const GRAPH_CENTER_X = 360
 const GRAPH_CENTER_Y = 240
 const GRAPH_RADIUS = 180
@@ -33,6 +39,76 @@ function compareGraphNodes(left: CampaignNode, right: CampaignNode): number {
   }
 
   return left.title.localeCompare(right.title)
+}
+
+function normalizeGraphQuery(value: string): string {
+  return value.trim().toLocaleLowerCase()
+}
+
+export function filterCampaignGraphInput(
+  nodes: CampaignNode[],
+  links: CampaignLink[],
+  query: string,
+): FilteredCampaignGraphInput {
+  const normalizedQuery = normalizeGraphQuery(query)
+
+  if (!normalizedQuery) {
+    return {
+      nodes,
+      links,
+      matchingNodeIds: new Set(),
+    }
+  }
+
+  const openableNodes = nodes.filter(isOpenableCampaignNode)
+  const openableNodeIds = new Set(openableNodes.map((node) => node.id))
+  const matchingNodeIds = new Set(
+    openableNodes
+      .filter((node) => node.title.toLocaleLowerCase().includes(normalizedQuery))
+      .map((node) => node.id),
+  )
+
+  if (matchingNodeIds.size === 0) {
+    return {
+      nodes: [],
+      links: [],
+      matchingNodeIds,
+    }
+  }
+
+  const includedNodeIds = new Set(matchingNodeIds)
+  let hasOutgoingMatches = false
+
+  for (const link of links) {
+    if (!openableNodeIds.has(link.sourceNodeId) || !openableNodeIds.has(link.targetNodeId)) {
+      continue
+    }
+
+    if (matchingNodeIds.has(link.sourceNodeId)) {
+      includedNodeIds.add(link.targetNodeId)
+      hasOutgoingMatches = true
+    }
+  }
+
+  if (!hasOutgoingMatches) {
+    for (const link of links) {
+      if (!openableNodeIds.has(link.sourceNodeId) || !openableNodeIds.has(link.targetNodeId)) {
+        continue
+      }
+
+      if (matchingNodeIds.has(link.targetNodeId)) {
+        includedNodeIds.add(link.sourceNodeId)
+      }
+    }
+  }
+
+  return {
+    nodes: openableNodes.filter((node) => includedNodeIds.has(node.id)),
+    links: links.filter(
+      (link) => includedNodeIds.has(link.sourceNodeId) && includedNodeIds.has(link.targetNodeId),
+    ),
+    matchingNodeIds,
+  }
 }
 
 export function buildCampaignGraph(nodes: CampaignNode[], links: CampaignLink[]): CampaignGraph {

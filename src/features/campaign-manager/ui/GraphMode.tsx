@@ -1,5 +1,7 @@
+import { Search, X } from 'lucide-react'
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type FocusEvent,
@@ -9,12 +11,15 @@ import {
 } from 'react'
 import {
   buildCampaignGraph,
+  filterCampaignGraphInput,
+  isOpenableCampaignNode,
   type CampaignGraphNode,
   type CampaignLink,
   type CampaignNode,
   type CampaignNodeKind,
 } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 
 type ColoredCampaignNodeKind = Extract<
   CampaignNodeKind,
@@ -67,17 +72,38 @@ function readNodeId(
 export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
+  const [filterQuery, setFilterQuery] = useState('')
   const [zoom, setZoom] = useState(1)
 
-  const graph = useMemo(() => buildCampaignGraph(nodes, links), [links, nodes])
+  const filteredInput = useMemo(
+    () => filterCampaignGraphInput(nodes, links, filterQuery),
+    [filterQuery, links, nodes],
+  )
+  const graph = useMemo(
+    () => buildCampaignGraph(filteredInput.nodes, filteredInput.links),
+    [filteredInput.links, filteredInput.nodes],
+  )
   const graphNodeById = useMemo(
     () => new Map(graph.nodes.map((node) => [node.id, node])),
     [graph.nodes],
   )
+  const visibleNodeIds = useMemo(() => new Set(graph.nodes.map((node) => node.id)), [graph.nodes])
+  const openableNodeCount = useMemo(() => nodes.filter(isOpenableCampaignNode).length, [nodes])
+  const filterActive = filterQuery.trim().length > 0
   const selectedNode = useMemo(
     () => (selectedNodeId ? graphNodeById.get(selectedNodeId) ?? null : null),
     [graphNodeById, selectedNodeId],
   )
+
+  useEffect(() => {
+    if (selectedNodeId && !visibleNodeIds.has(selectedNodeId)) {
+      setSelectedNodeId(null)
+    }
+
+    if (focusedNodeId && !visibleNodeIds.has(focusedNodeId)) {
+      setFocusedNodeId(null)
+    }
+  }, [focusedNodeId, selectedNodeId, visibleNodeIds])
 
   const handleSelectNode = useCallback((event: MouseEvent<SVGGElement>) => {
     setSelectedNodeId(readNodeId(event))
@@ -151,6 +177,10 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     setZoom(1)
   }, [])
 
+  const handleClearFilter = useCallback(() => {
+    setFilterQuery('')
+  }, [])
+
   return (
     <div
       className="grid min-h-0 flex-1 grid-cols-[minmax(36rem,1fr)_18rem] overflow-x-auto"
@@ -191,6 +221,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
               const radius = graphNodeRadius(node)
               const selected = node.id === selectedNodeId
               const focused = node.id === focusedNodeId
+              const matched = filterActive && filteredInput.matchingNodeIds.has(node.id)
 
               return (
                 <g
@@ -222,8 +253,8 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
                     r={radius}
                     fill={colorForKind(node.kind)}
                     opacity="0.92"
-                    stroke={selected ? '#f8fafc' : '#0f172a'}
-                    strokeWidth={selected ? 4 : 2}
+                    stroke={selected ? '#f8fafc' : matched ? '#facc15' : '#0f172a'}
+                    strokeWidth={selected || matched ? 4 : 2}
                   />
                   <text
                     x={node.x}
@@ -246,6 +277,33 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
             {Math.round(zoom * 100)}%
           </Button>
         </div>
+        <div className="mt-3 space-y-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={filterQuery}
+              onChange={(event) => setFilterQuery(event.target.value)}
+              placeholder="Filter graph..."
+              aria-label="Filter graph"
+              className="h-8 pr-9 pl-8"
+            />
+            {filterActive ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="absolute right-0 top-0"
+                aria-label="Clear graph filter"
+                onClick={handleClearFilter}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {graph.nodes.length} / {openableNodeCount} nodes
+          </div>
+        </div>
         {selectedNode ? (
           <div className="mt-4 space-y-3">
             <div>
@@ -265,7 +323,9 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
           </div>
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">
-            Select a document node to inspect its links.
+            {filterActive && graph.nodes.length === 0
+              ? 'No matching graph nodes.'
+              : 'Select a document node to inspect its links.'}
           </p>
         )}
       </aside>

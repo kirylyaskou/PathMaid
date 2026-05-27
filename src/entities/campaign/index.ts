@@ -29,5 +29,10 @@ export {
   formatCampaignWikiLink,
 } from './lib/links'
 export type { ExtractedCampaignLink } from './lib/links'
-export { buildCampaignGraph } from './lib/graph'
-export type { CampaignGraph, CampaignGraphEdge, CampaignGraphNode } from './lib/graph'
+export { buildCampaignGraph, filterCampaignGraphInput } from './lib/graph'
+export type {
+  CampaignGraph,
+  CampaignGraphEdge,
+  CampaignGraphNode,
+  FilteredCampaignGraphInput,
+} from './lib/graph'
