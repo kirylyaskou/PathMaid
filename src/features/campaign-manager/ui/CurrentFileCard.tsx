@@ -68,9 +68,9 @@ export function CurrentFileCard({
   const PinIcon = isPinned ? PinOff : Pin
 
   return (
-    <div className="flex h-full min-w-0 p-4">
-      <Card className="h-full w-full min-w-0 rounded-md py-0">
-        <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 p-4">
+    <div className="flex h-full min-h-0 min-w-0 overflow-hidden p-4">
+      <Card className="h-full min-h-0 w-full min-w-0 gap-0 overflow-hidden rounded-md py-0">
+        <CardHeader className="shrink-0 grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 p-4">
           <div className="min-w-0">
             <CardTitle>
               <Input
@@ -97,10 +97,10 @@ export function CurrentFileCard({
             </Button>
           ) : null}
         </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 p-0">
+        <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
           {activeNode.kind === 'table' ? (
             activeTable ? (
-              <div className="flex h-full min-h-0 w-full min-w-0 p-4">
+              <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden p-4">
                 <TableFileEditor node={activeNode} table={activeTable} />
               </div>
             ) : (
@@ -109,8 +109,8 @@ export function CurrentFileCard({
               </div>
             )
           ) : activeDocument ? (
-            <div className="flex h-full min-h-0 w-full min-w-0">
-              <div className="flex min-w-0 flex-1 p-4">
+            <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+              <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden p-4">
                 <MarkdownFileEditor node={activeNode} document={activeDocument} />
               </div>
               <TypedProfilePanel node={activeNode} document={activeDocument} />

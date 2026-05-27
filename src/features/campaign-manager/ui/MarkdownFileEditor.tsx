@@ -266,7 +266,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   )
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden">
       <SelectionActionMenu
         selectedText={selection.text}
         isPending={isCreatePending}
@@ -284,7 +284,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onSelect={handleSelect}
         onBlur={flushMarkdown}
         placeholder="Write markdown here. Select text to add links or create campaign files."
-        className="h-full min-h-0 flex-1 resize-none font-mono text-sm leading-6"
+        className="h-full min-h-0 flex-1 resize-none overflow-y-auto field-sizing-fixed font-mono text-sm leading-6"
       />
     </div>
   )

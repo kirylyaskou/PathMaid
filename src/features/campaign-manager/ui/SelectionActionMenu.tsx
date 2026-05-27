@@ -25,7 +25,10 @@ export function SelectionActionMenu({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      className="flex shrink-0 flex-wrap items-center gap-2"
+      onMouseDown={(event) => event.preventDefault()}
+    >
       <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={onLink}>
         <Link className="h-4 w-4" />
         Add link
