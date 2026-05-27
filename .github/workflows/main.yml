@@ -40,7 +40,7 @@ jobs:
 
             > \`Source code (zip)\` and \`Source code (tar.gz)\` are GitHub's auto-generated tarballs from the git tag — **not the intended downloads**. Use a platform binary above.`;
 
-            const { data } = await github.rest.repos.createRelease({
+            const releaseParams = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
@@ -48,8 +48,31 @@ jobs:
               body: body,
               draft: true,
               prerelease: isPrerelease,
-            });
-            core.setOutput('release_id', data.id);
+            };
+
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag,
+              });
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: data.id,
+                name: releaseParams.name,
+                body: releaseParams.body,
+                draft: releaseParams.draft,
+                prerelease: releaseParams.prerelease,
+              });
+              core.setOutput('release_id', data.id);
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              const { data } = await github.rest.repos.createRelease(releaseParams);
+              core.setOutput('release_id', data.id);
+            }
 
   build:
     needs: create-release
@@ -123,7 +146,10 @@ jobs:
 
           import paddlex
 
-          deps_all = set(paddlex.utils.deps.DEP_SPECS.keys())
+          dep_specs = getattr(paddlex.utils.deps, "DEP_SPECS", None)
+          if dep_specs is None:
+              dep_specs = paddlex.utils.deps.BASE_DEP_SPECS
+          deps_all = set(dep_specs.keys())
           deps_need = sorted({
               dist.metadata["Name"]
               for dist in importlib.metadata.distributions()
