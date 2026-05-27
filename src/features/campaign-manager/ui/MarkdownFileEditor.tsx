@@ -156,6 +156,26 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     setSelection(nextSelection)
   }, [])
 
+  const readEditorSelection = useCallback((): TextSelection => {
+    const textarea = textareaRef.current
+
+    if (!textarea) {
+      return selectionRef.current
+    }
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    if (start === end) {
+      return wikiTokenSelection(draft, start) ?? emptySelection()
+    }
+
+    return {
+      start,
+      end,
+      text: draft.slice(start, end),
+    }
+  }, [draft])
+
   useEffect(() => {
     setDraft(document.markdown)
     latestDraftRef.current = document.markdown
@@ -226,12 +246,11 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   }, [draft, updateSelection])
 
   const replaceSelectedText = useCallback(
-    (replacement: string) => {
-      const currentSelection = selectionRef.current
+    (replacement: string, targetSelection = selectionRef.current) => {
       const nextMarkdown =
-        draft.slice(0, currentSelection.start) +
+        draft.slice(0, targetSelection.start) +
         replacement +
-        draft.slice(currentSelection.end)
+        draft.slice(targetSelection.end)
 
       setDraft(nextMarkdown)
       latestDraftRef.current = nextMarkdown
@@ -248,11 +267,14 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       return
     }
 
-    const title = linkTitleFromSelection(selectionRef.current.text)
+    const currentSelection = readEditorSelection()
+    updateSelection(currentSelection)
+
+    const title = linkTitleFromSelection(currentSelection.text)
     if (title) {
-      replaceSelectedText(formatCampaignWikiLink(title))
+      replaceSelectedText(formatCampaignWikiLink(title), currentSelection)
     }
-  }, [replaceSelectedText])
+  }, [readEditorSelection, replaceSelectedText, updateSelection])
 
   const createLinked = useCallback(
     async (kind: LinkableCampaignNodeKind) => {
@@ -260,7 +282,10 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         return
       }
 
-      const title = linkTitleFromSelection(selectionRef.current.text)
+      const currentSelection = readEditorSelection()
+      updateSelection(currentSelection)
+
+      const title = linkTitleFromSelection(currentSelection.text)
 
       if (title.length === 0) {
         return
@@ -282,7 +307,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
           title,
           openAfterCreate: false,
         })
-        replaceSelectedText(formatCampaignWikiLink(title))
+        replaceSelectedText(formatCampaignWikiLink(title), currentSelection)
       } catch {
         toast.error('Failed to create campaign file')
       } finally {
@@ -290,7 +315,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         setIsCreatePending(false)
       }
     },
-    [createNode, node, nodes, replaceSelectedText],
+    [createNode, node, nodes, readEditorSelection, replaceSelectedText, updateSelection],
   )
 
   const handleCreateNote = useCallback(() => {

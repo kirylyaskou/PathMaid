@@ -17,7 +17,7 @@ interface CampaignTreeProps {
   nodes: CampaignNode[]
   activeNodeId: string | null
   onOpen: (nodeId: string) => void
-  onCreate: (parentId: string, kind?: CreateCampaignNodeKind) => void
+  onCreate: (parentId: string | null, kind?: CreateCampaignNodeKind) => void
 }
 
 interface CampaignTreeRowsProps extends Omit<CampaignTreeProps, 'nodes'> {
@@ -141,8 +141,32 @@ export function CampaignTree({ nodes, activeNodeId, onOpen, onCreate }: Campaign
 
   return (
     <ScrollArea className="h-full border-r border-border/50 p-3">
-      <div className="mb-2 px-1 text-xs font-semibold uppercase text-muted-foreground">
-        Files
+      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+        <div className="text-xs font-semibold uppercase text-muted-foreground">Files</div>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="h-6 w-6"
+            onClick={() => onCreate(null, 'note')}
+            aria-label="Create root note"
+            title="Create root note"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="h-6 w-6"
+            onClick={() => onCreate(null, 'table')}
+            aria-label="Create root table"
+            title="Create root table"
+          >
+            <Table2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
       <CampaignTreeRows
         treeNodes={treeNodes}

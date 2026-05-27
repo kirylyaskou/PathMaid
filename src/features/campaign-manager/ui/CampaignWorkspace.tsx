@@ -51,6 +51,26 @@ function bucketForKind(kind: CreateCampaignNodeKind, parent: CampaignNode): Camp
   return parent.bucket
 }
 
+function rootBucketForKind(kind: CreateCampaignNodeKind): CampaignBucket {
+  if (kind === 'table') {
+    return 'tables'
+  }
+
+  if (kind === 'npc') {
+    return 'npcs'
+  }
+
+  if (kind === 'item') {
+    return 'items'
+  }
+
+  if (kind === 'location') {
+    return 'locations'
+  }
+
+  return 'notes'
+}
+
 function defaultChildKind(parent: CampaignNode): CreateCampaignNodeKind {
   if (parent.bucket === 'tables') {
     return 'table'
@@ -129,19 +149,19 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
   }, [setMode])
 
   const createInParent = useCallback(
-    (parentId: string, requestedKind?: CreateCampaignNodeKind) => {
+    (parentId: string | null, requestedKind?: CreateCampaignNodeKind) => {
       const parent = findNodeById(nodes, parentId)
 
-      if (!activeCampaignId || !parent) {
+      if (!activeCampaignId || (parentId && !parent)) {
         return
       }
 
-      const kind = requestedKind ?? defaultChildKind(parent)
+      const kind = requestedKind ?? (parent ? defaultChildKind(parent) : 'note')
       void createNode({
         campaignId: activeCampaignId,
         parentId,
         kind,
-        bucket: bucketForKind(kind, parent),
+        bucket: parent ? bucketForKind(kind, parent) : rootBucketForKind(kind),
         title: DEFAULT_TITLES[kind],
       }).catch(() => {
         toast.error('Failed to create campaign file')

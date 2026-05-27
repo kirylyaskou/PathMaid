@@ -163,6 +163,29 @@ const PIN_COLUMNS = 'campaign_id, node_id, sort_order, created_at'
 
 const ASSET_COLUMNS = 'id, campaign_id, kind, file_name, mime_type, relative_path, created_at'
 
+let campaignWriteQueue: Promise<void> = Promise.resolve()
+
+async function runCampaignWrite<T>(task: () => Promise<T>): Promise<T> {
+  const previous = campaignWriteQueue
+  let releaseQueue: () => void = () => {}
+
+  campaignWriteQueue = new Promise<void>((resolve) => {
+    releaseQueue = resolve
+  })
+
+  await previous.catch(() => undefined)
+
+  try {
+    return await task()
+  } finally {
+    releaseQueue()
+  }
+}
+
+async function runCampaignBatch<T>(task: () => Promise<T>): Promise<T> {
+  return runCampaignWrite(task)
+}
+
 const CAMPAIGN_BUCKET_ROWS: Array<{
   bucket: CampaignBucket
   title: string
@@ -351,8 +374,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
   const now = nowISO()
   const db = await getDb()
 
-  await db.execute('BEGIN', [])
-  try {
+  return runCampaignBatch(async () => {
     await db.execute(
       `INSERT INTO campaigns (
          id, name, description, accent_color, cover_asset_id, last_opened_at, created_at, updated_at
@@ -390,12 +412,8 @@ export async function createCampaign(input: CreateCampaignInput): Promise<string
 
     await createStarterNote(db, id, now)
 
-    await db.execute('COMMIT', [])
     return id
-  } catch (error) {
-    await db.execute('ROLLBACK', [])
-    throw error
-  }
+  })
 }
 
 export async function ensureCampaignStarterNote(campaignId: string): Promise<string> {
@@ -413,7 +431,7 @@ export async function ensureCampaignStarterNote(campaignId: string): Promise<str
   }
 
   const now = nowISO()
-  return createStarterNote(db, campaignId, now)
+  return runCampaignWrite(() => createStarterNote(db, campaignId, now))
 }
 
 export async function updateCampaign(
@@ -421,26 +439,28 @@ export async function updateCampaign(
   input: UpdateCampaignInput,
 ): Promise<void> {
   const db = await getDb()
-  const currentRows = await db.select<CampaignRow[]>(
-    `SELECT ${CAMPAIGN_COLUMNS} FROM campaigns WHERE id = ?`,
-    [campaignId],
-  )
-  const current = currentRows[0]
-  if (!current) throw new Error(`Campaign not found: ${campaignId}`)
+  await runCampaignWrite(async () => {
+    const currentRows = await db.select<CampaignRow[]>(
+      `SELECT ${CAMPAIGN_COLUMNS} FROM campaigns WHERE id = ?`,
+      [campaignId],
+    )
+    const current = currentRows[0]
+    if (!current) throw new Error(`Campaign not found: ${campaignId}`)
 
-  await db.execute(
-    `UPDATE campaigns
-     SET name = ?, description = ?, accent_color = ?, cover_asset_id = ?, updated_at = ?
-     WHERE id = ?`,
-    [
-      input.name ?? current.name,
-      input.description ?? current.description,
-      input.accentColor ?? current.accent_color,
-      input.coverAssetId === undefined ? current.cover_asset_id : input.coverAssetId,
-      nowISO(),
-      campaignId,
-    ],
-  )
+    await db.execute(
+      `UPDATE campaigns
+       SET name = ?, description = ?, accent_color = ?, cover_asset_id = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        input.name ?? current.name,
+        input.description ?? current.description,
+        input.accentColor ?? current.accent_color,
+        input.coverAssetId === undefined ? current.cover_asset_id : input.coverAssetId,
+        nowISO(),
+        campaignId,
+      ],
+    )
+  })
 }
 
 export async function setCampaignCover(
@@ -449,24 +469,30 @@ export async function setCampaignCover(
 ): Promise<void> {
   const now = nowISO()
   const db = await getDb()
-  await db.execute(
-    'UPDATE campaigns SET cover_asset_id = ?, updated_at = ? WHERE id = ?',
-    [assetId, now, campaignId],
+  await runCampaignWrite(() =>
+    db.execute('UPDATE campaigns SET cover_asset_id = ?, updated_at = ? WHERE id = ?', [
+      assetId,
+      now,
+      campaignId,
+    ]),
   )
 }
 
 export async function markCampaignOpened(campaignId: string): Promise<void> {
   const now = nowISO()
   const db = await getDb()
-  await db.execute(
-    'UPDATE campaigns SET last_opened_at = ?, updated_at = ? WHERE id = ?',
-    [now, now, campaignId],
+  await runCampaignWrite(() =>
+    db.execute('UPDATE campaigns SET last_opened_at = ?, updated_at = ? WHERE id = ?', [
+      now,
+      now,
+      campaignId,
+    ]),
   )
 }
 
 export async function deleteCampaign(campaignId: string): Promise<void> {
   const db = await getDb()
-  await db.execute('DELETE FROM campaigns WHERE id = ?', [campaignId])
+  await runCampaignWrite(() => db.execute('DELETE FROM campaigns WHERE id = ?', [campaignId]))
 }
 
 export async function listCampaignNodes(campaignId: string): Promise<CampaignNode[]> {
@@ -503,8 +529,7 @@ export async function createCampaignNode(input: CreateNodeInput): Promise<string
   )
   const sortOrder = sortRows[0]?.next_sort_order ?? 0
 
-  await db.execute('BEGIN', [])
-  try {
+  return runCampaignBatch(async () => {
     await db.execute(
       `INSERT INTO campaign_nodes (${NODE_COLUMNS})
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -545,25 +570,26 @@ export async function createCampaignNode(input: CreateNodeInput): Promise<string
       )
     }
 
-    await db.execute('COMMIT', [])
     return id
-  } catch (error) {
-    await db.execute('ROLLBACK', [])
-    throw error
-  }
+  })
 }
 
 export async function updateCampaignNodeTitle(nodeId: string, title: string): Promise<void> {
   const db = await getDb()
-  await db.execute(
-    'UPDATE campaign_nodes SET title = ?, updated_at = ? WHERE id = ?',
-    [title, nowISO(), nodeId],
+  await runCampaignWrite(() =>
+    db.execute('UPDATE campaign_nodes SET title = ?, updated_at = ? WHERE id = ?', [
+      title,
+      nowISO(),
+      nodeId,
+    ]),
   )
 }
 
 export async function deleteCampaignNode(nodeId: string): Promise<void> {
   const db = await getDb()
-  await db.execute('DELETE FROM campaign_nodes WHERE id = ? AND is_system = 0', [nodeId])
+  await runCampaignWrite(() =>
+    db.execute('DELETE FROM campaign_nodes WHERE id = ? AND is_system = 0', [nodeId]),
+  )
 }
 
 export async function getCampaignDocument(nodeId: string): Promise<CampaignDocument | null> {
@@ -583,10 +609,12 @@ export async function ensureCampaignDocument(nodeId: string): Promise<CampaignDo
 
   const db = await getDb()
   const now = nowISO()
-  await db.execute(
-    `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [nodeId, '', '{}', null, '[]', now],
+  await runCampaignWrite(() =>
+    db.execute(
+      `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [nodeId, '', '{}', null, '[]', now],
+    ),
   )
 
   const document = await getCampaignDocument(nodeId)
@@ -602,22 +630,24 @@ export async function updateCampaignDocument(
   input: UpdateCampaignDocumentInput,
 ): Promise<void> {
   const db = await getDb()
-  const current = await getCampaignDocument(nodeId)
-  if (!current) throw new Error(`Campaign document not found: ${nodeId}`)
+  await runCampaignWrite(async () => {
+    const current = await getCampaignDocument(nodeId)
+    if (!current) throw new Error(`Campaign document not found: ${nodeId}`)
 
-  await db.execute(
-    `UPDATE campaign_documents
-     SET markdown = ?, profile_json = ?, cover_asset_id = ?, linked_db_refs_json = ?, updated_at = ?
-     WHERE node_id = ?`,
-    [
-      input.markdown ?? current.markdown,
-      input.profileJson ?? current.profileJson,
-      input.coverAssetId === undefined ? current.coverAssetId : input.coverAssetId,
-      input.linkedDbRefsJson ?? current.linkedDbRefsJson,
-      nowISO(),
-      nodeId,
-    ],
-  )
+    await db.execute(
+      `UPDATE campaign_documents
+       SET markdown = ?, profile_json = ?, cover_asset_id = ?, linked_db_refs_json = ?, updated_at = ?
+       WHERE node_id = ?`,
+      [
+        input.markdown ?? current.markdown,
+        input.profileJson ?? current.profileJson,
+        input.coverAssetId === undefined ? current.coverAssetId : input.coverAssetId,
+        input.linkedDbRefsJson ?? current.linkedDbRefsJson,
+        nowISO(),
+        nodeId,
+      ],
+    )
+  })
 }
 
 export async function setCampaignDocumentCover(
@@ -626,9 +656,11 @@ export async function setCampaignDocumentCover(
 ): Promise<void> {
   const now = nowISO()
   const db = await getDb()
-  await db.execute(
-    'UPDATE campaign_documents SET cover_asset_id = ?, updated_at = ? WHERE node_id = ?',
-    [assetId, now, nodeId],
+  await runCampaignWrite(() =>
+    db.execute(
+      'UPDATE campaign_documents SET cover_asset_id = ?, updated_at = ? WHERE node_id = ?',
+      [assetId, now, nodeId],
+    ),
   )
 }
 
@@ -649,18 +681,20 @@ export async function ensureCampaignTable(nodeId: string): Promise<CampaignTable
 
   const db = await getDb()
   const table = defaultTable(nowISO())
-  await db.execute(
-    `INSERT OR IGNORE INTO campaign_tables (${TABLE_COLUMNS})
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      nodeId,
-      JSON.stringify(table.columns),
-      JSON.stringify(table.rows),
-      JSON.stringify(table.cells),
-      JSON.stringify(table.columnSizes),
-      JSON.stringify(table.rowSizes),
-      table.updatedAt,
-    ],
+  await runCampaignWrite(() =>
+    db.execute(
+      `INSERT OR IGNORE INTO campaign_tables (${TABLE_COLUMNS})
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nodeId,
+        JSON.stringify(table.columns),
+        JSON.stringify(table.rows),
+        JSON.stringify(table.cells),
+        JSON.stringify(table.columnSizes),
+        JSON.stringify(table.rowSizes),
+        table.updatedAt,
+      ],
+    ),
   )
 
   const created = await getCampaignTable(nodeId)
@@ -676,19 +710,21 @@ export async function updateCampaignTable(
   input: UpdateCampaignTableInput,
 ): Promise<void> {
   const db = await getDb()
-  await db.execute(
-    `UPDATE campaign_tables
-     SET columns_json = ?, rows_json = ?, cells_json = ?, column_sizes_json = ?, row_sizes_json = ?, updated_at = ?
-     WHERE node_id = ?`,
-    [
-      JSON.stringify(input.columns),
-      JSON.stringify(input.rows),
-      JSON.stringify(input.cells),
-      JSON.stringify(input.columnSizes),
-      JSON.stringify(input.rowSizes),
-      nowISO(),
-      nodeId,
-    ],
+  await runCampaignWrite(() =>
+    db.execute(
+      `UPDATE campaign_tables
+       SET columns_json = ?, rows_json = ?, cells_json = ?, column_sizes_json = ?, row_sizes_json = ?, updated_at = ?
+       WHERE node_id = ?`,
+      [
+        JSON.stringify(input.columns),
+        JSON.stringify(input.rows),
+        JSON.stringify(input.cells),
+        JSON.stringify(input.columnSizes),
+        JSON.stringify(input.rowSizes),
+        nowISO(),
+        nodeId,
+      ],
+    ),
   )
 }
 
@@ -700,8 +736,7 @@ export async function replaceCampaignLinks(
   const now = nowISO()
   const db = await getDb()
 
-  await db.execute('BEGIN', [])
-  try {
+  await runCampaignBatch(async () => {
     await db.execute(
       'DELETE FROM campaign_links WHERE campaign_id = ? AND source_node_id = ?',
       [campaignId, sourceNodeId],
@@ -723,12 +758,7 @@ export async function replaceCampaignLinks(
         ],
       )
     }
-
-    await db.execute('COMMIT', [])
-  } catch (error) {
-    await db.execute('ROLLBACK', [])
-    throw error
-  }
+  })
 }
 
 export async function listCampaignLinks(campaignId: string): Promise<CampaignLink[]> {
@@ -759,8 +789,7 @@ export async function setCampaignPins(campaignId: string, nodeIds: string[]): Pr
   const now = nowISO()
   const db = await getDb()
 
-  await db.execute('BEGIN', [])
-  try {
+  await runCampaignBatch(async () => {
     await db.execute('DELETE FROM campaign_pins WHERE campaign_id = ?', [campaignId])
 
     for (const [sortOrder, nodeId] of nodeIds.entries()) {
@@ -769,28 +798,25 @@ export async function setCampaignPins(campaignId: string, nodeIds: string[]): Pr
         [campaignId, nodeId, sortOrder, now],
       )
     }
-
-    await db.execute('COMMIT', [])
-  } catch (error) {
-    await db.execute('ROLLBACK', [])
-    throw error
-  }
+  })
 }
 
 export async function createCampaignAsset(input: CreateCampaignAssetInput): Promise<string> {
   const id = input.id ?? `campaign-asset-${crypto.randomUUID()}`
   const db = await getDb()
-  await db.execute(
-    `INSERT INTO campaign_assets (${ASSET_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [
-      id,
-      input.campaignId,
-      input.kind,
-      input.fileName,
-      input.mimeType,
-      input.relativePath,
-      nowISO(),
-    ],
+  await runCampaignWrite(() =>
+    db.execute(
+      `INSERT INTO campaign_assets (${ASSET_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        input.campaignId,
+        input.kind,
+        input.fileName,
+        input.mimeType,
+        input.relativePath,
+        nowISO(),
+      ],
+    ),
   )
   return id
 }
