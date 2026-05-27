@@ -111,9 +111,6 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
             Upload cover
           </Button>
         </div>
-        <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs">
-          {document.profileJson}
-        </pre>
       </div>
     </aside>
   )
