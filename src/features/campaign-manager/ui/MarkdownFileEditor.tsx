@@ -5,6 +5,7 @@ import {
   findNodeById,
   formatCampaignWikiLink,
   nodesByTitle,
+  WIKI_LINK_PATTERN,
   type CampaignBucket,
   type CampaignDocument,
   type CampaignNode,
@@ -44,7 +45,6 @@ interface MarkdownFileEditorProps {
 }
 
 const MARKDOWN_COMMIT_DELAY_MS = 180
-const WIKI_LINK_PATTERN = /\[\[([^\]\n]+)\]\]/g
 
 function bucketForLinkedKind(kind: LinkableCampaignNodeKind, node: CampaignNode): CampaignBucket {
   if (kind === 'note') {
@@ -129,9 +129,10 @@ function markdownPreviewParts(markdown: string, nodes: CampaignNode[]): Markdown
     }
 
     const raw = match[1] ?? ''
+    const aliasLabel = match[2]
     const [targetTitleRaw, labelRaw] = raw.split('|')
     const targetTitle = targetTitleRaw?.trim() ?? ''
-    const label = (labelRaw ?? targetTitleRaw ?? '').trim()
+    const label = (aliasLabel ?? labelRaw ?? targetTitleRaw ?? '').trim()
     if (targetTitle) {
       parts.push({
         kind: 'link',
@@ -158,7 +159,7 @@ function markdownPreviewParts(markdown: string, nodes: CampaignNode[]): Markdown
 
 function linkTitleFromSelection(text: string): string {
   const trimmed = text.trim()
-  const wikiMatch = trimmed.match(/^\[\[([^\]\n]+)\]\]$/)
+  const wikiMatch = trimmed.match(/^\[\[([^\]\n]+)\]\](?:\([^\)\n]+\))?$/)
   const rawTitle = wikiMatch?.[1] ?? trimmed
   return (rawTitle.split('|')[0] ?? rawTitle).trim()
 }

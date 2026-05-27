@@ -8,7 +8,7 @@ export interface ExtractedCampaignLink {
   createdFrom: string
 }
 
-export const WIKI_LINK_PATTERN = /\[\[([^\]\n]+)\]\]/g
+export const WIKI_LINK_PATTERN = /\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?/g
 
 interface ParsedWikiLink {
   targetTitle: string
@@ -22,9 +22,10 @@ function parseWikiLinks(text: string): ParsedWikiLink[] {
   return [...text.matchAll(pattern)]
     .map((match) => {
       const rawContent = match[1] ?? ''
-      const [targetTitle, label] = rawContent.split('|')
+      const aliasLabel = match[2]
+      const [targetTitle, pipeLabel] = rawContent.split('|')
       const normalizedTitle = targetTitle.trim()
-      const normalizedLabel = (label ?? targetTitle).trim()
+      const normalizedLabel = (aliasLabel ?? pipeLabel ?? targetTitle).trim()
 
       return {
         targetTitle: normalizedTitle,
