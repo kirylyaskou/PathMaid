@@ -36,6 +36,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
       }))
       const combatants: Combatant[] = encounterCombatants.map((ec) => {
         const stat = ec.creatureRef ? statByRef.get(ec.creatureRef) : null
+        const kind = kindFromLegacy(ec.isNPC, ec.isHazard ?? false)
         const immunities = stat?.immunities.map((i) => (typeof i === 'string' ? i : i.type)) ?? []
         const weaknesses = stat?.weaknesses ?? []
         const resistances = stat?.resistances ?? []
@@ -47,7 +48,8 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
           hp: ec.maxHp,
           maxHp: ec.maxHp,
           tempHp: 0,
-          kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
+          kind,
+          ...(kind === 'npc' ? { mortal: true } : {}),
           ...(stat?.level != null ? { level: stat.level } : {}),
           ...(stat?.fort != null ? { fort: stat.fort } : {}),
           ...(immunities.length > 0 ? { iwrImmunities: immunities } : {}),

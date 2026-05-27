@@ -5,6 +5,7 @@ import { useEffectStore, mergeResistances } from '@/entities/spell-effect'
 import { Swords, Plus, Shield, Heart, ChevronUp, ChevronDown, X, Skull, HeartPulse, Sparkles } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Separator } from '@/shared/ui/separator'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import { cn } from '@/shared/lib/utils'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { useCombatTrackerStore } from '@/features/combat-tracker'
@@ -119,6 +120,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
   const [materials, setMaterials] = useState<string[]>([])
   const [traitSelectorOpen, setTraitSelectorOpen] = useState(false)
   const updateCombatant = useCombatantStore((s) => s.updateCombatant)
+  const nonMortalCreaturesEnabled = useAdvancedSettingsStore((s) => s.nonMortalCreatures)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const { hp, maxHp, tempHp, dyingValue, deathThreshold, isDead, applyDamage, applyHeal, applyTempHp, stabilize, resurrect } =
@@ -399,7 +401,7 @@ export function HpControls({ combatant, iwrImmunities, iwrWeaknesses, iwrResista
               <Shield className="w-3 h-3" />
               {t('combatantDetail.tempHp')}
             </Button>
-            {isNpc(combatant) && (
+            {nonMortalCreaturesEnabled && isNpc(combatant) && (
               <button
                 type="button"
                 onClick={() => updateCombatant(combatant.id, { mortal: !(combatant.mortal === true) })}

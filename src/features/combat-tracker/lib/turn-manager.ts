@@ -1,4 +1,4 @@
-import { useCombatantStore } from '@/entities/combatant'
+import { isNpc, useCombatantStore, type Combatant } from '@/entities/combatant'
 import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, type ActiveCondition } from '@/entities/condition'
 import { useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
@@ -17,6 +17,39 @@ interface TurnSnapshot {
 }
 
 let lastSnapshot: TurnSnapshot | null = null
+
+function shouldSkipTurn(combatant: Combatant): boolean {
+  return isNpc(combatant) && combatant.mortal === true && combatant.hp <= 0
+}
+
+function getNextTurn(
+  combatants: Combatant[],
+  currentIdx: number,
+  currentRound: number,
+  currentTurn: number,
+): { combatant: Combatant; round: number; turn: number } | null {
+  let nextIdx = currentIdx
+  let round = currentRound
+  let turn = currentTurn
+
+  for (let checked = 0; checked < combatants.length; checked++) {
+    if (nextIdx === -1 || nextIdx >= combatants.length - 1) {
+      nextIdx = 0
+      round += 1
+      turn = 0
+    } else {
+      nextIdx += 1
+      turn += 1
+    }
+
+    const combatant = combatants[nextIdx]
+    if (!shouldSkipTurn(combatant)) {
+      return { combatant, round, turn }
+    }
+  }
+
+  return null
+}
 
 export function advanceTurn(): void {
   const combatants = useCombatantStore.getState().combatants
@@ -93,22 +126,13 @@ export function advanceTurn(): void {
     }
   }
 
-  let nextIdx: number
-  let newRound = tracker.round
-  let newTurn = tracker.turn + 1
+  const nextTurn = getNextTurn(combatants, currentIdx, tracker.round, tracker.turn)
+  if (!nextTurn) return
 
-  if (currentIdx === -1 || currentIdx >= combatants.length - 1) {
-    nextIdx = 0
-    newRound = tracker.round + 1
-    newTurn = 0
-  } else {
-    nextIdx = currentIdx + 1
-  }
-
-  const nextCombatant = combatants[nextIdx]
+  const nextCombatant = nextTurn.combatant
   tracker.setActiveCombatant(nextCombatant.id)
-  tracker.setRound(newRound)
-  tracker.setTurn(newTurn)
+  tracker.setRound(nextTurn.round)
+  tracker.setTurn(nextTurn.turn)
 
   // PF2e: recovery check happens at START of the dying creature's turn (not when downed).
   const nextConditions = useConditionStore.getState().activeConditions

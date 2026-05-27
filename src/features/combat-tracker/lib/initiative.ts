@@ -44,6 +44,7 @@ export function createCombatantFromCreature(
     hp,
     maxHp: hp,
     tempHp: 0,
+    mortal: true,
     ...(level !== undefined ? { level } : {}),
     ...(tier && tier !== 'normal' ? { weakEliteTier: tier } : {}),
     ...(fort !== undefined ? { fort } : {}),

@@ -226,6 +226,19 @@
   "settings": {
     "title": "Settings",
     "preparingMess": "Preparing the mess",
+    "tabs": {
+      "general": "General",
+      "advanced": "Advanced"
+    },
+    "advanced": {
+      "title": "Advanced settings",
+      "stagingPool": "Staging pool",
+      "stagingPoolDescription": "Show delayed creature staging tools in encounters and combat.",
+      "customContent": "Custom creatures and items",
+      "customContentDescription": "Show custom creature and item sections in navigation and search.",
+      "nonMortalCreatures": "Non-mortal creatures in encounters",
+      "nonMortalCreaturesDescription": "Allow NPCs to use dying, recovery, and death saves instead of final death at 0 HP."
+    },
     "dataSource": {
       "title": "Data Source",
       "description": "Import latest Foundry VTT PF2e data from GitHub. Replaces existing entities.",
@@ -571,10 +584,15 @@
     "tierElite": "Elite",
     "searchFilters": "Search & filters",
     "searchBestiaryPlaceholder": "Search bestiary...",
+    "searchCharactersPlaceholder": "Search characters...",
     "allTypes": "All types",
     "allSources": "All sources",
     "noCreaturesFoundQuery": "No creatures found for \"{{query}}\"",
     "noCreaturesFound": "No creatures found",
+    "noCharactersFoundQuery": "No characters found for \"{{query}}\"",
+    "noCharacters": "No imported characters yet",
+    "characterAdded": "{{name}} added to combat",
+    "characterAddFailed": "Failed to add {{name}} to combat",
     "sourceLibraryFilterAriaLabel": "Source library filter",
     "charactersNotImplemented": "Characters tab not yet implemented.",
     "hazardsNotImplemented": "Hazard search not yet implemented."
@@ -899,7 +917,22 @@
       "statCreatures": "Creatures",
       "statSpells": "Spells",
       "statItems": "Items",
-      "statHazards": "Hazards"
+      "statHazards": "Hazards",
+      "navDescription": {
+        "combat": "Run initiative, HP, effects, saves, and creature cards.",
+        "encounters": "Build reusable encounters and load them into combat.",
+        "characters": "Import and manage player characters for the party.",
+        "campaigns": "Organize campaign notes, tables, links, and graph refs.",
+        "bestiary": "Search PF2e creatures and open detailed stat blocks.",
+        "actions": "Browse actions, feats, and combat reference entries.",
+        "spells": "Find spells, ranks, traits, and casting details.",
+        "items": "Search equipment, weapons, armor, consumables, and gear.",
+        "customItems": "Create and manage homebrew items for combat use.",
+        "conditions": "Check condition rules and quick reference text.",
+        "hazards": "Browse simple and complex hazards for encounters.",
+        "customCreatures": "Build homebrew creatures and export them.",
+        "settings": "Sync data, load seeds, configure hotkeys, and advanced tools."
+      }
     },
     "combat": {
       "selectCombatant": "Select a combatant",

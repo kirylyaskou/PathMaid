@@ -29,6 +29,7 @@ import { useCombatantStore } from '@/entities/combatant'
 import { createCombatantFromCreature } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
 import { logErrorWithToast } from '@/shared/lib/error'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import { getHpAdjustment } from '@engine'
 import { useDraggable } from '@dnd-kit/core'
 import { HazardSearchPanel } from './HazardSearchPanel'
@@ -115,10 +116,15 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const addCombatant = useCombatantStore((s) => s.addCombatant)
+  const customContentEnabled = useAdvancedSettingsStore((s) => s.customContent)
 
   // load the list of Paizo-library chips once — the set only changes
   // on sync and regenerating it per-search would be wasteful.
   useEffect(() => {
+    if (!customContentEnabled) {
+      setCustomRows([])
+      return
+    }
     let cancelled = false
     void (async () => {
       try {
@@ -129,7 +135,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [customContentEnabled])
 
   useEffect(() => {
     if (activeTab !== 'bestiary') return
@@ -186,11 +192,12 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
 
   // Filter customs by query + suppress when a Paizo source chip is active.
   const customFiltered = useMemo(() => {
+    if (!customContentEnabled) return []
     if (sourceFilter !== null) return []
     const q = query.trim().toLowerCase()
     if (!q) return customRows.slice(0, 20)
     return customRows.filter((r) => r.name.toLowerCase().includes(q)).slice(0, 20)
-  }, [customRows, query, sourceFilter])
+  }, [customContentEnabled, customRows, query, sourceFilter])
 
   useEffect(() => {
     setSelectedTier('normal')
@@ -271,7 +278,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
       {activeTab === 'hazards' && <HazardSearchPanel />}
 
       {/* Characters tab */}
-      {activeTab === 'characters' && <CharactersTab />}
+      {activeTab === 'characters' && <CharactersTab encounterId={encounterId} />}
 
       {/* Bestiary tab */}
       {activeTab === 'bestiary' && (

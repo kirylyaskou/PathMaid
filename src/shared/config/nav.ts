@@ -38,3 +38,9 @@ export const NAV_ITEMS = [
   { href: '/custom-creatures', icon: Hammer,          label: 'Custom Creatures', labelKey: 'nav.customCreatures', section: 'reference' },
   { href: '/settings',         icon: Settings,        label: 'Settings',         labelKey: 'nav.settings',        section: 'settings' },
 ] as const
+
+const CUSTOM_CONTENT_HREFS = new Set<string>(['/custom-items', '/custom-creatures'])
+
+export function getVisibleNavItems(customContentEnabled: boolean) {
+  return NAV_ITEMS.filter((item) => customContentEnabled || !CUSTOM_CONTENT_HREFS.has(item.href))
+}

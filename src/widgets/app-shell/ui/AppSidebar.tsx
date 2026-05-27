@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import { NAV_ITEMS } from '@/shared/config'
+import { getVisibleNavItems } from '@/shared/config'
+import { useAdvancedSettingsStore } from '@/shared/model'
 
 const STORAGE_KEY = 'sidebar_collapsed'
 
@@ -24,6 +25,11 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
   })
   const { pathname } = useLocation()
   const { t } = useTranslation()
+  const customContentEnabled = useAdvancedSettingsStore((s) => s.customContent)
+  const navItems = useMemo(
+    () => getVisibleNavItems(customContentEnabled),
+    [customContentEnabled],
+  )
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(collapsed)) } catch {}
@@ -86,7 +92,7 @@ export function AppSidebar({ onSearchOpen }: AppSidebarProps) {
         {/* Navigation - Grouped */}
         <nav className="flex-1 px-2 py-2 overflow-y-auto">
           {(['main', 'reference', 'settings'] as const).map((section) => {
-            const items = NAV_ITEMS.filter((i) => i.section === section)
+            const items = navItems.filter((i) => i.section === section)
             const sectionLabel =
               section === 'main'
                 ? t('navSection.tools')

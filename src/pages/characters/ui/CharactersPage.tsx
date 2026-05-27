@@ -15,14 +15,13 @@ import {
   getAllCharacters,
   deleteCharacter,
   duplicatePregenAsUserCharacter,
+  insertEncounterCombatant,
   type CharacterRecord,
 } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
-import { calculatePCMaxHP } from '@engine'
-import type { PathbuilderExport } from '@engine'
-import type { Combatant } from '@/entities/combatant'
-import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel } from '@/features/characters'
+import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel, createCombatantFromCharacter } from '@/features/characters'
 import { PregenPickerDialog } from '@/features/pregen-picker'
+import { useCombatTrackerStore } from '@/features/combat-tracker'
 
 // 70-04/06: filter chip values for the Characters page. `__user__` is the
 // default and matches records with NULL source_adventure (Pathbuilder
@@ -122,22 +121,34 @@ export function CharactersPage() {
     loadCharacters()
   }
 
-  function handleAddToCombat(character: CharacterRecord) {
+  async function handleAddToCombat(character: CharacterRecord) {
     try {
-      const exp = JSON.parse(character.rawJson) as PathbuilderExport
-      const maxHp = calculatePCMaxHP(exp.build)
-      const combatant: Combatant = {
-        id: crypto.randomUUID(),
-        creatureRef: character.id,
-        displayName: character.name,
-        initiative: 0,
-        hp: maxHp,
-        maxHp,
-        tempHp: 0,
-        kind: 'pc',
+      const currentCombatants = useCombatantStore.getState().combatants
+      const combatant = createCombatantFromCharacter(character, currentCombatants)
+      const { combatId, isEncounterBacked } = useCombatTrackerStore.getState()
+
+      if (isEncounterBacked && combatId) {
+        const sortOrder = currentCombatants.length
+        await insertEncounterCombatant(combatId, {
+          id: combatant.id,
+          encounterId: combatId,
+          creatureRef: combatant.creatureRef,
+          displayName: combatant.displayName,
+          initiative: combatant.initiative,
+          hp: combatant.hp,
+          maxHp: combatant.maxHp,
+          tempHp: combatant.tempHp,
+          isNPC: false,
+          weakEliteTier: 'normal',
+          creatureLevel: combatant.level ?? character.level ?? 0,
+          sortOrder,
+          isHazard: false,
+          hazardRef: null,
+        }, sortOrder)
       }
+
       addCombatant(combatant)
-      toast(`${character.name} added to combat`, {
+      toast(`${combatant.displayName} added to combat`, {
         action: {
           label: 'Go to Combat',
           onClick: () => navigate('/combat'),
