@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -11,7 +11,8 @@ import {
   type CampaignNode,
   type CampaignNodeKind,
 } from '@/entities/campaign'
-import { Textarea } from '@/shared/ui/textarea'
+import { cn } from '@/shared/lib/utils'
+import { Input } from '@/shared/ui/input'
 import { useCampaignManagerStore } from '../model/store'
 import { SelectionActionMenu } from './SelectionActionMenu'
 
@@ -24,10 +25,26 @@ interface TextSelection {
 }
 
 interface ActiveWikiLink {
+  start: number
+  end: number
+  raw: string
   targetTitle: string
   label: string
   node: CampaignNode | null
 }
+
+interface MarkdownEditorTextPart {
+  kind: 'text'
+  key: string
+  text: string
+}
+
+interface MarkdownEditorLinkPart extends ActiveWikiLink {
+  kind: 'link'
+  key: string
+}
+
+type MarkdownEditorPart = MarkdownEditorTextPart | MarkdownEditorLinkPart
 
 interface MarkdownFileEditorProps {
   node: CampaignNode
@@ -72,24 +89,6 @@ function topLevelBucketNode(
   )
 }
 
-function wikiTokenSelection(markdown: string, cursor: number): TextSelection | null {
-  const pattern = new RegExp(WIKI_LINK_PATTERN.source, WIKI_LINK_PATTERN.flags)
-
-  for (const match of markdown.matchAll(pattern)) {
-    const start = match.index ?? 0
-    const end = start + match[0].length
-    if (cursor >= start && cursor <= end) {
-      return {
-        start,
-        end,
-        text: match[0],
-      }
-    }
-  }
-
-  return null
-}
-
 function emptySelection(): TextSelection {
   return { start: 0, end: 0, text: '' }
 }
@@ -101,8 +100,8 @@ function linkTitleFromSelection(text: string): string {
   return (rawTitle.split('|')[0] ?? rawTitle).trim()
 }
 
-function activeWikiLink(selection: TextSelection, nodes: CampaignNode[]): ActiveWikiLink | null {
-  const match = selection.text.match(/^\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?$/)
+function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink | null {
+  const match = rawLink.match(/^\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?$/)
   if (!match) {
     return null
   }
@@ -124,20 +123,222 @@ function activeWikiLink(selection: TextSelection, nodes: CampaignNode[]): Active
     ) ?? null
 
   return {
+    start: 0,
+    end: rawLink.length,
+    raw: rawLink,
     targetTitle,
     label,
     node: targetNode,
   }
 }
 
+function wikiTokenSelection(markdown: string, cursor: number): TextSelection | null {
+  const pattern = new RegExp(WIKI_LINK_PATTERN.source, WIKI_LINK_PATTERN.flags)
+
+  for (const match of markdown.matchAll(pattern)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (cursor >= start && cursor <= end) {
+      return {
+        start,
+        end,
+        text: match[0],
+      }
+    }
+  }
+
+  return null
+}
+
+function activeWikiLink(selection: TextSelection, nodes: CampaignNode[]): ActiveWikiLink | null {
+  const link = parseWikiLink(selection.text, nodes)
+  if (!link) {
+    return null
+  }
+
+  return {
+    ...link,
+    start: selection.start,
+    end: selection.end,
+  }
+}
+
+function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownEditorPart[] {
+  const parts: MarkdownEditorPart[] = []
+  let cursor = 0
+
+  for (const match of markdown.matchAll(WIKI_LINK_PATTERN)) {
+    const start = match.index ?? 0
+    const rawLink = match[0]
+    const end = start + rawLink.length
+
+    if (start > cursor) {
+      parts.push({
+        kind: 'text',
+        key: `text-${cursor}`,
+        text: markdown.slice(cursor, start),
+      })
+    }
+
+    const link = parseWikiLink(rawLink, nodes)
+    if (link) {
+      parts.push({
+        ...link,
+        kind: 'link',
+        key: `link-${start}-${link.targetTitle}`,
+        start,
+        end,
+      })
+    } else {
+      parts.push({
+        kind: 'text',
+        key: `text-${start}`,
+        text: rawLink,
+      })
+    }
+
+    cursor = end
+  }
+
+  if (cursor < markdown.length) {
+    parts.push({
+      kind: 'text',
+      key: `text-${cursor}`,
+      text: markdown.slice(cursor),
+    })
+  }
+
+  return parts
+}
+
+function markdownFromEditorNode(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent ?? ''
+  }
+
+  if (!(node instanceof HTMLElement)) {
+    return ''
+  }
+
+  const rawLink = node.dataset.campaignWikiRaw
+  if (rawLink) {
+    return rawLink
+  }
+
+  if (node.tagName === 'BR') {
+    return '\n'
+  }
+
+  const childMarkdown = Array.from(node.childNodes).map(markdownFromEditorNode).join('')
+  if (node.tagName === 'DIV' || node.tagName === 'P') {
+    return `${childMarkdown}\n`
+  }
+
+  return childMarkdown
+}
+
+function markdownFromEditor(root: HTMLElement): string {
+  return Array.from(root.childNodes).map(markdownFromEditorNode).join('').replace(/\n$/, '')
+}
+
+function nodeMarkdownLength(node: Node): number {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent?.length ?? 0
+  }
+
+  if (!(node instanceof HTMLElement)) {
+    return 0
+  }
+
+  const rawLink = node.dataset.campaignWikiRaw
+  if (rawLink) {
+    return rawLink.length
+  }
+
+  if (node.tagName === 'BR') {
+    return 1
+  }
+
+  const childLength = Array.from(node.childNodes).reduce(
+    (total, child) => total + nodeMarkdownLength(child),
+    0,
+  )
+
+  return node.tagName === 'DIV' || node.tagName === 'P' ? childLength + 1 : childLength
+}
+
+function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: number): number {
+  let markdownOffset = 0
+  let resolved = false
+
+  const visit = (node: Node): void => {
+    if (resolved) {
+      return
+    }
+
+    if (node === target) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        markdownOffset += Math.min(offset, node.textContent?.length ?? 0)
+      } else if (node instanceof HTMLElement) {
+        const children = Array.from(node.childNodes).slice(0, offset)
+        markdownOffset += children.reduce((total, child) => total + nodeMarkdownLength(child), 0)
+      }
+      resolved = true
+      return
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      markdownOffset += node.textContent?.length ?? 0
+      return
+    }
+
+    if (!(node instanceof HTMLElement)) {
+      return
+    }
+
+    const rawLink = node.dataset.campaignWikiRaw
+    if (rawLink) {
+      if (node.contains(target)) {
+        markdownOffset += offset > 0 ? rawLink.length : 0
+        resolved = true
+        return
+      }
+
+      markdownOffset += rawLink.length
+      return
+    }
+
+    if (node.tagName === 'BR') {
+      markdownOffset += 1
+      return
+    }
+
+    for (const child of node.childNodes) {
+      visit(child)
+    }
+
+    if (!resolved && (node.tagName === 'DIV' || node.tagName === 'P')) {
+      markdownOffset += 1
+    }
+  }
+
+  for (const child of root.childNodes) {
+    visit(child)
+  }
+
+  return markdownOffset
+}
+
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const editorRef = useRef<HTMLDivElement | null>(null)
   const isCreatePendingRef = useRef(false)
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestDraftRef = useRef(document.markdown)
   const selectionRef = useRef<TextSelection>(emptySelection())
   const [draft, setDraft] = useState(document.markdown)
+  const [editorRenderVersion, setEditorRenderVersion] = useState(0)
   const [selection, setSelection] = useState<TextSelection>(emptySelection())
+  const [formulaDraft, setFormulaDraft] = useState('')
   const [isCreatePending, setIsCreatePending] = useState(false)
   const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes } =
     useCampaignManagerStore(
@@ -149,57 +350,25 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         nodes: state.nodes,
       })),
     )
-  const activeLink = activeWikiLink(selection, nodes)
+  const editorParts = useMemo(() => markdownEditorParts(draft, nodes), [draft, nodes])
+  const selectedLink = activeWikiLink(selection, nodes)
 
   const updateSelection = useCallback((nextSelection: TextSelection) => {
     selectionRef.current = nextSelection
     setSelection(nextSelection)
   }, [])
 
-  const readEditorSelection = useCallback((): TextSelection => {
-    const textarea = textareaRef.current
+  const rebuildEditorView = useCallback(() => {
+    setEditorRenderVersion((version) => version + 1)
+  }, [])
 
-    if (!textarea) {
-      return selectionRef.current
-    }
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    if (start === end) {
-      return wikiTokenSelection(draft, start) ?? emptySelection()
-    }
-
-    return {
-      start,
-      end,
-      text: draft.slice(start, end),
-    }
-  }, [draft])
+  const focusEditorSoon = useCallback(() => {
+    window.requestAnimationFrame(() => editorRef.current?.focus())
+  }, [])
 
   useEffect(() => {
-    setDraft(document.markdown)
-    latestDraftRef.current = document.markdown
-    updateSelection(emptySelection())
-  }, [node.id, updateSelection])
-
-  useEffect(() => {
-    if (document.markdown !== latestDraftRef.current) {
-      setDraft(document.markdown)
-      latestDraftRef.current = document.markdown
-    }
-  }, [document.markdown])
-
-  useEffect(
-    () => () => {
-      if (commitTimerRef.current) {
-        clearTimeout(commitTimerRef.current)
-      }
-      if (latestDraftRef.current !== document.markdown) {
-        patchDocumentMarkdown(node.id, latestDraftRef.current)
-      }
-    },
-    [document.markdown, node.id, patchDocumentMarkdown],
-  )
+    setFormulaDraft(selectedLink?.raw ?? '')
+  }, [selectedLink?.raw])
 
   const commitMarkdown = useCallback(
     (markdown: string) => {
@@ -224,42 +393,124 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     patchDocumentMarkdown(node.id, latestDraftRef.current)
   }, [node.id, patchDocumentMarkdown])
 
-  const handleSelect = useCallback(() => {
-    const textarea = textareaRef.current
+  const readEditorSelection = useCallback((): TextSelection => {
+    const editor = editorRef.current
+    const domSelection = window.getSelection()
 
-    if (!textarea) {
-      return
+    if (
+      !editor ||
+      !domSelection ||
+      domSelection.rangeCount === 0 ||
+      !domSelection.anchorNode ||
+      !domSelection.focusNode ||
+      !editor.contains(domSelection.anchorNode) ||
+      !editor.contains(domSelection.focusNode)
+    ) {
+      return selectionRef.current
     }
 
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
+    const anchor = markdownOffsetForDomPosition(
+      editor,
+      domSelection.anchorNode,
+      domSelection.anchorOffset,
+    )
+    const focus = markdownOffsetForDomPosition(editor, domSelection.focusNode, domSelection.focusOffset)
+    const start = Math.min(anchor, focus)
+    const end = Math.max(anchor, focus)
+    const currentMarkdown = latestDraftRef.current
+
     if (start === end) {
-      updateSelection(wikiTokenSelection(draft, start) ?? emptySelection())
-      return
+      return wikiTokenSelection(currentMarkdown, start) ?? emptySelection()
     }
 
-    updateSelection({
+    return {
       start,
       end,
-      text: draft.slice(start, end),
-    })
-  }, [draft, updateSelection])
+      text: currentMarkdown.slice(start, end),
+    }
+  }, [])
+
+  useEffect(() => {
+    setDraft(document.markdown)
+    latestDraftRef.current = document.markdown
+    updateSelection(emptySelection())
+    rebuildEditorView()
+  }, [node.id, rebuildEditorView, updateSelection])
+
+  useEffect(() => {
+    if (document.markdown !== latestDraftRef.current) {
+      setDraft(document.markdown)
+      latestDraftRef.current = document.markdown
+      rebuildEditorView()
+    }
+  }, [document.markdown, rebuildEditorView])
+
+  useEffect(
+    () => () => {
+      if (commitTimerRef.current) {
+        clearTimeout(commitTimerRef.current)
+      }
+      if (latestDraftRef.current !== document.markdown) {
+        patchDocumentMarkdown(node.id, latestDraftRef.current)
+      }
+    },
+    [document.markdown, node.id, patchDocumentMarkdown],
+  )
 
   const replaceSelectedText = useCallback(
     (replacement: string, targetSelection = selectionRef.current) => {
+      const currentMarkdown = latestDraftRef.current
       const nextMarkdown =
-        draft.slice(0, targetSelection.start) +
+        currentMarkdown.slice(0, targetSelection.start) +
         replacement +
-        draft.slice(targetSelection.end)
+        currentMarkdown.slice(targetSelection.end)
 
       setDraft(nextMarkdown)
+      rebuildEditorView()
       latestDraftRef.current = nextMarkdown
       flushMarkdown()
       void refreshLinksForNode(node.id)
       updateSelection(emptySelection())
-      textareaRef.current?.focus()
+      focusEditorSoon()
     },
-    [draft, flushMarkdown, node.id, refreshLinksForNode, updateSelection],
+    [flushMarkdown, focusEditorSoon, node.id, rebuildEditorView, refreshLinksForNode, updateSelection],
+  )
+
+  const handleSelect = useCallback(() => {
+    updateSelection(readEditorSelection())
+  }, [readEditorSelection, updateSelection])
+
+  const handleInput = useCallback(() => {
+    const editor = editorRef.current
+    if (!editor) {
+      return
+    }
+
+    const nextMarkdown = markdownFromEditor(editor)
+    latestDraftRef.current = nextMarkdown
+    commitMarkdown(nextMarkdown)
+    updateSelection(readEditorSelection())
+  }, [commitMarkdown, readEditorSelection, updateSelection])
+
+  const handleFormulaCommit = useCallback(() => {
+    if (!selectedLink || formulaDraft.trim().length === 0) {
+      return
+    }
+
+    replaceSelectedText(formulaDraft, {
+      start: selectedLink.start,
+      end: selectedLink.end,
+      text: selectedLink.raw,
+    })
+  }, [formulaDraft, replaceSelectedText, selectedLink])
+
+  const handleFormulaKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.currentTarget.blur()
+      }
+    },
+    [],
   )
 
   const handleLink = useCallback(() => {
@@ -334,24 +585,20 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     void createLinked('location')
   }, [createLinked])
 
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const nextMarkdown = event.target.value
-      setDraft(nextMarkdown)
-      commitMarkdown(nextMarkdown)
-
-      const nextSelection = wikiTokenSelection(nextMarkdown, event.target.selectionStart)
-      updateSelection(nextSelection ?? emptySelection())
-    },
-    [commitMarkdown, updateSelection],
-  )
-
   const handleBlur = useCallback(() => {
+    const editor = editorRef.current
+    if (editor) {
+      const nextMarkdown = markdownFromEditor(editor)
+      latestDraftRef.current = nextMarkdown
+      setDraft(nextMarkdown)
+      rebuildEditorView()
+    }
+
     flushMarkdown()
     if (latestDraftRef.current.includes('[[')) {
       void refreshLinksForNode(node.id)
     }
-  }, [flushMarkdown, node.id, refreshLinksForNode])
+  }, [flushMarkdown, node.id, rebuildEditorView, refreshLinksForNode])
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -364,35 +611,72 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onCreateItem={handleCreateItem}
         onCreateLocation={handleCreateLocation}
       />
-      {activeLink ? (
+      {selectedLink ? (
         <div className="flex shrink-0 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
-          <span className="text-xs text-muted-foreground">Link</span>
-          <button
-            type="button"
-            disabled={!activeLink.node}
-            title={activeLink.node ? activeLink.targetTitle : `${activeLink.targetTitle} is not created yet`}
-            className="rounded-sm px-0.5 text-amber-300 underline decoration-amber-400 underline-offset-4 hover:bg-amber-400/10 disabled:cursor-default disabled:text-amber-300/60 disabled:decoration-amber-400/40"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              if (activeLink.node) {
-                void openNode(activeLink.node.id)
-              }
-            }}
-          >
-            {activeLink.label}
-          </button>
+          <span className="text-xs text-muted-foreground">Formula</span>
+          <Input
+            value={formulaDraft}
+            onChange={(event) => setFormulaDraft(event.target.value)}
+            onBlur={handleFormulaCommit}
+            onKeyDown={handleFormulaKeyDown}
+            className="h-7 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-input"
+            aria-label="Edit wiki link formula"
+          />
         </div>
       ) : null}
-      <Textarea
-        ref={textareaRef}
-        value={draft}
-        disabled={isCreatePending}
-        onChange={handleChange}
-        onSelect={handleSelect}
+      <div
+        key={`${node.id}-${editorRenderVersion}`}
+        ref={editorRef}
+        contentEditable={!isCreatePending}
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        tabIndex={0}
+        data-placeholder="Write markdown here. Select text to add links or create campaign files."
+        className={cn(
+          'h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-6 whitespace-pre-wrap outline-none',
+          'empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]',
+          'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+          isCreatePending && 'cursor-not-allowed opacity-60',
+        )}
+        onInput={handleInput}
+        onMouseUp={handleSelect}
+        onKeyUp={handleSelect}
         onBlur={handleBlur}
-        placeholder="Write markdown here. Select text to add links or create campaign files."
-        className="h-full min-h-0 flex-1 resize-none overflow-y-auto field-sizing-fixed font-mono text-sm leading-6"
-      />
+      >
+        {editorParts.map((part) => {
+            if (part.kind === 'text') {
+              return <span key={part.key}>{part.text}</span>
+            }
+
+            return (
+              <button
+                key={part.key}
+                type="button"
+                contentEditable={false}
+                data-campaign-wiki-raw={part.raw}
+                aria-disabled={!part.node}
+                title={part.node ? part.raw : `${part.targetTitle} is not created yet`}
+                className={cn(
+                  'inline rounded-sm px-0.5 font-mono text-amber-300 underline decoration-amber-400 underline-offset-4 hover:bg-amber-400/10',
+                  !part.node && 'cursor-default text-amber-300/60 decoration-amber-400/40',
+                )}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  updateSelection({ start: part.start, end: part.end, text: part.raw })
+                  editorRef.current?.focus()
+                }}
+                onDoubleClick={() => {
+                  if (part.node) {
+                    void openNode(part.node.id)
+                  }
+                }}
+              >
+                {part.label}
+              </button>
+            )
+          })}
+      </div>
     </div>
   )
 }

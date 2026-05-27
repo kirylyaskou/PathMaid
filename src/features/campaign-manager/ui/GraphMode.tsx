@@ -5,6 +5,7 @@ import {
   type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
+  type WheelEvent,
 } from 'react'
 import {
   buildCampaignGraph,
@@ -66,6 +67,7 @@ function readNodeId(
 export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
 
   const graph = useMemo(() => buildCampaignGraph(nodes, links), [links, nodes])
   const graphNodeById = useMemo(
@@ -135,90 +137,115 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     [onOpen],
   )
 
+  const handleWheelZoom = useCallback((event: WheelEvent<Element>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const direction = event.deltaY > 0 ? -1 : 1
+    setZoom((currentZoom) => {
+      const nextZoom = currentZoom + direction * 0.12
+      return Math.min(2.5, Math.max(0.45, nextZoom))
+    })
+  }, [])
+
+  const handleResetZoom = useCallback(() => {
+    setZoom(1)
+  }, [])
+
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(36rem,1fr)_18rem] overflow-x-auto">
+    <div
+      className="grid min-h-0 flex-1 grid-cols-[minmax(36rem,1fr)_18rem] overflow-x-auto"
+      onWheelCapture={handleWheelZoom}
+    >
       <div className="min-w-[36rem] p-4">
         <svg
           role="img"
           aria-label="Campaign document graph"
           viewBox="0 0 720 480"
           className="h-full min-h-[28rem] w-full rounded-md border border-border/50 bg-slate-950"
+          onWheel={handleWheelZoom}
         >
           <rect width="720" height="480" fill="#020617" />
-          {graph.edges.map((edge) => {
-            const source = graphNodeById.get(edge.sourceNodeId)
-            const target = graphNodeById.get(edge.targetNodeId)
+          <g transform={`translate(360 240) scale(${zoom}) translate(-360 -240)`}>
+            {graph.edges.map((edge) => {
+              const source = graphNodeById.get(edge.sourceNodeId)
+              const target = graphNodeById.get(edge.targetNodeId)
 
-            if (!source || !target) {
-              return null
-            }
+              if (!source || !target) {
+                return null
+              }
 
-            return (
-              <line
-                key={edge.id}
-                x1={source.x}
-                y1={source.y}
-                x2={target.x}
-                y2={target.y}
-                stroke="#64748b"
-                strokeOpacity="0.55"
-                strokeWidth="2"
-              />
-            )
-          })}
-          {graph.nodes.map((node) => {
-            const radius = graphNodeRadius(node)
-            const selected = node.id === selectedNodeId
-            const focused = node.id === focusedNodeId
+              return (
+                <line
+                  key={edge.id}
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  stroke="#64748b"
+                  strokeOpacity="0.55"
+                  strokeWidth="2"
+                />
+              )
+            })}
+            {graph.nodes.map((node) => {
+              const radius = graphNodeRadius(node)
+              const selected = node.id === selectedNodeId
+              const focused = node.id === focusedNodeId
 
-            return (
-              <g
-                key={node.id}
-                data-node-id={node.id}
-                tabIndex={0}
-                role="button"
-                aria-label={`Select ${node.title} ${node.kind} node`}
-                className="cursor-pointer"
-                onClick={handleSelectNode}
-                onDoubleClick={handleOpenNode}
-                onFocus={handleFocusNode}
-                onBlur={handleBlurNode}
-                onKeyDown={handleNodeKeyDown}
-              >
-                {focused ? (
+              return (
+                <g
+                  key={node.id}
+                  data-node-id={node.id}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Select ${node.title} ${node.kind} node`}
+                  className="cursor-pointer"
+                  onClick={handleSelectNode}
+                  onDoubleClick={handleOpenNode}
+                  onFocus={handleFocusNode}
+                  onBlur={handleBlurNode}
+                  onKeyDown={handleNodeKeyDown}
+                >
+                  {focused ? (
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={radius + 7}
+                      fill="none"
+                      stroke="#facc15"
+                      strokeWidth="3"
+                    />
+                  ) : null}
                   <circle
                     cx={node.x}
                     cy={node.y}
-                    r={radius + 7}
-                    fill="none"
-                    stroke="#facc15"
-                    strokeWidth="3"
+                    r={radius}
+                    fill={colorForKind(node.kind)}
+                    opacity="0.92"
+                    stroke={selected ? '#f8fafc' : '#0f172a'}
+                    strokeWidth={selected ? 4 : 2}
                   />
-                ) : null}
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r={radius}
-                  fill={colorForKind(node.kind)}
-                  opacity="0.92"
-                  stroke={selected ? '#f8fafc' : '#0f172a'}
-                  strokeWidth={selected ? 4 : 2}
-                />
-                <text
-                  x={node.x}
-                  y={node.y + 4}
-                  textAnchor="middle"
-                  className="select-none fill-white text-[12px] font-semibold"
-                >
-                  {graphNodeLabel(node)}
-                </text>
-              </g>
-            )
-          })}
+                  <text
+                    x={node.x}
+                    y={node.y + 4}
+                    textAnchor="middle"
+                    className="select-none fill-white text-[12px] font-semibold"
+                  >
+                    {graphNodeLabel(node)}
+                  </text>
+                </g>
+              )
+            })}
+          </g>
         </svg>
       </div>
       <aside className="min-w-[18rem] border-l border-border/50 p-4">
-        <h2 className="text-sm font-semibold">Graph</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Graph</h2>
+          <Button type="button" variant="outline" size="sm" onClick={handleResetZoom}>
+            {Math.round(zoom * 100)}%
+          </Button>
+        </div>
         {selectedNode ? (
           <div className="mt-4 space-y-3">
             <div>
