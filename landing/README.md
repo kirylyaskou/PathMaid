@@ -6,17 +6,7 @@ Open `index.html` directly, or serve the folder with any static host.
 
 ## Release Links
 
-Download links in `app.js` use stable release asset aliases:
-
-```js
-const DOWNLOADS = {
-  windows: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_windows_x64-setup.exe',
-  macos: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_macos_aarch64.dmg',
-  linux: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_linux_amd64.AppImage',
-}
-```
-
-The release workflow uploads these aliases alongside versioned artifacts.
+Download buttons resolve assets from the latest GitHub release at runtime. If the GitHub API is temporarily unavailable, buttons fall back to the latest release page.
 
 ## Asset Sizes
 
