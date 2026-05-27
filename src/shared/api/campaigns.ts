@@ -575,6 +575,28 @@ export async function getCampaignDocument(nodeId: string): Promise<CampaignDocum
   return rows[0] ? mapDocument(rows[0]) : null
 }
 
+export async function ensureCampaignDocument(nodeId: string): Promise<CampaignDocument> {
+  const existing = await getCampaignDocument(nodeId)
+  if (existing) {
+    return existing
+  }
+
+  const db = await getDb()
+  const now = nowISO()
+  await db.execute(
+    `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [nodeId, '', '{}', null, '[]', now],
+  )
+
+  const document = await getCampaignDocument(nodeId)
+  if (!document) {
+    throw new Error(`Campaign document not found: ${nodeId}`)
+  }
+
+  return document
+}
+
 export async function updateCampaignDocument(
   nodeId: string,
   input: UpdateCampaignDocumentInput,
@@ -617,6 +639,36 @@ export async function getCampaignTable(nodeId: string): Promise<CampaignTable | 
     [nodeId],
   )
   return rows[0] ? mapTable(rows[0]) : null
+}
+
+export async function ensureCampaignTable(nodeId: string): Promise<CampaignTable> {
+  const existing = await getCampaignTable(nodeId)
+  if (existing) {
+    return existing
+  }
+
+  const db = await getDb()
+  const table = defaultTable(nowISO())
+  await db.execute(
+    `INSERT OR IGNORE INTO campaign_tables (${TABLE_COLUMNS})
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      nodeId,
+      JSON.stringify(table.columns),
+      JSON.stringify(table.rows),
+      JSON.stringify(table.cells),
+      JSON.stringify(table.columnSizes),
+      JSON.stringify(table.rowSizes),
+      table.updatedAt,
+    ],
+  )
+
+  const created = await getCampaignTable(nodeId)
+  if (!created) {
+    throw new Error(`Campaign table not found: ${nodeId}`)
+  }
+
+  return created
 }
 
 export async function updateCampaignTable(

@@ -1,4 +1,4 @@
-import { Pin, PinOff } from 'lucide-react'
+import { Pin, PinOff, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { findNodeById, type CampaignNode } from '@/entities/campaign'
@@ -32,6 +32,7 @@ export function CurrentFileCard({
     })),
   )
   const renameNode = useCampaignManagerStore((state) => state.renameNode)
+  const deleteNode = useCampaignManagerStore((state) => state.deleteNode)
   const [titleDraft, setTitleDraft] = useState(activeNode?.title ?? '')
   const activeDocument = activeNode && activeNode.kind !== 'table' ? documents[activeNode.id] : null
   const activeTable = activeNode?.kind === 'table' ? tables[activeNode.id] : null
@@ -56,6 +57,14 @@ export function CurrentFileCard({
     },
     [],
   )
+
+  const handleDeleteNode = useCallback(() => {
+    if (!activeNode || activeNode.isSystem) {
+      return
+    }
+
+    void deleteNode(activeNode.id)
+  }, [activeNode, deleteNode])
 
   if (!activeNode) {
     return (
@@ -86,15 +95,26 @@ export function CurrentFileCard({
             <div className="mt-1 text-xs capitalize text-muted-foreground">{activeNode.kind}</div>
           </div>
           {!activeNode.isSystem ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onTogglePin(activeNode.id)}
-              aria-label={isPinned ? `Unpin ${activeNode.title}` : `Pin ${activeNode.title}`}
-            >
-              <PinIcon className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onTogglePin(activeNode.id)}
+                aria-label={isPinned ? `Unpin ${activeNode.title}` : `Pin ${activeNode.title}`}
+              >
+                <PinIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleDeleteNode}
+                aria-label={`Delete ${activeNode.title}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           ) : null}
         </CardHeader>
         <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">

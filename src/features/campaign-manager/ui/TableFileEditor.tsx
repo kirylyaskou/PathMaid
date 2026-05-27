@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { CampaignNode, CampaignTable, CampaignTableColumn, CampaignTableRow } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
@@ -10,6 +10,7 @@ const DEFAULT_COLUMN_WIDTH = 160
 const DEFAULT_ROW_HEIGHT = 36
 const MIN_COLUMN_WIDTH = 96
 const MIN_ROW_HEIGHT = 28
+const ROW_HEADER_WIDTH = 180
 
 interface TableFileEditorProps {
   node: CampaignNode
@@ -20,7 +21,7 @@ interface TableHeaderRowProps {
   columns: CampaignTableColumn[]
   columnSizes: Record<string, number>
   onColumnTitleChange: (columnId: string, title: string) => void
-  onColumnWidthChange: (columnId: string, width: number) => void
+  onColumnResizeStart: (columnId: string, clientX: number) => void
 }
 
 interface TableBodyRowProps {
@@ -30,24 +31,8 @@ interface TableBodyRowProps {
   rowHeight: number
   columnSizes: Record<string, number>
   onCellChange: (rowId: string, columnId: string, value: string) => void
-  onRowHeightChange: (rowId: string, height: number) => void
-}
-
-interface SizeInputProps {
-  value: number
-  minimum: number
-  ariaLabel: string
-  className: string
-  onCommit: (value: number) => void
-}
-
-function parseMinimumNumber(value: string, minimum: number): number | null {
-  if (value.trim().length === 0) {
-    return null
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? Math.max(minimum, parsed) : null
+  onRowTitleChange: (rowId: string, title: string) => void
+  onRowResizeStart: (rowId: string, clientY: number) => void
 }
 
 function columnsAreEqual(previous: CampaignTableColumn[], next: CampaignTableColumn[]): boolean {
@@ -79,70 +64,18 @@ function rowCellsAreEqual(
   return columns.every((column) => (previous[column.id] ?? '') === (next[column.id] ?? ''))
 }
 
-const SizeInput = memo(function SizeInput({
-  value,
-  minimum,
-  ariaLabel,
-  className,
-  onCommit,
-}: SizeInputProps) {
-  const [draft, setDraft] = useState(String(value))
-
-  useEffect(() => {
-    setDraft(String(value))
-  }, [value])
-
-  const commitDraft = useCallback(() => {
-    const nextValue = parseMinimumNumber(draft, minimum)
-
-    if (nextValue === null) {
-      setDraft(String(value))
-      return
-    }
-
-    setDraft(String(nextValue))
-
-    if (nextValue !== value) {
-      onCommit(nextValue)
-    }
-  }, [draft, minimum, onCommit, value])
-
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setDraft(event.target.value)
-  }, [])
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        commitDraft()
-      }
-    },
-    [commitDraft],
-  )
-
-  return (
-    <Input
-      type="number"
-      min={minimum}
-      value={draft}
-      onChange={handleChange}
-      onBlur={commitDraft}
-      onKeyDown={handleKeyDown}
-      aria-label={ariaLabel}
-      className={className}
-    />
-  )
-})
-
 const TableHeaderRow = memo(function TableHeaderRow({
   columns,
   columnSizes,
   onColumnTitleChange,
-  onColumnWidthChange,
+  onColumnResizeStart,
 }: TableHeaderRowProps) {
   return (
     <tr className="border-b border-border/70">
-      <th className="sticky left-0 top-0 z-30 w-36 min-w-36 border-r border-border/70 bg-muted/80 px-2 py-2 text-left text-xs font-medium text-muted-foreground backdrop-blur">
+      <th
+        className="sticky left-0 top-0 z-30 border-r border-border/70 bg-muted/80 px-2 py-2 text-left text-xs font-medium text-muted-foreground backdrop-blur"
+        style={{ width: ROW_HEADER_WIDTH, minWidth: ROW_HEADER_WIDTH }}
+      >
         Row
       </th>
       {columns.map((column) => {
@@ -154,19 +87,21 @@ const TableHeaderRow = memo(function TableHeaderRow({
             className="sticky top-0 z-20 border-r border-border/70 bg-muted/80 p-2 backdrop-blur"
             style={{ width, minWidth: width }}
           >
-            <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
               <Input
                 value={column.title}
                 onChange={(event) => onColumnTitleChange(column.id, event.target.value)}
                 aria-label={`Column title ${column.title}`}
-                className="h-8 bg-background text-sm font-medium"
+                className="h-8 border-transparent bg-transparent px-2 text-sm font-medium shadow-none focus-visible:border-ring"
               />
-              <SizeInput
-                value={width}
-                minimum={MIN_COLUMN_WIDTH}
-                ariaLabel={`Column width ${column.title}`}
-                className="h-8 w-20 bg-background px-2 text-right text-xs"
-                onCommit={(value) => onColumnWidthChange(column.id, value)}
+              <button
+                type="button"
+                aria-label={`Resize ${column.title}`}
+                className="absolute -right-2 top-0 h-8 w-3 cursor-col-resize rounded-sm hover:bg-primary/30 focus-visible:bg-primary/30 focus-visible:outline-none"
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  onColumnResizeStart(column.id, event.clientX)
+                }}
               />
             </div>
           </th>
@@ -183,19 +118,30 @@ const TableBodyRow = memo(function TableBodyRow({
   rowHeight,
   columnSizes,
   onCellChange,
-  onRowHeightChange,
+  onRowTitleChange,
+  onRowResizeStart,
 }: TableBodyRowProps) {
   return (
     <tr className="border-b border-border/50" style={{ height: rowHeight }}>
-      <th className="sticky left-0 z-10 w-36 min-w-36 border-r border-border/70 bg-background p-2 text-left align-middle shadow-[1px_0_0_hsl(var(--border))]">
-        <div className="flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.title}</span>
-          <SizeInput
-            value={rowHeight}
-            minimum={MIN_ROW_HEIGHT}
-            ariaLabel={`Row height ${row.title}`}
-            className="h-8 w-16 bg-background px-2 text-right text-xs"
-            onCommit={(value) => onRowHeightChange(row.id, value)}
+      <th
+        className="sticky left-0 z-10 border-r border-border/70 bg-background p-1 text-left align-middle shadow-[1px_0_0_hsl(var(--border))]"
+        style={{ width: ROW_HEADER_WIDTH, minWidth: ROW_HEADER_WIDTH }}
+      >
+        <div className="relative">
+          <Input
+            value={row.title}
+            onChange={(event) => onRowTitleChange(row.id, event.target.value)}
+            aria-label={`Row title ${row.title}`}
+            className="h-8 border-transparent bg-transparent px-2 text-sm font-medium shadow-none focus-visible:border-ring"
+          />
+          <button
+            type="button"
+            aria-label={`Resize ${row.title}`}
+            className="absolute -bottom-1 left-0 h-2 w-full cursor-row-resize rounded-sm hover:bg-primary/30 focus-visible:bg-primary/30 focus-visible:outline-none"
+            onMouseDown={(event) => {
+              event.preventDefault()
+              onRowResizeStart(row.id, event.clientY)
+            }}
           />
         </div>
       </th>
@@ -224,7 +170,7 @@ const TableBodyRow = memo(function TableBodyRow({
 function areHeaderPropsEqual(previous: TableHeaderRowProps, next: TableHeaderRowProps): boolean {
   return (
     previous.onColumnTitleChange === next.onColumnTitleChange &&
-    previous.onColumnWidthChange === next.onColumnWidthChange &&
+    previous.onColumnResizeStart === next.onColumnResizeStart &&
     columnsAreEqual(previous.columns, next.columns) &&
     columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes)
   )
@@ -236,7 +182,8 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
     previous.row.title === next.row.title &&
     previous.rowHeight === next.rowHeight &&
     previous.onCellChange === next.onCellChange &&
-    previous.onRowHeightChange === next.onRowHeightChange &&
+    previous.onRowTitleChange === next.onRowTitleChange &&
+    previous.onRowResizeStart === next.onRowResizeStart &&
     columnsAreEqual(previous.columns, next.columns) &&
     columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes) &&
     rowCellsAreEqual(next.columns, previous.rowCells, next.rowCells)
@@ -317,15 +264,17 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
 
   const setColumnWidth = useCallback(
     (columnId: string, width: number) => {
+      const latestTable = latestTableRef.current
+
       patchTable(node.id, {
-        ...table,
+        ...latestTable,
         columnSizes: {
-          ...table.columnSizes,
+          ...latestTable.columnSizes,
           [columnId]: width,
         },
       })
     },
-    [node.id, patchTable, table],
+    [node.id, patchTable],
   )
 
   const setRowHeight = useCallback(
@@ -341,6 +290,56 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
       })
     },
     [node.id, patchTable],
+  )
+
+  const setRowTitle = useCallback(
+    (rowId: string, title: string) => {
+      const latestTable = latestTableRef.current
+
+      patchTable(node.id, {
+        ...latestTable,
+        rows: latestTable.rows.map((row) => (row.id === rowId ? { ...row, title } : row)),
+      })
+    },
+    [node.id, patchTable],
+  )
+
+  const startColumnResize = useCallback(
+    (columnId: string, clientX: number) => {
+      const startWidth = latestTableRef.current.columnSizes[columnId] ?? DEFAULT_COLUMN_WIDTH
+
+      const handleMouseMove = (event: globalThis.MouseEvent) => {
+        setColumnWidth(columnId, Math.max(MIN_COLUMN_WIDTH, startWidth + event.clientX - clientX))
+      }
+
+      const handleMouseUp = () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    },
+    [setColumnWidth],
+  )
+
+  const startRowResize = useCallback(
+    (rowId: string, clientY: number) => {
+      const startHeight = latestTableRef.current.rowSizes[rowId] ?? DEFAULT_ROW_HEIGHT
+
+      const handleMouseMove = (event: globalThis.MouseEvent) => {
+        setRowHeight(rowId, Math.max(MIN_ROW_HEIGHT, startHeight + event.clientY - clientY))
+      }
+
+      const handleMouseUp = () => {
+        window.removeEventListener('mousemove', handleMouseMove)
+        window.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      window.addEventListener('mousemove', handleMouseMove)
+      window.addEventListener('mouseup', handleMouseUp)
+    },
+    [setRowHeight],
   )
 
   return (
@@ -362,7 +361,7 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
               columns={table.columns}
               columnSizes={table.columnSizes}
               onColumnTitleChange={setColumnTitle}
-              onColumnWidthChange={setColumnWidth}
+              onColumnResizeStart={startColumnResize}
             />
           </thead>
           <tbody>
@@ -375,7 +374,8 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
                 rowHeight={table.rowSizes[row.id] ?? DEFAULT_ROW_HEIGHT}
                 columnSizes={table.columnSizes}
                 onCellChange={setCell}
-                onRowHeightChange={setRowHeight}
+                onRowTitleChange={setRowTitle}
+                onRowResizeStart={startRowResize}
               />
             ))}
           </tbody>

@@ -4,7 +4,10 @@ import {
   createCampaign,
   createCampaignNode,
   deleteCampaign,
+  deleteCampaignNode,
+  ensureCampaignDocument,
   ensureCampaignStarterNote,
+  ensureCampaignTable,
   getCampaignDocument,
   getCampaignTable,
   listCampaignLinks,
@@ -69,6 +72,7 @@ interface CampaignManagerState {
   setMode: (mode: CampaignManagerMode) => void
   openNode: (nodeId: string) => Promise<void>
   createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
+  deleteNode: (nodeId: string) => Promise<void>
   renameNode: (nodeId: string, title: string) => Promise<void>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
   patchDocumentCover: (nodeId: string, assetId: string | null) => void
@@ -287,7 +291,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
       if (node.kind === 'table') {
         if (!get().tables[nodeId]) {
-          const table = await getCampaignTable(nodeId)
+          const table = (await getCampaignTable(nodeId)) ?? (await ensureCampaignTable(nodeId))
           if (table && canApplyOpenNode(get(), requestId, campaignId, nodeId)) {
             set((state) => {
               state.tables[nodeId] = table
@@ -295,7 +299,8 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
           }
         }
       } else if (!get().documents[nodeId]) {
-        const document = await getCampaignDocument(nodeId)
+        const document =
+          (await getCampaignDocument(nodeId)) ?? (await ensureCampaignDocument(nodeId))
         if (document && canApplyOpenNode(get(), requestId, campaignId, nodeId)) {
           set((state) => {
             state.documents[nodeId] = document
@@ -311,6 +316,10 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.activeNodeId = nodeId
         state.mode = 'editor'
       })
+
+      if (node.kind === 'table' || get().documents[nodeId]?.markdown.includes('[[')) {
+        await refreshLinksNow(nodeId)
+      }
     },
 
     createNode: async (input) => {
@@ -341,6 +350,42 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
       }
 
       return id
+    },
+
+    deleteNode: async (nodeId) => {
+      const node = findNodeById(get().nodes, nodeId)
+      if (!node || node.isSystem) {
+        return
+      }
+
+      await deleteCampaignNode(nodeId)
+      const campaignId = node.campaignId
+      const [nodes, links] = await Promise.all([
+        listCampaignNodes(campaignId),
+        listCampaignLinks(campaignId),
+      ])
+
+      if (get().activeCampaignId !== campaignId) {
+        return
+      }
+
+      const activeNodeId =
+        get().activeNodeId === nodeId
+          ? nodes.find(isOpenableCampaignNode)?.id ?? null
+          : get().activeNodeId
+
+      set((state) => {
+        state.nodes = nodes
+        state.links = links
+        state.pins = state.pins.filter((pinId) => pinId !== nodeId)
+        delete state.documents[nodeId]
+        delete state.tables[nodeId]
+        state.activeNodeId = activeNodeId
+      })
+
+      if (activeNodeId && activeNodeId !== nodeId) {
+        await get().openNode(activeNodeId)
+      }
     },
 
     renameNode: async (nodeId, title) => {
