@@ -1,7 +1,7 @@
 const DOWNLOADS = {
-  windows: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_x64-setup.exe',
-  macos: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_aarch64.dmg',
-  linux: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.0_amd64.AppImage',
+  windows: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.4_x64-setup.exe',
+  macos: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.4_aarch64.dmg',
+  linux: 'https://github.com/kirylyaskou/PathMaid/releases/latest/download/PathMaid_1.9.4_amd64.AppImage',
 }
 
 const STRINGS = {
