@@ -169,6 +169,45 @@ jobs:
           args: ${{ matrix.args }}
           updaterJsonPreferNsis: true
 
+      - name: Upload stable download aliases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          case "${{ matrix.os }}" in
+            windows-latest)
+              source_glob="src-tauri/target/release/bundle/nsis/PathMaid_*_x64-setup.exe"
+              alias_path="target/release-aliases/PathMaid_windows_x64-setup.exe"
+              ;;
+            macos-latest)
+              source_glob="src-tauri/target/release/bundle/dmg/PathMaid_*_aarch64.dmg"
+              alias_path="target/release-aliases/PathMaid_macos_aarch64.dmg"
+              ;;
+            ubuntu-22.04)
+              source_glob="src-tauri/target/release/bundle/appimage/PathMaid_*_amd64.AppImage"
+              alias_path="target/release-aliases/PathMaid_linux_amd64.AppImage"
+              ;;
+            *)
+              echo "No stable download alias configured for ${{ matrix.os }}"
+              exit 0
+              ;;
+          esac
+
+          shopt -s nullglob
+          matches=( $source_glob )
+          if [ "${#matches[@]}" -ne 1 ]; then
+            echo "Expected exactly one release asset for: $source_glob"
+            echo "Found: ${#matches[@]}"
+            find src-tauri/target/release/bundle -maxdepth 3 -type f | sort
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$alias_path")"
+          cp "${matches[0]}" "$alias_path"
+          gh release upload "$GITHUB_REF_NAME" "$alias_path" --clobber
+
   publish-release:
     needs: [create-release, build]
     runs-on: ubuntu-latest
