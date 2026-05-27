@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   findNodeById,
   formatCampaignWikiLink,
+  nodesByTitle,
   type CampaignBucket,
   type CampaignDocument,
   type CampaignNode,
   type CampaignNodeKind,
 } from '@/entities/campaign'
+import { Button } from '@/shared/ui/button'
 import { Textarea } from '@/shared/ui/textarea'
 import { useCampaignManagerStore } from '../model/store'
 import { SelectionActionMenu } from './SelectionActionMenu'
@@ -26,6 +28,7 @@ interface MarkdownFileEditorProps {
 }
 
 const MARKDOWN_COMMIT_DELAY_MS = 180
+const WIKI_LINK_PATTERN = /\[\[([^\]\n]+)\]\]/g
 
 function bucketForLinkedKind(kind: LinkableCampaignNodeKind, node: CampaignNode): CampaignBucket {
   if (kind === 'note') {
@@ -90,6 +93,32 @@ function wikiTokenSelection(markdown: string, cursor: number): TextSelection | n
   }
 }
 
+function markdownLinkTitles(markdown: string): string[] {
+  const seen = new Set<string>()
+  const titles: string[] = []
+
+  for (const match of markdown.matchAll(WIKI_LINK_PATTERN)) {
+    const raw = match[1] ?? ''
+    const title = raw.split('|')[0]?.trim() ?? ''
+    const key = title.toLowerCase()
+    if (!title || seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    titles.push(title)
+  }
+
+  return titles
+}
+
+function linkTitleFromSelection(text: string): string {
+  const trimmed = text.trim()
+  const wikiMatch = trimmed.match(/^\[\[([^\]\n]+)\]\]$/)
+  const rawTitle = wikiMatch?.[1] ?? trimmed
+  return (rawTitle.split('|')[0] ?? rawTitle).trim()
+}
+
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isCreatePendingRef = useRef(false)
@@ -98,13 +127,23 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   const [draft, setDraft] = useState(document.markdown)
   const [selection, setSelection] = useState<TextSelection>({ start: 0, end: 0, text: '' })
   const [isCreatePending, setIsCreatePending] = useState(false)
-  const { patchDocumentMarkdown, createNode, nodes } = useCampaignManagerStore(
-    useShallow((state) => ({
-      patchDocumentMarkdown: state.patchDocumentMarkdown,
-      createNode: state.createNode,
-      nodes: state.nodes,
-    })),
-  )
+  const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes } =
+    useCampaignManagerStore(
+      useShallow((state) => ({
+        patchDocumentMarkdown: state.patchDocumentMarkdown,
+        createNode: state.createNode,
+        openNode: state.openNode,
+        refreshLinksForNode: state.refreshLinksForNode,
+        nodes: state.nodes,
+      })),
+    )
+  const renderedLinks = useMemo(() => {
+    const nodeTitleMap = nodesByTitle(nodes)
+    return markdownLinkTitles(draft).map((title) => ({
+      title,
+      node: nodeTitleMap.get(title.toLowerCase()) ?? null,
+    }))
+  }, [draft, nodes])
 
   useEffect(() => {
     setDraft(document.markdown)
@@ -185,10 +224,11 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       setDraft(nextMarkdown)
       latestDraftRef.current = nextMarkdown
       flushMarkdown()
+      void refreshLinksForNode(node.id)
       setSelection({ start: 0, end: 0, text: '' })
       textareaRef.current?.focus()
     },
-    [draft, flushMarkdown, selection.end, selection.start],
+    [draft, flushMarkdown, node.id, refreshLinksForNode, selection.end, selection.start],
   )
 
   const handleLink = useCallback(() => {
@@ -196,7 +236,10 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       return
     }
 
-    replaceSelectedText(formatCampaignWikiLink(selection.text))
+    const title = linkTitleFromSelection(selection.text)
+    if (title) {
+      replaceSelectedText(formatCampaignWikiLink(title))
+    }
   }, [replaceSelectedText, selection.text])
 
   const createLinked = useCallback(
@@ -205,7 +248,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         return
       }
 
-      const title = selection.text.trim()
+      const title = linkTitleFromSelection(selection.text)
 
       if (title.length === 0) {
         return
@@ -225,6 +268,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
           kind,
           bucket,
           title,
+          openAfterCreate: false,
         })
         replaceSelectedText(formatCampaignWikiLink(title))
       } finally {
@@ -276,6 +320,26 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onCreateItem={handleCreateItem}
         onCreateLocation={handleCreateLocation}
       />
+      {renderedLinks.length > 0 ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {renderedLinks.map(({ title, node: targetNode }) => (
+            <Button
+              key={title}
+              type="button"
+              variant={targetNode ? 'secondary' : 'outline'}
+              size="sm"
+              disabled={!targetNode}
+              onClick={() => {
+                if (targetNode) {
+                  void openNode(targetNode.id)
+                }
+              }}
+            >
+              {title}
+            </Button>
+          ))}
+        </div>
+      ) : null}
       <Textarea
         ref={textareaRef}
         value={draft}

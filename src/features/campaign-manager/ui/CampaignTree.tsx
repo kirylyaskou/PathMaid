@@ -103,7 +103,10 @@ function CampaignTreeRows({
                   variant="ghost"
                   size="icon-sm"
                   className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={() => onCreate(node.id)}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCreate(node.id)
+                  }}
                   aria-label={`Create child in ${node.title}`}
                 >
                   <Plus className="h-3.5 w-3.5" />

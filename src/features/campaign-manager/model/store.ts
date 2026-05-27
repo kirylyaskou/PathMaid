@@ -80,6 +80,7 @@ interface CampaignManagerState {
 
 interface CampaignManagerCreateNodeInput extends CreateNodeInput {
   bucket?: CampaignBucket
+  openAfterCreate?: boolean
 }
 
 const AUTOSAVE_DELAY_MS = 600
@@ -326,7 +327,9 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         state.nodes = nodes
       })
 
+      const shouldOpenAfterCreate = input.openAfterCreate ?? true
       if (
+        shouldOpenAfterCreate &&
         get().activeCampaignId === input.campaignId &&
         openNodeRequestId === openNodeRequestSequence
       ) {
