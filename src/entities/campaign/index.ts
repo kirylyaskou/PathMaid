@@ -27,8 +27,9 @@ export {
   extractMarkdownLinks,
   extractTableLinks,
   formatCampaignWikiLink,
+  parseCampaignWikiLinks,
 } from './lib/links'
-export type { ExtractedCampaignLink } from './lib/links'
+export type { ExtractedCampaignLink, ParsedCampaignWikiLink } from './lib/links'
 export { buildCampaignGraph, filterCampaignGraphInput } from './lib/graph'
 export type {
   CampaignGraph,

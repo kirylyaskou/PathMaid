@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type FormEvent,
+} from 'react'
+import { ChevronRight, ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -48,53 +56,84 @@ function CampaignCard({
     },
     [campaign.id, isUploadingCover, onUploadCover],
   )
+  const handleCoverDrop = useCallback(
+    (event: DragEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      const file = event.dataTransfer.files[0]
+      if (!file || isUploadingCover) {
+        return
+      }
+
+      onUploadCover(campaign.id, file)
+    },
+    [campaign.id, isUploadingCover, onUploadCover],
+  )
+  const handleCoverDragOver = useCallback((event: DragEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+  }, [])
 
   return (
-    <Card className="relative overflow-hidden rounded-md py-0">
+    <Card className="relative overflow-hidden rounded-md py-0 pr-11">
       <div className="h-1.5" style={{ backgroundColor: campaign.accentColor }} />
-      {campaign.coverAssetId ? (
-        <CampaignAssetImage
-          assetId={campaign.coverAssetId}
-          alt={`${campaign.name} cover`}
-          className="h-28 w-full object-cover"
-        />
-      ) : null}
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={handleCoverChange}
+      />
+      <button
+        type="button"
+        className="group relative block h-28 w-full overflow-hidden bg-muted text-left outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait"
+        disabled={isUploadingCover}
+        onClick={() => coverInputRef.current?.click()}
+        onDrop={handleCoverDrop}
+        onDragOver={handleCoverDragOver}
+        aria-label={`Upload cover for ${campaign.name}`}
+      >
+        {campaign.coverAssetId ? (
+          <CampaignAssetImage
+            assetId={campaign.coverAssetId}
+            alt={`${campaign.name} cover`}
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <span className="flex h-full items-center justify-center border-b border-dashed border-border/70 text-muted-foreground">
+            <ImagePlus className="h-5 w-5" />
+          </span>
+        )}
+        <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-background/80 px-3 py-2 text-xs font-semibold text-foreground backdrop-blur">
+          <span>Cover</span>
+          {isUploadingCover ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ImagePlus className="h-3.5 w-3.5" />
+          )}
+        </span>
+      </button>
       <CardContent className="flex min-h-32 flex-col gap-3 p-4">
         <div className="flex items-start gap-3">
-          <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
-            <span className="block truncate text-sm font-semibold hover:text-primary hover:underline">
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">
               {campaign.name}
             </span>
             <span className="mt-1 line-clamp-2 block text-xs leading-5 text-muted-foreground">
               {description}
             </span>
-          </button>
+          </div>
           <Button variant="ghost" size="icon-sm" onClick={onDelete} aria-label={`Delete ${campaign.name}`}>
             <Trash2 className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
-        <div className="mt-auto flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" className="w-fit" onClick={onOpen}>
-            Open
-          </Button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={handleCoverChange}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={isUploadingCover}
-            onClick={() => coverInputRef.current?.click()}
-          >
-            Cover
-          </Button>
-        </div>
       </CardContent>
+      <button
+        type="button"
+        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center border-l border-border/60 bg-background/35 text-muted-foreground transition hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onOpen}
+        aria-label={`Open ${campaign.name}`}
+      >
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </Card>
   )
 }

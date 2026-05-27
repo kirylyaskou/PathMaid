@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FocusEvent,
   type KeyboardEvent,
@@ -48,16 +49,20 @@ function colorForKind(kind: CampaignNodeKind): string {
   return '#64748b'
 }
 
-function graphNodeRadius(node: CampaignGraphNode): number {
-  return 22 + Math.min(node.degree, 8) * 4
-}
-
 function graphNodeLabel(node: CampaignGraphNode): string {
-  if (node.title.length <= 14) {
+  if (node.title.length <= 22) {
     return node.title
   }
 
-  return `${node.title.slice(0, 13)}...`
+  return `${node.title.slice(0, 21)}...`
+}
+
+function graphEdgeStrokeWidth(weight: number): number {
+  return 1.5 + Math.min(weight, 5) * 0.65
+}
+
+function graphEdgeStrokeOpacity(weight: number): number {
+  return 0.4 + Math.min(weight, 5) * 0.08
 }
 
 function readNodeId(
@@ -70,10 +75,16 @@ function readNodeId(
 }
 
 export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const stopGraphNodeDragRef = useRef<(() => void) | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
   const [filterQuery, setFilterQuery] = useState('')
   const [zoom, setZoom] = useState(1)
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
+  const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>(
+    {},
+  )
 
   const filteredInput = useMemo(
     () => filterCampaignGraphInput(nodes, links, filterQuery),
@@ -83,11 +94,22 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     () => buildCampaignGraph(filteredInput.nodes, filteredInput.links),
     [filteredInput.links, filteredInput.nodes],
   )
-  const graphNodeById = useMemo(
-    () => new Map(graph.nodes.map((node) => [node.id, node])),
-    [graph.nodes],
+  const displayGraphNodes = useMemo(
+    () =>
+      graph.nodes.map((node) => ({
+        ...node,
+        ...(manualPositions[node.id] ?? {}),
+      })),
+    [graph.nodes, manualPositions],
   )
-  const visibleNodeIds = useMemo(() => new Set(graph.nodes.map((node) => node.id)), [graph.nodes])
+  const graphNodeById = useMemo(
+    () => new Map(displayGraphNodes.map((node) => [node.id, node])),
+    [displayGraphNodes],
+  )
+  const visibleNodeIds = useMemo(
+    () => new Set(displayGraphNodes.map((node) => node.id)),
+    [displayGraphNodes],
+  )
   const openableNodeCount = useMemo(() => nodes.filter(isOpenableCampaignNode).length, [nodes])
   const filterActive = filterQuery.trim().length > 0
   const selectedNode = useMemo(
@@ -109,6 +131,82 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     setSelectedNodeId(readNodeId(event))
   }, [])
 
+  const clientPointToGraphPoint = useCallback(
+    (svg: SVGSVGElement, clientX: number, clientY: number) => {
+      const rect = svg.getBoundingClientRect()
+      const svgX = ((clientX - rect.left) / rect.width) * graph.width
+      const svgY = ((clientY - rect.top) / rect.height) * graph.height
+
+      return {
+        x: graph.centerX + (svgX - graph.centerX) / zoom,
+        y: graph.centerY + (svgY - graph.centerY) / zoom,
+      }
+    },
+    [graph.centerX, graph.centerY, graph.height, graph.width, zoom],
+  )
+
+  const startGraphNodeDrag = useCallback(
+    (nodeId: string, clientX: number, clientY: number) => {
+      const svg = svgRef.current
+
+      stopGraphNodeDragRef.current?.()
+      setSelectedNodeId(nodeId)
+      setDraggedNodeId(nodeId)
+
+      if (!svg) {
+        return
+      }
+
+      const handleWindowMouseMove = (moveEvent: globalThis.MouseEvent) => {
+        const point = clientPointToGraphPoint(svg, moveEvent.clientX, moveEvent.clientY)
+        setManualPositions((current) => ({
+          ...current,
+          [nodeId]: point,
+        }))
+      }
+      const handleWindowMouseUp = () => {
+        stopGraphNodeDragRef.current?.()
+        setDraggedNodeId(null)
+      }
+      stopGraphNodeDragRef.current = () => {
+        window.removeEventListener('mousemove', handleWindowMouseMove)
+        window.removeEventListener('mouseup', handleWindowMouseUp)
+        stopGraphNodeDragRef.current = null
+      }
+
+      handleWindowMouseMove({ clientX, clientY } as globalThis.MouseEvent)
+      window.addEventListener('mousemove', handleWindowMouseMove)
+      window.addEventListener('mouseup', handleWindowMouseUp)
+    },
+    [clientPointToGraphPoint],
+  )
+
+  useEffect(
+    () => () => {
+      stopGraphNodeDragRef.current?.()
+    },
+    [],
+  )
+
+  const handleGraphMouseDownCapture = useCallback(
+    (event: MouseEvent<SVGSVGElement>) => {
+      const target = event.target
+      if (!(target instanceof Element)) {
+        return
+      }
+
+      const nodeElement = target.closest<SVGGElement>('g[role="button"][data-node-id]')
+      const nodeId = nodeElement?.dataset.nodeId
+      if (!nodeId) {
+        return
+      }
+
+      event.preventDefault()
+      startGraphNodeDrag(nodeId, event.clientX, event.clientY)
+    },
+    [startGraphNodeDrag],
+  )
+
   const handleFocusNode = useCallback((event: FocusEvent<SVGGElement>) => {
     const nodeId = readNodeId(event)
 
@@ -122,6 +220,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
 
   const handleOpenNode = useCallback(
     (event: MouseEvent<SVGGElement>) => {
+      event.preventDefault()
       const nodeId = readNodeId(event)
 
       if (nodeId) {
@@ -183,19 +282,23 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
 
   return (
     <div
-      className="grid min-h-0 flex-1 grid-cols-[minmax(36rem,1fr)_18rem] overflow-x-auto"
+      className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_18rem] overflow-hidden"
       onWheelCapture={handleWheelZoom}
     >
-      <div className="min-w-[36rem] p-4">
+      <div className="min-h-0 min-w-0 p-4">
         <svg
+          ref={svgRef}
           role="img"
           aria-label="Campaign document graph"
-          viewBox="0 0 720 480"
-          className="h-full min-h-[28rem] w-full rounded-md border border-border/50 bg-slate-950"
+          viewBox={`0 0 ${graph.width} ${graph.height}`}
+          className={`h-full min-h-0 w-full touch-none rounded-md border border-border/50 bg-slate-950 ${draggedNodeId ? 'cursor-grabbing' : ''}`}
           onWheel={handleWheelZoom}
+          onMouseDownCapture={handleGraphMouseDownCapture}
         >
-          <rect width="720" height="480" fill="#020617" />
-          <g transform={`translate(360 240) scale(${zoom}) translate(-360 -240)`}>
+          <rect width={graph.width} height={graph.height} fill="#020617" />
+          <g
+            transform={`translate(${graph.centerX} ${graph.centerY}) scale(${zoom}) translate(${-graph.centerX} ${-graph.centerY})`}
+          >
             {graph.edges.map((edge) => {
               const source = graphNodeById.get(edge.sourceNodeId)
               const target = graphNodeById.get(edge.targetNodeId)
@@ -212,16 +315,17 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
                   x2={target.x}
                   y2={target.y}
                   stroke="#64748b"
-                  strokeOpacity="0.55"
-                  strokeWidth="2"
+                  strokeOpacity={graphEdgeStrokeOpacity(edge.weight)}
+                  strokeWidth={graphEdgeStrokeWidth(edge.weight)}
                 />
               )
             })}
-            {graph.nodes.map((node) => {
-              const radius = graphNodeRadius(node)
+            {displayGraphNodes.map((node) => {
               const selected = node.id === selectedNodeId
               const focused = node.id === focusedNodeId
               const matched = filterActive && filteredInput.matchingNodeIds.has(node.id)
+              const frameColor = selected ? '#f8fafc' : matched ? '#facc15' : colorForKind(node.kind)
+              const frameWidth = selected || matched ? 3 : 1.5
 
               return (
                 <g
@@ -238,29 +342,34 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
                   onKeyDown={handleNodeKeyDown}
                 >
                   {focused ? (
-                    <circle
-                      cx={node.x}
-                      cy={node.y}
-                      r={radius + 7}
+                    <rect
+                      x={node.x - node.width / 2 - 5}
+                      y={node.y - node.height / 2 - 5}
+                      width={node.width + 10}
+                      height={node.height + 10}
+                      rx="8"
                       fill="none"
                       stroke="#facc15"
-                      strokeWidth="3"
+                      strokeWidth="2"
                     />
                   ) : null}
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius}
-                    fill={colorForKind(node.kind)}
-                    opacity="0.92"
-                    stroke={selected ? '#f8fafc' : matched ? '#facc15' : '#0f172a'}
-                    strokeWidth={selected || matched ? 4 : 2}
+                  <rect
+                    x={node.x - node.width / 2}
+                    y={node.y - node.height / 2}
+                    width={node.width}
+                    height={node.height}
+                    rx="7"
+                    fill="#020617"
+                    fillOpacity="0.94"
+                    stroke={frameColor}
+                    strokeOpacity="0.95"
+                    strokeWidth={frameWidth}
                   />
                   <text
                     x={node.x}
                     y={node.y + 4}
                     textAnchor="middle"
-                    className="select-none fill-white text-[12px] font-semibold"
+                    className="select-none fill-white text-[12px] font-medium"
                   >
                     {graphNodeLabel(node)}
                   </text>

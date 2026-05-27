@@ -10,12 +10,13 @@ import {
 } from '@/shared/api'
 import { useUpdaterStore } from '@/shared/model'
 import { useCombatTrackerStore } from '@/features/combat-tracker'
+import { seedSampleCampaign } from '@/features/campaign-manager'
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'
 import { MascotHex } from '@/shared/ui/mascot-hex'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
-import { Download, RefreshCw, Loader2, ChevronDown } from 'lucide-react'
+import { Download, RefreshCw, Loader2, ChevronDown, ScrollText } from 'lucide-react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { getVersion } from '@tauri-apps/api/app'
@@ -29,6 +30,7 @@ export function SettingsPage() {
   const { t } = useTranslation('common')
   const [syncing, setSyncing] = useState(false)
   const [stage, setStage] = useState('')
+  const [seedingCampaign, setSeedingCampaign] = useState(false)
   const [progress, setProgress] = useState<{
     current: number
     total: number
@@ -157,6 +159,19 @@ export function SettingsPage() {
     }
   }
 
+  const handleSeedSampleCampaign = async () => {
+    setSeedingCampaign(true)
+    try {
+      await seedSampleCampaign()
+      toast.success('Sample campaign loaded.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
+      toast.error(`Sample campaign failed: ${msg}`)
+    } finally {
+      setSeedingCampaign(false)
+    }
+  }
+
   const progressPercent =
     progress && progress.total > 0
       ? Math.round((progress.current / progress.total) * 100)
@@ -233,6 +248,26 @@ export function SettingsPage() {
               })
             : t('settings.dataSource.noData')}
         </p>
+      </section>
+
+      <Separator className="my-6" />
+
+      <section>
+        <h2 className="text-xl font-semibold text-foreground">Sample campaign</h2>
+        <p className="mt-2 text-base text-muted-foreground">
+          Load a small campaign workspace with notes, tables, refs, and a readable graph.
+        </p>
+
+        <div className="mt-4">
+          <Button onClick={handleSeedSampleCampaign} disabled={syncing || seedingCampaign}>
+            {seedingCampaign ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ScrollText className="mr-2 h-4 w-4" />
+            )}
+            Load sample campaign
+          </Button>
+        </div>
       </section>
 
       <Separator className="my-6" />

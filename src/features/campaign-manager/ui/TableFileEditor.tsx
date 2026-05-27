@@ -1,7 +1,16 @@
 import { Plus } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef } from 'react'
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import type { CampaignNode, CampaignTable, CampaignTableColumn, CampaignTableRow } from '@/entities/campaign'
+import {
+  findNodeById,
+  nodesByTitle,
+  parseCampaignWikiLinks,
+  type CampaignNode,
+  type CampaignTable,
+  type CampaignTableColumn,
+  type CampaignTableRow,
+} from '@/entities/campaign'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { useCampaignManagerStore } from '../model/store'
@@ -30,9 +39,35 @@ interface TableBodyRowProps {
   rowCells: Record<string, string>
   rowHeight: number
   columnSizes: Record<string, number>
+  titleMap: ReadonlyMap<string, CampaignNode>
+  editingCellId: string | null
   onCellChange: (rowId: string, columnId: string, value: string) => void
   onRowTitleChange: (rowId: string, title: string) => void
   onRowResizeStart: (rowId: string, clientY: number) => void
+  onStartCellEdit: (cellId: string) => void
+  onStopCellEdit: () => void
+  onOpenNode: (nodeId: string) => void
+}
+
+interface TableBodyCellProps {
+  row: CampaignTableRow
+  column: CampaignTableColumn
+  value: string
+  width: number
+  titleMap: ReadonlyMap<string, CampaignNode>
+  editingCellId: string | null
+  onCellChange: (rowId: string, columnId: string, value: string) => void
+  onStartCellEdit: (cellId: string) => void
+  onStopCellEdit: () => void
+  onOpenNode: (nodeId: string) => void
+}
+
+interface TableCellPart {
+  kind: 'text' | 'link'
+  key: string
+  text: string
+  raw?: string
+  node?: CampaignNode | null
 }
 
 function columnsAreEqual(previous: CampaignTableColumn[], next: CampaignTableColumn[]): boolean {
@@ -62,6 +97,52 @@ function rowCellsAreEqual(
   next: Record<string, string>,
 ): boolean {
   return columns.every((column) => (previous[column.id] ?? '') === (next[column.id] ?? ''))
+}
+
+function tableCellId(rowId: string, columnId: string): string {
+  return `${rowId}:${columnId}`
+}
+
+function parseTableCellParts(
+  value: string,
+  titleMap: ReadonlyMap<string, CampaignNode>,
+): TableCellPart[] {
+  const parts: TableCellPart[] = []
+  let cursor = 0
+
+  for (const link of parseCampaignWikiLinks(value)) {
+    const start = value.indexOf(link.raw, cursor)
+    if (start < 0) {
+      continue
+    }
+
+    if (start > cursor) {
+      parts.push({
+        kind: 'text',
+        key: `text-${cursor}`,
+        text: value.slice(cursor, start),
+      })
+    }
+
+    parts.push({
+      kind: 'link',
+      key: `link-${start}-${link.targetTitle}`,
+      text: link.label,
+      raw: link.raw,
+      node: titleMap.get(link.targetTitle.toLocaleLowerCase()) ?? null,
+    })
+    cursor = start + link.raw.length
+  }
+
+  if (cursor < value.length) {
+    parts.push({
+      kind: 'text',
+      key: `text-${cursor}`,
+      text: value.slice(cursor),
+    })
+  }
+
+  return parts
 }
 
 const TableHeaderRow = memo(function TableHeaderRow({
@@ -111,15 +192,99 @@ const TableHeaderRow = memo(function TableHeaderRow({
   )
 }, areHeaderPropsEqual)
 
+const TableBodyCell = memo(function TableBodyCell({
+  row,
+  column,
+  value,
+  width,
+  titleMap,
+  editingCellId,
+  onCellChange,
+  onStartCellEdit,
+  onStopCellEdit,
+  onOpenNode,
+}: TableBodyCellProps) {
+  const cellId = tableCellId(row.id, column.id)
+  const cellParts = parseTableCellParts(value, titleMap)
+  const hasLinks = cellParts.some((part) => part.kind === 'link')
+  const editing = editingCellId === cellId || !hasLinks
+
+  return (
+    <td className="border-r border-border/50 p-1 align-middle" style={{ width, minWidth: width }}>
+      {editing ? (
+        <Input
+          value={value}
+          onChange={(event) => onCellChange(row.id, column.id, event.target.value)}
+          onBlur={onStopCellEdit}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter') {
+              event.currentTarget.blur()
+            }
+          }}
+          aria-label={`${row.title} ${column.title}`}
+          className="h-8 border-transparent bg-transparent px-2 text-sm shadow-none focus-visible:border-ring"
+        />
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          className="flex min-h-8 items-center overflow-hidden rounded-md px-2 text-sm"
+          onDoubleClick={() => onStartCellEdit(cellId)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === 'F2') {
+              event.preventDefault()
+              onStartCellEdit(cellId)
+            }
+          }}
+        >
+          <span className="truncate">
+            {cellParts.map((part) => {
+              if (part.kind === 'text') {
+                return <Fragment key={part.key}>{part.text}</Fragment>
+              }
+
+              return (
+                <button
+                  key={part.key}
+                  type="button"
+                  title={part.raw}
+                  aria-disabled={!part.node}
+                  className={cn(
+                    'inline rounded-sm px-0.5 text-amber-300 underline decoration-amber-400 underline-offset-4 hover:bg-amber-400/10',
+                    !part.node && 'cursor-default text-amber-300/60 decoration-amber-400/40',
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (part.node) {
+                      onOpenNode(part.node.id)
+                    }
+                  }}
+                >
+                  {part.text}
+                </button>
+              )
+            })}
+          </span>
+        </div>
+      )}
+    </td>
+  )
+}, areBodyCellPropsEqual)
+
 const TableBodyRow = memo(function TableBodyRow({
   row,
   columns,
   rowCells,
   rowHeight,
   columnSizes,
+  titleMap,
+  editingCellId,
   onCellChange,
   onRowTitleChange,
   onRowResizeStart,
+  onStartCellEdit,
+  onStopCellEdit,
+  onOpenNode,
 }: TableBodyRowProps) {
   return (
     <tr className="border-b border-border/50" style={{ height: rowHeight }}>
@@ -149,23 +314,41 @@ const TableBodyRow = memo(function TableBodyRow({
         const width = columnSizes[column.id] ?? DEFAULT_COLUMN_WIDTH
 
         return (
-          <td
+          <TableBodyCell
             key={column.id}
-            className="border-r border-border/50 p-1 align-middle"
-            style={{ width, minWidth: width }}
-          >
-            <Input
-              value={rowCells[column.id] ?? ''}
-              onChange={(event) => onCellChange(row.id, column.id, event.target.value)}
-              aria-label={`${row.title} ${column.title}`}
-              className="h-8 border-transparent bg-transparent px-2 text-sm shadow-none focus-visible:border-ring"
-            />
-          </td>
+            row={row}
+            column={column}
+            value={rowCells[column.id] ?? ''}
+            width={width}
+            titleMap={titleMap}
+            editingCellId={editingCellId}
+            onCellChange={onCellChange}
+            onStartCellEdit={onStartCellEdit}
+            onStopCellEdit={onStopCellEdit}
+            onOpenNode={onOpenNode}
+          />
         )
       })}
     </tr>
   )
 }, areBodyRowPropsEqual)
+
+function areBodyCellPropsEqual(previous: TableBodyCellProps, next: TableBodyCellProps): boolean {
+  return (
+    previous.row.id === next.row.id &&
+    previous.row.title === next.row.title &&
+    previous.column.id === next.column.id &&
+    previous.column.title === next.column.title &&
+    previous.value === next.value &&
+    previous.width === next.width &&
+    previous.titleMap === next.titleMap &&
+    previous.editingCellId === next.editingCellId &&
+    previous.onCellChange === next.onCellChange &&
+    previous.onStartCellEdit === next.onStartCellEdit &&
+    previous.onStopCellEdit === next.onStopCellEdit &&
+    previous.onOpenNode === next.onOpenNode
+  )
+}
 
 function areHeaderPropsEqual(previous: TableHeaderRowProps, next: TableHeaderRowProps): boolean {
   return (
@@ -181,9 +364,14 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
     previous.row.id === next.row.id &&
     previous.row.title === next.row.title &&
     previous.rowHeight === next.rowHeight &&
+    previous.editingCellId === next.editingCellId &&
     previous.onCellChange === next.onCellChange &&
     previous.onRowTitleChange === next.onRowTitleChange &&
     previous.onRowResizeStart === next.onRowResizeStart &&
+    previous.onStartCellEdit === next.onStartCellEdit &&
+    previous.onStopCellEdit === next.onStopCellEdit &&
+    previous.onOpenNode === next.onOpenNode &&
+    previous.titleMap === next.titleMap &&
     columnsAreEqual(previous.columns, next.columns) &&
     columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes) &&
     rowCellsAreEqual(next.columns, previous.rowCells, next.rowCells)
@@ -192,11 +380,15 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
 
 export function TableFileEditor({ node, table }: TableFileEditorProps) {
   const latestTableRef = useRef(table)
-  const { patchTable } = useCampaignManagerStore(
+  const [editingCellId, setEditingCellId] = useState<string | null>(null)
+  const { patchTable, nodes, openNode } = useCampaignManagerStore(
     useShallow((state) => ({
       patchTable: state.patchTable,
+      nodes: state.nodes,
+      openNode: state.openNode,
     })),
   )
+  const titleMap = useMemo(() => nodesByTitle(nodes), [nodes])
 
   useEffect(() => {
     latestTableRef.current = table
@@ -214,6 +406,23 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
       },
     })
   }, [node.id, patchTable, table])
+
+  const handleStartCellEdit = useCallback((cellId: string) => {
+    setEditingCellId(cellId)
+  }, [])
+
+  const handleStopCellEdit = useCallback(() => {
+    setEditingCellId(null)
+  }, [])
+
+  const handleOpenNode = useCallback(
+    (nodeId: string) => {
+      if (findNodeById(nodes, nodeId)) {
+        void openNode(nodeId)
+      }
+    },
+    [nodes, openNode],
+  )
 
   const addRow = useCallback(() => {
     const id = `row-${crypto.randomUUID()}`
@@ -373,9 +582,14 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
                 rowCells={table.cells[row.id] ?? {}}
                 rowHeight={table.rowSizes[row.id] ?? DEFAULT_ROW_HEIGHT}
                 columnSizes={table.columnSizes}
+                titleMap={titleMap}
+                editingCellId={editingCellId}
                 onCellChange={setCell}
                 onRowTitleChange={setRowTitle}
                 onRowResizeStart={startRowResize}
+                onStartCellEdit={handleStartCellEdit}
+                onStopCellEdit={handleStopCellEdit}
+                onOpenNode={handleOpenNode}
               />
             ))}
           </tbody>

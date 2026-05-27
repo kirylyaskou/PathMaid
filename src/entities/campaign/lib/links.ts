@@ -10,13 +10,13 @@ export interface ExtractedCampaignLink {
 
 export const WIKI_LINK_PATTERN = /\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?/g
 
-interface ParsedWikiLink {
+export interface ParsedCampaignWikiLink {
   targetTitle: string
   label: string
   raw: string
 }
 
-function parseWikiLinks(text: string): ParsedWikiLink[] {
+export function parseCampaignWikiLinks(text: string): ParsedCampaignWikiLink[] {
   const pattern = new RegExp(WIKI_LINK_PATTERN.source, WIKI_LINK_PATTERN.flags)
 
   return [...text.matchAll(pattern)]
@@ -44,7 +44,7 @@ function extractWikiLinks(
 ): ExtractedCampaignLink[] {
   const titleMap = nodesByTitle(nodes)
 
-  return parseWikiLinks(text)
+  return parseCampaignWikiLinks(text)
     .map((link) => {
       const targetNode = titleMap.get(link.targetTitle.toLowerCase())
 

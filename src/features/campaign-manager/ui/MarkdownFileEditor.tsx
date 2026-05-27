@@ -585,6 +585,23 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     void createLinked('location')
   }, [createLinked])
 
+  const handleEditWikiLink = useCallback(
+    (part: MarkdownEditorLinkPart) => {
+      updateSelection({ start: part.start, end: part.end, text: part.raw })
+      editorRef.current?.focus()
+    },
+    [updateSelection],
+  )
+
+  const handleOpenWikiLink = useCallback(
+    (part: MarkdownEditorLinkPart) => {
+      if (part.node) {
+        void openNode(part.node.id)
+      }
+    },
+    [openNode],
+  )
+
   const handleBlur = useCallback(() => {
     const editor = editorRef.current
     if (editor) {
@@ -663,12 +680,28 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
                 )}
                 onMouseDown={(event) => {
                   event.preventDefault()
-                  updateSelection({ start: part.start, end: part.end, text: part.raw })
-                  editorRef.current?.focus()
+                  event.stopPropagation()
                 }}
-                onDoubleClick={() => {
-                  if (part.node) {
-                    void openNode(part.node.id)
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  handleOpenWikiLink(part)
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  handleEditWikiLink(part)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    handleOpenWikiLink(part)
+                    return
+                  }
+
+                  if (event.key === 'F2') {
+                    event.preventDefault()
+                    handleEditWikiLink(part)
                   }
                 }}
               >
