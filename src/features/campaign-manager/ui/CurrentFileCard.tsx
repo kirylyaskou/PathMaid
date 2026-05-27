@@ -68,8 +68,8 @@ export function CurrentFileCard({
   const PinIcon = isPinned ? PinOff : Pin
 
   return (
-    <div className="flex h-full min-w-0 items-center justify-center p-4">
-      <Card className="h-full w-full max-w-5xl rounded-md py-0">
+    <div className="flex h-full min-w-0 p-4">
+      <Card className="h-full w-full min-w-0 rounded-md py-0">
         <CardHeader className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 p-4">
           <div className="min-w-0">
             <CardTitle>
@@ -100,23 +100,23 @@ export function CurrentFileCard({
         <CardContent className="flex min-h-0 flex-1 p-0">
           {activeNode.kind === 'table' ? (
             activeTable ? (
-              <div className="flex h-full min-h-0 p-4">
+              <div className="flex h-full min-h-0 w-full min-w-0 p-4">
                 <TableFileEditor node={activeNode} table={activeTable} />
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+              <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
                 Loading file...
               </div>
             )
           ) : activeDocument ? (
-            <div className="flex h-full min-h-0">
+            <div className="flex h-full min-h-0 w-full min-w-0">
               <div className="flex min-w-0 flex-1 p-4">
                 <MarkdownFileEditor node={activeNode} document={activeDocument} />
               </div>
               <TypedProfilePanel node={activeNode} document={activeDocument} />
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
               Loading file...
             </div>
           )}

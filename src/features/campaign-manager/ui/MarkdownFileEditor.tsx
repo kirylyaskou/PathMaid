@@ -266,7 +266,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
       <SelectionActionMenu
         selectedText={selection.text}
         isPending={isCreatePending}
