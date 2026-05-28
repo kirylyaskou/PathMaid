@@ -1,22 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
+  bucketForLinkedKind,
+  campaignLinkGuesses,
   findNodeById,
   formatCampaignWikiLink,
   isOpenableCampaignNode,
+  linkTitleFromSelection,
+  topLevelBucketNode,
   WIKI_LINK_PATTERN,
-  type CampaignBucket,
   type CampaignDocument,
   type CampaignNode,
-  type CampaignNodeKind,
+  type LinkableCampaignNodeKind,
 } from '@/entities/campaign'
 import { cn } from '@/shared/lib/utils'
-import { Input } from '@/shared/ui/input'
 import { useCampaignManagerStore } from '../model/store'
-import { SelectionActionMenu } from './SelectionActionMenu'
-
-type LinkableCampaignNodeKind = Extract<CampaignNodeKind, 'note' | 'npc' | 'item' | 'location'>
+import { SelectionActionMenu, type SelectionHighlightColor } from './SelectionActionMenu'
+import { WikiLinkFormulaEditor } from './WikiLinkFormulaEditor'
 
 interface TextSelection {
   start: number
@@ -44,12 +45,29 @@ interface MarkdownEditorLinkPart extends ActiveWikiLink {
   key: string
 }
 
-type MarkdownEditorPart = MarkdownEditorTextPart | MarkdownEditorLinkPart
-
-interface LinkGuess {
-  node: CampaignNode
-  score: number
+interface MarkdownEditorHighlightPart {
+  kind: 'highlight'
+  key: string
+  raw: string
+  text: string
+  color: SelectionHighlightColor
 }
+
+interface MarkdownEditorFormatPart {
+  kind: 'format'
+  key: string
+  raw: string
+  text: string
+  format: 'bold' | 'italic' | 'strike'
+}
+
+type TextFormatKind = MarkdownEditorFormatPart['format']
+
+type MarkdownEditorPart =
+  | MarkdownEditorTextPart
+  | MarkdownEditorLinkPart
+  | MarkdownEditorHighlightPart
+  | MarkdownEditorFormatPart
 
 interface MarkdownFileEditorProps {
   node: CampaignNode
@@ -57,110 +75,22 @@ interface MarkdownFileEditorProps {
 }
 
 const MARKDOWN_COMMIT_DELAY_MS = 180
+const HIGHLIGHT_TOKEN_PATTERN = /^==(?:\{(red|green|yellow|blue)\})?([^=\n][^\n]*?)==$/
+const BOLD_TOKEN_PATTERN = /^\*\*((?=\S)[\s\S]*?)\*\*$/
+const ITALIC_TOKEN_PATTERN = /^\*((?=\S)[\s\S]*?)\*$/
+const STRIKE_TOKEN_PATTERN = /^~~((?=\S)[\s\S]*?)~~$/
+const MARKDOWN_TOKEN_PATTERN =
+  /\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?|==(?:\{(?:red|green|yellow|blue)\})?([^=\n][^\n]*?)==|~~((?=\S)[\s\S]*?)~~|\*\*((?=\S)[\s\S]*?)\*\*|\*((?=\S)[\s\S]*?)\*/g
 
-function bucketForLinkedKind(kind: LinkableCampaignNodeKind, node: CampaignNode): CampaignBucket {
-  if (kind === 'note') {
-    return 'notes'
-  }
-
-  if (kind === 'npc') {
-    return 'npcs'
-  }
-
-  if (kind === 'item') {
-    return 'items'
-  }
-
-  if (kind === 'location') {
-    return 'locations'
-  }
-
-  return node.bucket
-}
-
-function topLevelBucketNode(
-  nodes: CampaignNode[],
-  campaignId: string,
-  bucket: CampaignBucket,
-): CampaignNode | null {
-  return (
-    nodes.find(
-      (candidate) =>
-        candidate.campaignId === campaignId &&
-        candidate.kind === 'bucket' &&
-        candidate.bucket === bucket &&
-        candidate.parentId === null,
-    ) ?? null
-  )
+const HIGHLIGHT_CLASS_BY_COLOR: Record<SelectionHighlightColor, string> = {
+  red: 'bg-red-400/25',
+  green: 'bg-emerald-400/25',
+  yellow: 'bg-amber-300/25',
+  blue: 'bg-sky-400/25',
 }
 
 function emptySelection(): TextSelection {
   return { start: 0, end: 0, text: '' }
-}
-
-function linkTitleFromSelection(text: string): string {
-  const trimmed = text.trim()
-  const wikiMatch = trimmed.match(/^\[\[([^\]\n]+)\]\](?:\([^\)\n]+\))?$/)
-  const rawTitle = wikiMatch?.[1] ?? trimmed
-  return (rawTitle.split('|')[0] ?? rawTitle).trim()
-}
-
-function normalizeLinkGuessText(value: string): string {
-  return linkTitleFromSelection(value).toLowerCase()
-}
-
-function graphNeighborIds(nodeId: string, links: { sourceNodeId: string; targetNodeId: string }[]): Set<string> {
-  const neighbors = new Set<string>()
-
-  for (const link of links) {
-    if (link.sourceNodeId === nodeId) {
-      neighbors.add(link.targetNodeId)
-    } else if (link.targetNodeId === nodeId) {
-      neighbors.add(link.sourceNodeId)
-    }
-  }
-
-  return neighbors
-}
-
-function campaignLinkGuesses(
-  sourceNode: CampaignNode,
-  nodes: CampaignNode[],
-  links: { sourceNodeId: string; targetNodeId: string }[],
-  draft: string,
-): CampaignNode[] {
-  const query = normalizeLinkGuessText(draft)
-  const neighborIds = graphNeighborIds(sourceNode.id, links)
-
-  return nodes
-    .filter(
-      (candidate) =>
-        candidate.id !== sourceNode.id &&
-        candidate.campaignId === sourceNode.campaignId &&
-        isOpenableCampaignNode(candidate),
-    )
-    .map((candidate): LinkGuess => {
-      const title = candidate.title.toLowerCase()
-      let score = 0
-      let textScore = 0
-
-      if (query.length > 0) {
-        if (title === query) textScore = 120
-        else if (title.startsWith(query)) textScore = 90
-        else if (title.includes(query)) textScore = 65
-      }
-
-      score += textScore
-      if (neighborIds.has(candidate.id)) score += 45
-      if (candidate.bucket === sourceNode.bucket) score += 10
-      if (candidate.kind === sourceNode.kind) score += 4
-
-      return { node: candidate, score: query.length === 0 || textScore > 0 ? score : 0 }
-    })
-    .filter((guess) => guess.score > 0)
-    .sort((left, right) => right.score - left.score || left.node.title.localeCompare(right.node.title))
-    .slice(0, 6)
-    .map((guess) => guess.node)
 }
 
 function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink | null {
@@ -226,14 +156,107 @@ function activeWikiLink(selection: TextSelection, nodes: CampaignNode[]): Active
   }
 }
 
+function parseHighlightToken(rawToken: string): { text: string; color: SelectionHighlightColor } | null {
+  const match = rawToken.match(HIGHLIGHT_TOKEN_PATTERN)
+  if (!match) {
+    return null
+  }
+
+  return {
+    color: (match[1] as SelectionHighlightColor | undefined) ?? 'yellow',
+    text: match[2] ?? '',
+  }
+}
+
+function parseFormatToken(
+  rawToken: string,
+): Pick<MarkdownEditorFormatPart, 'format' | 'text'> | null {
+  const boldMatch = rawToken.match(BOLD_TOKEN_PATTERN)
+  if (boldMatch) {
+    return { format: 'bold', text: boldMatch[1] ?? '' }
+  }
+
+  const strikeMatch = rawToken.match(STRIKE_TOKEN_PATTERN)
+  if (strikeMatch) {
+    return { format: 'strike', text: strikeMatch[1] ?? '' }
+  }
+
+  const italicMatch = rawToken.match(ITALIC_TOKEN_PATTERN)
+  if (italicMatch) {
+    return { format: 'italic', text: italicMatch[1] ?? '' }
+  }
+
+  return null
+}
+
+function highlightTokenTextStart(rawToken: string): number {
+  const colorEnd = rawToken.startsWith('=={') ? rawToken.indexOf('}') : -1
+  return colorEnd > -1 ? colorEnd + 1 : 2
+}
+
+function formatTokenTextStart(rawToken: string): number {
+  return rawToken.startsWith('**') || rawToken.startsWith('~~') ? 2 : 1
+}
+
+function formatTokenTextEnd(rawToken: string): number {
+  return rawToken.length - formatTokenTextStart(rawToken)
+}
+
+function highlightToken(color: SelectionHighlightColor, text: string): string {
+  return text.length > 0 ? `=={${color}}${text}==` : ''
+}
+
+function formatToken(format: TextFormatKind, text: string): string {
+  if (text.length === 0) {
+    return ''
+  }
+
+  if (format === 'bold') {
+    return `**${text}**`
+  }
+
+  if (format === 'italic') {
+    return `*${text}*`
+  }
+
+  return `~~${text}~~`
+}
+
+function formattedTokenOffset(
+  wrapper: HTMLElement,
+  target: Node,
+  offset: number,
+  rawToken: string,
+  textStart: number,
+  textEnd: number,
+): number {
+  if (target === wrapper) {
+    if (offset <= 0) {
+      return 0
+    }
+
+    if (offset >= wrapper.childNodes.length) {
+      return rawToken.length
+    }
+
+    return textStart
+  }
+
+  if (target.nodeType === Node.TEXT_NODE) {
+    return Math.min(textEnd, textStart + Math.min(offset, target.textContent?.length ?? 0))
+  }
+
+  return offset > 0 ? rawToken.length : 0
+}
+
 function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownEditorPart[] {
   const parts: MarkdownEditorPart[] = []
   let cursor = 0
 
-  for (const match of markdown.matchAll(WIKI_LINK_PATTERN)) {
+  for (const match of markdown.matchAll(MARKDOWN_TOKEN_PATTERN)) {
     const start = match.index ?? 0
-    const rawLink = match[0]
-    const end = start + rawLink.length
+    const rawToken = match[0]
+    const end = start + rawToken.length
 
     if (start > cursor) {
       parts.push({
@@ -243,7 +266,7 @@ function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownE
       })
     }
 
-    const link = parseWikiLink(rawLink, nodes)
+    const link = parseWikiLink(rawToken, nodes)
     if (link) {
       parts.push({
         ...link,
@@ -253,11 +276,31 @@ function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownE
         end,
       })
     } else {
-      parts.push({
-        kind: 'text',
-        key: `text-${start}`,
-        text: rawLink,
-      })
+      const highlight = parseHighlightToken(rawToken)
+      const format = parseFormatToken(rawToken)
+
+      if (highlight) {
+        parts.push({
+          kind: 'highlight',
+          key: `highlight-${start}`,
+          raw: rawToken,
+          text: highlight.text,
+          color: highlight.color,
+        })
+      } else if (format) {
+        parts.push({
+          ...format,
+          kind: 'format',
+          key: `format-${start}`,
+          raw: rawToken,
+        })
+      } else {
+        parts.push({
+          kind: 'text',
+          key: `text-${start}`,
+          text: rawToken,
+        })
+      }
     }
 
     cursor = end
@@ -274,6 +317,60 @@ function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownE
   return parts
 }
 
+function splitFormattedTokenReplacement(
+  markdown: string,
+  selection: TextSelection,
+  formatSelection: (text: string) => string,
+): { targetSelection: TextSelection; replacement: string } | null {
+  for (const match of markdown.matchAll(MARKDOWN_TOKEN_PATTERN)) {
+    const start = match.index ?? 0
+    const rawToken = match[0]
+    const end = start + rawToken.length
+
+    const highlight = parseHighlightToken(rawToken)
+    if (highlight) {
+      const contentStart = start + highlightTokenTextStart(rawToken)
+      const contentEnd = end - 2
+      if (selection.start < contentStart || selection.end > contentEnd) {
+        continue
+      }
+
+      const selectedText = markdown.slice(selection.start, selection.end)
+      const before = markdown.slice(contentStart, selection.start)
+      const after = markdown.slice(selection.end, contentEnd)
+      return {
+        targetSelection: { start, end, text: highlight.text },
+        replacement:
+          highlightToken(highlight.color, before) +
+          formatSelection(selectedText) +
+          highlightToken(highlight.color, after),
+      }
+    }
+
+    const format = parseFormatToken(rawToken)
+    if (format) {
+      const contentStart = start + formatTokenTextStart(rawToken)
+      const contentEnd = start + formatTokenTextEnd(rawToken)
+      if (selection.start < contentStart || selection.end > contentEnd) {
+        continue
+      }
+
+      const selectedText = markdown.slice(selection.start, selection.end)
+      const before = markdown.slice(contentStart, selection.start)
+      const after = markdown.slice(selection.end, contentEnd)
+      return {
+        targetSelection: { start, end, text: format.text },
+        replacement:
+          formatToken(format.format, before) +
+          formatSelection(selectedText) +
+          formatToken(format.format, after),
+      }
+    }
+  }
+
+  return null
+}
+
 function markdownFromEditorNode(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent ?? ''
@@ -286,6 +383,16 @@ function markdownFromEditorNode(node: Node): string {
   const rawLink = node.dataset.campaignWikiRaw
   if (rawLink) {
     return rawLink
+  }
+
+  const rawHighlight = node.dataset.campaignHighlightRaw
+  if (rawHighlight) {
+    return rawHighlight
+  }
+
+  const rawFormat = node.dataset.campaignFormatRaw
+  if (rawFormat) {
+    return rawFormat
   }
 
   if (node.tagName === 'BR') {
@@ -318,6 +425,16 @@ function nodeMarkdownLength(node: Node): number {
     return rawLink.length
   }
 
+  const rawHighlight = node.dataset.campaignHighlightRaw
+  if (rawHighlight) {
+    return rawHighlight.length
+  }
+
+  const rawFormat = node.dataset.campaignFormatRaw
+  if (rawFormat) {
+    return rawFormat.length
+  }
+
   if (node.tagName === 'BR') {
     return 1
   }
@@ -343,6 +460,34 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       if (node.nodeType === Node.TEXT_NODE) {
         markdownOffset += Math.min(offset, node.textContent?.length ?? 0)
       } else if (node instanceof HTMLElement) {
+        const rawHighlight = node.dataset.campaignHighlightRaw
+        if (rawHighlight) {
+          markdownOffset += formattedTokenOffset(
+            node,
+            target,
+            offset,
+            rawHighlight,
+            highlightTokenTextStart(rawHighlight),
+            rawHighlight.length - 2,
+          )
+          resolved = true
+          return
+        }
+
+        const rawFormat = node.dataset.campaignFormatRaw
+        if (rawFormat) {
+          markdownOffset += formattedTokenOffset(
+            node,
+            target,
+            offset,
+            rawFormat,
+            formatTokenTextStart(rawFormat),
+            rawFormat.length - formatTokenTextStart(rawFormat),
+          )
+          resolved = true
+          return
+        }
+
         const children = Array.from(node.childNodes).slice(0, offset)
         markdownOffset += children.reduce((total, child) => total + nodeMarkdownLength(child), 0)
       }
@@ -371,6 +516,44 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       return
     }
 
+    const rawHighlight = node.dataset.campaignHighlightRaw
+    if (rawHighlight) {
+      if (node.contains(target)) {
+        markdownOffset += formattedTokenOffset(
+          node,
+          target,
+          offset,
+          rawHighlight,
+          highlightTokenTextStart(rawHighlight),
+          rawHighlight.length - 2,
+        )
+        resolved = true
+        return
+      }
+
+      markdownOffset += rawHighlight.length
+      return
+    }
+
+    const rawFormat = node.dataset.campaignFormatRaw
+    if (rawFormat) {
+      if (node.contains(target)) {
+        markdownOffset += formattedTokenOffset(
+          node,
+          target,
+          offset,
+          rawFormat,
+          formatTokenTextStart(rawFormat),
+          rawFormat.length - formatTokenTextStart(rawFormat),
+        )
+        resolved = true
+        return
+      }
+
+      markdownOffset += rawFormat.length
+      return
+    }
+
     if (node.tagName === 'BR') {
       markdownOffset += 1
       return
@@ -396,7 +579,9 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   const editorRef = useRef<HTMLDivElement | null>(null)
   const isCreatePendingRef = useRef(false)
   const commitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const formatShortcutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestDraftRef = useRef(document.markdown)
+  const formatShortcutPendingRef = useRef(false)
   const selectionRef = useRef<TextSelection>(emptySelection())
   const [draft, setDraft] = useState(document.markdown)
   const [editorRenderVersion, setEditorRenderVersion] = useState(0)
@@ -461,6 +646,14 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     patchDocumentMarkdown(node.id, latestDraftRef.current)
   }, [node.id, patchDocumentMarkdown])
 
+  const clearFormatShortcut = useCallback(() => {
+    formatShortcutPendingRef.current = false
+    if (formatShortcutTimerRef.current) {
+      clearTimeout(formatShortcutTimerRef.current)
+      formatShortcutTimerRef.current = null
+    }
+  }, [])
+
   const readEditorSelection = useCallback((): TextSelection => {
     const editor = editorRef.current
     const domSelection = window.getSelection()
@@ -518,11 +711,12 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       if (commitTimerRef.current) {
         clearTimeout(commitTimerRef.current)
       }
+      clearFormatShortcut()
       if (latestDraftRef.current !== document.markdown) {
         patchDocumentMarkdown(node.id, latestDraftRef.current)
       }
     },
-    [document.markdown, node.id, patchDocumentMarkdown],
+    [clearFormatShortcut, document.markdown, node.id, patchDocumentMarkdown],
   )
 
   const replaceSelectedText = useCallback(
@@ -590,22 +784,6 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     [replaceSelectedText, selectedLink],
   )
 
-  const handleFormulaKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        const guessedNode = formulaGuesses[0]
-        if (guessedNode) {
-          event.preventDefault()
-          handleFormulaGuessPick(guessedNode)
-          return
-        }
-
-        event.currentTarget.blur()
-      }
-    },
-    [formulaGuesses, handleFormulaGuessPick],
-  )
-
   const handleLink = useCallback(() => {
     if (isCreatePendingRef.current) {
       return
@@ -619,6 +797,105 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
       replaceSelectedText(formatCampaignWikiLink(title), currentSelection)
     }
   }, [readEditorSelection, replaceSelectedText, updateSelection])
+
+  const applyTextFormat = useCallback(
+    (formatSelection: (text: string) => string) => {
+      const currentSelection = readEditorSelection()
+      updateSelection(currentSelection)
+
+      if (currentSelection.text.trim().length > 0) {
+        const splitReplacement = splitFormattedTokenReplacement(
+          latestDraftRef.current,
+          currentSelection,
+          formatSelection,
+        )
+
+        if (splitReplacement) {
+          replaceSelectedText(splitReplacement.replacement, splitReplacement.targetSelection)
+          return
+        }
+
+        replaceSelectedText(formatSelection(currentSelection.text), currentSelection)
+      }
+    },
+    [readEditorSelection, replaceSelectedText, updateSelection],
+  )
+
+  const handleHighlight = useCallback(
+    (color: SelectionHighlightColor) => {
+      applyTextFormat((text) => highlightToken(color, text))
+    },
+    [applyTextFormat],
+  )
+
+  const handleBold = useCallback(() => {
+    applyTextFormat((text) => formatToken('bold', text))
+  }, [applyTextFormat])
+
+  const handleItalic = useCallback(() => {
+    applyTextFormat((text) => formatToken('italic', text))
+  }, [applyTextFormat])
+
+  const handleStrike = useCallback(() => {
+    applyTextFormat((text) => formatToken('strike', text))
+  }, [applyTextFormat])
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.altKey || isCreatePendingRef.current) {
+        return
+      }
+
+      const key = event.key.toLowerCase()
+      if (formatShortcutPendingRef.current) {
+        if (key === 'b' || key === 'i' || key === 's') {
+          event.preventDefault()
+          clearFormatShortcut()
+
+          if (key === 'b') {
+            handleBold()
+          } else if (key === 'i') {
+            handleItalic()
+          } else {
+            handleStrike()
+          }
+          return
+        }
+
+        clearFormatShortcut()
+      }
+
+      if (!(event.ctrlKey || event.metaKey)) {
+        return
+      }
+
+      if (key === 't') {
+        event.preventDefault()
+        clearFormatShortcut()
+        formatShortcutPendingRef.current = true
+        formatShortcutTimerRef.current = setTimeout(clearFormatShortcut, 1500)
+        return
+      }
+
+      if (key === 'b') {
+        event.preventDefault()
+        handleBold()
+        return
+      }
+
+      if (key === 'i') {
+        event.preventDefault()
+        handleItalic()
+        return
+      }
+
+      if (key === 's') {
+        event.preventDefault()
+        handleStrike()
+      }
+    },
+    [clearFormatShortcut, handleBold, handleItalic, handleStrike],
+  )
 
   const createLinked = useCallback(
     async (kind: LinkableCampaignNodeKind) => {
@@ -716,43 +993,23 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         selectedText={selection.text}
         isPending={isCreatePending}
         onLink={handleLink}
+        onHighlight={handleHighlight}
+        onBold={handleBold}
+        onItalic={handleItalic}
+        onStrike={handleStrike}
         onCreateNote={handleCreateNote}
         onCreateNpc={handleCreateNpc}
         onCreateItem={handleCreateItem}
         onCreateLocation={handleCreateLocation}
       />
       {selectedLink ? (
-        <div className="relative flex shrink-0 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
-          <span className="text-xs text-muted-foreground">Formula</span>
-          <Input
-            value={formulaDraft}
-            onChange={(event) => setFormulaDraft(event.target.value)}
-            onBlur={handleFormulaCommit}
-            onKeyDown={handleFormulaKeyDown}
-            className="h-7 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-input"
-            aria-label="Edit wiki link formula"
-          />
-          {formulaGuesses.length > 0 ? (
-            <div className="absolute top-full right-3 left-16 z-20 mt-1 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
-              {formulaGuesses.map((guess) => (
-                <button
-                  key={guess.id}
-                  type="button"
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-accent hover:text-accent-foreground"
-                  onMouseDown={(event) => {
-                    event.preventDefault()
-                    handleFormulaGuessPick(guess)
-                  }}
-                >
-                  <span className="truncate font-medium">{guess.title}</span>
-                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {guess.kind}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <WikiLinkFormulaEditor
+          value={formulaDraft}
+          guesses={formulaGuesses}
+          onChange={setFormulaDraft}
+          onCommit={handleFormulaCommit}
+          onPick={handleFormulaGuessPick}
+        />
       ) : null}
       <div
         key={`${node.id}-${editorRenderVersion}`}
@@ -764,12 +1021,13 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         tabIndex={0}
         data-placeholder="Write markdown here. Select text to add links or create campaign files."
         className={cn(
-          'h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-6 whitespace-pre-wrap outline-none',
+          'h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-justify font-mono text-sm leading-6 whitespace-pre-wrap outline-none',
           'empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]',
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
           isCreatePending && 'cursor-not-allowed opacity-60',
         )}
         onInput={handleInput}
+        onKeyDown={handleKeyDown}
         onMouseUp={handleSelect}
         onKeyUp={handleSelect}
         onBlur={handleBlur}
@@ -777,6 +1035,45 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         {editorParts.map((part) => {
             if (part.kind === 'text') {
               return <span key={part.key}>{part.text}</span>
+            }
+
+            if (part.kind === 'highlight') {
+              return (
+                <mark
+                  key={part.key}
+                  data-campaign-highlight-raw={part.raw}
+                  className={cn(
+                    'rounded-sm px-0.5 text-foreground',
+                    HIGHLIGHT_CLASS_BY_COLOR[part.color],
+                  )}
+                >
+                  {part.text}
+                </mark>
+              )
+            }
+
+            if (part.kind === 'format') {
+              if (part.format === 'bold') {
+                return (
+                  <strong key={part.key} data-campaign-format-raw={part.raw}>
+                    {part.text}
+                  </strong>
+                )
+              }
+
+              if (part.format === 'italic') {
+                return (
+                  <em key={part.key} data-campaign-format-raw={part.raw}>
+                    {part.text}
+                  </em>
+                )
+              }
+
+              return (
+                <s key={part.key} data-campaign-format-raw={part.raw}>
+                  {part.text}
+                </s>
+              )
             }
 
             return (

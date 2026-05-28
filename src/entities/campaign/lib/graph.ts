@@ -142,7 +142,6 @@ export function filterCampaignGraphInput(
   }
 
   const includedNodeIds = new Set(matchingNodeIds)
-  let hasOutgoingMatches = false
 
   for (const link of links) {
     if (!openableNodeIds.has(link.sourceNodeId) || !openableNodeIds.has(link.targetNodeId)) {
@@ -151,19 +150,10 @@ export function filterCampaignGraphInput(
 
     if (matchingNodeIds.has(link.sourceNodeId)) {
       includedNodeIds.add(link.targetNodeId)
-      hasOutgoingMatches = true
     }
-  }
 
-  if (!hasOutgoingMatches) {
-    for (const link of links) {
-      if (!openableNodeIds.has(link.sourceNodeId) || !openableNodeIds.has(link.targetNodeId)) {
-        continue
-      }
-
-      if (matchingNodeIds.has(link.targetNodeId)) {
-        includedNodeIds.add(link.sourceNodeId)
-      }
+    if (matchingNodeIds.has(link.targetNodeId)) {
+      includedNodeIds.add(link.sourceNodeId)
     }
   }
 

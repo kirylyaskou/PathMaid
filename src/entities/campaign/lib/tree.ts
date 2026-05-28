@@ -59,6 +59,27 @@ export function findNodeById(
   return nodes.find((node) => node.id === id) ?? null
 }
 
+export function campaignNodeDescendantIds(nodes: CampaignNode[], nodeId: string): Set<string> {
+  const descendantIds = new Set<string>()
+  const pendingIds = [nodeId]
+
+  while (pendingIds.length > 0) {
+    const currentId = pendingIds.pop()
+    if (!currentId || descendantIds.has(currentId)) {
+      continue
+    }
+
+    descendantIds.add(currentId)
+    for (const node of nodes) {
+      if (node.parentId === currentId) {
+        pendingIds.push(node.id)
+      }
+    }
+  }
+
+  return descendantIds
+}
+
 export function nodesByTitle(nodes: CampaignNode[]): Map<string, CampaignNode> {
   const titleMap = new Map<string, CampaignNode>()
 

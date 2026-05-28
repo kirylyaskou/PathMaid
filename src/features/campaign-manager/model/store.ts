@@ -10,26 +10,31 @@ import {
   ensureCampaignTable,
   getCampaignDocument,
   getCampaignTable,
+  listCampaignGraphPositions,
   listCampaignLinks,
   listCampaignNodes,
   listCampaignPins,
   listCampaigns,
   markCampaignOpened,
+  moveCampaignNode,
   replaceCampaignLinks,
   setCampaignPins,
   updateCampaignNodeTitle,
   updateCampaignDocument,
   updateCampaignTable,
+  upsertCampaignGraphPosition,
   type CreateNodeInput,
 } from '@/shared/api'
 import {
   extractMarkdownLinks,
   extractTableLinks,
   findNodeById,
+  campaignNodeDescendantIds,
   isOpenableCampaignNode,
   type Campaign,
   type CampaignBucket,
   type CampaignDocument,
+  type CampaignGraphPosition,
   type CampaignLink,
   type CampaignNode,
   type CampaignTable,
@@ -37,6 +42,7 @@ import {
 import { createKeyedLatestTask } from './autosave'
 
 type CampaignManagerMode = 'editor' | 'graph'
+type CampaignGraphPositionMap = Record<string, { x: number; y: number }>
 
 interface DocumentSaveTask {
   nodeId: string
@@ -58,6 +64,7 @@ interface CampaignManagerState {
   nodes: CampaignNode[]
   links: CampaignLink[]
   pins: string[]
+  graphPositions: CampaignGraphPositionMap
   activeNodeId: string | null
   documents: Record<string, CampaignDocument>
   tables: Record<string, CampaignTable>
@@ -74,6 +81,8 @@ interface CampaignManagerState {
   createNode: (input: CampaignManagerCreateNodeInput) => Promise<string>
   deleteNode: (nodeId: string) => Promise<void>
   renameNode: (nodeId: string, title: string) => Promise<void>
+  moveNode: (nodeId: string, parentId: string | null) => Promise<void>
+  saveGraphNodePosition: (nodeId: string, position: { x: number; y: number }) => Promise<void>
   patchDocumentMarkdown: (nodeId: string, markdown: string) => void
   patchDocumentCover: (nodeId: string, assetId: string | null) => void
   patchTable: (nodeId: string, table: CampaignTable) => void
@@ -122,11 +131,18 @@ function emptyWorkspace() {
     nodes: [],
     links: [],
     pins: [],
+    graphPositions: {},
     activeNodeId: null,
     documents: {},
     tables: {},
     mode: 'editor' as const,
   }
+}
+
+function graphPositionsByNodeId(positions: CampaignGraphPosition[]): CampaignGraphPositionMap {
+  return Object.fromEntries(
+    positions.map((position) => [position.nodeId, { x: position.x, y: position.y }]),
+  )
 }
 
 export const useCampaignManagerStore = create<CampaignManagerState>()(
@@ -221,10 +237,11 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
 
       try {
         await markCampaignOpened(id)
-        const [initialNodes, pins, links] = await Promise.all([
+        const [initialNodes, pins, links, graphPositions] = await Promise.all([
           listCampaignNodes(id),
           listCampaignPins(id),
           listCampaignLinks(id),
+          listCampaignGraphPositions(id),
         ])
         let nodes = initialNodes
         firstOpenableNodeId = nodes.find(isOpenableCampaignNode)?.id ?? null
@@ -243,6 +260,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
           state.nodes = nodes
           state.links = links
           state.pins = pins.map((pin) => pin.nodeId)
+          state.graphPositions = graphPositionsByNodeId(graphPositions)
           state.activeNodeId = firstOpenableNodeId
           state.documents = {}
           state.tables = {}
@@ -358,6 +376,7 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         return
       }
 
+      const deletedNodeIds = campaignNodeDescendantIds(get().nodes, nodeId)
       await deleteCampaignNode(nodeId)
       const campaignId = node.campaignId
       const [nodes, links] = await Promise.all([
@@ -369,17 +388,21 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         return
       }
 
+      const currentActiveNodeId = get().activeNodeId
       const activeNodeId =
-        get().activeNodeId === nodeId
+        currentActiveNodeId && deletedNodeIds.has(currentActiveNodeId)
           ? nodes.find(isOpenableCampaignNode)?.id ?? null
-          : get().activeNodeId
+          : currentActiveNodeId
 
       set((state) => {
         state.nodes = nodes
         state.links = links
-        state.pins = state.pins.filter((pinId) => pinId !== nodeId)
-        delete state.documents[nodeId]
-        delete state.tables[nodeId]
+        state.pins = state.pins.filter((pinId) => !deletedNodeIds.has(pinId))
+        for (const deletedNodeId of deletedNodeIds) {
+          delete state.documents[deletedNodeId]
+          delete state.tables[deletedNodeId]
+          delete state.graphPositions[deletedNodeId]
+        }
         state.activeNodeId = activeNodeId
       })
 
@@ -402,6 +425,47 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         if (target) {
           target.title = nextTitle
         }
+      })
+    },
+
+    moveNode: async (nodeId, parentId) => {
+      const node = findNodeById(get().nodes, nodeId)
+      if (!node || node.isSystem || node.parentId === parentId) {
+        return
+      }
+
+      await moveCampaignNode(nodeId, { parentId })
+      const [nodes, links] = await Promise.all([
+        listCampaignNodes(node.campaignId),
+        listCampaignLinks(node.campaignId),
+      ])
+
+      if (get().activeCampaignId !== node.campaignId) {
+        return
+      }
+
+      set((state) => {
+        state.nodes = nodes
+        state.links = links
+      })
+    },
+
+    saveGraphNodePosition: async (nodeId, position) => {
+      const campaignId = get().activeCampaignId
+      const node = findNodeById(get().nodes, nodeId)
+      if (!campaignId || !node || node.campaignId !== campaignId || !isOpenableCampaignNode(node)) {
+        return
+      }
+
+      set((state) => {
+        state.graphPositions[nodeId] = position
+      })
+
+      await upsertCampaignGraphPosition({
+        campaignId,
+        nodeId,
+        x: position.x,
+        y: position.y,
       })
     },
 

@@ -30,7 +30,9 @@ type ColoredCampaignNodeKind = Extract<
 interface GraphModeProps {
   nodes: CampaignNode[]
   links: CampaignLink[]
+  graphPositions: Record<string, { x: number; y: number }>
   onOpen: (nodeId: string) => void
+  onNodePositionChange: (nodeId: string, position: { x: number; y: number }) => void
 }
 
 const COLOR_BY_KIND: Record<ColoredCampaignNodeKind, string> = {
@@ -74,7 +76,13 @@ function readNodeId(
   return event.currentTarget.dataset.nodeId ?? null
 }
 
-export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
+export function GraphMode({
+  nodes,
+  links,
+  graphPositions,
+  onOpen,
+  onNodePositionChange,
+}: GraphModeProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const stopGraphNodeDragRef = useRef<(() => void) | null>(null)
   const stopGraphPanRef = useRef<(() => void) | null>(null)
@@ -86,7 +94,7 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null)
   const [panning, setPanning] = useState(false)
   const [manualPositions, setManualPositions] = useState<Record<string, { x: number; y: number }>>(
-    {},
+    graphPositions,
   )
 
   const filteredInput = useMemo(
@@ -119,6 +127,10 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
     () => (selectedNodeId ? graphNodeById.get(selectedNodeId) ?? null : null),
     [graphNodeById, selectedNodeId],
   )
+
+  useEffect(() => {
+    setManualPositions(graphPositions)
+  }, [graphPositions])
 
   useEffect(() => {
     if (selectedNodeId && !visibleNodeIds.has(selectedNodeId)) {
@@ -161,15 +173,31 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
         return
       }
 
+      const startPoint = clientPointToGraphPoint(svg, clientX, clientY)
+      const startNode = graphNodeById.get(nodeId)
+      const pointerOffset = {
+        x: startPoint.x - (startNode?.x ?? startPoint.x),
+        y: startPoint.y - (startNode?.y ?? startPoint.y),
+      }
+      let latestPosition: { x: number; y: number } | null = null
+
       const handleWindowMouseMove = (moveEvent: globalThis.MouseEvent) => {
         const point = clientPointToGraphPoint(svg, moveEvent.clientX, moveEvent.clientY)
+        const position = {
+          x: point.x - pointerOffset.x,
+          y: point.y - pointerOffset.y,
+        }
+        latestPosition = position
         setManualPositions((current) => ({
           ...current,
-          [nodeId]: point,
+          [nodeId]: position,
         }))
       }
       const handleWindowMouseUp = () => {
         stopGraphNodeDragRef.current?.()
+        if (latestPosition) {
+          onNodePositionChange(nodeId, latestPosition)
+        }
         setDraggedNodeId(null)
       }
       stopGraphNodeDragRef.current = () => {
@@ -178,11 +206,10 @@ export function GraphMode({ nodes, links, onOpen }: GraphModeProps) {
         stopGraphNodeDragRef.current = null
       }
 
-      handleWindowMouseMove({ clientX, clientY } as globalThis.MouseEvent)
       window.addEventListener('mousemove', handleWindowMouseMove)
       window.addEventListener('mouseup', handleWindowMouseUp)
     },
-    [clientPointToGraphPoint],
+    [clientPointToGraphPoint, graphNodeById, onNodePositionChange],
   )
 
   const startGraphPan = useCallback(

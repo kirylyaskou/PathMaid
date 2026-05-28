@@ -3,9 +3,11 @@ import {
   type CampaignAsset,
   type CampaignBucket,
   type CampaignDocument,
+  type CampaignGraphPosition,
   type CampaignLink,
   type CampaignLinkSourceKind,
   type CampaignNode,
+  type CampaignNodeArtwork,
   type CampaignNodeKind,
   type CampaignPin,
   type CampaignTable,
@@ -91,6 +93,14 @@ interface CampaignPinRow {
   created_at: string
 }
 
+interface CampaignGraphPositionRow {
+  campaign_id: string
+  node_id: string
+  x: number
+  y: number
+  updated_at: string
+}
+
 interface CampaignAssetRow {
   id: string
   campaign_id: string
@@ -98,6 +108,13 @@ interface CampaignAssetRow {
   file_name: string
   mime_type: string
   relative_path: string
+  created_at: string
+}
+
+interface CampaignNodeArtworkRow {
+  node_id: string
+  asset_id: string
+  sort_order: number
   created_at: string
 }
 
@@ -121,6 +138,17 @@ export interface UpdateCampaignTableInput {
   cells: CampaignTableCells
   columnSizes: CampaignTableSizes
   rowSizes: CampaignTableSizes
+}
+
+export interface MoveCampaignNodeInput {
+  parentId: string | null
+}
+
+export interface UpsertCampaignGraphPositionInput {
+  campaignId: string
+  nodeId: string
+  x: number
+  y: number
 }
 
 export interface ReplaceCampaignLinkInput {
@@ -161,7 +189,11 @@ const LINK_COLUMNS = `
 
 const PIN_COLUMNS = 'campaign_id, node_id, sort_order, created_at'
 
+const GRAPH_POSITION_COLUMNS = 'campaign_id, node_id, x, y, updated_at'
+
 const ASSET_COLUMNS = 'id, campaign_id, kind, file_name, mime_type, relative_path, created_at'
+
+const NODE_ARTWORK_COLUMNS = 'node_id, asset_id, sort_order, created_at'
 
 let campaignWriteQueue: Promise<void> = Promise.resolve()
 
@@ -283,6 +315,16 @@ function mapPin(row: CampaignPinRow): CampaignPin {
   }
 }
 
+function mapGraphPosition(row: CampaignGraphPositionRow): CampaignGraphPosition {
+  return {
+    campaignId: row.campaign_id,
+    nodeId: row.node_id,
+    x: row.x,
+    y: row.y,
+    updatedAt: row.updated_at,
+  }
+}
+
 function mapAsset(row: CampaignAssetRow): CampaignAsset {
   return {
     id: row.id,
@@ -291,6 +333,15 @@ function mapAsset(row: CampaignAssetRow): CampaignAsset {
     fileName: row.file_name,
     mimeType: row.mime_type,
     relativePath: row.relative_path,
+    createdAt: row.created_at,
+  }
+}
+
+function mapNodeArtwork(row: CampaignNodeArtworkRow): CampaignNodeArtwork {
+  return {
+    nodeId: row.node_id,
+    assetId: row.asset_id,
+    sortOrder: row.sort_order,
     createdAt: row.created_at,
   }
 }
@@ -585,6 +636,84 @@ export async function updateCampaignNodeTitle(nodeId: string, title: string): Pr
   )
 }
 
+export async function moveCampaignNode(nodeId: string, input: MoveCampaignNodeInput): Promise<void> {
+  const db = await getDb()
+
+  await runCampaignWrite(async () => {
+    const nodeRows = await db.select<CampaignNodeRow[]>(
+      `SELECT ${NODE_COLUMNS} FROM campaign_nodes WHERE id = ?`,
+      [nodeId],
+    )
+    const node = nodeRows[0]
+    if (!node) throw new Error(`Campaign node not found: ${nodeId}`)
+    if (node.is_system === 1) return
+
+    const parentRows = input.parentId
+      ? await db.select<CampaignNodeRow[]>(
+          `SELECT ${NODE_COLUMNS} FROM campaign_nodes WHERE campaign_id = ? AND id = ?`,
+          [node.campaign_id, input.parentId],
+        )
+      : []
+    const parent = parentRows[0]
+    if (input.parentId && !parent) {
+      throw new Error(`Campaign parent node not found: ${input.parentId}`)
+    }
+    if (parent && parent.kind !== 'bucket' && parent.kind !== 'folder') {
+      throw new Error(`Campaign parent node cannot contain children: ${input.parentId}`)
+    }
+
+    const descendantRows = await db.select<Array<{ id: string }>>(
+      `WITH RECURSIVE descendants(id) AS (
+         SELECT id FROM campaign_nodes WHERE id = ?
+         UNION ALL
+         SELECT child.id
+         FROM campaign_nodes child
+         INNER JOIN descendants parent ON child.parent_id = parent.id
+         WHERE child.campaign_id = ?
+       )
+       SELECT id FROM descendants`,
+      [nodeId, node.campaign_id],
+    )
+    if (input.parentId && descendantRows.some((row) => row.id === input.parentId)) {
+      throw new Error('Campaign node cannot be moved into itself')
+    }
+
+    const sortRows = await db.select<Array<{ next_sort_order: number | null }>>(
+      `SELECT COALESCE(MAX(sort_order) + 1, 0) AS next_sort_order
+       FROM campaign_nodes
+       WHERE campaign_id = ? AND parent_id IS ?`,
+      [node.campaign_id, input.parentId],
+    )
+    const nextBucket =
+      node.kind === 'folder' || node.kind === 'note'
+        ? (parent?.bucket ?? node.bucket)
+        : node.bucket
+    const now = nowISO()
+
+    await db.execute(
+      `UPDATE campaign_nodes
+       SET parent_id = ?, bucket = ?, sort_order = ?, updated_at = ?
+       WHERE id = ? AND is_system = 0`,
+      [input.parentId, nextBucket, sortRows[0]?.next_sort_order ?? 0, now, nodeId],
+    )
+    await db.execute(
+      `WITH RECURSIVE descendants(id) AS (
+         SELECT id FROM campaign_nodes WHERE id = ?
+         UNION ALL
+         SELECT child.id
+         FROM campaign_nodes child
+         INNER JOIN descendants parent ON child.parent_id = parent.id
+         WHERE child.campaign_id = ?
+       )
+       UPDATE campaign_nodes
+       SET bucket = ?, updated_at = ?
+       WHERE id IN (SELECT id FROM descendants)
+         AND kind IN ('folder', 'note')`,
+      [nodeId, node.campaign_id, nextBucket, now],
+    )
+  })
+}
+
 export async function deleteCampaignNode(nodeId: string): Promise<void> {
   const db = await getDb()
   await runCampaignWrite(() =>
@@ -801,6 +930,38 @@ export async function setCampaignPins(campaignId: string, nodeIds: string[]): Pr
   })
 }
 
+export async function listCampaignGraphPositions(
+  campaignId: string,
+): Promise<CampaignGraphPosition[]> {
+  const db = await getDb()
+  const rows = await db.select<CampaignGraphPositionRow[]>(
+    `SELECT ${GRAPH_POSITION_COLUMNS}
+     FROM campaign_graph_positions
+     WHERE campaign_id = ?`,
+    [campaignId],
+  )
+  return rows.map(mapGraphPosition)
+}
+
+export async function upsertCampaignGraphPosition(
+  input: UpsertCampaignGraphPositionInput,
+): Promise<void> {
+  const now = nowISO()
+  const db = await getDb()
+
+  await runCampaignWrite(() =>
+    db.execute(
+      `INSERT INTO campaign_graph_positions (${GRAPH_POSITION_COLUMNS})
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(campaign_id, node_id) DO UPDATE SET
+         x = excluded.x,
+         y = excluded.y,
+         updated_at = excluded.updated_at`,
+      [input.campaignId, input.nodeId, input.x, input.y, now],
+    ),
+  )
+}
+
 export async function createCampaignAsset(input: CreateCampaignAssetInput): Promise<string> {
   const id = input.id ?? `campaign-asset-${crypto.randomUUID()}`
   const db = await getDb()
@@ -821,6 +982,18 @@ export async function createCampaignAsset(input: CreateCampaignAssetInput): Prom
   return id
 }
 
+export async function listCampaignAssets(campaignId: string): Promise<CampaignAsset[]> {
+  const db = await getDb()
+  const rows = await db.select<CampaignAssetRow[]>(
+    `SELECT ${ASSET_COLUMNS}
+     FROM campaign_assets
+     WHERE campaign_id = ?
+     ORDER BY created_at ASC`,
+    [campaignId],
+  )
+  return rows.map(mapAsset)
+}
+
 export async function getCampaignAsset(assetId: string): Promise<CampaignAsset | null> {
   const db = await getDb()
   const rows = await db.select<CampaignAssetRow[]>(
@@ -828,4 +1001,53 @@ export async function getCampaignAsset(assetId: string): Promise<CampaignAsset |
     [assetId],
   )
   return rows[0] ? mapAsset(rows[0]) : null
+}
+
+export async function addCampaignNodeArtwork(nodeId: string, assetId: string): Promise<void> {
+  const now = nowISO()
+  const db = await getDb()
+
+  await runCampaignWrite(async () => {
+    const sortRows = await db.select<Array<{ next_sort_order: number | null }>>(
+      `SELECT COALESCE(MAX(sort_order) + 1, 0) AS next_sort_order
+       FROM campaign_node_artworks
+       WHERE node_id = ?`,
+      [nodeId],
+    )
+
+    await db.execute(
+      `INSERT OR IGNORE INTO campaign_node_artworks (${NODE_ARTWORK_COLUMNS})
+       VALUES (?, ?, ?, ?)`,
+      [nodeId, assetId, sortRows[0]?.next_sort_order ?? 0, now],
+    )
+  })
+}
+
+export async function listCampaignNodeArtworks(
+  campaignId: string,
+): Promise<CampaignNodeArtwork[]> {
+  const db = await getDb()
+  const rows = await db.select<CampaignNodeArtworkRow[]>(
+    `SELECT artwork.node_id, artwork.asset_id, artwork.sort_order, artwork.created_at
+     FROM campaign_node_artworks artwork
+     INNER JOIN campaign_nodes node ON node.id = artwork.node_id
+     WHERE node.campaign_id = ?
+     ORDER BY artwork.node_id ASC, artwork.sort_order ASC`,
+    [campaignId],
+  )
+  return rows.map(mapNodeArtwork)
+}
+
+export async function listCampaignNodeArtworkAssets(nodeId: string): Promise<CampaignAsset[]> {
+  const db = await getDb()
+  const rows = await db.select<CampaignAssetRow[]>(
+    `SELECT asset.id, asset.campaign_id, asset.kind, asset.file_name, asset.mime_type,
+            asset.relative_path, asset.created_at
+     FROM campaign_node_artworks artwork
+     INNER JOIN campaign_assets asset ON asset.id = artwork.asset_id
+     WHERE artwork.node_id = ?
+     ORDER BY artwork.sort_order ASC`,
+    [nodeId],
+  )
+  return rows.map(mapAsset)
 }

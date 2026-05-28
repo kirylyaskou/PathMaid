@@ -90,6 +90,14 @@ export interface CampaignPin {
   createdAt: string
 }
 
+export interface CampaignGraphPosition {
+  campaignId: string
+  nodeId: string
+  x: number
+  y: number
+  updatedAt: string
+}
+
 export interface CampaignAsset {
   id: string
   campaignId: string
@@ -97,6 +105,13 @@ export interface CampaignAsset {
   fileName: string
   mimeType: string
   relativePath: string
+  createdAt: string
+}
+
+export interface CampaignNodeArtwork {
+  nodeId: string
+  assetId: string
+  sortOrder: number
   createdAt: string
 }
 

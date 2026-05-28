@@ -1,19 +1,28 @@
 import { Plus } from 'lucide-react'
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
+  bucketForLinkedKind,
+  campaignLinkGuesses,
   findNodeById,
+  formatCampaignWikiLink,
+  linkTitleFromSelection,
   nodesByTitle,
   parseCampaignWikiLinks,
+  topLevelBucketNode,
   type CampaignNode,
   type CampaignTable,
   type CampaignTableColumn,
   type CampaignTableRow,
+  type LinkableCampaignNodeKind,
 } from '@/entities/campaign'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { useCampaignManagerStore } from '../model/store'
+import { SelectionActionMenu } from './SelectionActionMenu'
+import { WikiLinkFormulaEditor } from './WikiLinkFormulaEditor'
 
 const DEFAULT_COLUMN_WIDTH = 160
 const DEFAULT_ROW_HEIGHT = 36
@@ -42,11 +51,12 @@ interface TableBodyRowProps {
   titleMap: ReadonlyMap<string, CampaignNode>
   editingCellId: string | null
   onCellChange: (rowId: string, columnId: string, value: string) => void
+  onCellSelect: (rowId: string, columnId: string, input: HTMLInputElement) => void
   onRowTitleChange: (rowId: string, title: string) => void
   onRowResizeStart: (rowId: string, clientY: number) => void
   onStartCellEdit: (cellId: string) => void
   onStopCellEdit: () => void
-  onOpenNode: (nodeId: string) => void
+  onEditLink: (rowId: string, columnId: string, part: TableCellLinkPart) => void
 }
 
 interface TableBodyCellProps {
@@ -57,17 +67,48 @@ interface TableBodyCellProps {
   titleMap: ReadonlyMap<string, CampaignNode>
   editingCellId: string | null
   onCellChange: (rowId: string, columnId: string, value: string) => void
+  onCellSelect: (rowId: string, columnId: string, input: HTMLInputElement) => void
   onStartCellEdit: (cellId: string) => void
   onStopCellEdit: () => void
-  onOpenNode: (nodeId: string) => void
+  onEditLink: (rowId: string, columnId: string, part: TableCellLinkPart) => void
 }
 
-interface TableCellPart {
-  kind: 'text' | 'link'
+interface TableCellTextPart {
+  kind: 'text'
   key: string
   text: string
-  raw?: string
+}
+
+interface TableCellLinkPart {
+  kind: 'link'
+  key: string
+  text: string
+  start: number
+  end: number
+  raw: string
   node?: CampaignNode | null
+}
+
+type TableCellPart = TableCellTextPart | TableCellLinkPart
+
+interface ActiveTableLink {
+  rowId: string
+  columnId: string
+  start: number
+  end: number
+  raw: string
+}
+
+interface ActiveTableSelection {
+  rowId: string
+  columnId: string
+  start: number
+  end: number
+  text: string
+}
+
+function emptyTableSelection(): ActiveTableSelection {
+  return { rowId: '', columnId: '', start: 0, end: 0, text: '' }
 }
 
 function columnsAreEqual(previous: CampaignTableColumn[], next: CampaignTableColumn[]): boolean {
@@ -128,6 +169,8 @@ function parseTableCellParts(
       kind: 'link',
       key: `link-${start}-${link.targetTitle}`,
       text: link.label,
+      start,
+      end: start + link.raw.length,
       raw: link.raw,
       node: titleMap.get(link.targetTitle.toLocaleLowerCase()) ?? null,
     })
@@ -200,9 +243,10 @@ const TableBodyCell = memo(function TableBodyCell({
   titleMap,
   editingCellId,
   onCellChange,
+  onCellSelect,
   onStartCellEdit,
   onStopCellEdit,
-  onOpenNode,
+  onEditLink,
 }: TableBodyCellProps) {
   const cellId = tableCellId(row.id, column.id)
   const cellParts = parseTableCellParts(value, titleMap)
@@ -215,6 +259,9 @@ const TableBodyCell = memo(function TableBodyCell({
         <Input
           value={value}
           onChange={(event) => onCellChange(row.id, column.id, event.target.value)}
+          onSelect={(event) => onCellSelect(row.id, column.id, event.currentTarget)}
+          onMouseUp={(event) => onCellSelect(row.id, column.id, event.currentTarget)}
+          onKeyUp={(event) => onCellSelect(row.id, column.id, event.currentTarget)}
           onBlur={onStopCellEdit}
           onKeyDown={(event) => {
             if (event.key === 'Escape' || event.key === 'Enter') {
@@ -254,9 +301,19 @@ const TableBodyCell = memo(function TableBodyCell({
                     !part.node && 'cursor-default text-amber-300/60 decoration-amber-400/40',
                   )}
                   onClick={(event) => {
+                    event.preventDefault()
                     event.stopPropagation()
-                    if (part.node) {
-                      onOpenNode(part.node.id)
+                    onEditLink(row.id, column.id, part)
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onEditLink(row.id, column.id, part)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'F2') {
+                      event.preventDefault()
+                      onEditLink(row.id, column.id, part)
                     }
                   }}
                 >
@@ -280,11 +337,12 @@ const TableBodyRow = memo(function TableBodyRow({
   titleMap,
   editingCellId,
   onCellChange,
+  onCellSelect,
   onRowTitleChange,
   onRowResizeStart,
   onStartCellEdit,
   onStopCellEdit,
-  onOpenNode,
+  onEditLink,
 }: TableBodyRowProps) {
   return (
     <tr className="border-b border-border/50" style={{ height: rowHeight }}>
@@ -323,9 +381,10 @@ const TableBodyRow = memo(function TableBodyRow({
             titleMap={titleMap}
             editingCellId={editingCellId}
             onCellChange={onCellChange}
+            onCellSelect={onCellSelect}
             onStartCellEdit={onStartCellEdit}
             onStopCellEdit={onStopCellEdit}
-            onOpenNode={onOpenNode}
+            onEditLink={onEditLink}
           />
         )
       })}
@@ -344,9 +403,10 @@ function areBodyCellPropsEqual(previous: TableBodyCellProps, next: TableBodyCell
     previous.titleMap === next.titleMap &&
     previous.editingCellId === next.editingCellId &&
     previous.onCellChange === next.onCellChange &&
+    previous.onCellSelect === next.onCellSelect &&
     previous.onStartCellEdit === next.onStartCellEdit &&
     previous.onStopCellEdit === next.onStopCellEdit &&
-    previous.onOpenNode === next.onOpenNode
+    previous.onEditLink === next.onEditLink
   )
 }
 
@@ -366,11 +426,12 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
     previous.rowHeight === next.rowHeight &&
     previous.editingCellId === next.editingCellId &&
     previous.onCellChange === next.onCellChange &&
+    previous.onCellSelect === next.onCellSelect &&
     previous.onRowTitleChange === next.onRowTitleChange &&
     previous.onRowResizeStart === next.onRowResizeStart &&
     previous.onStartCellEdit === next.onStartCellEdit &&
     previous.onStopCellEdit === next.onStopCellEdit &&
-    previous.onOpenNode === next.onOpenNode &&
+    previous.onEditLink === next.onEditLink &&
     previous.titleMap === next.titleMap &&
     columnsAreEqual(previous.columns, next.columns) &&
     columnSizesAreEqual(next.columns, previous.columnSizes, next.columnSizes) &&
@@ -380,15 +441,25 @@ function areBodyRowPropsEqual(previous: TableBodyRowProps, next: TableBodyRowPro
 
 export function TableFileEditor({ node, table }: TableFileEditorProps) {
   const latestTableRef = useRef(table)
+  const isCreatePendingRef = useRef(false)
   const [editingCellId, setEditingCellId] = useState<string | null>(null)
-  const { patchTable, nodes, openNode } = useCampaignManagerStore(
+  const [editingLink, setEditingLink] = useState<ActiveTableLink | null>(null)
+  const [selection, setSelection] = useState<ActiveTableSelection>(emptyTableSelection())
+  const [formulaDraft, setFormulaDraft] = useState('')
+  const [isCreatePending, setIsCreatePending] = useState(false)
+  const { patchTable, createNode, nodes, links } = useCampaignManagerStore(
     useShallow((state) => ({
       patchTable: state.patchTable,
+      createNode: state.createNode,
       nodes: state.nodes,
-      openNode: state.openNode,
+      links: state.links,
     })),
   )
   const titleMap = useMemo(() => nodesByTitle(nodes), [nodes])
+  const formulaGuesses = useMemo(
+    () => (editingLink ? campaignLinkGuesses(node, nodes, links, formulaDraft) : []),
+    [editingLink, formulaDraft, links, node, nodes],
+  )
 
   useEffect(() => {
     latestTableRef.current = table
@@ -408,21 +479,13 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
   }, [node.id, patchTable, table])
 
   const handleStartCellEdit = useCallback((cellId: string) => {
+    setEditingLink(null)
     setEditingCellId(cellId)
   }, [])
 
   const handleStopCellEdit = useCallback(() => {
     setEditingCellId(null)
   }, [])
-
-  const handleOpenNode = useCallback(
-    (nodeId: string) => {
-      if (findNodeById(nodes, nodeId)) {
-        void openNode(nodeId)
-      }
-    },
-    [nodes, openNode],
-  )
 
   const addRow = useCallback(() => {
     const id = `row-${crypto.randomUUID()}`
@@ -444,6 +507,7 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
   const setCell = useCallback(
     (rowId: string, columnId: string, value: string) => {
       const latestTable = latestTableRef.current
+      setEditingLink(null)
 
       patchTable(node.id, {
         ...latestTable,
@@ -457,6 +521,177 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
       })
     },
     [node.id, patchTable],
+  )
+
+  const handleCellSelect = useCallback(
+    (rowId: string, columnId: string, input: HTMLInputElement) => {
+      const start = input.selectionStart ?? 0
+      const end = input.selectionEnd ?? 0
+
+      if (start === end) {
+        setSelection(emptyTableSelection())
+        return
+      }
+
+      setSelection({
+        rowId,
+        columnId,
+        start: Math.min(start, end),
+        end: Math.max(start, end),
+        text: input.value.slice(Math.min(start, end), Math.max(start, end)),
+      })
+    },
+    [],
+  )
+
+  const replaceSelectedText = useCallback(
+    (replacement: string, targetSelection = selection) => {
+      if (!targetSelection.rowId || !targetSelection.columnId) {
+        return
+      }
+
+      const latestTable = latestTableRef.current
+      const currentValue = latestTable.cells[targetSelection.rowId]?.[targetSelection.columnId] ?? ''
+      const nextValue =
+        currentValue.slice(0, targetSelection.start) +
+        replacement +
+        currentValue.slice(targetSelection.end)
+
+      patchTable(node.id, {
+        ...latestTable,
+        cells: {
+          ...latestTable.cells,
+          [targetSelection.rowId]: {
+            ...(latestTable.cells[targetSelection.rowId] ?? {}),
+            [targetSelection.columnId]: nextValue,
+          },
+        },
+      })
+      setSelection(emptyTableSelection())
+      setEditingCellId(null)
+    },
+    [node.id, patchTable, selection],
+  )
+
+  const handleLinkSelection = useCallback(() => {
+    const title = linkTitleFromSelection(selection.text)
+    if (title.length > 0) {
+      replaceSelectedText(formatCampaignWikiLink(title))
+    }
+  }, [replaceSelectedText, selection.text])
+
+  const createLinked = useCallback(
+    async (kind: LinkableCampaignNodeKind) => {
+      if (isCreatePendingRef.current) {
+        return
+      }
+
+      const title = linkTitleFromSelection(selection.text)
+      if (title.length === 0) {
+        return
+      }
+
+      const bucket = bucketForLinkedKind(kind, node)
+      const parent = topLevelBucketNode(nodes, node.campaignId, bucket)
+      const fallbackParent = node.parentId ? findNodeById(nodes, node.parentId) : node
+
+      isCreatePendingRef.current = true
+      setIsCreatePending(true)
+
+      try {
+        await createNode({
+          campaignId: node.campaignId,
+          parentId: parent?.id ?? fallbackParent?.id ?? node.id,
+          kind,
+          bucket,
+          title,
+          openAfterCreate: false,
+        })
+        replaceSelectedText(formatCampaignWikiLink(title))
+      } catch {
+        toast.error('Failed to create campaign file')
+      } finally {
+        isCreatePendingRef.current = false
+        setIsCreatePending(false)
+      }
+    },
+    [createNode, node, nodes, replaceSelectedText, selection.text],
+  )
+
+  const handleCreateNote = useCallback(() => {
+    void createLinked('note')
+  }, [createLinked])
+
+  const handleCreateNpc = useCallback(() => {
+    void createLinked('npc')
+  }, [createLinked])
+
+  const handleCreateItem = useCallback(() => {
+    void createLinked('item')
+  }, [createLinked])
+
+  const handleCreateLocation = useCallback(() => {
+    void createLinked('location')
+  }, [createLinked])
+
+  const handleEditLink = useCallback(
+    (rowId: string, columnId: string, part: TableCellLinkPart) => {
+      setEditingCellId(null)
+      setEditingLink({
+        rowId,
+        columnId,
+        start: part.start,
+        end: part.end,
+        raw: part.raw,
+      })
+      setFormulaDraft(part.raw)
+    },
+    [],
+  )
+
+  const replaceEditingLink = useCallback(
+    (replacement: string, targetLink: ActiveTableLink) => {
+      const latestTable = latestTableRef.current
+      const currentValue = latestTable.cells[targetLink.rowId]?.[targetLink.columnId] ?? ''
+      const nextValue =
+        currentValue.slice(0, targetLink.start) +
+        replacement +
+        currentValue.slice(targetLink.end)
+
+      patchTable(node.id, {
+        ...latestTable,
+        cells: {
+          ...latestTable.cells,
+          [targetLink.rowId]: {
+            ...(latestTable.cells[targetLink.rowId] ?? {}),
+            [targetLink.columnId]: nextValue,
+          },
+        },
+      })
+      setEditingLink(null)
+      setFormulaDraft('')
+    },
+    [node.id, patchTable],
+  )
+
+  const handleFormulaCommit = useCallback(() => {
+    if (!editingLink || formulaDraft.trim().length === 0) {
+      return
+    }
+
+    const guessedTitle = formulaGuesses[0]?.title
+    replaceEditingLink(guessedTitle ? formatCampaignWikiLink(guessedTitle) : formulaDraft, editingLink)
+  }, [editingLink, formulaDraft, formulaGuesses, replaceEditingLink])
+
+  const handleFormulaGuessPick = useCallback(
+    (targetNode: CampaignNode) => {
+      if (!editingLink) {
+        return
+      }
+
+      replaceEditingLink(formatCampaignWikiLink(targetNode.title), editingLink)
+    },
+    [editingLink, replaceEditingLink],
   )
 
   const setColumnTitle = useCallback(
@@ -563,6 +798,24 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
           Add column
         </Button>
       </div>
+      <SelectionActionMenu
+        selectedText={selection.text}
+        isPending={isCreatePending}
+        onLink={handleLinkSelection}
+        onCreateNote={handleCreateNote}
+        onCreateNpc={handleCreateNpc}
+        onCreateItem={handleCreateItem}
+        onCreateLocation={handleCreateLocation}
+      />
+      {editingLink ? (
+        <WikiLinkFormulaEditor
+          value={formulaDraft}
+          guesses={formulaGuesses}
+          onChange={setFormulaDraft}
+          onCommit={handleFormulaCommit}
+          onPick={handleFormulaGuessPick}
+        />
+      ) : null}
       <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border/70 bg-background">
         <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
           <thead>
@@ -585,11 +838,12 @@ export function TableFileEditor({ node, table }: TableFileEditorProps) {
                 titleMap={titleMap}
                 editingCellId={editingCellId}
                 onCellChange={setCell}
+                onCellSelect={handleCellSelect}
                 onRowTitleChange={setRowTitle}
                 onRowResizeStart={startRowResize}
                 onStartCellEdit={handleStartCellEdit}
                 onStopCellEdit={handleStopCellEdit}
-                onOpenNode={handleOpenNode}
+                onEditLink={handleEditLink}
               />
             ))}
           </tbody>

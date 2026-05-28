@@ -1,5 +1,5 @@
-import { ArrowLeft, GitGraph, PencilLine } from 'lucide-react'
-import { useCallback, useMemo } from 'react'
+import { ArrowLeft, Download, GitGraph, PencilLine } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -9,6 +9,7 @@ import {
   type CampaignNodeKind,
 } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
+import { exportCampaignToPathmaidFile } from '../model/export-campaign'
 import { useCampaignManagerStore } from '../model/store'
 import { CampaignTree } from './CampaignTree'
 import { CurrentFileCard } from './CurrentFileCard'
@@ -98,10 +99,15 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
     nodes,
     links,
     pins,
+    graphPositions,
     activeNodeId,
     mode,
     openNode,
     createNode,
+    deleteNode,
+    renameNode,
+    moveNode,
+    saveGraphNodePosition,
     togglePin,
     setMode,
   } = useCampaignManagerStore(
@@ -111,10 +117,15 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
       nodes: state.nodes,
       links: state.links,
       pins: state.pins,
+      graphPositions: state.graphPositions,
       activeNodeId: state.activeNodeId,
       mode: state.mode,
       openNode: state.openNode,
       createNode: state.createNode,
+      deleteNode: state.deleteNode,
+      renameNode: state.renameNode,
+      moveNode: state.moveNode,
+      saveGraphNodePosition: state.saveGraphNodePosition,
       togglePin: state.togglePin,
       setMode: state.setMode,
     })),
@@ -125,6 +136,7 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
     [activeCampaignId, campaigns],
   )
   const activeNode = useMemo(() => findNodeById(nodes, activeNodeId), [activeNodeId, nodes])
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleOpen = useCallback(
     (nodeId: string) => {
@@ -148,6 +160,25 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
     setMode('graph')
   }, [setMode])
 
+  const handleExportCampaign = useCallback(() => {
+    if (!activeCampaign || isExporting) {
+      return
+    }
+
+    setIsExporting(true)
+    void exportCampaignToPathmaidFile(activeCampaign)
+      .then(() => {
+        toast('Campaign exported')
+      })
+      .catch((error) => {
+        console.error('Campaign export failed', error)
+        toast.error('Failed to export campaign')
+      })
+      .finally(() => {
+        setIsExporting(false)
+      })
+  }, [activeCampaign, isExporting])
+
   const createInParent = useCallback(
     (parentId: string | null, requestedKind?: CreateCampaignNodeKind) => {
       const parent = findNodeById(nodes, parentId)
@@ -170,6 +201,42 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
     [activeCampaignId, createNode, nodes],
   )
 
+  const handleRenameNode = useCallback(
+    (nodeId: string, title: string) => {
+      void renameNode(nodeId, title).catch(() => {
+        toast.error('Failed to rename campaign file')
+      })
+    },
+    [renameNode],
+  )
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      void deleteNode(nodeId).catch(() => {
+        toast.error('Failed to delete campaign file')
+      })
+    },
+    [deleteNode],
+  )
+
+  const handleMoveNode = useCallback(
+    (nodeId: string, parentId: string | null) => {
+      void moveNode(nodeId, parentId).catch(() => {
+        toast.error('Failed to move campaign file')
+      })
+    },
+    [moveNode],
+  )
+
+  const handleSaveGraphNodePosition = useCallback(
+    (nodeId: string, position: { x: number; y: number }) => {
+      void saveGraphNodePosition(nodeId, position).catch(() => {
+        toast.error('Failed to save graph position')
+      })
+    },
+    [saveGraphNodePosition],
+  )
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">
@@ -188,6 +255,16 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!activeCampaign || isExporting}
+            onClick={handleExportCampaign}
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
           <Button
             type="button"
             variant={mode === 'editor' ? 'secondary' : 'outline'}
@@ -212,7 +289,13 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
       <PinnedFileRail nodes={nodes} pins={pins} activeNodeId={activeNodeId} onOpen={handleOpen} />
 
       {mode === 'graph' ? (
-        <GraphMode nodes={nodes} links={links} onOpen={handleOpen} />
+        <GraphMode
+          nodes={nodes}
+          links={links}
+          graphPositions={graphPositions}
+          onOpen={handleOpen}
+          onNodePositionChange={handleSaveGraphNodePosition}
+        />
       ) : (
         <div className="min-h-0 flex-1 overflow-hidden">
           <div className="grid h-full min-h-0 min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
@@ -221,6 +304,9 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
               activeNodeId={activeNodeId}
               onOpen={handleOpen}
               onCreate={createInParent}
+              onRename={handleRenameNode}
+              onDelete={handleDeleteNode}
+              onMove={handleMoveNode}
             />
             <CurrentFileCard
               nodes={nodes}
