@@ -1,3 +1,4 @@
+mod campaign_assets;
 mod ocr;
 mod sync;
 
@@ -20,6 +21,9 @@ pub fn run() {
             sync::sync_foundry_data,
             sync::import_local_packs,
             ocr::ocr_statblock_file_bytes,
+            campaign_assets::save_campaign_asset_bytes,
+            campaign_assets::remove_campaign_asset,
+            campaign_assets::read_campaign_asset_bytes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

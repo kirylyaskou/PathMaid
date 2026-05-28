@@ -18,10 +18,7 @@ function buildEncounterSavePayload() {
   const combatants = useCombatantStore.getState().combatants
   const conditions = useConditionStore.getState().activeConditions
 
-  // PC combatants are session-only and have no rows in encounter_combatants.
-  // Including them in the UPDATE list is harmless (0 rows updated), but their
-  // condition combatant_id values would violate the FK constraint on INSERT.
-  const dbCombatants = combatants.filter((c) => c.kind !== 'pc')
+  const dbCombatants = combatants.filter((c) => c.kind !== 'pc' || c.creatureRef)
   const dbCombatantIds = new Set(dbCombatants.map((c) => c.id))
 
   return {
@@ -147,8 +144,9 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
       const weaknesses = stat?.weaknesses ?? []
       const resistances = stat?.resistances ?? []
 
+      const kind = kindFromLegacy(c.isNPC, c.isHazard ?? false)
       return {
-        kind: kindFromLegacy(c.isNPC, c.isHazard ?? false),
+        kind,
         id: c.id,
         creatureRef: c.creatureRef,
         displayName: c.displayName,
@@ -156,6 +154,7 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
         hp: c.hp,
         maxHp: c.maxHp,
         tempHp: c.tempHp,
+        ...(kind === 'npc' ? { mortal: true } : {}),
         ...(stat?.level != null ? { level: stat.level } : {}),
         ...(stat?.fort != null ? { fort: stat.fort } : {}),
         ...(c.weakEliteTier && c.weakEliteTier !== 'normal' ? { weakEliteTier: c.weakEliteTier } : {}),
@@ -180,6 +179,7 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
           hp: row.hp,
           maxHp: row.maxHp,
           tempHp: row.tempHp,
+          ...(row.kind === 'npc' ? { mortal: true } : {}),
           ...(row.creatureLevel ? { level: row.creatureLevel } : {}),
           ...(cr?.fort != null ? { fort: cr.fort } : {}),
           ...(cr?.immunities && cr.immunities.length > 0 ? { iwrImmunities: cr.immunities.map((i) => (typeof i === 'string' ? i : i.type)) } : {}),

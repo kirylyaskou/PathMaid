@@ -1,6 +1,7 @@
 import type { AppliedRoleValues } from '@engine'
 import { getBenchmark, classifyStat } from '@engine'
 import { applyAbilityModDelta, buildEquipmentStrikes, type CreatureStatBlockData } from '@/entities/creature'
+import { normalizeTraitList } from '@/shared/lib/trait-normalize'
 
 export interface BuilderState {
   form: CreatureStatBlockData
@@ -74,20 +75,33 @@ function appendEquipmentStrike(
   form: CreatureStatBlockData,
   item: EquipmentItem,
 ): CreatureStatBlockData['strikes'] {
+  const equipmentStrikes = buildEquipmentStrikes(
+    [equipmentItemToStrikeInput(item)],
+    form.strikes,
+    fallbackStrikeModifier(form),
+  ).map(normalizeStrike)
   return [
     ...form.strikes,
-    ...buildEquipmentStrikes(
-      [equipmentItemToStrikeInput(item)],
-      form.strikes,
-      fallbackStrikeModifier(form),
-    ),
+    ...equipmentStrikes,
   ]
+}
+
+function normalizeStrike(strike: CreatureStatBlockData['strikes'][number]): CreatureStatBlockData['strikes'][number] {
+  return { ...strike, traits: normalizeTraitList(strike.traits) }
+}
+
+function normalizeFormTraits(form: CreatureStatBlockData): CreatureStatBlockData {
+  return {
+    ...form,
+    traits: normalizeTraitList(form.traits),
+    strikes: form.strikes.map(normalizeStrike),
+  }
 }
 
 export function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
   switch (action.type) {
     case 'REPLACE_ALL':
-      return { form: action.form }
+      return { form: normalizeFormTraits(action.form) }
     case 'SET_FIELD':
       return { form: { ...state.form, [action.path]: action.value } as CreatureStatBlockData }
     case 'SET_BUILDER_MODE':
@@ -115,12 +129,12 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
       return { form: { ...state.form, speeds: next } }
     }
     case 'ADD_STRIKE':
-      return { form: { ...state.form, strikes: [...state.form.strikes, action.strike] } }
+      return { form: { ...state.form, strikes: [...state.form.strikes, normalizeStrike(action.strike)] } }
     case 'UPDATE_STRIKE':
       return {
         form: {
           ...state.form,
-          strikes: state.form.strikes.map((s, i) => (i === action.index ? action.strike : s)),
+          strikes: state.form.strikes.map((s, i) => (i === action.index ? normalizeStrike(action.strike) : s)),
         },
       }
     case 'REMOVE_STRIKE':
@@ -462,5 +476,5 @@ export function builderReducer(state: BuilderState, action: BuilderAction): Buil
 }
 
 export function makeInitialState(form: CreatureStatBlockData): BuilderState {
-  return { form }
+  return { form: normalizeFormTraits(form) }
 }

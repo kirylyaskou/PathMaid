@@ -73,11 +73,15 @@ export async function loadActiveCombat(): Promise<boolean> {
     if (!snapshot) return false
 
     useCombatantStore.getState().setCombatants(
-      snapshot.combatants.map((c) => ({
-        ...c,
-        level: c.level ?? undefined,
-        kind: kindFromLegacy(c.isNPC, false),
-      }))
+      snapshot.combatants.map((c) => {
+        const kind = kindFromLegacy(c.isNPC, false)
+        return {
+          ...c,
+          level: c.level ?? undefined,
+          kind,
+          ...(kind === 'npc' ? { mortal: true } : {}),
+        }
+      })
     )
     useCombatTrackerStore.getState().setCombatId(snapshot.id)
     useCombatTrackerStore.getState().setRound(snapshot.round)

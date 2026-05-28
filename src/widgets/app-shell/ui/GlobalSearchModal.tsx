@@ -10,7 +10,8 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/ui/command'
-import { NAV_ITEMS } from '@/shared/config'
+import { getVisibleNavItems } from '@/shared/config'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import type { GlobalSearchResult, EntityKind } from '@/shared/api'
 import { useGlobalSearch } from '../model/use-global-search'
 
@@ -26,8 +27,13 @@ export function GlobalSearchModal({ open, onOpenChange, onSelect }: GlobalSearch
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const customContentEnabled = useAdvancedSettingsStore((s) => s.customContent)
 
   const { results } = useGlobalSearch(query)
+  const navItems = useMemo(
+    () => getVisibleNavItems(customContentEnabled),
+    [customContentEnabled],
+  )
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -88,7 +94,7 @@ export function GlobalSearchModal({ open, onOpenChange, onSelect }: GlobalSearch
 
           {query.trim() === '' && (
             <CommandGroup heading={t('commandPalette.pagesGroup')}>
-              {NAV_ITEMS.map((page) => (
+              {navItems.map((page) => (
                 <CommandItem
                   key={page.href}
                   onSelect={() => runCommand(() => navigate(page.href))}

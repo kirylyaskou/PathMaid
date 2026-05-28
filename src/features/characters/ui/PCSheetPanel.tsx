@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next'
 function CoreSkillsContent({ build }: { build: PathbuilderBuild }) {
   const { t } = useTranslation('common')
   const maxHp = calculatePCMaxHP(build)
-  const ac = build.acTotal.acProfBonus + build.acTotal.acAbilityBonus + build.acTotal.acItemBonus
+  const ac = 10 + build.acTotal.acProfBonus + build.acTotal.acAbilityBonus + build.acTotal.acItemBonus
   const speed = build.attributes.speed + build.attributes.speedBonus
 
   const { abilities } = build

@@ -31,6 +31,7 @@ import { getHpAdjustment, applyTierToStatBlock } from '@engine'
 import { PCCombatCard } from '@/features/characters'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import { saveEncounterStagingCombatants, insertEncounterCombatant } from '@/shared/api'
 import type { EncounterStagingRow, EncounterCombatantRow } from '@/shared/api'
 import { StagingDeployDialog, StagingTable } from '@/features/encounter-builder'
@@ -267,6 +268,7 @@ export function CombatPage() {
   const { combatId, isEncounterBacked, currentRound } = useCombatTrackerStore(
     useShallow((s) => ({ combatId: s.combatId, isEncounterBacked: s.isEncounterBacked, currentRound: s.round }))
   )
+  const stagingPoolEnabled = useAdvancedSettingsStore((s) => s.stagingPool)
 
   // Auto-deploy state for staging creatures scheduled by round
   const [autoDeployTarget, setAutoDeployTarget] = useState<{
@@ -329,11 +331,11 @@ export function CombatPage() {
     }
     if (currentRound !== prevRoundRef.current) {
       prevRoundRef.current = currentRound
-      if (combatId) {
+      if (stagingPoolEnabled && combatId) {
         deployDueStagingCombatant(combatId, currentRound)
       }
     }
-  }, [currentRound, combatId, deployDueStagingCombatant])
+  }, [currentRound, combatId, deployDueStagingCombatant, stagingPoolEnabled])
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const { reorderInitiative } = useCombatantStore()
@@ -556,7 +558,7 @@ export function CombatPage() {
         combatantId={pendingRecoveryCheck?.combatantId ?? ''}
         combatantName={pendingRecoveryCheck?.combatantName ?? ''}
       />
-      {autoDeployTarget && (
+      {stagingPoolEnabled && autoDeployTarget && (
         <StagingDeployDialog
           open={autoDialogOpen}
           onOpenChange={setAutoDialogOpen}
@@ -656,7 +658,7 @@ export function CombatPage() {
                     <ResizablePanel defaultSize={35} minSize={20}>
                       <div className="flex flex-col h-full overflow-y-auto">
                         <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
-                        {isEncounterBacked && combatId && (
+                        {stagingPoolEnabled && isEncounterBacked && combatId && (
                           <div className="px-2 py-2 shrink-0">
                             <StagingTable encounterId={combatId} combatMode={true} />
                           </div>

@@ -228,16 +228,20 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
         try {
           const { loadEncounterCombatants } = await import('@/shared/api')
           const encounterCombatants = await loadEncounterCombatants(tab.encounterId)
-          const combatants: Combatant[] = encounterCombatants.map((ec) => ({
-            id: crypto.randomUUID(),
-            creatureRef: ec.creatureRef,
-            displayName: ec.displayName,
-            initiative: ec.initiative,
-            hp: ec.maxHp,
-            maxHp: ec.maxHp,
-            tempHp: 0,
-            kind: kindFromLegacy(ec.isNPC, ec.isHazard ?? false),
-          }))
+          const combatants: Combatant[] = encounterCombatants.map((ec) => {
+            const kind = kindFromLegacy(ec.isNPC, ec.isHazard ?? false)
+            return {
+              id: crypto.randomUUID(),
+              creatureRef: ec.creatureRef,
+              displayName: ec.displayName,
+              initiative: ec.initiative,
+              hp: ec.maxHp,
+              maxHp: ec.maxHp,
+              tempHp: 0,
+              kind,
+              ...(kind === 'npc' ? { mortal: true } : {}),
+            }
+          })
           freshSnapshot = {
             combatants,
             stagingCombatants: [],

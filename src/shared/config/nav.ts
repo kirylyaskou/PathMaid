@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Zap,
   Map,
+  ScrollText,
   Users,
   Settings,
   Hammer,
@@ -26,6 +27,7 @@ export const NAV_ITEMS = [
   { href: '/combat',           icon: Swords,          label: 'Combat Tracker',   labelKey: 'nav.combatTracker',   section: 'main' },
   { href: '/encounters',       icon: Map,             label: 'Encounters',       labelKey: 'nav.encounters',      section: 'main' },
   { href: '/characters',       icon: Users,           label: 'Characters',       labelKey: 'nav.characters',      section: 'main' },
+  { href: '/campaigns',        icon: ScrollText,      label: 'Campaigns',        labelKey: 'nav.campaigns',       section: 'main' },
   { href: '/bestiary',         icon: BookOpen,        label: 'Bestiary',         labelKey: 'nav.bestiary',        section: 'reference' },
   { href: '/actions',          icon: Zap,             label: 'Actions',          labelKey: 'nav.actions',         section: 'reference' },
   { href: '/spells',           icon: Sparkles,        label: 'Spells',           labelKey: 'nav.spells',          section: 'reference' },
@@ -36,3 +38,9 @@ export const NAV_ITEMS = [
   { href: '/custom-creatures', icon: Hammer,          label: 'Custom Creatures', labelKey: 'nav.customCreatures', section: 'reference' },
   { href: '/settings',         icon: Settings,        label: 'Settings',         labelKey: 'nav.settings',        section: 'settings' },
 ] as const
+
+const CUSTOM_CONTENT_HREFS = new Set<string>(['/custom-items', '/custom-creatures'])
+
+export function getVisibleNavItems(customContentEnabled: boolean) {
+  return NAV_ITEMS.filter((item) => customContentEnabled || !CUSTOM_CONTENT_HREFS.has(item.href))
+}

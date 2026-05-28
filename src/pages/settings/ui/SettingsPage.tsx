@@ -8,14 +8,17 @@ import {
   isDarwin,
   openReleasesPage,
 } from '@/shared/api'
-import { useUpdaterStore } from '@/shared/model'
+import { useAdvancedSettingsStore, useUpdaterStore } from '@/shared/model'
 import { useCombatTrackerStore } from '@/features/combat-tracker'
+import { seedSampleCampaign } from '@/features/campaign-manager'
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Separator } from '@/shared/ui/separator'
+import { Switch } from '@/shared/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { MascotHex } from '@/shared/ui/mascot-hex'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/shared/ui/collapsible'
-import { Download, RefreshCw, Loader2, ChevronDown } from 'lucide-react'
+import { Download, RefreshCw, Loader2, ChevronDown, ScrollText } from 'lucide-react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { getVersion } from '@tauri-apps/api/app'
@@ -29,6 +32,7 @@ export function SettingsPage() {
   const { t } = useTranslation('common')
   const [syncing, setSyncing] = useState(false)
   const [stage, setStage] = useState('')
+  const [seedingCampaign, setSeedingCampaign] = useState(false)
   const [progress, setProgress] = useState<{
     current: number
     total: number
@@ -157,6 +161,19 @@ export function SettingsPage() {
     }
   }
 
+  const handleSeedSampleCampaign = async () => {
+    setSeedingCampaign(true)
+    try {
+      await seedSampleCampaign()
+      toast.success('Sample campaign loaded.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
+      toast.error(`Sample campaign failed: ${msg}`)
+    } finally {
+      setSeedingCampaign(false)
+    }
+  }
+
   const progressPercent =
     progress && progress.total > 0
       ? Math.round((progress.current / progress.total) * 100)
@@ -200,90 +217,187 @@ export function SettingsPage() {
       <h1 className="text-xl font-semibold text-foreground">{t('settings.title')}</h1>
       <Separator className="my-6" />
 
-      <section>
-        <h2 className="text-xl font-semibold text-foreground">{t('settings.dataSource.title')}</h2>
-        <p className="mt-2 text-base text-muted-foreground">
-          {t('settings.dataSource.description')}
-        </p>
+      <Tabs defaultValue="general">
+        <TabsList>
+          <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+          <TabsTrigger value="advanced">{t('settings.tabs.advanced')}</TabsTrigger>
+        </TabsList>
 
-        <div className="mt-4 flex gap-3">
-          <Button onClick={handleSync} disabled={syncing}>
-            {syncing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {syncing ? t('settings.dataSource.syncing') : t('settings.dataSource.syncButton')}
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={handleLocalImport}
-            disabled={syncing}
-          >
-            {t('settings.dataSource.importLocalButton')}
-          </Button>
-        </div>
-
-        <p className="mt-4 text-sm text-muted-foreground">
-          {lastSync && entityCount
-            ? t('settings.dataSource.lastSynced', {
-                date: formatDate(lastSync),
-                count: Number(entityCount).toLocaleString(),
-              })
-            : t('settings.dataSource.noData')}
-        </p>
-      </section>
-
-      <Separator className="my-6" />
-
-      <section>
-        <h2 className="text-xl font-semibold text-foreground">{t('settings.updates.title')}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t('settings.updates.currentVersion', { version: currentVersion })}
-        </p>
-        <div className="mt-4">
-          {darwin ? (
-            <Button variant="outline" onClick={openReleasesPage}>
-              <Download className="mr-2 h-4 w-4" />
-              {t('settings.updates.openReleasePage')}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleCheckForUpdate}
-              disabled={updaterStatus === 'checking'}
-            >
-              {updaterStatus === 'checking' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              {t('settings.updates.check')}
-            </Button>
-          )}
-        </div>
-        {darwin ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            {t('settings.updates.darwinUnavailable')}
-          </p>
-        ) : (
-          updaterStatus !== 'idle' && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {statusLine(updaterStatus, updaterError)}
+        <TabsContent value="general" className="mt-6">
+          <section>
+            <h2 className="text-xl font-semibold text-foreground">{t('settings.dataSource.title')}</h2>
+            <p className="mt-2 text-base text-muted-foreground">
+              {t('settings.dataSource.description')}
             </p>
-          )
-        )}
-      </section>
 
-      <Separator className="my-6" />
+            <div className="mt-4 flex gap-3">
+              <Button onClick={handleSync} disabled={syncing}>
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {syncing ? t('settings.dataSource.syncing') : t('settings.dataSource.syncButton')}
+              </Button>
 
-      <HotkeysSection />
+              <Button
+                variant="outline"
+                onClick={handleLocalImport}
+                disabled={syncing}
+              >
+                {t('settings.dataSource.importLocalButton')}
+              </Button>
+            </div>
 
-      <Separator className="my-6" />
+            <p className="mt-4 text-sm text-muted-foreground">
+              {lastSync && entityCount
+                ? t('settings.dataSource.lastSynced', {
+                    date: formatDate(lastSync),
+                    count: Number(entityCount).toLocaleString(),
+                  })
+                : t('settings.dataSource.noData')}
+            </p>
+          </section>
 
-      <AboutSection currentVersion={currentVersion} />
+          <Separator className="my-6" />
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground">Sample campaign</h2>
+            <p className="mt-2 text-base text-muted-foreground">
+              Load a small campaign workspace with notes, tables, refs, and a readable graph.
+            </p>
+
+            <div className="mt-4">
+              <Button onClick={handleSeedSampleCampaign} disabled={syncing || seedingCampaign}>
+                {seedingCampaign ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ScrollText className="mr-2 h-4 w-4" />
+                )}
+                Load sample campaign
+              </Button>
+            </div>
+          </section>
+
+          <Separator className="my-6" />
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground">{t('settings.updates.title')}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t('settings.updates.currentVersion', { version: currentVersion })}
+            </p>
+            <div className="mt-4">
+              {darwin ? (
+                <Button variant="outline" onClick={openReleasesPage}>
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('settings.updates.openReleasePage')}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleCheckForUpdate}
+                  disabled={updaterStatus === 'checking'}
+                >
+                  {updaterStatus === 'checking' ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {t('settings.updates.check')}
+                </Button>
+              )}
+            </div>
+            {darwin ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {t('settings.updates.darwinUnavailable')}
+              </p>
+            ) : (
+              updaterStatus !== 'idle' && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {statusLine(updaterStatus, updaterError)}
+                </p>
+              )
+            )}
+          </section>
+
+          <Separator className="my-6" />
+
+          <HotkeysSection />
+
+          <Separator className="my-6" />
+
+          <AboutSection currentVersion={currentVersion} />
+        </TabsContent>
+
+        <TabsContent value="advanced" className="mt-6">
+          <AdvancedSettingsSection />
+        </TabsContent>
+      </Tabs>
     </div>
     </>
+  )
+}
+
+function AdvancedSettingsSection() {
+  const { t } = useTranslation('common')
+  const stagingPool = useAdvancedSettingsStore((s) => s.stagingPool)
+  const customContent = useAdvancedSettingsStore((s) => s.customContent)
+  const nonMortalCreatures = useAdvancedSettingsStore((s) => s.nonMortalCreatures)
+  const setStagingPool = useAdvancedSettingsStore((s) => s.setStagingPool)
+  const setCustomContent = useAdvancedSettingsStore((s) => s.setCustomContent)
+  const setNonMortalCreatures = useAdvancedSettingsStore((s) => s.setNonMortalCreatures)
+
+  return (
+    <section>
+      <h2 className="text-xl font-semibold text-foreground">
+        {t('settings.advanced.title')}
+      </h2>
+      <div className="mt-4 divide-y divide-border rounded-md border border-border">
+        <AdvancedToggle
+          label={t('settings.advanced.stagingPool')}
+          description={t('settings.advanced.stagingPoolDescription')}
+          checked={stagingPool}
+          onCheckedChange={setStagingPool}
+        />
+        <AdvancedToggle
+          label={t('settings.advanced.customContent')}
+          description={t('settings.advanced.customContentDescription')}
+          checked={customContent}
+          onCheckedChange={setCustomContent}
+        />
+        <AdvancedToggle
+          label={t('settings.advanced.nonMortalCreatures')}
+          description={t('settings.advanced.nonMortalCreaturesDescription')}
+          checked={nonMortalCreatures}
+          onCheckedChange={setNonMortalCreatures}
+        />
+      </div>
+    </section>
+  )
+}
+
+function AdvancedToggle({
+  label,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  onCheckedChange: (value: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <span>
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
+      </span>
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        aria-label={label}
+      />
+    </div>
   )
 }
 

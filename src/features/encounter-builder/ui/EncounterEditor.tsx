@@ -6,6 +6,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,11 +55,16 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
   // clicking a creature name opens its stat block.
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
+  const stagingPoolEnabled = useAdvancedSettingsStore((s) => s.stagingPool)
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: 'encounter-drop-zone' })
 
   // Load staging pool from DB when encounter selection changes so StagingTable reflects this encounter's staged creatures.
   useEffect(() => {
+    if (!stagingPoolEnabled) {
+      useCombatantStore.getState().setStagingCombatants([])
+      return
+    }
     let cancelled = false
     loadEncounterStagingCombatants(encounterId)
       .then((rows) => {
@@ -84,7 +90,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     return () => {
       cancelled = true
     }
-  }, [encounterId])
+  }, [encounterId, stagingPoolEnabled])
 
   if (!encounter) return null
 
@@ -313,9 +319,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       </ScrollArea>
 
       {/* Staging pool — creatures queued to enter combat later */}
-      <div className="px-3 pb-3 shrink-0">
-        <StagingTable encounterId={encounterId} combatMode={false} />
-      </div>
+      {stagingPoolEnabled && (
+        <div className="px-3 pb-3 shrink-0">
+          <StagingTable encounterId={encounterId} combatMode={false} />
+        </div>
+      )}
 
       {/* Load into Combat — confirm when combat is active */}
       <AlertDialog open={showLoadConfirm} onOpenChange={setShowLoadConfirm}>

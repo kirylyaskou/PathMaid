@@ -480,4 +480,4 @@ export async function getMonsterTranslation(
 export { getSizeLabel } from './dictionaries/sizes'
 export { getSkillLabel } from './dictionaries/skills'
 export { getLanguageLabel } from './dictionaries/languages'
-export { getTraitLabel, getTraitDescription } from './dictionaries/traits'
+export { getTraitLabel, getTraitDescription, getTraitSlugs } from './dictionaries/traits'

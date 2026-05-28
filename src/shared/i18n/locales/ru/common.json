@@ -7,6 +7,7 @@
     "dashboard": "Главная",
     "combatTracker": "Бой",
     "encounters": "Энкаунтеры",
+    "campaigns": "Кампании",
     "characters": "Персонажи",
     "bestiary": "Бестиарий",
     "actions": "Действия",
@@ -232,6 +233,19 @@
   "settings": {
     "title": "Настройки",
     "preparingMess": "Подготавливаем бардак",
+    "tabs": {
+      "general": "Общие",
+      "advanced": "Advanced"
+    },
+    "advanced": {
+      "title": "Дополнительные настройки",
+      "stagingPool": "Staging pool",
+      "stagingPoolDescription": "Показывать инструменты отложенного вывода существ в энкаунтерах и бою.",
+      "customContent": "Кастомные существа и предметы",
+      "customContentDescription": "Показывать разделы кастомных существ и предметов в навигации и поиске.",
+      "nonMortalCreatures": "Не mortal существа в энкаунтерах",
+      "nonMortalCreaturesDescription": "Разрешить NPC использовать dying, recovery и спасброски от смерти вместо финальной смерти на 0 HP."
+    },
     "dataSource": {
       "title": "Источник данных",
       "description": "Импортировать последние данные Foundry VTT PF2e из GitHub. Заменяет существующие записи.",
@@ -579,10 +593,15 @@
     "tierElite": "Элитный",
     "searchFilters": "Поиск и фильтры",
     "searchBestiaryPlaceholder": "Поиск в бестиарии...",
+    "searchCharactersPlaceholder": "Поиск персонажей...",
     "allTypes": "Все типы",
     "allSources": "Все источники",
     "noCreaturesFoundQuery": "Существа не найдены по запросу «{{query}}»",
     "noCreaturesFound": "Существа не найдены",
+    "noCharactersFoundQuery": "Персонажи не найдены по запросу «{{query}}»",
+    "noCharacters": "Импортированных персонажей пока нет",
+    "characterAdded": "{{name}} добавлен в бой",
+    "characterAddFailed": "Не удалось добавить {{name}} в бой",
     "sourceLibraryFilterAriaLabel": "Фильтр по источнику",
     "charactersNotImplemented": "Вкладка персонажей ещё не реализована.",
     "hazardsNotImplemented": "Поиск опасностей ещё не реализован."
@@ -912,7 +931,22 @@
       "statCreatures": "Существа",
       "statSpells": "Заклинания",
       "statItems": "Предметы",
-      "statHazards": "Угрозы"
+      "statHazards": "Угрозы",
+      "navDescription": {
+        "combat": "Инициатива, HP, эффекты, спасброски и карточки существ.",
+        "encounters": "Сборка энкаунтеров и загрузка их прямо в бой.",
+        "characters": "Импорт и управление персонажами партии.",
+        "campaigns": "Заметки, таблицы, ссылки и граф кампейна.",
+        "bestiary": "Поиск существ PF2e и подробные статблоки.",
+        "actions": "Действия, feats и боевые справочные записи.",
+        "spells": "Заклинания, ранги, трейты и детали сотворения.",
+        "items": "Снаряжение, оружие, броня, расходники и предметы.",
+        "customItems": "Создание и управление домашними предметами.",
+        "conditions": "Правила состояний и быстрые справки.",
+        "hazards": "Простые и комплексные угрозы для энкаунтеров.",
+        "customCreatures": "Создание домашних существ и экспорт.",
+        "settings": "Синхронизация, seeds, хоткеи и advanced tools."
+      }
     },
     "combat": {
       "selectCombatant": "Выберите участника",

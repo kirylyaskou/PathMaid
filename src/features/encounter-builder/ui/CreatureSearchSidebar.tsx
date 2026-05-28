@@ -26,6 +26,7 @@ import type { CreatureRow, HazardRow, EncounterStagingRow, LibrarySourceOption }
 import { useEncounterBuilderStore } from '../model/store'
 import { useCombatantStore } from '@/entities/combatant'
 import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
+import { useAdvancedSettingsStore } from '@/shared/model'
 import { getHpAdjustment } from '@engine'
 import { logErrorWithToast } from '@/shared/lib/error'
 
@@ -146,8 +147,14 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
 
   const addCreatureToDraft = useEncounterBuilderStore((s) => s.addCreatureToDraft)
   const addHazardToDraft = useEncounterBuilderStore((s) => s.addHazardToDraft)
+  const stagingPoolEnabled = useAdvancedSettingsStore((s) => s.stagingPool)
+  const customContentEnabled = useAdvancedSettingsStore((s) => s.customContent)
 
   useEffect(() => {
+    if (!customContentEnabled) {
+      setCustomRows([])
+      return
+    }
     let cancelled = false
     void (async () => {
       try {
@@ -158,7 +165,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [customContentEnabled])
 
   // Creature search
   useEffect(() => {
@@ -249,10 +256,11 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
 
   // Filter custom creatures by name; cap at 20 for row-density parity.
   const customFiltered = useMemo(() => {
+    if (!customContentEnabled) return []
     const q = query.trim().toLowerCase()
     if (!q) return customRows.slice(0, 20)
     return customRows.filter((r) => r.name.toLowerCase().includes(q)).slice(0, 20)
-  }, [customRows, query])
+  }, [customContentEnabled, customRows, query])
 
   const handleAddCreature = useCallback(
     (row: CreatureRow) => {
@@ -274,7 +282,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
 
   const handleAddToStaging = useCallback(
     (row: CreatureRow) => {
-      if (!encounterId) return
+      if (!encounterId || !stagingPoolEnabled) return
       const creature = toCreature(row)
       const adjustedHp = Math.max(1, creature.hp + getHpAdjustment(selectedTier, creature.level))
       const iwr = extractIwr(row)
@@ -287,6 +295,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
         hp: adjustedHp,
         maxHp: adjustedHp,
         tempHp: 0,
+        mortal: true,
         level: creature.level,
         fort: creature.fort,
         ...(iwr.immunities.length > 0 ? { iwrImmunities: iwr.immunities } : {}),
@@ -298,7 +307,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
       saveEncounterStagingCombatants(encounterId, stagingToRows(encounterId, staging))
         .catch(logErrorWithToast('staging-save'))
     },
-    [encounterId, selectedTier]
+    [encounterId, selectedTier, stagingPoolEnabled]
   )
   const handleAddHazard = useCallback(
     (hazard: HazardRow) => {
@@ -419,7 +428,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                     row={row}
                     tier={selectedTier}
                     onAdd={() => handleAddCreature(row)}
-                    onAddToStaging={encounterId ? () => handleAddToStaging(row) : undefined}
+                    onAddToStaging={encounterId && stagingPoolEnabled ? () => handleAddToStaging(row) : undefined}
                     onClick={() => setStatBlockCreatureId(row.id)}
                     isCustom
                   />
@@ -431,7 +440,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
                     row={row}
                     tier={selectedTier}
                     onAdd={() => handleAddCreature(row)}
-                    onAddToStaging={encounterId ? () => handleAddToStaging(row) : undefined}
+                    onAddToStaging={encounterId && stagingPoolEnabled ? () => handleAddToStaging(row) : undefined}
                     onClick={() => setStatBlockCreatureId(row.id)}
                   />
                 </DraggableCreatureRow>
