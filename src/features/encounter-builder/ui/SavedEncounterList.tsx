@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Download, MoreHorizontal, Plus, Trash2, Upload } from 'lucide-react'
+import { recordError } from '@/shared/api'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -73,7 +75,8 @@ export function SavedEncounterList() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error('[export encounter] failed', err)
+      void recordError('encounter.export', 'Failed to export encounter', err)
+      toast.error(t('encounterBuilder.exportFailed'))
     }
   }
 
@@ -99,7 +102,8 @@ export function SavedEncounterList() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (err) {
-      console.error('[export bundle] failed', err)
+      void recordError('encounter.exportBundle', 'Failed to export encounter bundle', err)
+      toast.error(t('encounterBuilder.exportFailed'))
     } finally {
       setExporting(false)
       setExportOpen(false)

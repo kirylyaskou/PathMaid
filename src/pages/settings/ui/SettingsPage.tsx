@@ -7,6 +7,7 @@ import {
   checkForUpdate,
   isDarwin,
   openReleasesPage,
+  recordError,
 } from '@/shared/api'
 import { useAdvancedSettingsStore, useUpdaterStore } from '@/shared/model'
 import { useCombatTrackerStore } from '@/features/combat-tracker'
@@ -125,7 +126,7 @@ export function SettingsPage() {
       useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
-      console.error('[Sync] Failed:', err)
+      void recordError('settings.sync', 'Foundry sync failed', err)
       const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
       toast.error(t('toast.sync.failed', { message: msg }))
     } finally {
@@ -151,7 +152,7 @@ export function SettingsPage() {
       useCombatTrackerStore.getState().bumpEntityDataVersion()
       await loadSyncStatus()
     } catch (err) {
-      console.error('[Import] Failed:', err)
+      void recordError('settings.import', 'Local pack import failed', err)
       const msg = err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err)
       toast.error(t('toast.import.failed', { message: msg }))
     } finally {

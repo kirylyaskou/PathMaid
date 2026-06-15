@@ -1,5 +1,5 @@
 import { ArrowLeft, Download, GitGraph, PencilLine } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import {
@@ -13,7 +13,6 @@ import { exportCampaignToPathmaidFile } from '../model/export-campaign'
 import { useCampaignManagerStore } from '../model/store'
 import { CampaignTree } from './CampaignTree'
 import { CurrentFileCard } from './CurrentFileCard'
-import { GraphMode } from './GraphMode'
 import { PinnedFileRail } from './PinnedFileRail'
 import { RefsRail } from './RefsRail'
 
@@ -31,6 +30,10 @@ const DEFAULT_TITLES: Record<CreateCampaignNodeKind, string> = {
   item: 'New Item',
   location: 'New Location',
 }
+
+const GraphMode = lazy(() =>
+  import('./GraphMode').then((module) => ({ default: module.GraphMode })),
+)
 
 function bucketForKind(kind: CreateCampaignNodeKind, parent: CampaignNode): CampaignBucket {
   if (kind === 'table') {
@@ -289,15 +292,23 @@ export function CampaignWorkspace({ onBack }: CampaignWorkspaceProps) {
       <PinnedFileRail nodes={nodes} pins={pins} activeNodeId={activeNodeId} onOpen={handleOpen} />
 
       {mode === 'graph' ? (
-        <GraphMode
-          nodes={nodes}
-          links={links}
-          graphPositions={graphPositions}
-          onOpen={handleOpen}
-          onNodePositionChange={handleSaveGraphNodePosition}
-        />
+        <Suspense
+          fallback={
+            <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
+              Loading graph...
+            </div>
+          }
+        >
+          <GraphMode
+            nodes={nodes}
+            links={links}
+            graphPositions={graphPositions}
+            onOpen={handleOpen}
+            onNodePositionChange={handleSaveGraphNodePosition}
+          />
+        </Suspense>
       ) : (
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
           <div className="grid h-full min-h-0 min-w-[56rem] grid-cols-[18rem_minmax(21rem,1fr)_17rem]">
             <CampaignTree
               nodes={nodes}

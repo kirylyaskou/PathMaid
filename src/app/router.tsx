@@ -27,6 +27,7 @@ const CustomCreaturesEditPage = lazy(() =>
   import('@/pages/custom-creatures').then(m => ({ default: m.CustomCreaturesEditPage }))
 )
 const SettingsPage   = lazy(() => import('@/pages/settings').then(m => ({ default: m.SettingsPage })))
+const DebugPage      = lazy(() => import('@/features/debug').then(m => ({ default: m.DebugPage })))
 
 function SuspenseOutlet() {
   return (
@@ -60,6 +61,7 @@ const router = createHashRouter([
           { path: 'custom-creatures', element: <CustomCreaturesListPage /> },
           { path: 'custom-creatures/:id/edit', element: <CustomCreaturesEditPage /> },
           { path: 'settings', element: <SettingsPage /> },
+          { path: 'debug', element: <DebugPage /> },
         ],
       },
     ],

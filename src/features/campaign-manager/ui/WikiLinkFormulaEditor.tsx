@@ -33,23 +33,23 @@ export function WikiLinkFormulaEditor({
   }
 
   return (
-    <div className="relative flex shrink-0 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm">
-      <span className="text-xs text-muted-foreground">Formula</span>
+    <div className="relative flex shrink-0 items-center gap-2 rounded-md border border-pf-gold/30 bg-pf-gold/10 px-3 py-2 text-sm shadow-sm">
+      <span className="text-xs font-medium text-pf-gold">Formula</span>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onCommit}
         onKeyDown={handleKeyDown}
-        className="h-7 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-input"
+        className="h-7 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-pf-gold/60"
         aria-label="Edit wiki link formula"
       />
       {guesses.length > 0 ? (
-        <div className="absolute top-full right-3 left-16 z-20 mt-1 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
+        <div className="absolute top-full right-3 left-16 z-20 mt-1 overflow-hidden rounded-md border border-pf-gold/30 bg-popover shadow-lg">
           {guesses.map((guess) => (
             <button
               key={guess.id}
               type="button"
-              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs hover:bg-accent hover:text-accent-foreground"
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
               onMouseDown={(event) => {
                 event.preventDefault()
                 onPick(guess)

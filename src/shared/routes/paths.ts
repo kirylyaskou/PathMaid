@@ -15,4 +15,5 @@ export const PATHS = {
   SETTINGS: '/settings',
   HAZARDS: '/hazards',
   ACTIONS: '/actions',
+  DEBUG: '/debug',
 } as const

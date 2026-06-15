@@ -12,6 +12,7 @@ import {
   Users,
   Settings,
   Hammer,
+  Bug,
 } from 'lucide-react'
 
 /**
@@ -37,6 +38,7 @@ export const NAV_ITEMS = [
   { href: '/hazards',          icon: AlertTriangle,   label: 'Hazards',          labelKey: 'nav.hazards',         section: 'reference' },
   { href: '/custom-creatures', icon: Hammer,          label: 'Custom Creatures', labelKey: 'nav.customCreatures', section: 'reference' },
   { href: '/settings',         icon: Settings,        label: 'Settings',         labelKey: 'nav.settings',        section: 'settings' },
+  { href: '/debug',            icon: Bug,             label: 'Debug',            labelKey: 'nav.debug',           section: 'settings' },
 ] as const
 
 const CUSTOM_CONTENT_HREFS = new Set<string>(['/custom-items', '/custom-creatures'])

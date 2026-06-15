@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useCallback,
   useEffect,
   useRef,
@@ -16,9 +18,11 @@ import { createCampaignAsset, saveCampaignAssetBytes, setCampaignCover } from '@
 import { useCampaignManagerStore } from '../model/store'
 import type { Campaign } from '@/entities/campaign'
 import { CampaignAssetImage } from './CampaignAssetImage'
-import { CampaignWorkspace } from './CampaignWorkspace'
 
 const DESCRIPTION_FALLBACK = 'No description yet.'
+const CampaignWorkspace = lazy(() =>
+  import('./CampaignWorkspace').then((module) => ({ default: module.CampaignWorkspace })),
+)
 
 function extensionFromFileName(fileName: string): string {
   const dotIndex = fileName.lastIndexOf('.')
@@ -233,7 +237,17 @@ export function CampaignLibrary() {
   )
 
   if (activeCampaignId) {
-    return <CampaignWorkspace onBack={closeCampaign} />
+    return (
+      <Suspense
+        fallback={
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Loading workspace...
+          </div>
+        }
+      >
+        <CampaignWorkspace onBack={closeCampaign} />
+      </Suspense>
+    )
   }
 
   return (

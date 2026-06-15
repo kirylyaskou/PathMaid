@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import type { ReactNode, ErrorInfo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { recordError } from '@/shared/api'
 
 interface Props {
   children: ReactNode
@@ -50,7 +51,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary]', error, info.componentStack)
+    // Attach the React component stack so the Debug page shows where in the
+    // tree the throw happened — far more actionable than the error alone.
+    const enriched = new Error(error.message)
+    enriched.stack = error.stack ? `${error.stack}\nComponent stack:${info.componentStack}` : info.componentStack ?? undefined
+    void recordError('ErrorBoundary', 'Uncaught render error', enriched)
   }
 
   render() {

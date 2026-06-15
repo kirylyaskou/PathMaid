@@ -1,4 +1,4 @@
-import { saveCombatState, loadCombatState, listCombats } from '@/shared/api'
+import { saveCombatState, loadCombatState, listCombats, recordError } from '@/shared/api'
 import type { CombatSnapshot } from '@/shared/api'
 import { useCombatantStore, kindFromLegacy } from '@/entities/combatant'
 import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
@@ -121,7 +121,7 @@ export async function loadActiveCombat(): Promise<boolean> {
 
     return true
   } catch (err) {
-    console.error('Failed to load combat:', err)
+    void recordError('combat.load', 'Failed to load combat state', err)
     return false
   }
 }

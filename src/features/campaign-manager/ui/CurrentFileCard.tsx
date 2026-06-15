@@ -1,20 +1,35 @@
 import { Pin, PinOff, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { findNodeById, type CampaignNode } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { useCampaignManagerStore } from '../model/store'
-import { MarkdownFileEditor } from './MarkdownFileEditor'
-import { TableFileEditor } from './TableFileEditor'
-import { TypedProfilePanel } from './TypedProfilePanel'
 
 interface CurrentFileCardProps {
   nodes: CampaignNode[]
   activeNodeId: string | null
   pins: string[]
   onTogglePin: (nodeId: string) => void
+}
+
+const MarkdownFileEditor = lazy(() =>
+  import('./MarkdownFileEditor').then((module) => ({ default: module.MarkdownFileEditor })),
+)
+const TableFileEditor = lazy(() =>
+  import('./TableFileEditor').then((module) => ({ default: module.TableFileEditor })),
+)
+const TypedProfilePanel = lazy(() =>
+  import('./TypedProfilePanel').then((module) => ({ default: module.TypedProfilePanel })),
+)
+
+function EditorLoadingState() {
+  return (
+    <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      Loading file...
+    </div>
+  )
 }
 
 export function CurrentFileCard({
@@ -25,17 +40,16 @@ export function CurrentFileCard({
 }: CurrentFileCardProps) {
   const activeNode = useMemo(() => findNodeById(nodes, activeNodeId), [activeNodeId, nodes])
   const isPinned = activeNode ? pins.includes(activeNode.id) : false
-  const { documents, tables } = useCampaignManagerStore(
+  const { activeDocument, activeTable } = useCampaignManagerStore(
     useShallow((state) => ({
-      documents: state.documents,
-      tables: state.tables,
+      activeDocument:
+        activeNode && activeNode.kind !== 'table' ? (state.documents[activeNode.id] ?? null) : null,
+      activeTable: activeNode?.kind === 'table' ? (state.tables[activeNode.id] ?? null) : null,
     })),
   )
   const renameNode = useCampaignManagerStore((state) => state.renameNode)
   const deleteNode = useCampaignManagerStore((state) => state.deleteNode)
   const [titleDraft, setTitleDraft] = useState(activeNode?.title ?? '')
-  const activeDocument = activeNode && activeNode.kind !== 'table' ? documents[activeNode.id] : null
-  const activeTable = activeNode?.kind === 'table' ? tables[activeNode.id] : null
 
   useEffect(() => {
     setTitleDraft(activeNode?.title ?? '')
@@ -78,8 +92,8 @@ export function CurrentFileCard({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 overflow-hidden p-4">
-      <Card className="h-full min-h-0 w-full min-w-0 gap-0 overflow-hidden rounded-md py-0">
-        <CardHeader className="shrink-0 grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 p-4">
+      <Card className="h-full min-h-0 w-full min-w-0 gap-0 overflow-hidden rounded-md border-border/70 bg-card/95 py-0 shadow-sm">
+        <CardHeader className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 bg-muted/20 p-4">
           <div className="min-w-0">
             <CardTitle>
               <Input
@@ -92,7 +106,9 @@ export function CurrentFileCard({
                 className="h-8 border-transparent px-0 text-base font-semibold shadow-none focus-visible:px-2"
               />
             </CardTitle>
-            <div className="mt-1 text-xs capitalize text-muted-foreground">{activeNode.kind}</div>
+            <div className="mt-1 text-xs font-medium tracking-wide text-pf-gold uppercase">
+              {activeNode.kind}
+            </div>
           </div>
           {!activeNode.isSystem ? (
             <div className="flex items-center gap-1">
@@ -120,25 +136,25 @@ export function CurrentFileCard({
         <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
           {activeNode.kind === 'table' ? (
             activeTable ? (
-              <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden p-4">
-                <TableFileEditor node={activeNode} table={activeTable} />
-              </div>
+              <Suspense fallback={<EditorLoadingState />}>
+                <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden p-4">
+                  <TableFileEditor node={activeNode} table={activeTable} />
+                </div>
+              </Suspense>
             ) : (
-              <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                Loading file...
-              </div>
+              <EditorLoadingState />
             )
           ) : activeDocument ? (
-            <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
-              <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden p-4">
-                <MarkdownFileEditor node={activeNode} document={activeDocument} />
+            <Suspense fallback={<EditorLoadingState />}>
+              <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+                <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden p-4">
+                  <MarkdownFileEditor node={activeNode} document={activeDocument} />
+                </div>
+                <TypedProfilePanel node={activeNode} document={activeDocument} />
               </div>
-              <TypedProfilePanel node={activeNode} document={activeDocument} />
-            </div>
+            </Suspense>
           ) : (
-            <div className="flex h-full w-full items-center justify-center p-6 text-center text-sm text-muted-foreground">
-              Loading file...
-            </div>
+            <EditorLoadingState />
           )}
         </CardContent>
       </Card>

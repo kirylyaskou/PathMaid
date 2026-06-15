@@ -31,6 +31,7 @@ import {
   findNodeById,
   campaignNodeDescendantIds,
   isOpenableCampaignNode,
+  type ExtractedCampaignLink,
   type Campaign,
   type CampaignBucket,
   type CampaignDocument,
@@ -145,6 +146,25 @@ function graphPositionsByNodeId(positions: CampaignGraphPosition[]): CampaignGra
   )
 }
 
+function campaignLinkKey(
+  link: Pick<CampaignLink, 'targetNodeId' | 'sourceKind' | 'label' | 'createdFrom'>,
+): string {
+  return `${link.targetNodeId}\u0000${link.sourceKind}\u0000${link.label}\u0000${link.createdFrom}`
+}
+
+function campaignLinksAreEqual(
+  currentLinks: CampaignLink[],
+  nextLinks: ExtractedCampaignLink[],
+): boolean {
+  if (currentLinks.length !== nextLinks.length) {
+    return false
+  }
+
+  const currentKeys = currentLinks.map(campaignLinkKey).sort()
+  const nextKeys = nextLinks.map(campaignLinkKey).sort()
+  return currentKeys.every((key, index) => key === nextKeys[index])
+}
+
 export const useCampaignManagerStore = create<CampaignManagerState>()(
   immer((set, get) => {
     const refreshLinksNow = async (nodeId: string): Promise<void> => {
@@ -158,6 +178,10 @@ export const useCampaignManagerStore = create<CampaignManagerState>()(
         node.kind === 'table'
           ? extractTableLinks(get().tables[nodeId]?.cells ?? {}, get().nodes)
           : extractMarkdownLinks(get().documents[nodeId]?.markdown ?? '', get().nodes)
+      const currentLinks = get().links.filter((link) => link.sourceNodeId === nodeId)
+      if (campaignLinksAreEqual(currentLinks, extractedLinks)) {
+        return
+      }
 
       await replaceCampaignLinks(campaignId, nodeId, extractedLinks)
       const links = await listCampaignLinks(campaignId)

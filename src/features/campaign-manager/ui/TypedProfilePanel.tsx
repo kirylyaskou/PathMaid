@@ -10,6 +10,7 @@ import {
   readCampaignAssetBytes,
   saveCampaignAssetBytes,
   setCampaignDocumentCover,
+  recordError,
 } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -119,7 +120,7 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       })
       .catch((error) => {
         if (!disposed) {
-          console.error('Campaign artworks failed to load', error)
+          void recordError('campaign.artworkLoad', 'Failed to load campaign artworks', error)
           toast.error('Failed to load artworks')
         }
       })
@@ -150,7 +151,8 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       const nextIndex = (activeArtworkIndex + delta + artworks.length) % artworks.length
       const nextArtwork = artworks[nextIndex]
       if (nextArtwork) {
-        void selectArtwork(nextArtwork.id).catch(() => {
+        void selectArtwork(nextArtwork.id).catch((error: unknown) => {
+          void recordError('campaign.artworkSwitch', 'Failed to switch campaign artwork', error)
           toast.error('Failed to switch artwork')
         })
       }
@@ -200,7 +202,7 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
         await loadArtworks()
         toast(files.length === 1 ? 'Artwork uploaded' : `${files.length} artworks uploaded`)
       } catch (error) {
-        console.error('Campaign cover upload failed', error)
+        void recordError('campaign.coverUpload', 'Failed to upload campaign artwork', error)
         toast.error('Failed to upload artwork')
       } finally {
         setIsUploadingCover(false)
@@ -246,7 +248,7 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
       await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
       toast('Artwork copied')
     } catch (error) {
-      console.error('Campaign artwork copy failed', error)
+      void recordError('campaign.artworkCopy', 'Failed to copy campaign artwork to clipboard', error)
       toast.error('Failed to copy artwork')
     } finally {
       setIsCopyingArtwork(false)
@@ -309,7 +311,8 @@ export function TypedProfilePanel({ node, document }: TypedProfilePanelProps) {
                     activeArtwork?.id === asset.id && 'border-amber-400',
                   )}
                   onClick={() => {
-                    void selectArtwork(asset.id).catch(() => {
+                    void selectArtwork(asset.id).catch((error: unknown) => {
+                      void recordError('campaign.artworkSwitch', 'Failed to switch campaign artwork', error)
                       toast.error('Failed to switch artwork')
                     })
                   }}

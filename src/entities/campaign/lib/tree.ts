@@ -60,6 +60,13 @@ export function findNodeById(
 }
 
 export function campaignNodeDescendantIds(nodes: CampaignNode[], nodeId: string): Set<string> {
+  const childIdsByParent = new Map<string | null, string[]>()
+  for (const node of nodes) {
+    const childIds = childIdsByParent.get(node.parentId) ?? []
+    childIds.push(node.id)
+    childIdsByParent.set(node.parentId, childIds)
+  }
+
   const descendantIds = new Set<string>()
   const pendingIds = [nodeId]
 
@@ -70,10 +77,8 @@ export function campaignNodeDescendantIds(nodes: CampaignNode[], nodeId: string)
     }
 
     descendantIds.add(currentId)
-    for (const node of nodes) {
-      if (node.parentId === currentId) {
-        pendingIds.push(node.id)
-      }
+    for (const childId of childIdsByParent.get(currentId) ?? []) {
+      pendingIds.push(childId)
     }
   }
 

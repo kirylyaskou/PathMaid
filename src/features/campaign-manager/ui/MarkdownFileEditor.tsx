@@ -6,8 +6,8 @@ import {
   campaignLinkGuesses,
   findNodeById,
   formatCampaignWikiLink,
-  isOpenableCampaignNode,
   linkTitleFromSelection,
+  nodesByTitle,
   topLevelBucketNode,
   WIKI_LINK_PATTERN,
   type CampaignDocument,
@@ -74,6 +74,15 @@ interface MarkdownFileEditorProps {
   document: CampaignDocument
 }
 
+interface WikiLinkFormulaSectionProps {
+  node: CampaignNode
+  nodes: CampaignNode[]
+  selectedLink: ActiveWikiLink
+  formulaDraft: string
+  onFormulaDraftChange: (value: string) => void
+  onReplaceSelectedLink: (replacement: string, selection: TextSelection) => void
+}
+
 const MARKDOWN_COMMIT_DELAY_MS = 180
 const HIGHLIGHT_TOKEN_PATTERN = /^==(?:\{(red|green|yellow|blue)\})?([^=\n][^\n]*?)==$/
 const BOLD_TOKEN_PATTERN = /^\*\*((?=\S)[\s\S]*?)\*\*$/
@@ -93,7 +102,10 @@ function emptySelection(): TextSelection {
   return { start: 0, end: 0, text: '' }
 }
 
-function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink | null {
+function parseWikiLink(
+  rawLink: string,
+  titleMap: ReadonlyMap<string, CampaignNode>,
+): ActiveWikiLink | null {
   const match = rawLink.match(/^\[\[([^\]\n]+)\]\](?:\(([^\)\n]+)\))?$/)
   if (!match) {
     return null
@@ -108,12 +120,7 @@ function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink |
   }
 
   const label = (aliasLabel ?? labelRaw ?? targetTitleRaw ?? '').trim()
-  const normalizedTitle = targetTitle.toLowerCase()
-  const targetNode =
-    nodes.find(
-      (candidate) =>
-        isOpenableCampaignNode(candidate) && candidate.title.toLowerCase() === normalizedTitle,
-    ) ?? null
+  const targetNode = titleMap.get(targetTitle.toLowerCase()) ?? null
 
   return {
     start: 0,
@@ -126,25 +133,34 @@ function parseWikiLink(rawLink: string, nodes: CampaignNode[]): ActiveWikiLink |
 }
 
 function wikiTokenSelection(markdown: string, cursor: number): TextSelection | null {
-  const pattern = new RegExp(WIKI_LINK_PATTERN.source, WIKI_LINK_PATTERN.flags)
+  const start = markdown.lastIndexOf('[[', cursor)
+  if (start < 0) {
+    return null
+  }
 
-  for (const match of markdown.matchAll(pattern)) {
-    const start = match.index ?? 0
-    const end = start + match[0].length
-    if (cursor >= start && cursor <= end) {
-      return {
-        start,
-        end,
-        text: match[0],
-      }
+  const linkEnd = markdown.indexOf(']]', start + 2)
+  if (linkEnd < 0) {
+    return null
+  }
+
+  let end = linkEnd + 2
+  if (markdown[end] === '(') {
+    const aliasEnd = markdown.indexOf(')', end + 1)
+    if (aliasEnd > -1) {
+      end = aliasEnd + 1
     }
   }
 
-  return null
+  const text = markdown.slice(start, end)
+  const pattern = new RegExp(`^${WIKI_LINK_PATTERN.source}$`)
+  return cursor <= end && pattern.test(text) ? { start, end, text } : null
 }
 
-function activeWikiLink(selection: TextSelection, nodes: CampaignNode[]): ActiveWikiLink | null {
-  const link = parseWikiLink(selection.text, nodes)
+function activeWikiLink(
+  selection: TextSelection,
+  titleMap: ReadonlyMap<string, CampaignNode>,
+): ActiveWikiLink | null {
+  const link = parseWikiLink(selection.text, titleMap)
   if (!link) {
     return null
   }
@@ -222,6 +238,74 @@ function formatToken(format: TextFormatKind, text: string): string {
   return `~~${text}~~`
 }
 
+function isHighlightColor(value: string | undefined): value is SelectionHighlightColor {
+  return value === 'red' || value === 'green' || value === 'yellow' || value === 'blue'
+}
+
+function isTextFormatKind(value: string | undefined): value is TextFormatKind {
+  return value === 'bold' || value === 'italic' || value === 'strike'
+}
+
+function isBlockElement(node: Node): node is HTMLElement {
+  return node instanceof HTMLElement && (node.tagName === 'DIV' || node.tagName === 'P')
+}
+
+function nodeTextLength(node: Node): number {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent?.length ?? 0
+  }
+
+  if (!(node instanceof HTMLElement)) {
+    return 0
+  }
+
+  if (node.tagName === 'BR') {
+    return 1
+  }
+
+  return Array.from(node.childNodes).reduce((total, child) => total + nodeTextLength(child), 0)
+}
+
+function textOffsetWithin(wrapper: HTMLElement, target: Node, offset: number): number {
+  if (target === wrapper) {
+    return Array.from(wrapper.childNodes)
+      .slice(0, offset)
+      .reduce((total, child) => total + nodeTextLength(child), 0)
+  }
+
+  let textOffset = 0
+  let resolved = false
+
+  const visit = (node: Node): void => {
+    if (resolved) {
+      return
+    }
+
+    if (node === target) {
+      textOffset += node.nodeType === Node.TEXT_NODE ? Math.min(offset, nodeTextLength(node)) : 0
+      resolved = true
+      return
+    }
+
+    if (node.nodeType === Node.TEXT_NODE || node instanceof HTMLElement) {
+      if (node.contains(target)) {
+        for (const child of node.childNodes) {
+          visit(child)
+        }
+        return
+      }
+
+      textOffset += nodeTextLength(node)
+    }
+  }
+
+  for (const child of wrapper.childNodes) {
+    visit(child)
+  }
+
+  return textOffset
+}
+
 function formattedTokenOffset(
   wrapper: HTMLElement,
   target: Node,
@@ -231,25 +315,24 @@ function formattedTokenOffset(
   textEnd: number,
 ): number {
   if (target === wrapper) {
-    if (offset <= 0) {
-      return 0
-    }
-
     if (offset >= wrapper.childNodes.length) {
       return rawToken.length
     }
 
-    return textStart
+    return Math.min(textEnd, textStart + textOffsetWithin(wrapper, target, offset))
   }
 
-  if (target.nodeType === Node.TEXT_NODE) {
-    return Math.min(textEnd, textStart + Math.min(offset, target.textContent?.length ?? 0))
+  if (wrapper.contains(target)) {
+    return Math.min(textEnd, textStart + textOffsetWithin(wrapper, target, offset))
   }
 
-  return offset > 0 ? rawToken.length : 0
+  return offset > 0 ? rawToken.length : textStart
 }
 
-function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownEditorPart[] {
+function markdownEditorParts(
+  markdown: string,
+  titleMap: ReadonlyMap<string, CampaignNode>,
+): MarkdownEditorPart[] {
   const parts: MarkdownEditorPart[] = []
   let cursor = 0
 
@@ -266,7 +349,7 @@ function markdownEditorParts(markdown: string, nodes: CampaignNode[]): MarkdownE
       })
     }
 
-    const link = parseWikiLink(rawToken, nodes)
+    const link = parseWikiLink(rawToken, titleMap)
     if (link) {
       parts.push({
         ...link,
@@ -385,22 +468,22 @@ function markdownFromEditorNode(node: Node): string {
     return rawLink
   }
 
-  const rawHighlight = node.dataset.campaignHighlightRaw
-  if (rawHighlight) {
-    return rawHighlight
-  }
-
-  const rawFormat = node.dataset.campaignFormatRaw
-  if (rawFormat) {
-    return rawFormat
-  }
-
   if (node.tagName === 'BR') {
     return '\n'
   }
 
   const childMarkdown = Array.from(node.childNodes).map(markdownFromEditorNode).join('')
-  if (node.tagName === 'DIV' || node.tagName === 'P') {
+  const highlightColor = node.dataset.campaignHighlightColor
+  if (isHighlightColor(highlightColor)) {
+    return highlightToken(highlightColor, childMarkdown)
+  }
+
+  const formatKind = node.dataset.campaignFormatKind
+  if (isTextFormatKind(formatKind)) {
+    return formatToken(formatKind, childMarkdown)
+  }
+
+  if (isBlockElement(node)) {
     return `${childMarkdown}\n`
   }
 
@@ -408,7 +491,35 @@ function markdownFromEditorNode(node: Node): string {
 }
 
 function markdownFromEditor(root: HTMLElement): string {
-  return Array.from(root.childNodes).map(markdownFromEditorNode).join('').replace(/\n$/, '')
+  let markdown = ''
+
+  for (const child of root.childNodes) {
+    if (isBlockElement(child) && markdown.length > 0 && !markdown.endsWith('\n')) {
+      markdown += '\n'
+    }
+
+    markdown += markdownFromEditorNode(child)
+  }
+
+  return markdown.replace(/\n$/, '')
+}
+
+function nodeMarkdownEndsWithNewline(node: Node): boolean {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent?.endsWith('\n') ?? false
+  }
+
+  if (!(node instanceof HTMLElement)) {
+    return false
+  }
+
+  if (node.tagName === 'BR' || isBlockElement(node)) {
+    return true
+  }
+
+  const element = node as HTMLElement
+  const lastChild = element.childNodes.item(element.childNodes.length - 1)
+  return lastChild ? nodeMarkdownEndsWithNewline(lastChild) : false
 }
 
 function nodeMarkdownLength(node: Node): number {
@@ -425,14 +536,16 @@ function nodeMarkdownLength(node: Node): number {
     return rawLink.length
   }
 
-  const rawHighlight = node.dataset.campaignHighlightRaw
-  if (rawHighlight) {
-    return rawHighlight.length
+  const highlightColor = node.dataset.campaignHighlightColor
+  if (isHighlightColor(highlightColor)) {
+    return highlightToken(highlightColor, Array.from(node.childNodes).map(markdownFromEditorNode).join(''))
+      .length
   }
 
-  const rawFormat = node.dataset.campaignFormatRaw
-  if (rawFormat) {
-    return rawFormat.length
+  const formatKind = node.dataset.campaignFormatKind
+  if (isTextFormatKind(formatKind)) {
+    return formatToken(formatKind, Array.from(node.childNodes).map(markdownFromEditorNode).join(''))
+      .length
   }
 
   if (node.tagName === 'BR') {
@@ -444,7 +557,7 @@ function nodeMarkdownLength(node: Node): number {
     0,
   )
 
-  return node.tagName === 'DIV' || node.tagName === 'P' ? childLength + 1 : childLength
+  return isBlockElement(node) ? childLength + 1 : childLength
 }
 
 function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: number): number {
@@ -460,8 +573,9 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       if (node.nodeType === Node.TEXT_NODE) {
         markdownOffset += Math.min(offset, node.textContent?.length ?? 0)
       } else if (node instanceof HTMLElement) {
-        const rawHighlight = node.dataset.campaignHighlightRaw
-        if (rawHighlight) {
+        const highlightColor = node.dataset.campaignHighlightColor
+        if (isHighlightColor(highlightColor)) {
+          const rawHighlight = highlightToken(highlightColor, node.textContent ?? '')
           markdownOffset += formattedTokenOffset(
             node,
             target,
@@ -474,8 +588,9 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
           return
         }
 
-        const rawFormat = node.dataset.campaignFormatRaw
-        if (rawFormat) {
+        const formatKind = node.dataset.campaignFormatKind
+        if (isTextFormatKind(formatKind)) {
+          const rawFormat = formatToken(formatKind, node.textContent ?? '')
           markdownOffset += formattedTokenOffset(
             node,
             target,
@@ -516,8 +631,9 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       return
     }
 
-    const rawHighlight = node.dataset.campaignHighlightRaw
-    if (rawHighlight) {
+    const highlightColor = node.dataset.campaignHighlightColor
+    if (isHighlightColor(highlightColor)) {
+      const rawHighlight = highlightToken(highlightColor, node.textContent ?? '')
       if (node.contains(target)) {
         markdownOffset += formattedTokenOffset(
           node,
@@ -535,8 +651,9 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       return
     }
 
-    const rawFormat = node.dataset.campaignFormatRaw
-    if (rawFormat) {
+    const formatKind = node.dataset.campaignFormatKind
+    if (isTextFormatKind(formatKind)) {
+      const rawFormat = formatToken(formatKind, node.textContent ?? '')
       if (node.contains(target)) {
         markdownOffset += formattedTokenOffset(
           node,
@@ -563,16 +680,79 @@ function markdownOffsetForDomPosition(root: HTMLElement, target: Node, offset: n
       visit(child)
     }
 
-    if (!resolved && (node.tagName === 'DIV' || node.tagName === 'P')) {
+    if (!resolved && isBlockElement(node)) {
       markdownOffset += 1
     }
   }
 
+  let rootEndsWithNewline = true
   for (const child of root.childNodes) {
+    if (resolved) {
+      break
+    }
+
+    if (isBlockElement(child) && markdownOffset > 0 && !rootEndsWithNewline) {
+      markdownOffset += 1
+    }
+
     visit(child)
+    if (!resolved) {
+      rootEndsWithNewline = nodeMarkdownEndsWithNewline(child)
+    }
   }
 
   return markdownOffset
+}
+
+function WikiLinkFormulaSection({
+  node,
+  nodes,
+  selectedLink,
+  formulaDraft,
+  onFormulaDraftChange,
+  onReplaceSelectedLink,
+}: WikiLinkFormulaSectionProps) {
+  const links = useCampaignManagerStore(useShallow((state) => state.links))
+  const formulaGuesses = useMemo(
+    () => campaignLinkGuesses(node, nodes, links, formulaDraft),
+    [formulaDraft, links, node, nodes],
+  )
+
+  const handleFormulaCommit = useCallback(() => {
+    if (formulaDraft.trim().length === 0) {
+      return
+    }
+
+    const guessedTitle = formulaGuesses[0]?.title
+    const replacement = guessedTitle ? formatCampaignWikiLink(guessedTitle) : formulaDraft
+
+    onReplaceSelectedLink(replacement, {
+      start: selectedLink.start,
+      end: selectedLink.end,
+      text: selectedLink.raw,
+    })
+  }, [formulaDraft, formulaGuesses, onReplaceSelectedLink, selectedLink])
+
+  const handleFormulaGuessPick = useCallback(
+    (targetNode: CampaignNode) => {
+      onReplaceSelectedLink(formatCampaignWikiLink(targetNode.title), {
+        start: selectedLink.start,
+        end: selectedLink.end,
+        text: selectedLink.raw,
+      })
+    },
+    [onReplaceSelectedLink, selectedLink],
+  )
+
+  return (
+    <WikiLinkFormulaEditor
+      value={formulaDraft}
+      guesses={formulaGuesses}
+      onChange={onFormulaDraftChange}
+      onCommit={handleFormulaCommit}
+      onPick={handleFormulaGuessPick}
+    />
+  )
 }
 
 export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) {
@@ -588,7 +768,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
   const [selection, setSelection] = useState<TextSelection>(emptySelection())
   const [formulaDraft, setFormulaDraft] = useState('')
   const [isCreatePending, setIsCreatePending] = useState(false)
-  const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes, links } =
+  const { patchDocumentMarkdown, createNode, openNode, refreshLinksForNode, nodes } =
     useCampaignManagerStore(
       useShallow((state) => ({
         patchDocumentMarkdown: state.patchDocumentMarkdown,
@@ -596,19 +776,21 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         openNode: state.openNode,
         refreshLinksForNode: state.refreshLinksForNode,
         nodes: state.nodes,
-        links: state.links,
       })),
     )
-  const editorParts = useMemo(() => markdownEditorParts(draft, nodes), [draft, nodes])
-  const selectedLink = activeWikiLink(selection, nodes)
-  const formulaGuesses = useMemo(
-    () => (selectedLink ? campaignLinkGuesses(node, nodes, links, formulaDraft) : []),
-    [formulaDraft, links, node, nodes, selectedLink],
-  )
+  const titleMap = useMemo(() => nodesByTitle(nodes), [nodes])
+  const editorParts = useMemo(() => markdownEditorParts(draft, titleMap), [draft, titleMap])
+  const selectedLink = useMemo(() => activeWikiLink(selection, titleMap), [selection, titleMap])
 
   const updateSelection = useCallback((nextSelection: TextSelection) => {
     selectionRef.current = nextSelection
-    setSelection(nextSelection)
+    setSelection((currentSelection) =>
+      currentSelection.start === nextSelection.start &&
+      currentSelection.end === nextSelection.end &&
+      currentSelection.text === nextSelection.text
+        ? currentSelection
+        : nextSelection,
+    )
   }, [])
 
   const rebuildEditorView = useCallback(() => {
@@ -753,36 +935,6 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
     commitMarkdown(nextMarkdown)
     updateSelection(readEditorSelection())
   }, [commitMarkdown, readEditorSelection, updateSelection])
-
-  const handleFormulaCommit = useCallback(() => {
-    if (!selectedLink || formulaDraft.trim().length === 0) {
-      return
-    }
-
-    const guessedTitle = formulaGuesses[0]?.title
-    const replacement = guessedTitle ? formatCampaignWikiLink(guessedTitle) : formulaDraft
-
-    replaceSelectedText(replacement, {
-      start: selectedLink.start,
-      end: selectedLink.end,
-      text: selectedLink.raw,
-    })
-  }, [formulaDraft, formulaGuesses, replaceSelectedText, selectedLink])
-
-  const handleFormulaGuessPick = useCallback(
-    (targetNode: CampaignNode) => {
-      if (!selectedLink) {
-        return
-      }
-
-      replaceSelectedText(formatCampaignWikiLink(targetNode.title), {
-        start: selectedLink.start,
-        end: selectedLink.end,
-        text: selectedLink.raw,
-      })
-    },
-    [replaceSelectedText, selectedLink],
-  )
 
   const handleLink = useCallback(() => {
     if (isCreatePendingRef.current) {
@@ -1003,12 +1155,13 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         onCreateLocation={handleCreateLocation}
       />
       {selectedLink ? (
-        <WikiLinkFormulaEditor
-          value={formulaDraft}
-          guesses={formulaGuesses}
-          onChange={setFormulaDraft}
-          onCommit={handleFormulaCommit}
-          onPick={handleFormulaGuessPick}
+        <WikiLinkFormulaSection
+          node={node}
+          nodes={nodes}
+          selectedLink={selectedLink}
+          formulaDraft={formulaDraft}
+          onFormulaDraftChange={setFormulaDraft}
+          onReplaceSelectedLink={replaceSelectedText}
         />
       ) : null}
       <div
@@ -1021,7 +1174,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
         tabIndex={0}
         data-placeholder="Write markdown here. Select text to add links or create campaign files."
         className={cn(
-          'h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-justify font-mono text-sm leading-6 whitespace-pre-wrap outline-none',
+          'h-full min-h-0 flex-1 overflow-y-auto rounded-md border border-border/70 bg-card/90 px-4 py-3 text-left font-mono text-sm leading-7 whitespace-pre-wrap shadow-inner shadow-black/5 outline-none selection:bg-pf-gold/25 dark:shadow-black/20',
           'empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]',
           'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
           isCreatePending && 'cursor-not-allowed opacity-60',
@@ -1041,9 +1194,9 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
               return (
                 <mark
                   key={part.key}
-                  data-campaign-highlight-raw={part.raw}
+                  data-campaign-highlight-color={part.color}
                   className={cn(
-                    'rounded-sm px-0.5 text-foreground',
+                    'rounded-sm px-1 py-0.5 text-foreground',
                     HIGHLIGHT_CLASS_BY_COLOR[part.color],
                   )}
                 >
@@ -1055,7 +1208,7 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
             if (part.kind === 'format') {
               if (part.format === 'bold') {
                 return (
-                  <strong key={part.key} data-campaign-format-raw={part.raw}>
+                  <strong key={part.key} data-campaign-format-kind={part.format}>
                     {part.text}
                   </strong>
                 )
@@ -1063,14 +1216,14 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
 
               if (part.format === 'italic') {
                 return (
-                  <em key={part.key} data-campaign-format-raw={part.raw}>
+                  <em key={part.key} data-campaign-format-kind={part.format}>
                     {part.text}
                   </em>
                 )
               }
 
               return (
-                <s key={part.key} data-campaign-format-raw={part.raw}>
+                <s key={part.key} data-campaign-format-kind={part.format}>
                   {part.text}
                 </s>
               )
@@ -1085,8 +1238,8 @@ export function MarkdownFileEditor({ node, document }: MarkdownFileEditorProps) 
                 aria-disabled={!part.node}
                 title={part.node ? part.raw : `${part.targetTitle} is not created yet`}
                 className={cn(
-                  'inline rounded-sm px-0.5 font-mono text-amber-300 underline decoration-amber-400 underline-offset-4 hover:bg-amber-400/10',
-                  !part.node && 'cursor-default text-amber-300/60 decoration-amber-400/40',
+                  'inline rounded-sm bg-pf-gold/10 px-1 font-mono font-medium text-pf-gold underline decoration-pf-gold/50 underline-offset-4 transition-colors hover:bg-pf-gold/20',
+                  !part.node && 'cursor-default bg-muted/40 text-muted-foreground decoration-muted-foreground/40',
                 )}
                 onMouseDown={(event) => {
                   event.preventDefault()

@@ -5,7 +5,7 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { useEncounterStore } from '@/entities/encounter'
 import { useEncounterTabsStore, createEmptySnapshot } from '@/features/combat-tracker'
 import type { TabSnapshot } from '@/features/combat-tracker'
-import { loadEncounterCombatants } from '@/shared/api'
+import { loadEncounterCombatants, recordError } from '@/shared/api'
 import type { Combatant } from '@/entities/combatant'
 import { kindFromLegacy } from '@/entities/combatant'
 import { fetchCreatureStatBlockData } from '@/entities/creature'
@@ -70,7 +70,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
       useEncounterTabsStore.getState().openTab({ encounterId, name: encounterName, snapshot })
       onOpenChange(false)
     } catch (err) {
-      console.error('Failed to open encounter blueprint:', err)
+      void recordError('blueprint.open', 'Failed to open encounter blueprint', err)
     }
   }
 

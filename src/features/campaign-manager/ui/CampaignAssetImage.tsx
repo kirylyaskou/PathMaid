@@ -3,6 +3,8 @@ import {
   assetBytesToObjectUrl,
   getCampaignAsset,
   readCampaignAssetBytes,
+  recordWarn,
+  errMessage,
 } from '@/shared/api'
 
 interface CampaignAssetImageProps {
@@ -44,7 +46,11 @@ export function CampaignAssetImage({ assetId, alt, className }: CampaignAssetIma
 
         setImageUrl(objectUrl)
       } catch (error) {
-        console.error('Campaign asset image failed to load', error)
+        // Asset not loadable (missing file, corrupt bytes). Non-fatal — the
+        // component renders an inline "failed" placeholder. Recorded as warn so
+        // it's traceable in the Debug page without spamming error-level alerts
+        // for every broken artwork reference.
+        void recordWarn('campaign-asset.load', `Campaign asset image failed to load: ${errMessage(error)}`)
         setImageUrl(null)
         setFailed(true)
       }

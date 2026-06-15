@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import { recordError } from '@/shared/api'
 import type { Combatant, StagingCombatant } from '@/entities/combatant'
 import { useCombatantStore, kindFromLegacy } from '@/entities/combatant'
 import { useCombatTrackerStore } from './store'
@@ -253,7 +254,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
             isEncounterBacked: true,
           }
         } catch (err) {
-          console.error('Failed to reset tab from blueprint:', err)
+          void recordError('encounter-tab.reset', 'Failed to reset encounter tab from blueprint', err)
           return
         }
       }

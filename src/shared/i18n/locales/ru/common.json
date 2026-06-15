@@ -17,7 +17,8 @@
     "conditions": "Состояния",
     "hazards": "Опасности",
     "customCreatures": "Свои существа",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "debug": "Отладка"
   },
   "navSection": {
     "tools": "Инструменты",
@@ -42,8 +43,39 @@
   "common": {
     "close": "Закрыть",
     "cancel": "Отмена",
+    "confirm": "Подтвердить",
     "save": "Сохранить",
     "loading": "Загрузка…"
+  },
+  "debug": {
+    "title": "Логи отладки",
+    "gateTitle": "Доступ к отладке",
+    "passwordPlaceholder": "Пароль",
+    "wrongPassword": "Неверный пароль",
+    "rowCount": "{{count}} записей · {{error}} ошибок · {{warn}} предупреждений · {{info}} инфо",
+    "refresh": "Обновить",
+    "lock": "Заблокировать",
+    "clear": "Очистить",
+    "clearConfirmTitle": "Очистить все логи?",
+    "clearConfirmDesc": "Это удалит все записи из таблицы логов. Файлы логов на диске сохранятся.",
+    "cleared": "Логи очищены",
+    "clearFailed": "Не удалось очистить логи",
+    "fetchFailed": "Не удалось загрузить логи",
+    "from": "С",
+    "to": "По",
+    "level": "Уровень",
+    "actor": "Источник",
+    "actorPlaceholder": "Фильтр по источнику…",
+    "allLevels": "Все",
+    "error": "Ошибка",
+    "warn": "Предупреждение",
+    "info": "Инфо",
+    "empty": "Нет записей, соответствующих текущим фильтрам.",
+    "colLevel": "Уровень",
+    "colActor": "Источник",
+    "colTime": "Время",
+    "colMessage": "Сообщение",
+    "colError": "Ошибка"
   },
   "about": {
     "title": "О приложении и лицензиях",
@@ -562,6 +594,7 @@
     "partySize": "Размер",
     "encountersHeader": "Энкаунтеры",
     "importBtn": "Импорт",
+    "exportFailed": "Не удалось экспортировать энкаунтер",
     "exportBtn": "Экспорт",
     "newEncounter": "Новый энкаунтер",
     "exportEncountersTitle": "Экспорт энкаунтеров",

@@ -17,7 +17,8 @@
     "conditions": "Conditions",
     "hazards": "Hazards",
     "customCreatures": "Custom Creatures",
-    "settings": "Settings"
+    "settings": "Settings",
+    "debug": "Debug"
   },
   "navSection": {
     "tools": "Tools",
@@ -42,8 +43,39 @@
   "common": {
     "close": "Close",
     "cancel": "Cancel",
+    "confirm": "Confirm",
     "save": "Save",
     "loading": "Loading…"
+  },
+  "debug": {
+    "title": "Debug Logs",
+    "gateTitle": "Debug access",
+    "passwordPlaceholder": "Password",
+    "wrongPassword": "Wrong password",
+    "rowCount": "{{count}} rows · {{error}} errors · {{warn}} warnings · {{info}} info",
+    "refresh": "Refresh",
+    "lock": "Lock",
+    "clear": "Clear",
+    "clearConfirmTitle": "Clear all logs?",
+    "clearConfirmDesc": "This deletes every row from the error log table. The on-disk log files are kept.",
+    "cleared": "Logs cleared",
+    "clearFailed": "Failed to clear logs",
+    "fetchFailed": "Failed to load logs",
+    "from": "From",
+    "to": "To",
+    "level": "Level",
+    "actor": "Actor",
+    "actorPlaceholder": "Filter by actor…",
+    "allLevels": "All",
+    "error": "Error",
+    "warn": "Warning",
+    "info": "Info",
+    "empty": "No log entries match the current filters.",
+    "colLevel": "Level",
+    "colActor": "Actor",
+    "colTime": "Time",
+    "colMessage": "Message",
+    "colError": "Error"
   },
   "about": {
     "title": "About and Licenses",
@@ -553,6 +585,7 @@
     "partySize": "Size",
     "encountersHeader": "Encounters",
     "importBtn": "Import",
+    "exportFailed": "Failed to export encounter",
     "exportBtn": "Export",
     "newEncounter": "New Encounter",
     "exportEncountersTitle": "Export Encounters",

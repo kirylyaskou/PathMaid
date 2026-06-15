@@ -64,7 +64,7 @@ export function SelectionActionMenu({
 
   return (
     <div
-      className="flex shrink-0 flex-wrap items-center gap-2"
+      className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1.5 rounded-md border border-border/60 bg-card/95 px-2 py-2 shadow-sm backdrop-blur"
       onMouseDown={(event) => event.preventDefault()}
     >
       <Button
@@ -75,7 +75,7 @@ export function SelectionActionMenu({
         onMouseDown={handleActionMouseDown(onLink)}
       >
         <Link className="h-4 w-4" />
-        Add link
+        Link
       </Button>
       {onBold ? (
         <Button
@@ -117,7 +117,7 @@ export function SelectionActionMenu({
         </Button>
       ) : null}
       {onHighlight ? (
-        <div className="flex items-center gap-1 rounded-md border border-border px-1 py-0.5">
+        <div className="flex h-8 items-center gap-0.5 rounded-md border border-border/60 bg-muted/40 px-1">
           <Highlighter className="mx-1 h-4 w-4 text-muted-foreground" />
           {HIGHLIGHT_COLORS.map((highlight) => (
             <Button
@@ -130,11 +130,12 @@ export function SelectionActionMenu({
               title={highlight.label}
               onMouseDown={handleActionMouseDown(() => onHighlight(highlight.color))}
             >
-              <span className={`h-4 w-4 rounded-full ${highlight.className}`} />
+              <span className={`h-4 w-4 rounded-full ring-1 ring-black/10 ${highlight.className}`} />
             </Button>
           ))}
         </div>
       ) : null}
+      <span aria-hidden className="mx-1 h-5 w-px bg-border/70" />
       <Button
         type="button"
         variant="outline"

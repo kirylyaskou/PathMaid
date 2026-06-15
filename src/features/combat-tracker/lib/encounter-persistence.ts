@@ -1,4 +1,4 @@
-import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingCombatants } from '@/shared/api'
+import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingCombatants, recordError } from '@/shared/api'
 import type { EncounterConditionRow } from '@/shared/api'
 import { useCombatantStore, kindFromLegacy, type Combatant, type StagingCombatant } from '@/entities/combatant'
 import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
@@ -238,7 +238,7 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
 
     return true
   } catch (err) {
-    console.error('Failed to load encounter into combat:', err)
+    void recordError('encounter.load', 'Failed to load encounter into combat', err)
     return false
   }
 }

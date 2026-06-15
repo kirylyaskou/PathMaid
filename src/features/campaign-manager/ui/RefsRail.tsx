@@ -1,6 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { useMemo } from 'react'
-import { findNodeById, type CampaignLink, type CampaignNode } from '@/entities/campaign'
+import type { CampaignLink, CampaignNode } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 
@@ -15,6 +15,11 @@ interface RefButtonListProps {
   refs: CampaignNode[]
   emptyText: string
   onOpen: (nodeId: string) => void
+}
+
+interface ActiveRefs {
+  outboundRefs: CampaignNode[]
+  inboundRefs: CampaignNode[]
 }
 
 function RefButtonList({ refs, emptyText, onOpen }: RefButtonListProps) {
@@ -41,20 +46,30 @@ function RefButtonList({ refs, emptyText, onOpen }: RefButtonListProps) {
 }
 
 export function RefsRail({ nodes, links, activeNodeId, onOpen }: RefsRailProps) {
-  const outboundRefs = useMemo(
-    () =>
-      links
-        .filter((link) => link.sourceNodeId === activeNodeId)
-        .map((link) => findNodeById(nodes, link.targetNodeId))
-        .filter((node): node is CampaignNode => node !== null),
-    [activeNodeId, links, nodes],
-  )
-  const inboundRefs = useMemo(
-    () =>
-      links
-        .filter((link) => link.targetNodeId === activeNodeId)
-        .map((link) => findNodeById(nodes, link.sourceNodeId))
-        .filter((node): node is CampaignNode => node !== null),
+  const { outboundRefs, inboundRefs } = useMemo<ActiveRefs>(
+    () => {
+      const refs: ActiveRefs = { outboundRefs: [], inboundRefs: [] }
+      if (!activeNodeId) {
+        return refs
+      }
+
+      const nodeById = new Map(nodes.map((node) => [node.id, node]))
+      for (const link of links) {
+        if (link.sourceNodeId === activeNodeId) {
+          const target = nodeById.get(link.targetNodeId)
+          if (target) {
+            refs.outboundRefs.push(target)
+          }
+        } else if (link.targetNodeId === activeNodeId) {
+          const source = nodeById.get(link.sourceNodeId)
+          if (source) {
+            refs.inboundRefs.push(source)
+          }
+        }
+      }
+
+      return refs
+    },
     [activeNodeId, links, nodes],
   )
 

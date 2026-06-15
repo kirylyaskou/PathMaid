@@ -112,6 +112,10 @@ function emptyTableSelection(): ActiveTableSelection {
 }
 
 function columnsAreEqual(previous: CampaignTableColumn[], next: CampaignTableColumn[]): boolean {
+  if (previous === next) {
+    return true
+  }
+
   return (
     previous.length === next.length &&
     previous.every((column, index) => {
@@ -126,6 +130,10 @@ function columnSizesAreEqual(
   previous: Record<string, number>,
   next: Record<string, number>,
 ): boolean {
+  if (previous === next) {
+    return true
+  }
+
   return columns.every(
     (column) =>
       (previous[column.id] ?? DEFAULT_COLUMN_WIDTH) === (next[column.id] ?? DEFAULT_COLUMN_WIDTH),
@@ -137,6 +145,10 @@ function rowCellsAreEqual(
   previous: Record<string, string>,
   next: Record<string, string>,
 ): boolean {
+  if (previous === next) {
+    return true
+  }
+
   return columns.every((column) => (previous[column.id] ?? '') === (next[column.id] ?? ''))
 }
 
@@ -347,7 +359,7 @@ const TableBodyRow = memo(function TableBodyRow({
   return (
     <tr className="border-b border-border/50" style={{ height: rowHeight }}>
       <th
-        className="sticky left-0 z-10 border-r border-border/70 bg-background p-1 text-left align-middle shadow-[1px_0_0_hsl(var(--border))]"
+        className="sticky left-0 z-10 border-r border-border/70 bg-background p-1 text-left align-middle shadow-[1px_0_0_var(--border)]"
         style={{ width: ROW_HEADER_WIDTH, minWidth: ROW_HEADER_WIDTH }}
       >
         <div className="relative">

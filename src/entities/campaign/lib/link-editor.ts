@@ -75,6 +75,26 @@ function graphNeighborIds(nodeId: string, links: CampaignLink[]): Set<string> {
   return neighbors
 }
 
+function compareLinkGuesses(left: LinkGuess, right: LinkGuess): number {
+  return right.score - left.score || left.node.title.localeCompare(right.node.title)
+}
+
+function pushTopLinkGuess(guesses: LinkGuess[], guess: LinkGuess): void {
+  const insertIndex = guesses.findIndex((candidate) => compareLinkGuesses(guess, candidate) < 0)
+
+  if (insertIndex < 0) {
+    if (guesses.length < 6) {
+      guesses.push(guess)
+    }
+    return
+  }
+
+  guesses.splice(insertIndex, 0, guess)
+  if (guesses.length > 6) {
+    guesses.pop()
+  }
+}
+
 export function campaignLinkGuesses(
   sourceNode: CampaignNode,
   nodes: CampaignNode[],
@@ -83,34 +103,37 @@ export function campaignLinkGuesses(
 ): CampaignNode[] {
   const query = normalizeLinkGuessText(draft)
   const neighborIds = graphNeighborIds(sourceNode.id, links)
+  const guesses: LinkGuess[] = []
 
-  return nodes
-    .filter(
-      (candidate) =>
-        candidate.id !== sourceNode.id &&
-        candidate.campaignId === sourceNode.campaignId &&
-        isOpenableCampaignNode(candidate),
-    )
-    .map((candidate): LinkGuess => {
-      const title = candidate.title.toLowerCase()
-      let score = 0
-      let textScore = 0
+  for (const candidate of nodes) {
+    if (
+      candidate.id === sourceNode.id ||
+      candidate.campaignId !== sourceNode.campaignId ||
+      !isOpenableCampaignNode(candidate)
+    ) {
+      continue
+    }
 
-      if (query.length > 0) {
-        if (title === query) textScore = 120
-        else if (title.startsWith(query)) textScore = 90
-        else if (title.includes(query)) textScore = 65
-      }
+    const title = candidate.title.toLowerCase()
+    let score = 0
+    let textScore = 0
 
-      score += textScore
-      if (neighborIds.has(candidate.id)) score += 45
-      if (candidate.bucket === sourceNode.bucket) score += 10
-      if (candidate.kind === sourceNode.kind) score += 4
+    if (query.length > 0) {
+      if (title === query) textScore = 120
+      else if (title.startsWith(query)) textScore = 90
+      else if (title.includes(query)) textScore = 65
+    }
 
-      return { node: candidate, score: query.length === 0 || textScore > 0 ? score : 0 }
-    })
-    .filter((guess) => guess.score > 0)
-    .sort((left, right) => right.score - left.score || left.node.title.localeCompare(right.node.title))
-    .slice(0, 6)
-    .map((guess) => guess.node)
+    score += textScore
+    if (neighborIds.has(candidate.id)) score += 45
+    if (candidate.bucket === sourceNode.bucket) score += 10
+    if (candidate.kind === sourceNode.kind) score += 4
+
+    const finalScore = query.length === 0 || textScore > 0 ? score : 0
+    if (finalScore > 0) {
+      pushTopLinkGuess(guesses, { node: candidate, score: finalScore })
+    }
+  }
+
+  return guesses.map((guess) => guess.node)
 }

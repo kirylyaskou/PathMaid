@@ -38,12 +38,10 @@ export function parseCampaignWikiLinks(text: string): ParsedCampaignWikiLink[] {
 
 function extractWikiLinks(
   text: string,
-  nodes: CampaignNode[],
+  titleMap: ReadonlyMap<string, CampaignNode>,
   sourceKind: CampaignLinkSourceKind,
   createCreatedFrom: (raw: string) => string,
 ): ExtractedCampaignLink[] {
-  const titleMap = nodesByTitle(nodes)
-
   return parseCampaignWikiLinks(text)
     .map((link) => {
       const targetNode = titleMap.get(link.targetTitle.toLowerCase())
@@ -70,7 +68,7 @@ export function extractMarkdownLinks(
   markdown: string,
   nodes: CampaignNode[],
 ): ExtractedCampaignLink[] {
-  return extractWikiLinks(markdown, nodes, 'markdown', (raw) => raw)
+  return extractWikiLinks(markdown, nodesByTitle(nodes), 'markdown', (raw) => raw)
 }
 
 export function extractTableLinks(
@@ -78,11 +76,17 @@ export function extractTableLinks(
   nodes: CampaignNode[],
 ): ExtractedCampaignLink[] {
   const links: ExtractedCampaignLink[] = []
+  const titleMap = nodesByTitle(nodes)
 
   for (const [rowId, row] of Object.entries(cells)) {
     for (const [columnId, raw] of Object.entries(row)) {
       links.push(
-        ...extractWikiLinks(raw, nodes, 'table-cell', (linkRaw) => `${rowId}:${columnId}:${linkRaw}`),
+        ...extractWikiLinks(
+          raw,
+          titleMap,
+          'table-cell',
+          (linkRaw) => `${rowId}:${columnId}:${linkRaw}`,
+        ),
       )
     }
   }

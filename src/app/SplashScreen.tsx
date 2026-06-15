@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { initDatabase } from '@/shared/api'
+import { initDatabase, recordError } from '@/shared/api'
 import { useEncounterBuilderStore } from '@/features/encounter-builder'
 import { Button } from '@/shared/ui/button'
 import { AlertCircle } from 'lucide-react'
@@ -70,7 +70,9 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       setFading(true)
       setTimeout(onReady, 150)
     } catch (err) {
-      console.error('[SplashScreen] Init failed:', err)
+      // Surface in the error log; the UI below already shows a retry panel to
+      // the user, so no toast here.
+      void recordError('SplashScreen.init', 'Database initialization failed', err)
       setStatus('error')
       setError(
         err instanceof Error

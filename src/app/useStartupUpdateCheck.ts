@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { checkForUpdate, isDarwin } from '@/shared/api'
+import { checkForUpdate, isDarwin, recordWarn, errMessage } from '@/shared/api'
 import { useUpdaterStore } from '@/shared/model'
 
 // Module-scope session flag — survives Strict Mode double-mount and re-mounts of AppProviders.
@@ -29,7 +29,10 @@ export function useStartupUpdateCheck(): void {
         useUpdaterStore.getState().setAvailable(update)
       } catch (err) {
         // silent fail — user may retry via Settings "Проверить обновления".
-        console.error('[useStartupUpdateCheck] update check failed:', err)
+        // err is swallowed deliberately: this runs on every cold boot and must
+        // not interrupt startup. Recorded as warn so it surfaces in the Debug
+        // page without escalating to an error-level alert.
+        void recordWarn('update-check', `Startup update check failed: ${errMessage(err)}`)
       }
     })()
   }, [])
