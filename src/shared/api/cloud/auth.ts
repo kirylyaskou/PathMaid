@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js'
 
 import { getSupabase } from './supabase-client'
 
-export const AUTH_EMAIL_REDIRECT_URL = 'pathmaid://auth/callback'
+export const AUTH_EMAIL_REDIRECT_URL = 'https://kirylyaskou.github.io/PathMaid/auth-confirmed/'
 
 /**
  * Cloud auth wrappers.

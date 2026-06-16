@@ -65,7 +65,7 @@
       "description": "Create an account to enable cloud sync.",
       "submit": "Create account",
       "switchToSignIn": "Already have an account? Sign in",
-      "confirmEmail": "Account created. Check your inbox to confirm your email, then sign in."
+      "confirmEmail": "Account created. Check your inbox, confirm the email in your browser, then return here to sign in."
     },
     "errors": {
       "invalid_credentials": "Invalid email or password.",
