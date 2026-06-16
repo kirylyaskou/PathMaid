@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 
 import { i18n } from '@/shared/i18n'
 import { isCloudConfigured } from '@/shared/config/env'
+import { getAuthErrorToast } from '../lib/auth-error-toast'
 import { useAuthStore } from './auth-store'
 
 interface TauriWindow extends Window {
@@ -47,13 +48,11 @@ export function useAuthDeepLinks(): void {
             continue
           }
 
-          const code = (err as { code?: string })?.code ?? 'unknown'
           if (!cancelled) {
-            toast.error(
-              i18n.t(`auth.errors.${code}`, {
-                defaultValue: i18n.t('auth.errors.unknown'),
-              }),
-            )
+            const authErrorToast = getAuthErrorToast(err, i18n.t)
+            toast.error(authErrorToast.title, {
+              description: authErrorToast.description,
+            })
           }
         } finally {
           pendingAuthDeepLinks.delete(url)

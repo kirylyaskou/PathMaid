@@ -15,6 +15,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { useAuthStore } from '@/features/auth/model'
+import { getAuthErrorToast } from '@/features/auth/lib/auth-error-toast'
 
 export type LoginDialogMode = 'signin' | 'signup'
 
@@ -87,8 +88,10 @@ export function LoginDialog({ open, onOpenChange, initialMode = 'signin' }: Logi
       }
     } catch (err) {
       // The store already recorded a typed error; translate it for the toast.
-      const code = (err as { code?: string })?.code ?? 'unknown'
-      toast.error(t(`auth.errors.${code}`, { defaultValue: t('auth.errors.unknown') }))
+      const authErrorToast = getAuthErrorToast(err, t)
+      toast.error(authErrorToast.title, {
+        description: authErrorToast.description,
+      })
     }
   }
 

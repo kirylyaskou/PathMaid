@@ -21,45 +21,125 @@ export interface AuthResult {
   session: Session | null
 }
 
+export type AuthErrorCode =
+  | 'invalid_credentials'
+  | 'email_not_confirmed'
+  | 'user_already_exists'
+  | 'invalid_email'
+  | 'weak_password'
+  | 'email_link_expired'
+  | 'auth_callback_failed'
+  | 'signup_disabled'
+  | 'user_banned'
+  | 'rate_limited'
+  | 'network'
+  | 'server'
+  | 'not_configured'
+  | 'unknown'
+
 export interface TypedAuthError {
   /** Stable code for i18n lookup; 'unknown' = no specific mapping. */
-  code:
-    | 'invalid_credentials'
-    | 'email_not_confirmed'
-    | 'user_already_exists'
-    | 'rate_limited'
-    | 'network'
-    | 'not_configured'
-    | 'unknown'
+  code: AuthErrorCode
   message: string
+  providerCode?: string
+  status?: number
   cause: unknown
+}
+
+function readAuthErrorField(err: unknown, field: string): unknown {
+  return typeof err === 'object' && err !== null ? (err as Record<string, unknown>)[field] : undefined
+}
+
+function readAuthErrorStatus(err: unknown): number | undefined {
+  const status = readAuthErrorField(err, 'status')
+  return typeof status === 'number' ? status : undefined
+}
+
+function readAuthProviderCode(err: unknown): string | undefined {
+  const code = readAuthErrorField(err, 'code')
+  return typeof code === 'string' ? code : undefined
 }
 
 /** Map a raw Supabase auth error to a stable code the UI can translate. */
 export function classifyAuthError(err: unknown): TypedAuthError {
   const msg = err instanceof Error ? err.message : String(err)
   const lower = msg.toLowerCase()
+  const providerCode = readAuthProviderCode(err)
+  const status = readAuthErrorStatus(err)
+
+  const typed = (code: AuthErrorCode): TypedAuthError => ({
+    code,
+    message: msg,
+    cause: err,
+    ...(providerCode ? { providerCode } : {}),
+    ...(status ? { status } : {}),
+  })
 
   // Not-configured is thrown synchronously by getSupabase().
   if (/not configured/i.test(msg)) {
-    return { code: 'not_configured', message: msg, cause: err }
+    return typed('not_configured')
   }
-  if (lower.includes('invalid login') || lower.includes('invalid credentials')) {
-    return { code: 'invalid_credentials', message: msg, cause: err }
+  if (providerCode === 'invalid_credentials' || lower.includes('invalid login') || lower.includes('invalid credentials')) {
+    return typed('invalid_credentials')
   }
-  if (lower.includes('email not confirmed') || lower.includes('not confirmed')) {
-    return { code: 'email_not_confirmed', message: msg, cause: err }
+  if (providerCode === 'email_not_confirmed' || lower.includes('email not confirmed') || lower.includes('not confirmed')) {
+    return typed('email_not_confirmed')
   }
-  if (lower.includes('already registered') || lower.includes('already been registered') || lower.includes('user already exists')) {
-    return { code: 'user_already_exists', message: msg, cause: err }
+  if (
+    providerCode === 'user_already_exists' ||
+    providerCode === 'email_exists' ||
+    providerCode === 'identity_already_exists' ||
+    lower.includes('already registered') ||
+    lower.includes('already been registered') ||
+    lower.includes('user already exists')
+  ) {
+    return typed('user_already_exists')
   }
-  if (lower.includes('rate limit') || lower.includes('too many') || lower.includes('for security purposes')) {
-    return { code: 'rate_limited', message: msg, cause: err }
+  if (providerCode === 'email_address_invalid' || lower.includes('invalid email')) {
+    return typed('invalid_email')
   }
-  if (lower.includes('failed to fetch') || lower.includes('network') || lower.includes('timeout')) {
-    return { code: 'network', message: msg, cause: err }
+  if (providerCode === 'weak_password' || lower.includes('weak password') || lower.includes('password should be')) {
+    return typed('weak_password')
   }
-  return { code: 'unknown', message: msg, cause: err }
+  if (
+    providerCode === 'bad_code_verifier' ||
+    providerCode === 'flow_state_expired' ||
+    providerCode === 'flow_state_not_found' ||
+    lower.includes('code verifier') ||
+    lower.includes('auth code')
+  ) {
+    return typed('auth_callback_failed')
+  }
+  if (
+    providerCode === 'otp_expired' ||
+    lower.includes('email link is invalid or has expired') ||
+    lower.includes('token has expired')
+  ) {
+    return typed('email_link_expired')
+  }
+  if (providerCode === 'signup_disabled' || lower.includes('signup disabled') || lower.includes('signups not allowed')) {
+    return typed('signup_disabled')
+  }
+  if (providerCode === 'user_banned' || lower.includes('user is banned')) {
+    return typed('user_banned')
+  }
+  if (
+    providerCode === 'over_request_rate_limit' ||
+    providerCode === 'over_email_send_rate_limit' ||
+    providerCode === 'over_sms_send_rate_limit' ||
+    lower.includes('rate limit') ||
+    lower.includes('too many') ||
+    lower.includes('for security purposes')
+  ) {
+    return typed('rate_limited')
+  }
+  if (providerCode === 'request_timeout' || lower.includes('failed to fetch') || lower.includes('network') || lower.includes('timeout')) {
+    return typed('network')
+  }
+  if (providerCode === 'unexpected_failure' || (status !== undefined && status >= 500)) {
+    return typed('server')
+  }
+  return typed('unknown')
 }
 
 function getAuthCallbackParams(urlString: string): URLSearchParams | null {

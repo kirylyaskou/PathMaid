@@ -12,6 +12,7 @@ import {
   type TypedAuthError,
 } from '@/shared/api/cloud/auth'
 import { getSupabase } from '@/shared/api/cloud/supabase-client'
+import { recordError } from '@/shared/api/logging'
 import { isCloudConfigured } from '@/shared/config/env'
 
 /**
@@ -53,6 +54,21 @@ export interface AuthState {
 
 let subscribed = false
 
+function authErrorMessage(err: unknown): string {
+  const authError = err as Partial<TypedAuthError>
+  const details = [
+    authError.code ? `code=${authError.code}` : null,
+    authError.providerCode ? `provider=${authError.providerCode}` : null,
+    authError.status ? `http=${authError.status}` : null,
+    authError.message ? `message=${authError.message}` : null,
+  ].filter(Boolean)
+  return details.length ? details.join(' ') : 'Unknown auth error'
+}
+
+function logAuthError(operation: string, err: unknown): void {
+  void recordError(`auth.${operation}`, authErrorMessage(err), err)
+}
+
 export const useAuthStore = create<AuthState>()(
   immer((set, get) => ({
     status: 'idle',
@@ -71,6 +87,7 @@ export const useAuthStore = create<AuthState>()(
           s.status = session ? 'authenticated' : 'idle'
         })
       } catch (err) {
+        logAuthError('sign_in', err)
         set((s) => { s.status = 'error'; s.error = err as TypedAuthError })
         throw err
       }
@@ -88,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
           s.status = session ? 'authenticated' : 'idle'
         })
       } catch (err) {
+        logAuthError('sign_up', err)
         set((s) => { s.status = 'error'; s.error = err as TypedAuthError })
         throw err
       }
@@ -123,6 +141,7 @@ export const useAuthStore = create<AuthState>()(
         return true
       } catch (err) {
         const authError = err as TypedAuthError
+        logAuthError('callback', err)
         set((s) => {
           s.status = 'error'
           s.error = authError
