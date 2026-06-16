@@ -85,8 +85,8 @@ export function SyncIndicator() {
       } else {
         toast.success(
           t('sync.syncedSummary', {
-            pulled: result.applied,
-            pushed: result.pushed + result.deleted,
+            pulled: result.applied + result.assetsDownloaded,
+            pushed: result.pushed + result.deleted + result.assetsUploaded,
           }),
         )
       }

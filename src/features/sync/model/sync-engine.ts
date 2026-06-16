@@ -2,6 +2,10 @@ import { SYNC_TABLES } from '@/shared/api/cloud/sync-tables'
 import { pushTable } from '@/shared/api/cloud/sync-push'
 import { pullTable } from '@/shared/api/cloud/sync-pull'
 import { pushDeletions } from '@/shared/api/cloud/sync-deletions'
+import {
+  pullMissingCampaignAssetFiles,
+  pushCampaignAssetFiles,
+} from '@/shared/api/cloud/asset-sync'
 
 /**
  * Sync orchestrator.
@@ -23,6 +27,8 @@ export interface SyncRunResult {
   skipped: number
   pushed: number
   deleted: number
+  assetsUploaded: number
+  assetsDownloaded: number
   errors: string[]
 }
 
@@ -38,6 +44,8 @@ export async function runSync(): Promise<SyncRunResult> {
     skipped: 0,
     pushed: 0,
     deleted: 0,
+    assetsUploaded: 0,
+    assetsDownloaded: 0,
     errors: [],
   }
 
@@ -55,9 +63,29 @@ export async function runSync(): Promise<SyncRunResult> {
     }
   }
 
+  // Pull asset metadata first, then hydrate any missing local files from
+  // Storage before the UI tries to render them on a fresh device.
+  try {
+    const assetStats = await pullMissingCampaignAssetFiles()
+    result.assetsDownloaded += assetStats.downloaded
+    result.errors.push(...assetStats.errors)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    result.errors.push(`pull asset files: ${msg}`)
+    console.error('[sync.engine] pull asset files failed', err)
+  }
+
   // --- PUSH (rows) ---
   for (const def of SYNC_TABLES) {
     try {
+      if (def.local === 'campaign_assets') {
+        const assetStats = await pushCampaignAssetFiles()
+        result.assetsUploaded += assetStats.uploaded
+        if (assetStats.errors.length > 0) {
+          result.errors.push(...assetStats.errors)
+          continue
+        }
+      }
       const stats = await pushTable(def)
       result.pushed += stats.pushed
     } catch (err) {
@@ -94,10 +122,20 @@ export async function runPushOnly(): Promise<SyncRunResult> {
     skipped: 0,
     pushed: 0,
     deleted: 0,
+    assetsUploaded: 0,
+    assetsDownloaded: 0,
     errors: [],
   }
   for (const def of SYNC_TABLES) {
     try {
+      if (def.local === 'campaign_assets') {
+        const assetStats = await pushCampaignAssetFiles()
+        result.assetsUploaded += assetStats.uploaded
+        if (assetStats.errors.length > 0) {
+          result.errors.push(...assetStats.errors)
+          continue
+        }
+      }
       const stats = await pushTable(def)
       result.pushed += stats.pushed
     } catch (err) {
@@ -127,6 +165,8 @@ export async function runPullOnly(): Promise<SyncRunResult> {
     skipped: 0,
     pushed: 0,
     deleted: 0,
+    assetsUploaded: 0,
+    assetsDownloaded: 0,
     errors: [],
   }
   for (const def of SYNC_TABLES) {
@@ -141,5 +181,16 @@ export async function runPullOnly(): Promise<SyncRunResult> {
       console.error(`[sync.engine] pull ${def.local} failed`, err)
     }
   }
+
+  try {
+    const assetStats = await pullMissingCampaignAssetFiles()
+    result.assetsDownloaded += assetStats.downloaded
+    result.errors.push(...assetStats.errors)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    result.errors.push(`pull asset files: ${msg}`)
+    console.error('[sync.engine] pull asset files failed', err)
+  }
+
   return result
 }

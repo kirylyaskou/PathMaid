@@ -1,6 +1,7 @@
 import { getDb } from '@/shared/db'
 
 import { getSupabase } from './supabase-client'
+import { removeCampaignAssetObjects } from './asset-sync'
 import { SYNC_TABLE_BY_LOCAL } from './sync-tables'
 
 /**
@@ -77,6 +78,15 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
     // tuples — acceptable since composite-PK deletions are rare (override rows
     // that cascade from their parent).
     try {
+      if (tableName === 'campaign_assets') {
+        const assetIds = group.keys.map((key) => String(key[0]))
+        const assetStats = await removeCampaignAssetObjects(assetIds)
+        if (assetStats.errors.length > 0) {
+          console.error(`[sync.del] ${tableName} assets:`, assetStats.errors.join('; '))
+          continue
+        }
+      }
+
       if (def.pk.length === 1) {
         const col = def.pk[0]!
         const values = group.keys.map((k) => String(k[0]))

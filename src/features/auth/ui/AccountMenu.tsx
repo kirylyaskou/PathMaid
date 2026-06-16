@@ -52,7 +52,12 @@ export function AccountMenu() {
     setBusy(true)
     try {
       const result = await runPushOnly()
-      toast.success(t('sync.syncedSummary', { pulled: 0, pushed: result.pushed + result.deleted }))
+      toast.success(
+        t('sync.syncedSummary', {
+          pulled: 0,
+          pushed: result.pushed + result.deleted + result.assetsUploaded,
+        }),
+      )
     } catch {
       toast.error(t('sync.errors.unknown'))
     } finally {
@@ -68,7 +73,12 @@ export function AccountMenu() {
       // "download everything" action for first-login on a new device.
       await resetAllProgress()
       const result = await runPullOnly()
-      toast.success(t('sync.syncedSummary', { pulled: result.applied, pushed: 0 }))
+      toast.success(
+        t('sync.syncedSummary', {
+          pulled: result.applied + result.assetsDownloaded,
+          pushed: 0,
+        }),
+      )
     } catch {
       toast.error(t('sync.errors.unknown'))
     } finally {
