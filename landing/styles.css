@@ -232,6 +232,71 @@ h3 {
   background: color-mix(in oklab, var(--color-gold) 86%, var(--color-white));
 }
 
+.cloud-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 31rem);
+  gap: clamp(var(--space-xl), 5vw, 5rem);
+  align-items: center;
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+  background:
+    radial-gradient(circle at 72% 38%, color-mix(in oklab, var(--color-violet-bright) 25%, transparent), transparent 20rem),
+    linear-gradient(135deg, oklch(0.13 0.025 260), var(--color-paper));
+}
+
+.cloud-copy {
+  max-width: 62rem;
+}
+
+.cloud-body {
+  max-width: 48rem;
+  margin: var(--space-lg) 0 0;
+  color: color-mix(in oklab, var(--color-ink) 86%, var(--color-gold));
+  font-size: var(--text-lg);
+  line-height: 1.6;
+}
+
+.cloud-points {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+}
+
+.cloud-point {
+  min-width: 0;
+  border-top: var(--rule-hair) solid color-mix(in oklab, var(--color-gold) 58%, var(--color-rule));
+  padding-top: var(--space-md);
+}
+
+.cloud-point h3 {
+  font-size: var(--text-lg);
+}
+
+.cloud-point p {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-ink-muted);
+  line-height: 1.5;
+}
+
+.cloud-art {
+  position: relative;
+  padding: 0.85rem;
+  border-color: color-mix(in oklab, var(--color-gold) 60%, var(--color-rule));
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--color-panel-strong) 86%, transparent), var(--color-panel)),
+    var(--color-panel);
+  transform: rotate(-1deg);
+}
+
+.cloud-art img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: var(--rule-hair) solid color-mix(in oklab, var(--color-gold) 42%, var(--color-rule));
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
 .feature-slider-section {
   background: linear-gradient(180deg, var(--color-paper), var(--color-panel));
 }
@@ -621,6 +686,7 @@ h3 {
   }
 
   .hero,
+  .cloud-section,
   .showcase-section,
   .slider-slide {
     grid-template-columns: 1fr;
@@ -648,8 +714,15 @@ h3 {
   }
 
   .service-grid,
+  .cloud-points,
   .download-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cloud-art {
+    max-width: 32rem;
+    justify-self: center;
+    transform: none;
   }
 
   .slider-viewport {

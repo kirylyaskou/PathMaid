@@ -16,6 +16,7 @@ Use these generation targets:
 | --- | ---: | --- |
 | `pathmaid-icon-128.png` | 128 x 128 | Current app icon used as favicon and header mark. |
 | `hero-character.png` | 1106 x 1422 current, target 1080 x 1320+ | Main mascot art for the first screen. Current file is wired into the hero. |
+| `cloud-sync-guide.png` | 1254 x 1254 current, target 1200 x 1200+ | Cloud sync section art. Current file is wired into the page. |
 | `feature-wide.png` | 1774 x 887 current, target 2:1 | Wide transformation banner for the middle showcase. Current file is wired into the page. |
 | `service-card-encyclopedia.png` | 1505 x 1045 current, target 720 x 500+ | Slider art for the complete PF2e encyclopedia. Current file is wired into the first slide. |
 | `service-card-combat.png` | 1505 x 1045 current, target 720 x 500+ | Slider art for combat, encounter, and effects tracking. Current file is wired into slide 2. |

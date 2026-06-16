@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="PathMaid is an all-in-one desktop GM screen for Pathfinder 2e."
+      content="PathMaid is an all-in-one desktop GM screen for Pathfinder 2e with cloud sync between devices."
     >
     <title>PathMaid - Let the maid handle the mess</title>
     <link rel="icon" type="image/png" sizes="128x128" href="./assets/pathmaid-icon-128.png">
@@ -21,6 +21,7 @@
         <span>PathMaid</span>
       </a>
       <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#cloud" data-i18n="nav.cloud">Cloud Sync</a>
         <a href="#features" data-i18n="nav.features">Features</a>
         <a href="#service" data-i18n="nav.service">Benefits</a>
         <a href="#downloads" data-i18n="nav.downloads">Downloads</a>
@@ -54,6 +55,45 @@
 
         <figure class="hero-art hero-art-filled" data-asset-slot="hero-character">
           <img src="./assets/hero-character.png" alt="PathMaid mascot serving potions beside a mimic chest">
+        </figure>
+      </section>
+
+      <section id="cloud" class="section-band cloud-section">
+        <div class="cloud-copy">
+          <p class="eyebrow" data-i18n="cloud.eyebrow">Now with cloud sync</p>
+          <h2 data-i18n="cloud.title">Your campaign follows every device.</h2>
+          <p class="cloud-body" data-i18n="cloud.body">
+            Sign in once and keep campaigns, encounters, custom creatures, notes, and uploaded images
+            synchronized across your desktop installs. Prep on one machine, run on another, and keep
+            going when the internet drops.
+          </p>
+          <div class="cloud-points">
+            <article class="cloud-point">
+              <h3 data-i18n="cloud.local.title">Offline first</h3>
+              <p data-i18n="cloud.local.body">
+                Local data stays on your machine and sync catches up when the connection returns.
+              </p>
+            </article>
+            <article class="cloud-point">
+              <h3 data-i18n="cloud.assets.title">Images included</h3>
+              <p data-i18n="cloud.assets.body">
+                Campaign artwork and handouts travel with the campaign, not just database rows.
+              </p>
+            </article>
+            <article class="cloud-point">
+              <h3 data-i18n="cloud.devices.title">One GM, many desks</h3>
+              <p data-i18n="cloud.devices.body">
+                Move between Windows, macOS, and Linux without rebuilding the same workspace.
+              </p>
+            </article>
+          </div>
+        </div>
+
+        <figure class="cloud-art asset-slot">
+          <img
+            src="./assets/cloud-sync-guide.png"
+            alt="PathMaid mascot surfing through the internet with the words Welcome to the Internet, I'll be your guide"
+          >
         </figure>
       </section>
 
