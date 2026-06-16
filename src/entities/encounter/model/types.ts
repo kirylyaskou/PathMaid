@@ -1,5 +1,7 @@
 // EncounterCombatant — a creature stored in a saved encounter (SQLite-derived).
 // creatureLevel is the base Foundry level; weakEliteTier adjusts displayed level by ±1.
+import type { EncounterSide } from '@engine'
+
 export interface EncounterCombatant {
   id: string
   encounterId: string
@@ -16,6 +18,7 @@ export interface EncounterCombatant {
   isHazard?: boolean        // true for hazard rows
   hazardRef?: string | null // hazard.id reference
   hazardType?: 'simple' | 'complex' // resolved from JOIN with hazards table
+  side: EncounterSide
 }
 
 // Encounter — a saved encounter entity (SQLite-derived).

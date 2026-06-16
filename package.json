@@ -1,6 +1,6 @@
 {
   "name": "pathmaid",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "Pathfinder 2e DM Assistant",
   "type": "module",
   "scripts": {
@@ -50,8 +50,10 @@
     "@radix-ui/react-toggle": "1.1.10",
     "@radix-ui/react-toggle-group": "1.1.11",
     "@radix-ui/react-tooltip": "1.2.8",
+    "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-virtual": "^3.13.23",
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-deep-link": "^2.4.9",
     "@tauri-apps/plugin-log": "^2.8.0",
     "@tauri-apps/plugin-opener": "2.5.3",
     "@tauri-apps/plugin-os": "2.3.2",

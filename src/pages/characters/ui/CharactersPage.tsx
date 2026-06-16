@@ -144,6 +144,7 @@ export function CharactersPage() {
           sortOrder,
           isHazard: false,
           hazardRef: null,
+          side: 'ally',
         }, sortOrder)
       }
 

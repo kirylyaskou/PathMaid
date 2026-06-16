@@ -243,6 +243,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
             sortOrder,
             isHazard: false,
             hazardRef: null,
+            side: 'enemy',
           }, sortOrder)
         } catch (err) {
           logErrorWithToast('bestiary-add-insert')(err)

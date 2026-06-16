@@ -1,6 +1,7 @@
 import { getDb } from '@/shared/db'
 import { getCustomCreatureById, listEncounters, loadEncounterCombatants } from '@/shared/api'
 import type { CustomCreatureApiStatBlock } from '@/shared/api'
+import type { EncounterSide } from '@engine'
 import type { EmbeddedCustomCreature } from './types'
 
 // 69-01/02: export an encounter as a pathmaiden-v1 JSON payload that round-trips
@@ -19,6 +20,7 @@ export interface PathmaidenV1Combatant {
   hp: number
   hpMax: number
   initiative: number
+  side?: EncounterSide
 }
 
 export interface PathmaidenV1Encounter {
@@ -121,6 +123,7 @@ export async function exportEncounter(
       hp: c.hp,
       hpMax: c.maxHp,
       initiative: c.initiative,
+      side: c.side,
     }
     if (embedded) combatant.customCreatureId = embedded.sourceId
     exported.push(combatant)

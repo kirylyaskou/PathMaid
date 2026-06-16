@@ -26,6 +26,7 @@ export function createCombatantFromCharacter(
     maxHp,
     tempHp: 0,
     kind: 'pc',
+    side: 'ally',
     ...(build.level != null ? { level: build.level } : {}),
   }
 }

@@ -79,6 +79,7 @@ export function StagingDeployDialog({
       sortOrder,
       isHazard: c.kind === 'hazard',
       hazardRef: c.kind === 'hazard' ? c.creatureRef : null,
+      side: c.side ?? (c.kind === 'pc' ? 'ally' : 'enemy'),
     }, sortOrder).catch(logErrorWithToast('staging-deploy-insert'))
   }
 

@@ -12,6 +12,7 @@
     "updater:default",
     "process:allow-restart",
     "os:default",
-    "log:default"
+    "log:default",
+    "deep-link:default"
   ]
 }

@@ -18,27 +18,45 @@ export function CombatControls() {
   const { isRunning, round, turn, lastSaveError } = useCombatTrackerStore(
     useShallow((s) => ({ isRunning: s.isRunning, round: s.round, turn: s.turn, lastSaveError: s.lastSaveError }))
   )
-  const { startCombat, endCombat, setActiveCombatant } = useCombatTrackerStore()
+  const startCombat = useCombatTrackerStore((s) => s.startCombat)
+  const endCombat = useCombatTrackerStore((s) => s.endCombat)
+  const setActiveCombatant = useCombatTrackerStore((s) => s.setActiveCombatant)
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
   const clearAllCombatants = useCombatantStore((s) => s.clearAll)
 
   // 63-fix: pre-start gate — tab is opened in isStarted=false state after
   // loadEncounterIntoCombat. We show a "Start" button until the GM taps it,
   // regardless of whether the tracker is already running.
-  const activeTabId = useEncounterTabsStore((s) => s.activeTabId)
-  const activeTabIsStarted = useEncounterTabsStore(
-    (s) => s.openTabs.find((t) => t.id === s.activeTabId)?.isStarted ?? true
-  )
+  const activeTabStart = useEncounterTabsStore(useShallow((s) => {
+    const tab = s.openTabs.find((t) => t.id === s.activeTabId)
+    return {
+      activeTabId: tab?.id ?? null,
+      activeCombatantId: tab?.snapshot.activeCombatantId ?? null,
+      encounterId: tab?.encounterId ?? null,
+      isStarted: tab?.isStarted ?? true,
+      round: tab?.snapshot.round ?? 0,
+      turn: tab?.snapshot.turn ?? 0,
+    }
+  }))
   const startTab = useEncounterTabsStore((s) => s.startTab)
+  const startEncounterCombat = useCombatTrackerStore((s) => s.startEncounterCombat)
 
   const handleStart = () => {
     if (combatants.length === 0) return
     // Flip the tab flag first so TurnControls un-disable synchronously.
-    if (activeTabId) startTab(activeTabId)
-    // If the tracker isn't already running (ad-hoc combat), boot it here.
+    if (activeTabStart.activeTabId) startTab(activeTabStart.activeTabId)
+    // If a refreshed encounter tab is pre-start, keep its real encounter id.
     if (!isRunning) {
-      const combatId = crypto.randomUUID()
-      startCombat(combatId)
+      if (activeTabStart.encounterId) {
+        startEncounterCombat(
+          activeTabStart.encounterId,
+          activeTabStart.round,
+          activeTabStart.turn,
+          activeTabStart.activeCombatantId,
+        )
+      } else {
+        startCombat(crypto.randomUUID())
+      }
     }
     // If no active combatant yet, sort by initiative and pick the first.
     const activeId = useCombatTrackerStore.getState().activeCombatantId
@@ -60,12 +78,12 @@ export function CombatControls() {
     useRollOptionsStore.getState().clearAll()
   }
 
-  const showStart = !isRunning || !activeTabIsStarted
+  const showStart = !isRunning || !activeTabStart.isStarted
 
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border/50">
       <Swords className="w-4 h-4 text-primary/70" />
-      {isRunning && activeTabIsStarted ? (
+      {isRunning && activeTabStart.isStarted ? (
         <Badge variant="secondary" className="text-xs font-mono">
           R{round} T{turn + 1}
         </Badge>
@@ -89,7 +107,7 @@ export function CombatControls() {
           {t('combatTracker.start')}
         </Button>
       )}
-      {isRunning && activeTabIsStarted && (
+      {isRunning && activeTabStart.isStarted && (
         <Button
           size="sm"
           variant="destructive"

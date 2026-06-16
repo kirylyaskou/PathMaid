@@ -1,4 +1,4 @@
-import type { CreatureStatBlockData } from '../model/types'
+import type { CreatureStatBlockData, DisplayActionCost } from '../model/types'
 
 export interface EquipmentAttackItem {
   id?: string
@@ -82,6 +82,67 @@ function parseTraits(traits: string | null | undefined): string[] {
   } catch {
     return []
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function actionCostFromGlyph(glyph: string | undefined): DisplayActionCost | undefined {
+  const normalized = glyph?.trim().toLowerCase()
+  if (!normalized) return undefined
+  if (normalized === 'r') return 'reaction'
+  if (normalized === 'f') return 'free'
+  const numeric = Number.parseInt(normalized, 10)
+  return numeric >= 1 && numeric <= 3 ? numeric as 1 | 2 | 3 : undefined
+}
+
+function parseActivationTraits(rawTraits: string | undefined): string[] {
+  if (!rawTraits) return []
+  return rawTraits
+    .split(',')
+    .map((trait) => trait.trim())
+    .filter((trait) => trait.length > 0)
+}
+
+function stripTags(value: string): string {
+  return value.replace(/<[^>]*>/g, '').trim()
+}
+
+const ACTIVATE_RE =
+  /<p>\s*<strong>\s*Activate(?:[—-]\s*([^<]+?))?\s*<\/strong>\s*(?:<span[^>]*class=["']action-glyph["'][^>]*>\s*([^<]+?)\s*<\/span>)?\s*(?:\(([^)]*)\))?\s*<\/p>/gi
+
+export function buildEquipmentActivationAbilities(
+  equipment: readonly EquipmentAttackItem[],
+): CreatureStatBlockData['abilities'] {
+  return equipment.flatMap((item): CreatureStatBlockData['abilities'] => {
+    const description = item.descriptionLoc
+    if (!description || !/<strong>\s*Activate/i.test(description)) return []
+
+    const matches = Array.from(description.matchAll(ACTIVATE_RE))
+    return matches.flatMap((match, index): CreatureStatBlockData['abilities'] => {
+      const start = match.index
+      if (start === undefined) return []
+      const header = match[0]
+      const bodyStart = start + header.length
+      const bodyEnd = matches[index + 1]?.index ?? description.length
+      const body = description.slice(bodyStart, bodyEnd).trim()
+      const activationName = stripTags(match[1] ?? '') || 'Activate'
+      const traits = parseActivationTraits(match[3])
+      const actionCost = actionCostFromGlyph(match[2])
+      return [{
+        id: `equipment-activation:${item.id ?? item.name}:${index}`,
+        name: activationName,
+        actionCost,
+        traits,
+        description: `<p><strong>Item</strong> ${escapeHtml(item.name)}</p>${body}`,
+      }]
+    })
+  })
 }
 
 export function buildEquipmentStrikes(

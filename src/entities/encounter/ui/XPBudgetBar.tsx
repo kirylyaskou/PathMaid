@@ -7,6 +7,7 @@ import { cn } from "@/shared/lib/utils"
 interface XPBudgetBarProps {
   currentXP: number
   partySize: number
+  allyBudgetXP?: number
   className?: string
 }
 
@@ -26,10 +27,18 @@ const threatTextColors: Record<ThreatRating, string> = {
   extreme: "text-pf-threat-extreme",
 }
 
-export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProps) {
+export function XPBudgetBar({ currentXP, partySize, allyBudgetXP = 0, className }: XPBudgetBarProps) {
   const { t } = useTranslation('common')
-  const thresholds = generateEncounterBudgets(partySize)
-  const threatLevel = calculateEncounterRating(currentXP, partySize)
+  const baseThresholds = useMemo(() => generateEncounterBudgets(partySize), [partySize])
+  const thresholds = useMemo(() => ({
+    trivial: baseThresholds.trivial + allyBudgetXP,
+    low: baseThresholds.low + allyBudgetXP,
+    moderate: baseThresholds.moderate + allyBudgetXP,
+    severe: baseThresholds.severe + allyBudgetXP,
+    extreme: baseThresholds.extreme + allyBudgetXP,
+  }), [allyBudgetXP, baseThresholds])
+  const threatLevel = calculateEncounterRating(currentXP, partySize, allyBudgetXP)
+  const awardXp = baseThresholds[threatLevel]
   const maxXP = thresholds.extreme * 1.5 // extend bar beyond extreme for visual
 
   // Calculate segment widths as percentages
@@ -57,6 +66,11 @@ export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProp
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('entities.encounter.threatAssessment')}</span>
         <div className="flex items-center gap-2">
+          {allyBudgetXP > 0 && (
+            <span className="font-mono text-xs text-emerald-400">
+              {t('entities.encounter.allyBudget', { xp: allyBudgetXP })}
+            </span>
+          )}
           <span className="font-mono text-sm font-bold">{currentXP} XP</span>
           <span
             className={cn(
@@ -70,6 +84,12 @@ export function XPBudgetBar({ currentXP, partySize, className }: XPBudgetBarProp
           </span>
         </div>
       </div>
+      {allyBudgetXP > 0 && (
+        <div className="flex items-center justify-end gap-2 text-[10px] font-mono text-muted-foreground">
+          <span>{t('entities.encounter.enemySpend', { xp: currentXP })}</span>
+          <span>{t('entities.encounter.awardXp', { xp: awardXp })}</span>
+        </div>
+      )}
 
       {/* Progress Bar - Grimdark */}
       <div className="relative">

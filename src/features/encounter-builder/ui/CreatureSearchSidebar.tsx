@@ -296,6 +296,7 @@ export function CreatureSearchSidebar({ onAddCreature, onAddHazard, encounterId 
         maxHp: adjustedHp,
         tempHp: 0,
         mortal: true,
+        side: 'enemy',
         level: creature.level,
         fort: creature.fort,
         ...(iwr.immunities.length > 0 ? { iwrImmunities: iwr.immunities } : {}),

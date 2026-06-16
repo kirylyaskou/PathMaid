@@ -343,9 +343,11 @@ function AdvancedSettingsSection() {
   const stagingPool = useAdvancedSettingsStore((s) => s.stagingPool)
   const customContent = useAdvancedSettingsStore((s) => s.customContent)
   const nonMortalCreatures = useAdvancedSettingsStore((s) => s.nonMortalCreatures)
+  const autoSyncEnabled = useAdvancedSettingsStore((s) => s.autoSyncEnabled)
   const setStagingPool = useAdvancedSettingsStore((s) => s.setStagingPool)
   const setCustomContent = useAdvancedSettingsStore((s) => s.setCustomContent)
   const setNonMortalCreatures = useAdvancedSettingsStore((s) => s.setNonMortalCreatures)
+  const setAutoSyncEnabled = useAdvancedSettingsStore((s) => s.setAutoSyncEnabled)
 
   return (
     <section>
@@ -370,6 +372,12 @@ function AdvancedSettingsSection() {
           description={t('settings.advanced.nonMortalCreaturesDescription')}
           checked={nonMortalCreatures}
           onCheckedChange={setNonMortalCreatures}
+        />
+        <AdvancedToggle
+          label={t('sync.autoSync')}
+          description={t('sync.autoSyncDescription')}
+          checked={autoSyncEnabled}
+          onCheckedChange={setAutoSyncEnabled}
         />
       </div>
     </section>

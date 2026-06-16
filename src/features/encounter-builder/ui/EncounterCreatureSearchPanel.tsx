@@ -78,6 +78,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       sortOrder: currentCombatants.length,
       isHazard: false,
       hazardRef: null,
+      side: 'enemy',
     }
 
     const updatedRows: EncounterCombatantRow[] = [
@@ -96,6 +97,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
         sortOrder: c.sortOrder,
         isHazard: c.isHazard ?? false,
         hazardRef: c.hazardRef ?? null,
+        side: c.side,
       })),
       newCombatant,
     ]
@@ -117,6 +119,7 @@ export function EncounterCreatureSearchPanel({ encounterId, currentCombatants }:
       sortOrder: r.sortOrder,
       isHazard: r.isHazard,
       hazardRef: r.hazardRef,
+      side: r.side,
     }))
     setEncounterCombatants(encounterId, updated)
   }

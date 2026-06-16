@@ -5,6 +5,8 @@ import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { RollDie20Button } from '@/shared/ui/roll-die20-button'
 import { DicePanel } from '@/shared/ui/DicePanel'
+import { AccountMenu } from '@/features/auth'
+import { SyncIndicator } from '@/features/sync'
 import { RollHistoryPanel } from './RollHistoryPanel'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
@@ -39,6 +41,8 @@ export function AppHeader() {
             <RollHistoryPanel />
           </PopoverContent>
         </Popover>
+        <SyncIndicator />
+        <AccountMenu />
         <LanguageSwitcher />
         <Button
           variant="ghost"

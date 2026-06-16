@@ -1,6 +1,7 @@
 // shared types for the import pipeline.
 
 import type { CustomCreatureApiStatBlock } from '@/shared/api'
+import type { EncounterSide } from '@engine'
 
 export type ImportFormat = 'dashboard' | 'pathmaiden' | 'pathmaid-bundle' | 'unknown'
 
@@ -35,6 +36,7 @@ export interface ParsedCombatant {
    *  falls back to matched bestiary HP. */
   hpMax?: number
   initiative?: number
+  side?: EncounterSide
   embeddedCustomCreature?: EmbeddedCustomCreature
 }
 

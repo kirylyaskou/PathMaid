@@ -1,6 +1,6 @@
 {
   "productName": "PathMaid",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "identifier": "com.pathmaid.app",
   "build": {
     "beforeDevCommand": "npm run dev:vite",
@@ -42,6 +42,11 @@
     ]
   },
   "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["pathmaid"]
+      }
+    },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVDNjVEMzRDNEExMTFBNzgKUldSNEdoRktUTk5sN0dnQk8zYmxrL3VTbVd3YXJVekt5ZkJEUnlsdGdYZmtnaWd0Zk44M29RTmsK",
       "endpoints": [

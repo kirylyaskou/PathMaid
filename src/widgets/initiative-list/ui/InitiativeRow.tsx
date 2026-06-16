@@ -44,7 +44,7 @@ export function InitiativeRow({
   const { t } = useTranslation('common')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: combatant.id, data: { combatant } })
-  const { setInitiative } = useCombatantStore()
+  const setInitiative = useCombatantStore((s) => s.setInitiative)
   const { cursorMode, resetCursorMode } = useHotkeyStore(
     useShallow((s) => ({ cursorMode: s.cursorMode, resetCursorMode: s.resetCursorMode }))
   )

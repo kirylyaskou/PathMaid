@@ -21,6 +21,7 @@ export interface EncounterTab {
   encounterId: string | null     // null = blank/ad-hoc encounter
   name: string
   snapshot: TabSnapshot          // last saved state for this tab
+  inventoryVersion: number
   // pre-start gate. false = combatants loaded but combat not started yet
   // (blur overlay + Start button gate in UI). Default true for ad-hoc/migrated
   // running combats; false for tabs opened via builder Load-into-combat.
@@ -122,6 +123,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           encounterId: tabInput.encounterId,
           name: tabInput.name,
           snapshot: tabInput.snapshot,
+          inventoryVersion: 0,
           isStarted: tabInput.isStarted ?? true,
           templateSnapshot: tabInput.templateSnapshot ?? null,
         })
@@ -142,6 +144,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           encounterId: tabInput.encounterId,
           name: tabInput.name,
           snapshot: tabInput.snapshot,
+          inventoryVersion: 0,
           isStarted: tabInput.isStarted ?? false,
           templateSnapshot: tabInput.templateSnapshot ?? null,
         })
@@ -232,7 +235,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
           const combatants: Combatant[] = encounterCombatants.map((ec) => {
             const kind = kindFromLegacy(ec.isNPC, ec.isHazard ?? false)
             return {
-              id: crypto.randomUUID(),
+              id: ec.id,
               creatureRef: ec.creatureRef,
               displayName: ec.displayName,
               initiative: ec.initiative,
@@ -240,6 +243,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
               maxHp: ec.maxHp,
               tempHp: 0,
               kind,
+              side: ec.side,
               ...(kind === 'npc' ? { mortal: true } : {}),
             }
           })
@@ -259,10 +263,20 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
         }
       }
 
+      if (tab.encounterId) {
+        try {
+          const { clearEncounterLootRuntimeState } = await import('@/shared/api')
+          await clearEncounterLootRuntimeState(tab.encounterId)
+        } catch (err) {
+          void recordError('encounter-tab.resetLoot', 'Failed to reset encounter loot state', err)
+        }
+      }
+
       set((state) => {
         const t = state.openTabs.find((t) => t.id === tabId)
         if (t) {
           t.snapshot = freshSnapshot
+          t.inventoryVersion += 1
           t.isStarted = false
         }
       })

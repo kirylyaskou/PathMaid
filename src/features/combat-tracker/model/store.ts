@@ -88,6 +88,7 @@ export const useCombatTrackerStore = create<CombatTrackerState>()(
         state.round = 1
         state.turn = 0
         state.isRunning = true
+        state.isEncounterBacked = false
       }),
     endCombat: () =>
       set((state) => {
