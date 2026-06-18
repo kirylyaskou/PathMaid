@@ -2,6 +2,7 @@ import { SYNC_TABLES } from '@/shared/api/cloud/sync-tables'
 import { pushTable } from '@/shared/api/cloud/sync-push'
 import { pullTable } from '@/shared/api/cloud/sync-pull'
 import { pushDeletions } from '@/shared/api/cloud/sync-deletions'
+import { recordError, recordInfo } from '@/shared/api/logging'
 import {
   pullMissingCampaignAssetFiles,
   pushCampaignAssetFiles,
@@ -32,12 +33,44 @@ export interface SyncRunResult {
   errors: string[]
 }
 
+type SyncRunKind = 'full' | 'push-only' | 'pull-only'
+
+function syncErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+async function appendSyncError(
+  result: SyncRunResult,
+  actor: string,
+  message: string,
+  err?: unknown,
+): Promise<void> {
+  result.errors.push(message)
+  await recordError(actor, message, err)
+}
+
+async function appendSyncErrorMessages(
+  result: SyncRunResult,
+  actor: string,
+  messages: string[],
+): Promise<void> {
+  for (const message of messages) {
+    result.errors.push(message)
+    await recordError(actor, message)
+  }
+}
+
+function syncSummary(kind: SyncRunKind, result: SyncRunResult): string {
+  return `${kind} sync finished: pulled=${result.pulled}, applied=${result.applied}, skipped=${result.skipped}, pushed=${result.pushed}, deleted=${result.deleted}, assetsUploaded=${result.assetsUploaded}, assetsDownloaded=${result.assetsDownloaded}, errors=${result.errors.length}`
+}
+
 /**
  * Run a full sync pass across all tables in registry order.
  * Pull → push. Throws only on a fatal config error (no cloud); per-table
  * errors are collected into `errors` and do not abort the pass.
  */
 export async function runSync(): Promise<SyncRunResult> {
+  await recordInfo('sync.full', 'full sync started')
   const result: SyncRunResult = {
     pulled: 0,
     applied: 0,
@@ -57,8 +90,8 @@ export async function runSync(): Promise<SyncRunResult> {
       result.applied += stats.applied
       result.skipped += stats.skipped
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      result.errors.push(`pull ${def.local}: ${msg}`)
+      const msg = syncErrorMessage(err)
+      await appendSyncError(result, `sync.pull.${def.local}`, `pull ${def.local}: ${msg}`, err)
       console.error(`[sync.engine] pull ${def.local} failed`, err)
     }
   }
@@ -68,10 +101,10 @@ export async function runSync(): Promise<SyncRunResult> {
   try {
     const assetStats = await pullMissingCampaignAssetFiles()
     result.assetsDownloaded += assetStats.downloaded
-    result.errors.push(...assetStats.errors)
+    await appendSyncErrorMessages(result, 'sync.pull.assets', assetStats.errors)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    result.errors.push(`pull asset files: ${msg}`)
+    const msg = syncErrorMessage(err)
+    await appendSyncError(result, 'sync.pull.assets', `pull asset files: ${msg}`, err)
     console.error('[sync.engine] pull asset files failed', err)
   }
 
@@ -82,15 +115,15 @@ export async function runSync(): Promise<SyncRunResult> {
         const assetStats = await pushCampaignAssetFiles()
         result.assetsUploaded += assetStats.uploaded
         if (assetStats.errors.length > 0) {
-          result.errors.push(...assetStats.errors)
+          await appendSyncErrorMessages(result, 'sync.push.assets', assetStats.errors)
           continue
         }
       }
       const stats = await pushTable(def)
       result.pushed += stats.pushed
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      result.errors.push(`push ${def.local}: ${msg}`)
+      const msg = syncErrorMessage(err)
+      await appendSyncError(result, `sync.push.${def.local}`, `push ${def.local}: ${msg}`, err)
       console.error(`[sync.engine] push ${def.local} failed`, err)
     }
   }
@@ -103,11 +136,12 @@ export async function runSync(): Promise<SyncRunResult> {
     const delStats = await pushDeletions()
     result.deleted = delStats.reduce((sum, s) => sum + s.deleted, 0)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    result.errors.push(`push deletions: ${msg}`)
+    const msg = syncErrorMessage(err)
+    await appendSyncError(result, 'sync.delete', `push deletions: ${msg}`, err)
     console.error('[sync.engine] push deletions failed', err)
   }
 
+  await recordInfo('sync.full', syncSummary('full', result))
   return result
 }
 
@@ -116,6 +150,7 @@ export async function runSync(): Promise<SyncRunResult> {
  * pulling remote updates first (e.g. right after a bulk local edit).
  */
 export async function runPushOnly(): Promise<SyncRunResult> {
+  await recordInfo('sync.push-only', 'push-only sync started')
   const result: SyncRunResult = {
     pulled: 0,
     applied: 0,
@@ -132,15 +167,15 @@ export async function runPushOnly(): Promise<SyncRunResult> {
         const assetStats = await pushCampaignAssetFiles()
         result.assetsUploaded += assetStats.uploaded
         if (assetStats.errors.length > 0) {
-          result.errors.push(...assetStats.errors)
+          await appendSyncErrorMessages(result, 'sync.push.assets', assetStats.errors)
           continue
         }
       }
       const stats = await pushTable(def)
       result.pushed += stats.pushed
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      result.errors.push(`push ${def.local}: ${msg}`)
+      const msg = syncErrorMessage(err)
+      await appendSyncError(result, `sync.push.${def.local}`, `push ${def.local}: ${msg}`, err)
       console.error(`[sync.engine] push ${def.local} failed`, err)
     }
   }
@@ -148,10 +183,11 @@ export async function runPushOnly(): Promise<SyncRunResult> {
     const delStats = await pushDeletions()
     result.deleted = delStats.reduce((sum, s) => sum + s.deleted, 0)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    result.errors.push(`push deletions: ${msg}`)
+    const msg = syncErrorMessage(err)
+    await appendSyncError(result, 'sync.delete', `push deletions: ${msg}`, err)
     console.error('[sync.engine] push deletions failed', err)
   }
+  await recordInfo('sync.push-only', syncSummary('push-only', result))
   return result
 }
 
@@ -159,6 +195,7 @@ export async function runPushOnly(): Promise<SyncRunResult> {
  * Pull only — used for first-login "load from server" flow.
  */
 export async function runPullOnly(): Promise<SyncRunResult> {
+  await recordInfo('sync.pull-only', 'pull-only sync started')
   const result: SyncRunResult = {
     pulled: 0,
     applied: 0,
@@ -176,8 +213,8 @@ export async function runPullOnly(): Promise<SyncRunResult> {
       result.applied += stats.applied
       result.skipped += stats.skipped
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      result.errors.push(`pull ${def.local}: ${msg}`)
+      const msg = syncErrorMessage(err)
+      await appendSyncError(result, `sync.pull.${def.local}`, `pull ${def.local}: ${msg}`, err)
       console.error(`[sync.engine] pull ${def.local} failed`, err)
     }
   }
@@ -185,12 +222,13 @@ export async function runPullOnly(): Promise<SyncRunResult> {
   try {
     const assetStats = await pullMissingCampaignAssetFiles()
     result.assetsDownloaded += assetStats.downloaded
-    result.errors.push(...assetStats.errors)
+    await appendSyncErrorMessages(result, 'sync.pull.assets', assetStats.errors)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    result.errors.push(`pull asset files: ${msg}`)
+    const msg = syncErrorMessage(err)
+    await appendSyncError(result, 'sync.pull.assets', `pull asset files: ${msg}`, err)
     console.error('[sync.engine] pull asset files failed', err)
   }
 
+  await recordInfo('sync.pull-only', syncSummary('pull-only', result))
   return result
 }

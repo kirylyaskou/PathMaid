@@ -1,4 +1,5 @@
 import { getDb } from '@/shared/db'
+import { recordError } from '@/shared/api/logging'
 
 /**
  * Per-table sync watermarks stored in the local `sync_progress` table.
@@ -63,6 +64,8 @@ export async function logSyncError(
   message: string,
   payload?: unknown,
 ): Promise<void> {
+  await recordError(`sync.${direction}.${tableName}`, message, payload)
+
   const db = await getDb()
   await db.execute(
     `INSERT INTO sync_errors (table_name, direction, message, payload)

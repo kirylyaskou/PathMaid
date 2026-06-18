@@ -1,4 +1,5 @@
 import { getDb } from '@/shared/db'
+import { recordError } from '@/shared/api/logging'
 
 import { getSupabase } from './supabase-client'
 import { removeCampaignAssetObjects } from './asset-sync'
@@ -52,6 +53,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
     // a table could have been removed from SYNC_TABLES after a tombstone was
     // recorded). Mark them pushed so they don't accumulate forever.
     if (!SYNC_TABLE_BY_LOCAL.has(t.table_name)) {
+      await recordError(`sync.delete.${t.table_name}`, `Unknown tombstone table: ${t.table_name}`)
       await db.execute('UPDATE sync_deletions SET pushed = 1 WHERE id = ?', [t.id])
       continue
     }
@@ -64,6 +66,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
     try {
       group.keys.push(JSON.parse(t.row_key))
     } catch {
+      await recordError(`sync.delete.${t.table_name}`, `Malformed tombstone row_key: ${t.row_key}`)
       // Malformed row_key — mark pushed to skip it permanently.
       await db.execute('UPDATE sync_deletions SET pushed = 1 WHERE id = ?', [t.id])
     }
@@ -83,6 +86,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
         const assetStats = await removeCampaignAssetObjects(assetIds)
         if (assetStats.errors.length > 0) {
           console.error(`[sync.del] ${tableName} assets:`, assetStats.errors.join('; '))
+          await recordError(`sync.delete.${tableName}`, assetStats.errors.join('; '))
           continue
         }
       }
@@ -93,6 +97,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
         const { error } = await supabase.from(def.remote).delete().in(col, values)
         if (error) {
           console.error(`[sync.del] ${tableName}:`, error.message)
+          await recordError(`sync.delete.${tableName}`, error.message, error)
           continue
         }
       } else {
@@ -106,6 +111,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
           const { error } = await q
           if (error) {
             console.error(`[sync.del] ${tableName} composite:`, error.message)
+            await recordError(`sync.delete.${tableName}`, error.message, error)
             break
           }
           ok++
@@ -114,6 +120,7 @@ export async function pushDeletions(): Promise<DeletionPushStats[]> {
       }
     } catch (err) {
       console.error(`[sync.del] ${tableName} threw:`, err)
+      await recordError(`sync.delete.${tableName}`, 'Delete push failed', err)
       continue
     }
 

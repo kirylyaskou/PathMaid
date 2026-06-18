@@ -1,6 +1,7 @@
 import { getDb } from '@/shared/db'
 
 import { getSupabase } from './supabase-client'
+import { logSyncError } from './sync-progress'
 import type { SyncTableDef } from './sync-tables'
 
 /**
@@ -60,6 +61,7 @@ export async function pushTable(
     rows = await readDirtyRows(def)
   } catch (err) {
     console.error(`[sync.push] ${def.local}: read failed`, err)
+    await logSyncError(def.local, 'push', 'read failed', err)
     return stats
   }
   if (rows.length === 0) return stats
@@ -84,6 +86,7 @@ export async function pushTable(
 
     if (error) {
       console.error(`[sync.push] ${def.local} batch ${i}:`, error.message)
+      await logSyncError(def.local, 'push', `batch ${i}: ${error.message}`, error)
       return stats // stop on first batch error; remaining rows stay dirty
     }
     stats.pushed += batch.length
@@ -97,6 +100,7 @@ export async function pushTable(
   } catch (err) {
     // Non-fatal: rows will be re-pushed next cycle (idempotent upsert).
     console.warn(`[sync.push] ${def.local}: clear-dirty failed`, err)
+    await logSyncError(def.local, 'push', 'clear-dirty failed', err)
   }
 
   return stats

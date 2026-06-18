@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
+import { recordError } from '@/shared/api/logging'
+
 import { runSync, type SyncRunResult } from './sync-engine'
 
 /**
@@ -53,6 +55,7 @@ export const useSyncStore = create<SyncState>()(
         return result
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
+        await recordError('sync.full', `fatal sync error: ${msg}`, err)
         set((s) => {
           s.status = 'error'
           s.lastError = msg
