@@ -45,6 +45,7 @@ export async function pullTable(def: SyncTableDef): Promise<PullStats> {
   const PAGE_SIZE = 1000
   let offset = 0
   let maxSeen: string | null = null
+  const deferredRows: RemoteRow[] = []
   // Cap pages to avoid an infinite loop if a misbehaving query keeps returning
   // the same rows — defensive, should never trigger in practice.
   const MAX_PAGES = 500
@@ -81,6 +82,15 @@ export async function pullTable(def: SyncTableDef): Promise<PullStats> {
     const remoteRows = data as RemoteRow[]
     stats.pulled += remoteRows.length
 
+    // campaign_nodes has a self-FK, so updated_at order can place a child
+    // before its parent on first pull.
+    if (def.local === 'campaign_nodes') {
+      deferredRows.push(...remoteRows)
+      if (data.length < PAGE_SIZE) break // last page
+      offset += PAGE_SIZE
+      continue
+    }
+
     for (const row of remoteRows) {
       const applied = await applyRemoteRow(def, row)
       if (applied) stats.applied++
@@ -94,6 +104,15 @@ export async function pullTable(def: SyncTableDef): Promise<PullStats> {
     offset += PAGE_SIZE
   }
 
+  for (const row of orderCampaignNodeRowsForPull(deferredRows)) {
+    const applied = await applyRemoteRow(def, row)
+    if (applied) stats.applied++
+    else stats.skipped++
+
+    const rowTs = normaliseTimestamp(row.updated_at as string)
+    if (rowTs && (maxSeen === null || rowTs > maxSeen)) maxSeen = rowTs
+  }
+
   // Advance watermark only after a successful pass. If we crashed mid-way the
   // un-advanced watermark ensures the next pull re-fetches the missing tail.
   if (maxSeen) {
@@ -105,6 +124,40 @@ export async function pullTable(def: SyncTableDef): Promise<PullStats> {
   }
 
   return stats
+}
+
+function orderCampaignNodeRowsForPull(rows: RemoteRow[]): RemoteRow[] {
+  if (rows.length < 2) return rows
+
+  const byId = new Map<string, RemoteRow>()
+  for (const row of rows) {
+    if (typeof row.id === 'string') byId.set(row.id, row)
+  }
+
+  const ordered: RemoteRow[] = []
+  const visited = new Set<string>()
+  const visiting = new Set<string>()
+
+  const visit = (row: RemoteRow) => {
+    const id = typeof row.id === 'string' ? row.id : null
+    if (!id) {
+      ordered.push(row)
+      return
+    }
+    if (visited.has(id) || visiting.has(id)) return
+
+    visiting.add(id)
+    const parentId = typeof row.parent_id === 'string' ? row.parent_id : null
+    const parent = parentId ? byId.get(parentId) : undefined
+    if (parent) visit(parent)
+    visiting.delete(id)
+
+    visited.add(id)
+    ordered.push(row)
+  }
+
+  for (const row of rows) visit(row)
+  return ordered
 }
 
 /**
