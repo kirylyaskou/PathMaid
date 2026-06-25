@@ -1125,11 +1125,18 @@
     "max": "Макс",
     "allRarities": "Все редкости",
     "allTypes": "Все типы",
+    "allSizes": "Все размеры",
     "allSources": "Все источники",
     "reset": "Сбросить",
     "rarity": "Редкость",
     "type": "Тип",
-    "source": "Источник"
+    "size": "Размер",
+    "source": "Источник",
+    "searchRarity": "Найти редкость...",
+    "searchType": "Найти тип...",
+    "searchSize": "Найти размер...",
+    "searchSource": "Найти источник...",
+    "noOptions": "Ничего не найдено."
   },
   "commandPalette": {
     "searchPages": "Поиск страниц...",

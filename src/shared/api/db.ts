@@ -1,4 +1,4 @@
-import { getDb, runMigrations } from '@/shared/db'
+import { getDb, runMigrations, seedGenericCreatures } from '@/shared/db'
 import { loadContentTranslations } from '@/shared/i18n'
 
 // Module-level guard: React StrictMode fires the SplashScreen useEffect twice in
@@ -22,6 +22,7 @@ export async function initDatabase(): Promise<void> {
     await db.execute('PRAGMA foreign_keys=OFF', [])
     await runMigrations(db)
     await db.execute('PRAGMA foreign_keys=ON', [])
+    await seedGenericCreatures(db)
 
     // Seed bundled content translations (Phase 78). Idempotent via unique
     // index + INSERT OR REPLACE — safe to re-run on every startup.

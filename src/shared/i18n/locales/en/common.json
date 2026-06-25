@@ -1109,11 +1109,18 @@
     "max": "Max",
     "allRarities": "All Rarities",
     "allTypes": "All Types",
+    "allSizes": "All Sizes",
     "allSources": "All Sources",
     "reset": "Reset",
     "rarity": "Rarity",
     "type": "Type",
-    "source": "Source"
+    "size": "Size",
+    "source": "Source",
+    "searchRarity": "Search rarity...",
+    "searchType": "Search type...",
+    "searchSize": "Search size...",
+    "searchSource": "Search source...",
+    "noOptions": "No options found."
   },
   "commandPalette": {
     "searchPages": "Search pages...",

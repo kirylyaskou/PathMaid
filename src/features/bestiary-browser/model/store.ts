@@ -6,6 +6,7 @@ export interface BestiaryFilters {
   levelMax: number | null
   traits: string[]
   rarity: string | null
+  size: string | null
   source: string | null
 }
 
@@ -24,6 +25,7 @@ const defaultFilters: BestiaryFilters = {
   levelMax: null,
   traits: [],
   rarity: null,
+  size: null,
   source: null,
 }
 

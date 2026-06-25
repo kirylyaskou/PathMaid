@@ -57,9 +57,19 @@ export function toCreature(row: CreatureRow): Creature {
   // Extract stealth skill modifier from raw_json skills block (all creature types)
   let stealth: number | null = null
   try {
-    const rawForStealth = JSON.parse(row.raw_json) as { system?: { skills?: Record<string, { base?: unknown }> } } | null
-    const stealthBase = rawForStealth?.system?.skills?.stealth?.base
+    const rawForStealth = JSON.parse(row.raw_json) as unknown
+    const stealthBase = isRecord(rawForStealth)
+      && isRecord(rawForStealth.system)
+      && isRecord(rawForStealth.system.skills)
+      && isRecord(rawForStealth.system.skills.stealth)
+      ? rawForStealth.system.skills.stealth.base
+      : undefined
     if (typeof stealthBase === 'number') stealth = stealthBase
+    if (stealth == null && isDashboardCreature(rawForStealth)) {
+      const dashboardStealth = dashboardSkills(rawForStealth.skills)
+        .find((skill) => skill.name.toLowerCase() === 'stealth')?.modifier
+      if (typeof dashboardStealth === 'number') stealth = dashboardStealth
+    }
   } catch {
     // raw_json absent or malformed — stealth stays null
   }
@@ -87,9 +97,291 @@ function asArray(val: unknown): unknown[] {
   return Array.isArray(val) ? val : []
 }
 
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === 'object' && val !== null && !Array.isArray(val)
+}
+
+function dashboardNumber(val: unknown): number | null {
+  if (typeof val === 'number' && Number.isFinite(val)) return val
+  if (typeof val === 'string' && val.trim()) {
+    const parsed = Number(val)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  if (isRecord(val)) return dashboardNumber(val.value)
+  return null
+}
+
+function dashboardText(val: unknown): string {
+  return typeof val === 'string' ? val.trim() : ''
+}
+
+function dashboardArray(val: unknown): unknown[] {
+  return Array.isArray(val) ? val : []
+}
+
+function dashboardTraits(val: unknown): string[] {
+  const sizeTraits = new Set(['tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'])
+  return dashboardArray(val)
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0 && !sizeTraits.has(item) && !item.startsWith('('))
+}
+
+function dashboardSize(val: unknown): CreatureStatBlockData['size'] {
+  const sizes: Record<string, CreatureStatBlockData['size']> = {
+    tiny: 'Tiny',
+    small: 'Small',
+    medium: 'Medium',
+    large: 'Large',
+    huge: 'Huge',
+    gargantuan: 'Gargantuan',
+  }
+  for (const item of dashboardArray(val)) {
+    if (typeof item !== 'string') continue
+    const size = sizes[item.trim().toLowerCase()]
+    if (size) return size
+  }
+  return 'Medium'
+}
+
+function dashboardSpeed(raw: unknown): Record<string, number | null> {
+  const text = dashboardText(raw)
+  const speeds: Record<string, number | null> = {}
+  for (const part of text.split(',').map((item) => item.trim()).filter(Boolean)) {
+    const match = /^(?:(\w+)\s+)?(\d+)\s*(?:feet|ft\.?)?/i.exec(part)
+    if (!match) continue
+    speeds[(match[1] ?? 'land').toLowerCase()] = Number(match[2])
+  }
+  return Object.keys(speeds).length > 0 ? speeds : { land: null }
+}
+
+function dashboardIwrEntries(raw: unknown): Array<{ type: string; value: number }> {
+  return dashboardArray(raw).flatMap((item) => {
+    if (typeof item === 'string') {
+      const match = /^(.+?)\s+(\d+)$/.exec(item.trim())
+      if (!match) return []
+      return [{ type: match[1].trim().toLowerCase(), value: Number(match[2]) }]
+    }
+    if (!isRecord(item)) return []
+    const type = dashboardText(item.type ?? item.name)
+    const value = dashboardNumber(item.value)
+    return type && value != null ? [{ type: type.toLowerCase(), value }] : []
+  })
+}
+
+function dashboardImmunities(raw: unknown): ImmunityEntry[] {
+  return dashboardArray(raw).flatMap((item) => {
+    if (typeof item === 'string' && item.trim()) return [item.trim().toLowerCase()]
+    if (isRecord(item)) {
+      const type = dashboardText(item.type ?? item.name)
+      if (type) return [type.toLowerCase()]
+    }
+    return []
+  })
+}
+
+function dashboardActionCost(raw: unknown): DisplayActionCost | undefined {
+  const value = dashboardNumber(raw)
+  if (value === -1) return 'reaction'
+  if (value === 0 || value === 1 || value === 2 || value === 3) return value
+  return undefined
+}
+
+function dashboardDamageRolls(raw: unknown): { formula: string; type: string }[] {
+  return dashboardArray(raw).flatMap((item) => {
+    if (typeof item === 'string') {
+      const match = /roll=([^;}]+)(?:;\s*type=([^;}]*))?/.exec(item)
+      if (!match) return []
+      return [{ formula: match[1].trim(), type: (match[2] ?? '').trim() }]
+    }
+    if (!isRecord(item)) return []
+    const formula = dashboardText(item.roll ?? item.formula)
+    if (!formula) return []
+    return [{ formula, type: dashboardText(item.type) }]
+  })
+}
+
+function dashboardRange(traits: string[]): number | undefined {
+  for (const trait of traits) {
+    const match = /^(?:range-increment|range|reach)-(\d+)$/.exec(trait)
+    if (match && !trait.startsWith('reach')) return Number(match[1])
+  }
+  return undefined
+}
+
+function dashboardReach(traits: string[]): number | undefined {
+  for (const trait of traits) {
+    const match = /^reach-(\d+)$/.exec(trait)
+    if (match) return Number(match[1])
+  }
+  return traits.includes('reach') ? 10 : undefined
+}
+
+function dashboardStrikes(raw: unknown): CreatureStatBlockData['strikes'] {
+  return dashboardArray(raw).flatMap((item, index) => {
+    if (!isRecord(item)) return []
+    const name = dashboardText(item.name) || 'Strike'
+    const modifier = dashboardNumber(item.bonus)
+    if (modifier == null) return []
+    const traits = dashboardArray(item.traits)
+      .filter((trait): trait is string => typeof trait === 'string')
+      .map((trait) => trait.trim().toLowerCase())
+      .filter(Boolean)
+    const strike: CreatureStatBlockData['strikes'][number] = {
+      id: `dashboard-strike-${index}`,
+      name,
+      modifier,
+      damage: dashboardDamageRolls(item.damageRolls),
+      traits,
+    }
+    const reach = dashboardReach(traits)
+    const range = dashboardRange(traits)
+    if (reach != null) strike.reach = reach
+    if (range != null || item.type === 'ranged') strike.range = range ?? 30
+    return [strike]
+  })
+}
+
+function dashboardAbilities(raw: Record<string, unknown>): CreatureStatBlockData['abilities'] {
+  const groups = [raw.generalAbilities, raw.defensiveAbilities, raw.offensiveAbilities]
+  return groups.flatMap((group) =>
+    dashboardArray(group).flatMap((item, index) => {
+      if (!isRecord(item)) return []
+      const name = dashboardText(item.name)
+      if (!name) return []
+      const traits = dashboardArray(item.traits)
+        .filter((trait): trait is string => typeof trait === 'string')
+        .map((trait) => trait.trim().toLowerCase())
+        .filter(Boolean)
+      return [{
+        id: `dashboard-ability-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${index}`,
+        name,
+        actionCost: dashboardActionCost(item.actions),
+        description: stripHtml(dashboardText(item.description)),
+        traits,
+      }]
+    })
+  )
+}
+
+function dashboardSkills(raw: unknown): CreatureStatBlockData['skills'] {
+  return dashboardArray(raw).flatMap((item) => {
+    if (!isRecord(item)) return []
+    const name = dashboardText(item.name)
+    const modifier = dashboardNumber(item.modifier)
+    return name && modifier != null ? [{ name, modifier, calculated: false }] : []
+  })
+}
+
+function dashboardSpellcasting(raw: Record<string, unknown>, creatureLevel: number): CreatureStatBlockData['spellcasting'] {
+  return dashboardArray(raw.spellcastingEntries).flatMap((entry, entryIndex) => {
+    if (!isRecord(entry)) return []
+    const entryId = `dashboard-spellcasting-${entryIndex}`
+    const spellsByRank: NonNullable<CreatureStatBlockData['spellcasting']>[number]['spellsByRank'] = []
+    const appendRank = (rank: number, spellsRaw: unknown, slotsRaw: unknown) => {
+      const spells = dashboardArray(spellsRaw).flatMap((spell) => {
+        if (!isRecord(spell)) return []
+        const name = dashboardText(spell.name)
+        if (!name) return []
+        const from = dashboardNumber(spell.fromlevel)
+        const to = dashboardNumber(spell.tolevel)
+        if (from != null && creatureLevel < from) return []
+        if (to != null && creatureLevel > to) return []
+        return [{
+          name,
+          foundryId: dashboardText(spell.id) || null,
+          entryId,
+          ...(rank !== 0 && dashboardNumber(spell.level) != null
+            ? { heightenedFromRank: dashboardNumber(spell.level)! }
+            : {}),
+        }]
+      })
+      if (spells.length === 0) return
+      spellsByRank.push({
+        rank,
+        slots: isRecord(slotsRaw) ? dashboardNumber(slotsRaw.max) ?? 0 : 0,
+        spells,
+      })
+    }
+
+    appendRank(0, entry.cantrips, { max: 0 })
+    for (let rank = 1; rank <= 10; rank++) {
+      appendRank(rank, entry[`lv${rank}spells`], entry[`lv${rank}slots`])
+    }
+
+    if (spellsByRank.length === 0 && dashboardNumber(entry.dc) == null) return []
+    const entryName = dashboardText(entry.name) || 'Spells'
+    const entryNameLower = entryName.toLowerCase()
+    const tradition =
+      ['arcane', 'divine', 'occult', 'primal'].find((item) => entryNameLower.includes(item)) ?? 'arcane'
+    return [{
+      entryId,
+      entryName,
+      tradition,
+      castType: dashboardText(entry.type) || 'prepared',
+      spellDc: dashboardNumber(entry.dc) ?? 0,
+      spellAttack: dashboardNumber(entry.bonus) ?? 0,
+      spellsByRank,
+    }]
+  })
+}
+
+function dashboardAbilityMods(raw: Record<string, unknown>): AbilityMods {
+  return {
+    str: dashboardNumber(raw.strength) ?? 0,
+    dex: dashboardNumber(raw.dexterity) ?? 0,
+    con: dashboardNumber(raw.constitution) ?? 0,
+    int: dashboardNumber(raw.intelligence) ?? 0,
+    wis: dashboardNumber(raw.wisdom) ?? 0,
+    cha: dashboardNumber(raw.charisma) ?? 0,
+  }
+}
+
+function isDashboardCreature(raw: unknown): raw is Record<string, unknown> {
+  return isRecord(raw) && raw.type === 'Creature' && typeof raw.source === 'string'
+}
+
+function toDashboardCreatureStatBlockData(row: CreatureRow, raw: Record<string, unknown>): CreatureStatBlockData {
+  const base = toCreature(row)
+  const level = dashboardNumber(raw.level) ?? base.level
+  const skills = dashboardSkills(raw.skills)
+  const spellcasting = dashboardSpellcasting(raw, level)
+  return {
+    ...base,
+    level,
+    hp: dashboardNumber(raw.hp) ?? base.hp,
+    ac: dashboardNumber(raw.ac) ?? base.ac,
+    fort: dashboardNumber(raw.fortitude) ?? base.fort,
+    ref: dashboardNumber(raw.reflex) ?? base.ref,
+    will: dashboardNumber(raw.will) ?? base.will,
+    perception: dashboardNumber(raw.perception) ?? base.perception,
+    stealth: skills.find((skill) => skill.name.toLowerCase() === 'stealth')?.modifier ?? base.stealth,
+    traits: dashboardTraits(raw.traits),
+    rarity: base.rarity,
+    size: dashboardSize(raw.traits),
+    immunities: dashboardImmunities(raw.immunities),
+    weaknesses: dashboardIwrEntries(raw.weaknesses),
+    resistances: dashboardIwrEntries(raw.resistances),
+    speeds: dashboardSpeed(raw.speed),
+    strikes: dashboardStrikes(raw.strikes),
+    abilities: dashboardAbilities(raw),
+    skills,
+    languages: dashboardArray(raw.languages).filter((item): item is string => typeof item === 'string'),
+    senses: dashboardArray(raw.senses).filter((item): item is string => typeof item === 'string'),
+    description: dashboardText(raw.description) || undefined,
+    source: dashboardText(raw.source) || row.source_name || 'Generic Creatures',
+    spellDC: spellcasting?.[0]?.spellDc,
+    spellcasting,
+    abilityMods: dashboardAbilityMods(raw),
+  }
+}
+
 export function toCreatureStatBlockData(row: CreatureRow): CreatureStatBlockData {
   const base = toCreature(row)
   const raw = JSON.parse(row.raw_json)
+  if (isDashboardCreature(raw)) {
+    return toDashboardCreatureStatBlockData(row, raw)
+  }
   const system = (raw.system || {}) as FoundrySystem
   const details = system.details || {}
 

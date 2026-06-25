@@ -246,8 +246,8 @@ export async function saveEncounterCombatState(
   )
   for (const c of combatants) {
     await db.execute(
-      `UPDATE encounter_combatants SET hp=?, temp_hp=?, initiative=? WHERE id=?`,
-      [c.hp, c.tempHp, c.initiative, c.id]
+      `UPDATE encounter_combatants SET hp=?, temp_hp=?, initiative=? WHERE id=? AND encounter_id=?`,
+      [c.hp, c.tempHp, c.initiative, c.id, encounterId]
     )
   }
   await saveEncounterConditions(encounterId, conditions)

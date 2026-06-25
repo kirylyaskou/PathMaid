@@ -44,6 +44,7 @@ export function BestiaryPage() {
             levelMin: filters.levelMin,
             levelMax: filters.levelMax,
             rarity: filters.rarity,
+            size: filters.size,
             traits: filters.traits.length > 0 ? filters.traits : undefined,
             source: filters.source,
           },
@@ -93,6 +94,7 @@ export function BestiaryPage() {
     filters.levelMin != null ||
     filters.levelMax != null ||
     filters.rarity != null ||
+    filters.size != null ||
     filters.traits.length > 0 ||
     filters.source != null
 

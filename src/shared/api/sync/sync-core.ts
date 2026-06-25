@@ -1,4 +1,4 @@
-import { getDb } from '@/shared/db'
+import { GENERIC_CREATURE_SEED_COUNT, getDb, seedGenericCreatures } from '@/shared/db'
 import { setSyncMetadata } from '../db'
 import type { RawEntity, SyncProgressCallback } from './types'
 import { BATCH_SIZE } from './types'
@@ -162,12 +162,15 @@ export async function batchInsertEntities(
     )
   }
 
+  onProgress?.('Importing generic creatures...', total, total)
+  await seedGenericCreatures(db, { rebuildFts: false })
+
   onProgress?.('Building search index...', total, total)
   await db.execute(
     "INSERT INTO entities_fts(entities_fts) VALUES('rebuild')",
     []
   )
 
-  await setSyncMetadata('entity_count', String(total))
+  await setSyncMetadata('entity_count', String(total + GENERIC_CREATURE_SEED_COUNT))
   await setSyncMetadata('last_sync_date', new Date().toISOString())
 }

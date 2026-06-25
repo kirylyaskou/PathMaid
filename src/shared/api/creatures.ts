@@ -89,6 +89,7 @@ export interface CreatureFilters {
   levelMin?: number | null
   levelMax?: number | null
   rarity?: string | null
+  size?: string | null
   traits?: string[]
   source?: string | null
   // adventure-scoped library filter. Special value `__iconics__` matches
@@ -121,6 +122,10 @@ export async function searchCreaturesFiltered(
   if (filters.rarity) {
     conditions.push('e.rarity = ?')
     params.push(filters.rarity)
+  }
+  if (filters.size) {
+    conditions.push('e.size = ?')
+    params.push(filters.size)
   }
   if (filters.source) {
     // Filter by source_name (human-readable, unique per row).

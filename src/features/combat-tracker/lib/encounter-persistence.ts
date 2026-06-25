@@ -10,6 +10,7 @@ import { logErrorWithToast } from '@/shared/lib/error'
 
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let pendingPayload: NonNullable<ReturnType<typeof buildEncounterSavePayload>> | null = null
 
 function buildEncounterSavePayload() {
   const tracker = useCombatTrackerStore.getState()
@@ -46,26 +47,43 @@ function buildEncounterSavePayload() {
   }
 }
 
+async function saveEncounterPayload(
+  payload: NonNullable<ReturnType<typeof buildEncounterSavePayload>>
+): Promise<void> {
+  await saveEncounterCombatState(
+    payload.encounterId,
+    payload.round,
+    payload.turn,
+    payload.activeCombatantId,
+    payload.isRunning,
+    payload.combatants,
+    payload.conditions
+  )
+  useCombatTrackerStore.getState().setLastSaveError(null)
+}
+
+async function saveEncounterPayloadSafely(
+  payload: NonNullable<ReturnType<typeof buildEncounterSavePayload>>
+): Promise<void> {
+  try {
+    await saveEncounterPayload(payload)
+  } catch (err) {
+    logErrorWithToast('encounter-auto-save')(err)
+    useCombatTrackerStore.getState().setLastSaveError('Auto-save failed')
+  }
+}
+
 function debouncedEncounterSave(): void {
+  const payload = buildEncounterSavePayload()
+  if (!payload) return
+  pendingPayload = payload
   if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(async () => {
-    const payload = buildEncounterSavePayload()
+  saveTimer = setTimeout(() => {
+    const payload = pendingPayload
+    saveTimer = null
+    pendingPayload = null
     if (!payload) return
-    try {
-      await saveEncounterCombatState(
-        payload.encounterId,
-        payload.round,
-        payload.turn,
-        payload.activeCombatantId,
-        payload.isRunning,
-        payload.combatants,
-        payload.conditions
-      )
-      useCombatTrackerStore.getState().setLastSaveError(null)
-    } catch (err) {
-      logErrorWithToast('encounter-auto-save')(err)
-      useCombatTrackerStore.getState().setLastSaveError('Auto-save failed')
-    }
+    void saveEncounterPayloadSafely(payload)
   }, 300)
 }
 
@@ -85,6 +103,11 @@ export function teardownEncounterAutoSave(): void {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  if (pendingPayload) {
+    const payload = pendingPayload
+    pendingPayload = null
+    void saveEncounterPayloadSafely(payload)
+  }
 }
 
 /** Immediately persist the current encounter state (flush pending debounced save). */
@@ -93,17 +116,10 @@ export async function flushEncounterSave(): Promise<void> {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+  pendingPayload = null
   const payload = buildEncounterSavePayload()
   if (!payload) return
-  await saveEncounterCombatState(
-    payload.encounterId,
-    payload.round,
-    payload.turn,
-    payload.activeCombatantId,
-    payload.isRunning,
-    payload.combatants,
-    payload.conditions
-  )
+  await saveEncounterPayload(payload)
 }
 
 /**
