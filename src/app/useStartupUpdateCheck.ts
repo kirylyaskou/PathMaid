@@ -14,8 +14,9 @@ let hasChecked = false
  * automatically. No toast is surfaced here.
  * Errors from `checkForUpdate()` are silenced via `console.error` .
  */
-export function useStartupUpdateCheck(): void {
+export function useStartupUpdateCheck(enabled: boolean): void {
   useEffect(() => {
+    if (!enabled) return
     // React disallows `async` as the useEffect callback — wrap in async IIFE.
     ;(async () => {
       if (!import.meta.env.PROD) return
@@ -35,5 +36,5 @@ export function useStartupUpdateCheck(): void {
         void recordWarn('update-check', `Startup update check failed: ${errMessage(err)}`)
       }
     })()
-  }, [])
+  }, [enabled])
 }

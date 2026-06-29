@@ -19,7 +19,7 @@ function App() {
   }, [])
 
   return (
-    <AppProviders>
+    <AppProviders databaseReady={dbReady}>
       {dbReady ? <AppRouter /> : <SplashScreen onReady={handleReady} />}
     </AppProviders>
   )

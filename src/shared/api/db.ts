@@ -1,4 +1,4 @@
-import { getDb, runMigrations, seedGenericCreatures } from '@/shared/db'
+import { closeDb, getDb, runMigrations, seedGenericCreatures } from '@/shared/db'
 import { loadContentTranslations } from '@/shared/i18n'
 
 // Module-level guard: React StrictMode fires the SplashScreen useEffect twice in
@@ -54,8 +54,7 @@ export async function initDatabase(): Promise<void> {
  */
 export async function closeDatabase(): Promise<void> {
   try {
-    const db = await getDb()
-    await db.close()
+    await closeDb()
   } catch (e) {
     console.warn('[db] close failed (non-fatal):', e)
   } finally {

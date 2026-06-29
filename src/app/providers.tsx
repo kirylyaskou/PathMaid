@@ -5,8 +5,14 @@ import { UpdateDialog } from '@/widgets/update-dialog'
 import { i18n } from '@/shared/i18n'
 import { useStartupUpdateCheck } from './useStartupUpdateCheck'
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
-  useStartupUpdateCheck()
+export function AppProviders({
+  children,
+  databaseReady,
+}: {
+  children: React.ReactNode
+  databaseReady: boolean
+}) {
+  useStartupUpdateCheck(databaseReady)
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
