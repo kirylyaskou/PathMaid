@@ -1,4 +1,5 @@
 import type { EmbeddedCustomCreature, ImportFormat, ParsedEncounter, ParsedCombatant } from './types'
+import type { EncounterSide } from '@engine'
 
 // format detection + parsing. Pure functions; no DB access.
 
@@ -66,6 +67,7 @@ interface PathmaidenExport {
       hp?: number
       hpMax?: number
       initiative?: number
+      side?: EncounterSide
     }>
     customCreatures?: EmbeddedCustomCreature[]
   }
@@ -86,6 +88,10 @@ function customCreatureMap(customCreatures: EmbeddedCustomCreature[] | undefined
     }
   }
   return map
+}
+
+function parseSide(value: unknown): EncounterSide | undefined {
+  return value === 'enemy' || value === 'ally' ? value : undefined
 }
 
 export function detectFormat(json: unknown): ImportFormat {
@@ -181,6 +187,7 @@ export function parsePathmaiden(json: unknown): ParsedEncounter[] {
       hp: c.hp,
       hpMax: c.hpMax,
       initiative: c.initiative,
+      side: parseSide(c.side),
       embeddedCustomCreature,
     })
   }
@@ -221,6 +228,7 @@ export function parsePathmaidBundle(json: unknown): ParsedEncounter[] {
         hp: c.hp,
         hpMax: c.hpMax,
         initiative: c.initiative,
+        side: parseSide(c.side),
         embeddedCustomCreature,
       })
     }

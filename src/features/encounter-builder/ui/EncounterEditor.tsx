@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
+import { Gift, Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useDroppable } from '@dnd-kit/core'
 import { Button } from '@/shared/ui/button'
@@ -21,6 +21,7 @@ import { cn } from '@/shared/lib/utils'
 import { useEncounterStore } from '@/entities/encounter'
 import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName, loadEncounterStagingCombatants } from '@/shared/api'
 import type { EncounterCombatantRow } from '@/shared/api'
+import type { EncounterSide } from '@engine'
 import { logErrorWithToast } from '@/shared/lib/error'
 import {
   loadEncounterIntoCombat, teardownEncounterAutoSave, flushEncounterSave,
@@ -31,6 +32,7 @@ import { StatBlockModal } from '@/entities/creature'
 import { PATHS } from '@/shared/routes'
 import { useCombatantStore } from '@/entities/combatant'
 import type { StagingCombatant, Combatant } from '@/entities/combatant'
+import { EncounterLootModal } from '@/features/encounter-loot'
 import { StagingTable } from './StagingTable'
 import { EncounterRosterItem } from './EncounterRosterItem'
 
@@ -53,6 +55,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
   const [loading, setLoading] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState(encounter?.name ?? '')
+  const [lootOpen, setLootOpen] = useState(false)
   // clicking a creature name opens its stat block.
   const [statBlockCreatureId, setStatBlockCreatureId] = useState<string | null>(null)
   const stagingPoolEnabled = useAdvancedSettingsStore((s) => s.stagingPool)
@@ -187,6 +190,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       isHazard: r.isHazard,
       hazardRef: r.hazardRef,
       hazardType: r.hazardType,
+      side: r.side,
     }))
     setEncounterCombatants(encounterId, updated)
     useCombatantStore.getState().setStagingCombatants([])
@@ -213,6 +217,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       weakEliteTier: c.weakEliteTier, creatureLevel: c.creatureLevel,
       sortOrder: i, isHazard: c.isHazard ?? false, hazardRef: c.hazardRef ?? null,
       hazardType: c.hazardType,
+      side: c.side,
     }))
     await saveEncounterCombatants(encounterId, rows)
     setEncounterCombatants(encounterId, sorted.map((c, i) => ({ ...c, sortOrder: i })))
@@ -241,9 +246,34 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       isHazard: c.isHazard ?? false,
       hazardRef: c.hazardRef ?? null,
       hazardType: c.hazardType,
+      side: c.side,
     }))
     await saveEncounterCombatants(encounterId, rows)
     setEncounterCombatants(encounterId, remaining.map((c, i) => ({ ...c, sortOrder: i })))
+  }
+
+  async function handleSetSide(instanceId: string, side: EncounterSide) {
+    const updated = combatants.map((c) => c.id === instanceId ? { ...c, side } : c)
+    const rows: EncounterCombatantRow[] = updated.map((c, i) => ({
+      id: c.id,
+      encounterId: c.encounterId,
+      creatureRef: c.creatureRef,
+      displayName: c.displayName,
+      initiative: c.initiative,
+      hp: c.hp,
+      maxHp: c.maxHp,
+      tempHp: c.tempHp,
+      isNPC: c.isNPC,
+      weakEliteTier: c.weakEliteTier,
+      creatureLevel: c.creatureLevel,
+      sortOrder: i,
+      isHazard: c.isHazard ?? false,
+      hazardRef: c.hazardRef ?? null,
+      hazardType: c.hazardType,
+      side: c.side,
+    }))
+    await saveEncounterCombatants(encounterId, rows)
+    setEncounterCombatants(encounterId, updated.map((c, i) => ({ ...c, sortOrder: i })))
   }
 
   return (
@@ -281,6 +311,10 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         <Button variant="outline" size="sm" className="h-8 text-sm text-destructive hover:text-destructive" onClick={() => setShowResetConfirm(true)}>
           {t('encounterBuilder.reset')}
         </Button>
+        <Button variant="outline" size="sm" className="h-8 gap-1 text-sm" onClick={() => setLootOpen(true)}>
+          <Gift className="w-3.5 h-3.5" />
+          {t('encounterBuilder.loot')}
+        </Button>
         <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs ml-auto" onClick={handleSortByLevel}>
           <ArrowUpDown className="w-3 h-3" />
           {t('encounterBuilder.sortByLevel')}
@@ -312,6 +346,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
               combatant={c}
               partyLevel={partyLevel}
               onRemove={() => handleRemove(c.id)}
+              onSetSide={(side) => handleSetSide(c.id, side)}
               onViewStatBlock={setStatBlockCreatureId}
             />
           ))}
@@ -398,6 +433,12 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
         creatureId={statBlockCreatureId}
         open={statBlockCreatureId !== null}
         onOpenChange={(open) => { if (!open) setStatBlockCreatureId(null) }}
+      />
+      <EncounterLootModal
+        encounterId={encounterId}
+        mode="builder"
+        open={lootOpen}
+        onOpenChange={setLootOpen}
       />
     </div>
   )

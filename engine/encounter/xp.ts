@@ -1,6 +1,7 @@
 export type XpResult = { xp: number; outOfRange?: false } | { xp: null; outOfRange: true }
 export type HazardType = 'simple' | 'complex'
 export type ThreatRating = 'trivial' | 'low' | 'moderate' | 'severe' | 'extreme'
+export type EncounterSide = 'enemy' | 'ally'
 
 // ─── XP Lookup Tables ────────────────────────────────────────────────────────
 
@@ -121,8 +122,19 @@ export function generateEncounterBudgets(partySize: number): Record<ThreatRating
  * - totalXp <= severe -> 'severe'
  * - totalXp > severe -> 'extreme'
  */
-export function calculateEncounterRating(totalXp: number, partySize: number): ThreatRating {
-  const budgets = generateEncounterBudgets(partySize)
+export function calculateEncounterRating(
+  totalXp: number,
+  partySize: number,
+  budgetAdjustmentXp = 0,
+): ThreatRating {
+  const baseBudgets = generateEncounterBudgets(partySize)
+  const budgets = {
+    trivial: baseBudgets.trivial + budgetAdjustmentXp,
+    low: baseBudgets.low + budgetAdjustmentXp,
+    moderate: baseBudgets.moderate + budgetAdjustmentXp,
+    severe: baseBudgets.severe + budgetAdjustmentXp,
+    extreme: baseBudgets.extreme + budgetAdjustmentXp,
+  }
   if (totalXp > budgets.severe) return 'extreme'
   if (totalXp > budgets.moderate) return 'severe'
   if (totalXp > budgets.low) return 'moderate'
@@ -132,15 +144,25 @@ export function calculateEncounterRating(totalXp: number, partySize: number): Th
 
 // ─── Orchestrator Types & Function ──────────────────────────────────────────
 
-export interface EncounterCreatureEntry { level: number; xp: number | null; outOfRange?: boolean }
-export interface EncounterHazardEntry { level: number; type: HazardType; xp: number | null; outOfRange?: boolean }
+export interface EncounterCreatureInput { level: number; side?: EncounterSide }
+export interface EncounterHazardInput { level: number; type: HazardType; side?: EncounterSide }
+export interface EncounterCreatureEntry { level: number; side: EncounterSide; xp: number | null; outOfRange?: boolean }
+export interface EncounterHazardEntry { level: number; type: HazardType; side: EncounterSide; xp: number | null; outOfRange?: boolean }
 export interface OutOfRangeWarning { type: 'outOfRange'; creatureLevel?: number; hazardLevel?: number; partyLevel: number }
 export interface EncounterResult {
   totalXp: number
+  enemyXp: number
+  allyXp: number
+  budgetAdjustmentXp: number
+  awardXp: number
   rating: ThreatRating
   creatures: EncounterCreatureEntry[]
   hazards: EncounterHazardEntry[]
   warnings: OutOfRangeWarning[]
+}
+
+function normalizeCreatureInput(input: number | EncounterCreatureInput): EncounterCreatureInput {
+  return typeof input === 'number' ? { level: input, side: 'enemy' } : input
 }
 
 /**
@@ -148,39 +170,57 @@ export interface EncounterResult {
  * threat rating, and out-of-range warnings.
  */
 export function calculateXP(
-  creatures: number[],
-  hazards: Array<{ level: number; type: HazardType }>,
+  creatures: Array<number | EncounterCreatureInput>,
+  hazards: EncounterHazardInput[],
   partyLevel: number,
   partySize: number,
 ): EncounterResult {
   if (partySize === 0) throw new Error('Party size cannot be 0')
 
   const warnings: OutOfRangeWarning[] = []
-  let totalXp = 0
+  let enemyXp = 0
+  let allyXp = 0
 
-  const creatureEntries: EncounterCreatureEntry[] = creatures.map(level => {
+  const creatureEntries: EncounterCreatureEntry[] = creatures.map(input => {
+    const { level, side = 'enemy' } = normalizeCreatureInput(input)
     const result = calculateCreatureXP(level, partyLevel)
     if (result.outOfRange) {
       warnings.push({ type: 'outOfRange', creatureLevel: level, partyLevel })
-      return { level, xp: null, outOfRange: true }
+      return { level, side, xp: null, outOfRange: true }
     }
-    totalXp += result.xp
-    return { level, xp: result.xp }
+    if (side === 'ally') allyXp += result.xp
+    else enemyXp += result.xp
+    return { level, side, xp: result.xp }
   })
 
   const hazardEntries: EncounterHazardEntry[] = hazards.map(h => {
+    const side = h.side ?? 'enemy'
     const result = getHazardXp(h.level, partyLevel, h.type)
     if (result.outOfRange) {
       warnings.push({ type: 'outOfRange', hazardLevel: h.level, partyLevel })
-      return { level: h.level, type: h.type, xp: null, outOfRange: true }
+      return { level: h.level, type: h.type, side, xp: null, outOfRange: true }
     }
-    totalXp += result.xp
-    return { level: h.level, type: h.type, xp: result.xp }
+    if (side === 'ally') allyXp += result.xp
+    else enemyXp += result.xp
+    return { level: h.level, type: h.type, side, xp: result.xp }
   })
 
-  const rating = calculateEncounterRating(totalXp, partySize)
+  const budgetAdjustmentXp = allyXp
+  const rating = calculateEncounterRating(enemyXp, partySize, budgetAdjustmentXp)
+  // Allied troops raise the enemy budget, but the encounter still awards the base XP for its threat.
+  const awardXp = generateEncounterBudgets(partySize)[rating]
 
-  return { totalXp, rating, creatures: creatureEntries, hazards: hazardEntries, warnings }
+  return {
+    totalXp: enemyXp,
+    enemyXp,
+    allyXp,
+    budgetAdjustmentXp,
+    awardXp,
+    rating,
+    creatures: creatureEntries,
+    hazards: hazardEntries,
+    warnings,
+  }
 }
 
 // ─── Test-only exports ───────────────────────────────────────────────────────

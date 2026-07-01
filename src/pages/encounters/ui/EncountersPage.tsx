@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core'
 import {
@@ -72,6 +72,7 @@ export function EncountersPage() {
         isHazard: r.isHazard,
         hazardRef: r.hazardRef,
         hazardType: r.hazardType,
+        side: r.side,
       })))
     })
   }, [selectedId, encounters, setEncounterCombatants])
@@ -85,19 +86,32 @@ export function EncountersPage() {
   }
 
   // XP Budget: compute from selected encounter's combatants
-  const selectedEncounter = encounters.find((e) => e.id === selectedId)
-  // PF2e Monster Core pg. 6-7: weak/elite adjust creature level by ±1 for
-  // the XP budget. Use getAdjustedLevel from the engine (also applies the
-  // display clamp for level -1/0/1) rather than the ad-hoc ternary.
-  const creatureLevels = selectedEncounter?.combatants
-    .filter((c) => !c.isHazard)
-    .map((c) => getAdjustedLevel(c.weakEliteTier, c.creatureLevel)) ?? []
-  const hazardEntries = selectedEncounter?.combatants
-    .filter((c) => c.isHazard === true)
-    .map((c) => ({ level: c.creatureLevel, type: (c.hazardType ?? 'simple') as HazardType })) ?? []
-  const totalXp = selectedEncounter
-    ? calculateXP(creatureLevels, hazardEntries, partyLevel, partySize).totalXp
-    : 0
+  const selectedEncounter = useMemo(
+    () => encounters.find((e) => e.id === selectedId),
+    [encounters, selectedId],
+  )
+  const encounterXpResult = useMemo(() => {
+    if (!selectedEncounter) return null
+    // PF2e Monster Core pg. 6-7: weak/elite adjust creature level by ±1 for
+    // the XP budget. Use getAdjustedLevel from the engine (also applies the
+    // display clamp for level -1/0/1) rather than the ad-hoc ternary.
+    const creatureLevels = selectedEncounter.combatants
+      .filter((c) => !c.isHazard)
+      .map((c) => ({
+        level: getAdjustedLevel(c.weakEliteTier, c.creatureLevel),
+        side: c.side,
+      }))
+    const hazardEntries = selectedEncounter.combatants
+      .filter((c) => c.isHazard === true)
+      .map((c) => ({
+        level: c.creatureLevel,
+        type: (c.hazardType ?? 'simple') as HazardType,
+        side: c.side,
+      }))
+    return calculateXP(creatureLevels, hazardEntries, partyLevel, partySize)
+  }, [partyLevel, partySize, selectedEncounter])
+  const encounterXp = encounterXpResult?.totalXp ?? 0
+  const allyBudgetXp = encounterXpResult?.budgetAdjustmentXp ?? 0
   const xpPartySize = partySize
 
   // Add creature to currently selected encounter
@@ -126,6 +140,7 @@ export function EncountersPage() {
       sortOrder: enc.combatants.length,
       isHazard: false,
       hazardRef: null,
+      side: 'enemy',
     }
 
     const updatedRows: EncounterCombatantRow[] = [
@@ -145,6 +160,7 @@ export function EncountersPage() {
         isHazard: c.isHazard ?? false,
         hazardRef: c.hazardRef ?? null,
         hazardType: c.hazardType,
+        side: c.side,
       })),
       newRow,
     ]
@@ -178,6 +194,7 @@ export function EncountersPage() {
       isHazard: true,
       hazardRef: hazard.id,
       hazardType: hazard.hazard_type as 'simple' | 'complex',
+      side: 'enemy',
     }
 
     const updatedRows: EncounterCombatantRow[] = [
@@ -197,6 +214,7 @@ export function EncountersPage() {
         isHazard: c.isHazard ?? false,
         hazardRef: c.hazardRef ?? null,
         hazardType: c.hazardType,
+        side: c.side,
       })),
       newRow,
     ]
@@ -230,7 +248,7 @@ export function EncountersPage() {
       {/* Party config + XP summary */}
       <PartyConfigBar />
       <div className="px-4 py-2 border-b border-border/50">
-        <XPBudgetBar currentXP={totalXp} partySize={xpPartySize} />
+        <XPBudgetBar currentXP={encounterXp} partySize={xpPartySize} allyBudgetXP={allyBudgetXp} />
       </div>
 
       {/* 3-panel layout wrapped in DndContext */}

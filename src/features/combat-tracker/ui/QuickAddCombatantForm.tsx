@@ -63,6 +63,7 @@ export function QuickAddCombatantForm({ mode }: QuickAddCombatantFormProps) {
       hp: parsedHp,
       maxHp: parsedHp,
       tempHp: 0,
+      side: mode === 'creature' ? 'enemy' : 'ally',
       ...(mode === 'creature' ? { mortal: true } : {}),
       ...(mode === 'creature' && parsedAc !== undefined ? { ac: parsedAc } : {}),
       ...(mode === 'creature' && parsedPerception !== undefined ? { perception: parsedPerception } : {}),

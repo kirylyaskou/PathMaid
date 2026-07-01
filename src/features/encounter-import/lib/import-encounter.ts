@@ -93,6 +93,7 @@ export async function commitMatchedEncounter(
       isHazard,
       hazardRef: isHazard ? match.id : null,
       hazardType: isHazard ? 'simple' : undefined,
+      side: mc.parsed.side ?? 'enemy',
     })
     sortIdx += 1
   }

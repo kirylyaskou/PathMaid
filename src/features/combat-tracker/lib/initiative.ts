@@ -44,6 +44,7 @@ export function createCombatantFromCreature(
     hp,
     maxHp: hp,
     tempHp: 0,
+    side: 'enemy',
     mortal: true,
     ...(level !== undefined ? { level } : {}),
     ...(tier && tier !== 'normal' ? { weakEliteTier: tier } : {}),
@@ -79,5 +80,6 @@ export function createPCCombatant(
     hp: maxHp,
     maxHp,
     tempHp: 0,
+    side: 'ally',
   }
 }

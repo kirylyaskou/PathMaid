@@ -1,6 +1,6 @@
 [package]
 name = "pathmaid"
-version = "3.0.91"
+version = "3.1.0"
 description = "Pathfinder 2e DM Assistant"
 authors = ["you"]
 edition = "2021"
@@ -17,6 +17,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-log = "2"
+tauri-plugin-deep-link = "2"
 log = "0.4"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 serde = { version = "1", features = ["derive"] }
@@ -32,3 +33,4 @@ tempfile = "3"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-os = "2"
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

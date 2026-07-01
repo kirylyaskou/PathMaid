@@ -80,7 +80,7 @@ export function EncounterTabBar() {
           }}
           onReset={(e) => {
             e.stopPropagation()
-            resetTab(tab.id)
+            void resetTab(tab.id)
           }}
         />
       ))}

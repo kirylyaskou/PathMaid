@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useCombatantStore } from '@/entities/combatant'
-import { useConditionStore } from '@/entities/condition'
+import { useConditionStore, type ActiveCondition } from '@/entities/condition'
 import { useCombatTrackerStore, clearCombatantManager, rollInitiative, useEncounterTabsStore } from '@/features/combat-tracker'
 import { fetchCreatureById } from '@/shared/api'
 import { useShallow } from 'zustand/react/shallow'
@@ -14,6 +14,8 @@ interface InitiativeListProps {
   onSelect: (id: string) => void
 }
 
+const EMPTY_CONDITIONS: ActiveCondition[] = []
+
 export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
   const { t } = useTranslation('common')
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
@@ -21,7 +23,8 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
   const activeCombatantId = useCombatTrackerStore(
     useShallow((s) => s.activeCombatantId)
   )
-  const { removeCombatant, setInitiative } = useCombatantStore()
+  const removeCombatant = useCombatantStore((s) => s.removeCombatant)
+  const setInitiative = useCombatantStore((s) => s.setInitiative)
   const activeTabId = useEncounterTabsStore((s) => s.activeTabId)
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [modalCreatureId, setModalCreatureId] = useState<string | null>(null)
@@ -38,14 +41,21 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
 
   async function handleRollAll() {
     const tabAtStart = activeTabId
-    await Promise.all(combatants.map(async (c) => {
-      let perception = 0
-      if (c.creatureRef) {
-        const row = await fetchCreatureById(c.creatureRef)
-        perception = row?.perception ?? 0
-      }
-      setInitiative(c.id, rollInitiative(perception))
+    const creatureRefs = Array.from(
+      new Set(combatants.map((c) => c.creatureRef).filter((ref): ref is string => Boolean(ref)))
+    )
+    const perceptionByRef = new Map<string, number>()
+
+    await Promise.all(creatureRefs.map(async (ref) => {
+      const row = await fetchCreatureById(ref)
+      perceptionByRef.set(ref, row?.perception ?? 0)
     }))
+
+    for (const combatant of combatants) {
+      const perception = combatant.creatureRef ? perceptionByRef.get(combatant.creatureRef) ?? 0 : 0
+      setInitiative(combatant.id, rollInitiative(perception))
+    }
+
     // Only dismiss the banner if the user is still on the same tab.
     // If they switched tabs during the async fetch, the useEffect above
     // already reset bannerDismissed, so we must not override that.
@@ -64,6 +74,21 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
 
   // Memoize: stable ID array passed as prop to SortableContext; avoids new array reference on every render
   const combatantIds = useMemo(() => combatants.map((c) => c.id), [combatants])
+  const conditionsByCombatantId = useMemo(() => {
+    const grouped = new Map<string, ActiveCondition[]>()
+
+    for (const condition of conditions) {
+      const existing = grouped.get(condition.combatantId)
+
+      if (existing) {
+        existing.push(condition)
+      } else {
+        grouped.set(condition.combatantId, [condition])
+      }
+    }
+
+    return grouped
+  }, [conditions])
 
   return (
     <div className="h-full overflow-y-auto">
@@ -93,9 +118,7 @@ export function InitiativeList({ selectedId, onSelect }: InitiativeListProps) {
             <InitiativeRow
               key={combatant.id}
               combatant={combatant}
-              conditions={conditions.filter(
-                (c) => c.combatantId === combatant.id
-              )}
+              conditions={conditionsByCombatantId.get(combatant.id) ?? EMPTY_CONDITIONS}
               isActive={combatant.id === activeCombatantId}
               isSelected={combatant.id === selectedId}
               onSelect={() => onSelect(combatant.id)}

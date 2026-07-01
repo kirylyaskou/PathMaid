@@ -53,14 +53,18 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
   const castMode = resolveCastMode(entry.castType)
   // PF2e RAW: cantrips heighten to ceil(casterLevel / 2), clamped 1..10.
   const autoCantripRank = Math.min(10, Math.max(1, Math.ceil(props.creatureLevel / 2)))
+  const spellRanksByRank = useMemo(
+    () => new Map(entry.spellsByRank.map((byRank) => [byRank.rank, byRank])),
+    [entry.spellsByRank],
+  )
 
   const effectiveRanks = useMemo(() => {
-    const baseRanks = entry.spellsByRank.map((br) => br.rank)
+    const baseRanks = Array.from(spellRanksByRank.keys())
     const customRanks = Object.entries(slotDeltas)
-      .filter(([r, d]) => !baseRanks.includes(Number(r)) && d > 0)
+      .filter(([r, d]) => !spellRanksByRank.has(Number(r)) && d > 0)
       .map(([r]) => Number(r))
     return [...baseRanks, ...customRanks].sort((a, b) => a - b)
-  }, [entry.spellsByRank, slotDeltas])
+  }, [slotDeltas, spellRanksByRank])
 
   const nextRank = useMemo(() => {
     if (effectiveRanks.length === 0) return 1
@@ -90,7 +94,7 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
     const result = new Map<number, { defaultSlots: SlotInstance[]; addedSlots: SlotInstance[] }>()
     const isInnate = castMode === 'innate'
     for (const rank of effectiveRanks) {
-      const byRank = entry.spellsByRank.find((br) => br.rank === rank)
+      const byRank = spellRanksByRank.get(rank)
       const visible = byRank
         ? byRank.spells.filter((s) => !removedSpells.has(`${rank}:${s.name}`))
         : []
@@ -141,10 +145,10 @@ export function SpellcastingEditor(props: SpellcastingEditorProps) {
       result.set(rank, { defaultSlots, addedSlots })
     }
     return result
-  }, [effectiveRanks, entry.spellsByRank, removedSpells, addedByRank, castMode])
+  }, [effectiveRanks, spellRanksByRank, removedSpells, addedByRank, castMode])
 
   function renderRank(rank: number) {
-    const byRank = entry.spellsByRank.find((br) => br.rank === rank)
+    const byRank = spellRanksByRank.get(rank)
     const baseSlots = byRank?.slots ?? 0
     const slotDelta = slotDeltas[rank] ?? 0
     const totalSlots = Math.max(0, baseSlots + slotDelta)

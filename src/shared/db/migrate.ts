@@ -6,6 +6,62 @@ const migrationFiles = import.meta.glob('./migrations/*.sql', {
   import: 'default',
 }) as Record<string, string>
 
+function isIncompleteTriggerStatement(statement: string): boolean {
+  return /^\s*CREATE\s+(?:TEMP\s+|TEMPORARY\s+)?TRIGGER\b/i.test(statement)
+    && !/\bEND\s*;?\s*$/i.test(statement)
+}
+
+function splitMigrationStatements(sql: string): string[] {
+  const withoutComments = sql.replace(/--[^\n]*/g, '')
+  const statements: string[] = []
+  let current = ''
+  let inSingleQuote = false
+  let inDoubleQuote = false
+
+  for (let i = 0; i < withoutComments.length; i++) {
+    const ch = withoutComments[i]!
+    const next = withoutComments[i + 1]
+    current += ch
+
+    if (ch === "'" && !inDoubleQuote) {
+      if (inSingleQuote && next === "'") {
+        current += next
+        i++
+      } else {
+        inSingleQuote = !inSingleQuote
+      }
+      continue
+    }
+
+    if (ch === '"' && !inSingleQuote) {
+      if (inDoubleQuote && next === '"') {
+        current += next
+        i++
+      } else {
+        inDoubleQuote = !inDoubleQuote
+      }
+      continue
+    }
+
+    if (ch !== ';' || inSingleQuote || inDoubleQuote) continue
+
+    const statement = current.trim()
+    if (!statement) {
+      current = ''
+      continue
+    }
+
+    if (isIncompleteTriggerStatement(statement)) continue
+
+    statements.push(statement.replace(/;\s*$/, '').trim())
+    current = ''
+  }
+
+  const tail = current.trim()
+  if (tail) statements.push(tail)
+  return statements
+}
+
 export async function runMigrations(db: Database): Promise<void> {
   await db.execute(
     `CREATE TABLE IF NOT EXISTS _migrations (
@@ -33,25 +89,28 @@ export async function runMigrations(db: Database): Promise<void> {
     if (appliedSet.has(name)) continue
 
     console.log(`[migrate] Applying: ${name}`)
-    // Strip SQL line comments before splitting so that any `;` inside a comment
-    // does not corrupt the statement stream. Assumes our migrations do not
-    // contain `--` inside string literals (true for every migration to date).
-    const statements = sql
-      .replace(/--[^\n]*/g, '')
-      .split(';')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0)
+    const statements = splitMigrationStatements(sql)
     for (let i = 0; i < statements.length; i++) {
       const stmt = statements[i]
       try {
         await db.execute(stmt, [])
       } catch (err) {
-        // Rich error message so the SplashScreen surface points at the exact
-        // failing migration + statement in production. SQLite errors from the
-        // plugin only carry the terse code ("no such table: foo") without
-        // migration context — which made clean-install triage guesswork.
-        const snippet = stmt.replace(/\s+/g, ' ').slice(0, 140)
+        // SQLite has no `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. A migration
+        // that adds many columns can be interrupted mid-way (crash, force-quit);
+        // columns added before the failure persist, but the migration itself is
+        // not recorded as applied — so on the next launch it re-runs from the
+        // top and trips on `duplicate column name`. Treat that single, benign
+        // case as success so the migration self-heals instead of bricking the
+        // database. All other errors still abort with full context below.
         const msg = err instanceof Error ? err.message : String(err)
+        const isDuplicateColumn =
+          /^\s*ALTER\s+TABLE\s+.*\bADD\s+COLUMN\b/i.test(stmt) &&
+          /duplicate column name/i.test(msg)
+        if (isDuplicateColumn) {
+          console.warn(`[migrate] ${name}: skipping already-applied column (${msg})`)
+          continue
+        }
+        const snippet = stmt.replace(/\s+/g, ' ').slice(0, 140)
         throw new Error(
           `[migrate] ${name} failed at statement #${i + 1}: ${msg}\nSQL: ${snippet}${stmt.length > 140 ? '…' : ''}`,
         )

@@ -13,6 +13,7 @@ import { StatBlockModal } from '@/entities/creature'
 import { SpellReferenceDrawer } from '@/entities/spell'
 import { ItemReferenceDrawer } from '@/entities/item'
 import { FeatReferenceDrawer } from '@/entities/feat'
+import { useSync } from '@/features/sync'
 import type { GlobalSearchResult } from '@/shared/api'
 import { PATHS } from '@/shared/routes'
 
@@ -34,6 +35,11 @@ export function AppShell() {
   )
   const navigate = useNavigate()
   useChordEngine()
+  // Mounts the cloud-sync timer. No-op until the user authenticates (see
+  // useSync preconditions). Returns reactive status that SyncIndicator reads
+  // independently, so the timer runs regardless of whether the indicator is
+  // currently rendered.
+  useSync({ autoRun: true })
 
   useEffect(() => {
     loadHotkeys()

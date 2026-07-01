@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Gift, Shield } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/shared/ui/resizable'
@@ -36,6 +36,7 @@ import { saveEncounterStagingCombatants, insertEncounterCombatant } from '@/shar
 import type { EncounterStagingRow, EncounterCombatantRow } from '@/shared/api'
 import { StagingDeployDialog, StagingTable } from '@/features/encounter-builder'
 import { logErrorWithToast } from '@/shared/lib/error'
+import { EncounterLootModal } from '@/features/encounter-loot'
 import { useCombatDetailLoader } from '../model/use-combat-detail-loader'
 import { EncounterTabBar } from './EncounterTabBar'
 import { BlueprintSelectorDialog } from './BlueprintSelectorDialog'
@@ -117,10 +118,11 @@ interface CombatColumnProps {
   isActive: boolean
   onActivate: () => void
   onSelect: (id: string) => void
+  onShowLoot: (encounterId: string) => void
   className?: string
 }
 
-function CombatColumn({ tab, isActive, onActivate, onSelect, className }: CombatColumnProps) {
+function CombatColumn({ tab, isActive, onActivate, onSelect, onShowLoot, className }: CombatColumnProps) {
   const { t } = useTranslation('common')
   const [columnSelectedId, setColumnSelectedId] = useState<string | null>(null)
 
@@ -148,6 +150,10 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
     [onSelect]
   )
 
+  const handleShowLoot = useCallback(() => {
+    if (tab.encounterId) onShowLoot(tab.encounterId)
+  }, [onShowLoot, tab.encounterId])
+
   if (isActive) {
     // Active column — full interactive widgets backed by global stores.
     // SnapshotSyncEffect keeps the tab snapshot in sync with live mutations.
@@ -161,6 +167,12 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, className }: Combat
             <CombatControls />
           </div>
           <div className="flex items-center gap-2 px-2 border-b border-border/50">
+            {tab.encounterId && (
+              <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleShowLoot}>
+                <Gift className="h-3.5 w-3.5" />
+                {t('pages.combat.showLoot')}
+              </Button>
+            )}
             <QuickAddCombatantForm mode="creature" />
             <AddPCDialog />
           </div>
@@ -243,6 +255,9 @@ export function CombatPage() {
   const { t } = useTranslation('common')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showSelector, setShowSelector] = useState(false)
+  const [lootModalEncounterId, setLootModalEncounterId] = useState<string | null>(null)
+  const [lootRefreshKey, setLootRefreshKey] = useState(0)
+  const autoShownLootRef = useRef<Set<string>>(new Set())
   const [searchPanelCollapsed, setSearchPanelCollapsed] = useState(() => {
     try { return localStorage.getItem(SEARCH_PANEL_COLLAPSED_KEY) === 'true' } catch { return false }
   })
@@ -304,6 +319,7 @@ export function CombatPage() {
       sortOrder,
       isHazard: sc.kind === 'hazard',
       hazardRef: sc.kind === 'hazard' ? (sc as unknown as NpcCombatant).creatureRef : null,
+      side: sc.side ?? (sc.kind === 'pc' ? 'ally' : 'enemy'),
     }
     try {
       await insertEncounterCombatant(encounterId, row, sortOrder)
@@ -338,25 +354,38 @@ export function CombatPage() {
   }, [currentRound, combatId, deployDueStagingCombatant, stagingPoolEnabled])
 
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
-  const { reorderInitiative } = useCombatantStore()
+  const reorderInitiative = useCombatantStore((s) => s.reorderInitiative)
   const openTabs = useEncounterTabsStore((s) => s.openTabs)
   const activeTabId = useEncounterTabsStore((s) => s.activeTabId)
   const splitMode = useEncounterTabsStore((s) => s.splitMode)
   const setActiveTab = useEncounterTabsStore((s) => s.setActiveTab)
+  const activeTabState = useEncounterTabsStore(useShallow((s) => {
+    const tab = s.openTabs.find((candidate) => candidate.id === s.activeTabId)
+    return {
+      encounterId: tab?.encounterId ?? null,
+      inventoryVersion: tab?.inventoryVersion ?? 0,
+      isStarted: tab?.isStarted ?? true,
+    }
+  }))
+  const activeEncounterId = isEncounterBacked ? (activeTabState.encounterId ?? combatId) : null
   const selectedCombatant = selectedId ? combatants.find((x) => x.id === selectedId) : null
   const selectedNpcTier: WeakEliteTier =
     selectedCombatant && selectedCombatant.kind === 'npc'
       ? selectedCombatant.weakEliteTier ?? 'normal'
       : 'normal'
   const spellcastingEncounter = useMemo(
-    () => combatId && selectedId
+    () => activeEncounterId && selectedId
       ? {
-        encounterId: combatId,
+        encounterId: activeEncounterId,
         combatantId: selectedId,
-        onInventoryChanged: () => refreshShieldBonus(selectedId, combatId),
+        inventoryVersion: activeTabState.inventoryVersion,
+        onInventoryChanged: () => {
+          setLootRefreshKey((key) => key + 1)
+          refreshShieldBonus(selectedId, activeEncounterId)
+        },
       }
       : undefined,
-    [combatId, refreshShieldBonus, selectedId],
+    [activeEncounterId, activeTabState.inventoryVersion, refreshShieldBonus, selectedId],
   )
   const displayedNpcStatBlock = useMemo(
     () => lastNpcStatBlock ? applyTierToStatBlock(lastNpcStatBlock, selectedNpcTier) : null,
@@ -368,6 +397,26 @@ export function CombatPage() {
     spellcastingEncounter?.combatantId,
     'attack',
   )
+
+  const handleShowLoot = useCallback((encounterId: string) => {
+    setLootModalEncounterId(encounterId)
+  }, [])
+
+  const handleLootOpenChange = useCallback((open: boolean) => {
+    if (!open) setLootModalEncounterId(null)
+  }, [])
+
+  useEffect(() => {
+    if (!activeEncounterId || !activeTabState.isStarted) {
+      if (activeEncounterId) autoShownLootRef.current.delete(activeEncounterId)
+      return
+    }
+    if (autoShownLootRef.current.has(activeEncounterId)) return
+    const enemies = combatants.filter((combatant) => combatant.kind === 'npc' && combatant.side !== 'ally')
+    if (enemies.length === 0 || enemies.some((combatant) => combatant.hp > 0)) return
+    autoShownLootRef.current.add(activeEncounterId)
+    setLootModalEncounterId(activeEncounterId)
+  }, [activeEncounterId, activeTabState.isStarted, combatants])
 
   // Mount: migrate existing running combat to a tab, then setup auto-save per active tab
   useEffect(() => {
@@ -457,6 +506,7 @@ export function CombatPage() {
             sortOrder,
             isHazard: false,
             hazardRef: null,
+            side: 'enemy',
           }, sortOrder)
         } catch (err) {
           logErrorWithToast('bestiary-drag-insert')(err)
@@ -489,6 +539,7 @@ export function CombatPage() {
             sortOrder,
             isHazard: true,
             hazardRef: hr.id,
+            side: 'enemy',
           }, sortOrder)
         } catch (err) {
           logErrorWithToast('hazard-drag-insert')(err)
@@ -504,6 +555,7 @@ export function CombatPage() {
         maxHp: hr.hp ?? 0,
         tempHp: 0,
         kind: 'hazard',
+        side: 'enemy',
         initiativeBonus: hr.stealth_dc ?? 0,
       })
       return
@@ -565,7 +617,7 @@ export function CombatPage() {
           combatantId={autoDeployTarget.combatantId}
           creatureRef={autoDeployTarget.creatureRef}
           displayName={autoDeployTarget.displayName}
-          encounterId={isEncounterBacked && combatId ? combatId : undefined}
+          encounterId={activeEncounterId ?? undefined}
         />
       )}
       {openTabs.length === 0 ? (
@@ -612,7 +664,7 @@ export function CombatPage() {
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
-                  <BestiarySearchPanel encounterId={isEncounterBacked ? combatId ?? undefined : undefined} />
+                  <BestiarySearchPanel encounterId={activeEncounterId ?? undefined} />
                 </div>
               </ResizablePanel>
             )}
@@ -629,6 +681,7 @@ export function CombatPage() {
                     isActive={openTabs[0].id === activeTabId}
                     onActivate={handleActivateTab0}
                     onSelect={handleSelect}
+                    onShowLoot={handleShowLoot}
                     className="flex-1 border-r border-border/50"
                   />
                   <CombatColumn
@@ -636,6 +689,7 @@ export function CombatPage() {
                     isActive={openTabs[1].id === activeTabId}
                     onActivate={handleActivateTab1}
                     onSelect={handleSelect}
+                    onShowLoot={handleShowLoot}
                     className="flex-1"
                   />
                 </div>
@@ -648,6 +702,12 @@ export function CombatPage() {
                       <CombatControls />
                     </div>
                     <div className="flex items-center gap-2 px-2 border-b border-border/50">
+                      {activeEncounterId && (
+                        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleShowLoot(activeEncounterId)}>
+                          <Gift className="h-3.5 w-3.5" />
+                          {t('pages.combat.showLoot')}
+                        </Button>
+                      )}
                       <QuickAddCombatantForm mode="creature" />
                       <AddPCDialog />
                     </div>
@@ -658,9 +718,9 @@ export function CombatPage() {
                     <ResizablePanel defaultSize={35} minSize={20}>
                       <div className="flex flex-col h-full overflow-y-auto">
                         <InitiativeList selectedId={selectedId} onSelect={handleSelect} />
-                        {stagingPoolEnabled && isEncounterBacked && combatId && (
+                        {stagingPoolEnabled && activeEncounterId && (
                           <div className="px-2 py-2 shrink-0">
-                            <StagingTable encounterId={combatId} combatMode={true} />
+                            <StagingTable encounterId={activeEncounterId} combatMode={true} />
                           </div>
                         )}
                       </div>
@@ -694,7 +754,7 @@ export function CombatPage() {
               <div className="h-full overflow-y-auto">
                 {/* PC selected */}
                 {selectedPcBuild && selectedCombatant && (
-                  <PCCombatCard build={selectedPcBuild} combatant={selectedCombatant} encounterId={isEncounterBacked && combatId ? combatId : undefined} />
+                  <PCCombatCard build={selectedPcBuild} combatant={selectedCombatant} encounterId={activeEncounterId ?? undefined} />
                 )}
 
                 {/* NPC selected — apply Weak/Elite tier adjustment to displayed
@@ -739,6 +799,13 @@ export function CombatPage() {
           </ResizablePanelGroup>
         </DndContext>
       )}
+      <EncounterLootModal
+        encounterId={lootModalEncounterId}
+        mode="combat"
+        refreshKey={lootRefreshKey}
+        open={lootModalEncounterId !== null}
+        onOpenChange={handleLootOpenChange}
+      />
     </div>
   )
 }

@@ -41,7 +41,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
         const weaknesses = stat?.weaknesses ?? []
         const resistances = stat?.resistances ?? []
         return {
-          id: crypto.randomUUID(),
+          id: ec.id,
           creatureRef: ec.creatureRef,
           displayName: ec.displayName,
           initiative: ec.initiative,
@@ -49,6 +49,7 @@ export function BlueprintSelectorDialog({ open, onOpenChange }: BlueprintSelecto
           maxHp: ec.maxHp,
           tempHp: 0,
           kind,
+          side: ec.side,
           ...(kind === 'npc' ? { mortal: true } : {}),
           ...(stat?.level != null ? { level: stat.level } : {}),
           ...(stat?.fort != null ? { fort: stat.fort } : {}),

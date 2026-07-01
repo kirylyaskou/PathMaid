@@ -1,6 +1,6 @@
 import { Pin } from 'lucide-react'
 import { useMemo } from 'react'
-import { findNodeById, type CampaignNode } from '@/entities/campaign'
+import type { CampaignNode } from '@/entities/campaign'
 import { Button } from '@/shared/ui/button'
 
 interface PinnedFileRailProps {
@@ -11,10 +11,13 @@ interface PinnedFileRailProps {
 }
 
 export function PinnedFileRail({ nodes, pins, activeNodeId, onOpen }: PinnedFileRailProps) {
-  const pinnedNodes = useMemo(
-    () => pins.map((pinId) => findNodeById(nodes, pinId)).filter((node): node is CampaignNode => node !== null),
-    [nodes, pins],
-  )
+  const pinnedNodes = useMemo(() => {
+    const nodesById = new Map(nodes.map((node) => [node.id, node]))
+
+    return pins
+      .map((pinId) => nodesById.get(pinId))
+      .filter((node): node is CampaignNode => node !== undefined)
+  }, [nodes, pins])
 
   return (
     <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border/50 px-4 py-2">

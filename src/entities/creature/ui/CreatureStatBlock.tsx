@@ -56,7 +56,7 @@ import { CreatureAbilitiesSection } from './CreatureAbilitiesSection'
 import { CreatureSkillsLine } from './CreatureSkillsLine'
 import { CreatureDefensesBlock } from './CreatureDefensesBlock'
 import { useEffectiveStrikes, type EffectiveStrike } from '../model/use-effective-strikes'
-import { buildEquipmentStrikes, type EquipmentAttackItem } from '../lib/equipment-strike'
+import { buildEquipmentActivationAbilities, buildEquipmentStrikes, type EquipmentAttackItem } from '../lib/equipment-strike'
 import { logErrorWithToast } from '@/shared/lib/error'
 
 import type { StatModifierResult } from '../model/use-modified-stats'
@@ -122,6 +122,7 @@ function DcDisplay({
 export interface EncounterContext {
   encounterId: string
   combatantId: string
+  inventoryVersion?: number
   /** Called after any encounter-inventory mutation so parent can reload hasShield etc. */
   onInventoryChanged?: () => void
 }
@@ -398,6 +399,17 @@ export function CreatureStatBlock({
     () => buildEquipmentStrikes(equipmentAttackItems, creature.strikes, fallbackStrikeModifier),
     [creature.strikes, equipmentAttackItems, fallbackStrikeModifier],
   )
+  const equipmentAbilities = useMemo(
+    () => buildEquipmentActivationAbilities(equipmentAttackItems),
+    [equipmentAttackItems],
+  )
+  const displayAbilities = useMemo(() => {
+    const existingNames = new Set(creature.abilities.map((ability) => ability.name.trim().toLowerCase()))
+    return [
+      ...creature.abilities,
+      ...equipmentAbilities.filter((ability) => !existingNames.has(ability.name.trim().toLowerCase())),
+    ]
+  }, [creature.abilities, equipmentAbilities])
   const displayStrikes = useMemo(
     () => [...creature.strikes, ...equipmentStrikes],
     [creature.strikes, equipmentStrikes],
@@ -445,11 +457,11 @@ export function CreatureStatBlock({
   // Classify abilities into Offensive / Defensive / Reactions / Other via
   // trait+name heuristics — no 'category' field on the Foundry data model.
   const classifiedAbilities = useMemo(
-    () => classifyAbilities(creature.abilities, {
+    () => classifyAbilities(displayAbilities, {
       isSpecialFormation,
       troopDefensesName: troopDefenses?.name?.toLowerCase() ?? '',
     }),
-    [creature.abilities, isSpecialFormation, troopDefenses],
+    [displayAbilities, isSpecialFormation, troopDefenses],
   )
 
   const handlePdfDownload = useCallback(() => {
@@ -722,7 +734,7 @@ export function CreatureStatBlock({
 
         <Separator />
 
-        {creature.abilities.length > 0 && (
+        {displayAbilities.length > 0 && (
           <>
             <CreatureAbilitiesSection classified={classifiedAbilities} onRoll={handleRoll} itemsLocById={itemsLocById} />
             <Separator />

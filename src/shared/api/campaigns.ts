@@ -58,6 +58,7 @@ interface CampaignNodeRow {
 
 interface CampaignDocumentRow {
   node_id: string
+  campaign_id: string
   markdown: string
   profile_json: string
   cover_asset_id: string | null
@@ -67,6 +68,7 @@ interface CampaignDocumentRow {
 
 interface CampaignTableRowRecord {
   node_id: string
+  campaign_id: string
   columns_json: string
   rows_json: string
   cells_json: string
@@ -114,6 +116,7 @@ interface CampaignAssetRow {
 interface CampaignNodeArtworkRow {
   node_id: string
   asset_id: string
+  campaign_id: string
   sort_order: number
   created_at: string
 }
@@ -176,11 +179,11 @@ const NODE_COLUMNS = `
 `
 
 const DOCUMENT_COLUMNS = `
-  node_id, markdown, profile_json, cover_asset_id, linked_db_refs_json, updated_at
+  node_id, campaign_id, markdown, profile_json, cover_asset_id, linked_db_refs_json, updated_at
 `
 
 const TABLE_COLUMNS = `
-  node_id, columns_json, rows_json, cells_json, column_sizes_json, row_sizes_json, updated_at
+  node_id, campaign_id, columns_json, rows_json, cells_json, column_sizes_json, row_sizes_json, updated_at
 `
 
 const LINK_COLUMNS = `
@@ -193,7 +196,7 @@ const GRAPH_POSITION_COLUMNS = 'campaign_id, node_id, x, y, updated_at'
 
 const ASSET_COLUMNS = 'id, campaign_id, kind, file_name, mime_type, relative_path, created_at'
 
-const NODE_ARTWORK_COLUMNS = 'node_id, asset_id, sort_order, created_at'
+const NODE_ARTWORK_COLUMNS = 'node_id, asset_id, campaign_id, sort_order, created_at'
 
 let campaignWriteQueue: Promise<void> = Promise.resolve()
 
@@ -381,6 +384,19 @@ function starterNoteNodeId(campaignId: string): string {
   return `campaign-node-${campaignId}-session-notes`
 }
 
+async function campaignIdForNode(
+  db: Awaited<ReturnType<typeof getDb>>,
+  nodeId: string,
+): Promise<string> {
+  const rows = await db.select<Array<{ campaign_id: string }>>(
+    'SELECT campaign_id FROM campaign_nodes WHERE id = ?',
+    [nodeId],
+  )
+  const campaignId = rows[0]?.campaign_id
+  if (!campaignId) throw new Error(`Campaign node not found: ${nodeId}`)
+  return campaignId
+}
+
 async function createStarterNote(
   db: Awaited<ReturnType<typeof getDb>>,
   campaignId: string,
@@ -405,8 +421,8 @@ async function createStarterNote(
   )
   await db.execute(
     `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [nodeId, '', '{}', null, '[]', now],
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [nodeId, campaignId, '', '{}', null, '[]', now],
   )
   return nodeId
 }
@@ -602,9 +618,10 @@ export async function createCampaignNode(input: CreateNodeInput): Promise<string
       const table = defaultTable(now)
       await db.execute(
         `INSERT INTO campaign_tables (${TABLE_COLUMNS})
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
+          input.campaignId,
           JSON.stringify(table.columns),
           JSON.stringify(table.rows),
           JSON.stringify(table.cells),
@@ -616,8 +633,8 @@ export async function createCampaignNode(input: CreateNodeInput): Promise<string
     } else if (input.kind !== 'folder') {
       await db.execute(
         `INSERT INTO campaign_documents (${DOCUMENT_COLUMNS})
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [id, '', '{}', null, '[]', now],
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, input.campaignId, '', '{}', null, '[]', now],
       )
     }
 
@@ -738,13 +755,14 @@ export async function ensureCampaignDocument(nodeId: string): Promise<CampaignDo
 
   const db = await getDb()
   const now = nowISO()
-  await runCampaignWrite(() =>
-    db.execute(
+  await runCampaignWrite(async () => {
+    const campaignId = await campaignIdForNode(db, nodeId)
+    await db.execute(
       `INSERT OR IGNORE INTO campaign_documents (${DOCUMENT_COLUMNS})
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [nodeId, '', '{}', null, '[]', now],
-    ),
-  )
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [nodeId, campaignId, '', '{}', null, '[]', now],
+    )
+  })
 
   const document = await getCampaignDocument(nodeId)
   if (!document) {
@@ -810,12 +828,14 @@ export async function ensureCampaignTable(nodeId: string): Promise<CampaignTable
 
   const db = await getDb()
   const table = defaultTable(nowISO())
-  await runCampaignWrite(() =>
-    db.execute(
+  await runCampaignWrite(async () => {
+    const campaignId = await campaignIdForNode(db, nodeId)
+    await db.execute(
       `INSERT OR IGNORE INTO campaign_tables (${TABLE_COLUMNS})
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nodeId,
+        campaignId,
         JSON.stringify(table.columns),
         JSON.stringify(table.rows),
         JSON.stringify(table.cells),
@@ -823,8 +843,8 @@ export async function ensureCampaignTable(nodeId: string): Promise<CampaignTable
         JSON.stringify(table.rowSizes),
         table.updatedAt,
       ],
-    ),
-  )
+    )
+  })
 
   const created = await getCampaignTable(nodeId)
   if (!created) {
@@ -1008,6 +1028,7 @@ export async function addCampaignNodeArtwork(nodeId: string, assetId: string): P
   const db = await getDb()
 
   await runCampaignWrite(async () => {
+    const campaignId = await campaignIdForNode(db, nodeId)
     const sortRows = await db.select<Array<{ next_sort_order: number | null }>>(
       `SELECT COALESCE(MAX(sort_order) + 1, 0) AS next_sort_order
        FROM campaign_node_artworks
@@ -1017,8 +1038,8 @@ export async function addCampaignNodeArtwork(nodeId: string, assetId: string): P
 
     await db.execute(
       `INSERT OR IGNORE INTO campaign_node_artworks (${NODE_ARTWORK_COLUMNS})
-       VALUES (?, ?, ?, ?)`,
-      [nodeId, assetId, sortRows[0]?.next_sort_order ?? 0, now],
+       VALUES (?, ?, ?, ?, ?)`,
+      [nodeId, assetId, campaignId, sortRows[0]?.next_sort_order ?? 0, now],
     )
   })
 }
@@ -1028,11 +1049,10 @@ export async function listCampaignNodeArtworks(
 ): Promise<CampaignNodeArtwork[]> {
   const db = await getDb()
   const rows = await db.select<CampaignNodeArtworkRow[]>(
-    `SELECT artwork.node_id, artwork.asset_id, artwork.sort_order, artwork.created_at
-     FROM campaign_node_artworks artwork
-     INNER JOIN campaign_nodes node ON node.id = artwork.node_id
-     WHERE node.campaign_id = ?
-     ORDER BY artwork.node_id ASC, artwork.sort_order ASC`,
+    `SELECT ${NODE_ARTWORK_COLUMNS}
+     FROM campaign_node_artworks
+     WHERE campaign_id = ?
+     ORDER BY node_id ASC, sort_order ASC`,
     [campaignId],
   )
   return rows.map(mapNodeArtwork)

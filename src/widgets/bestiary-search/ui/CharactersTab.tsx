@@ -130,6 +130,7 @@ export function CharactersTab({ encounterId }: CharactersTabProps) {
             sortOrder,
             isHazard: false,
             hazardRef: null,
+            side: 'ally',
           }, sortOrder)
         }
 

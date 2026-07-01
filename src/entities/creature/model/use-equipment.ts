@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   loadItemOverrides,
   upsertItemOverride,
@@ -8,16 +8,28 @@ import {
   loadEncounterCustomItemRefs,
   upsertEncounterCustomItemRef,
   deleteEncounterCustomItemRef,
+  listEncounterLootState,
+  setEncounterLootItemState,
 } from '@/shared/api'
-import type { CreatureItemRow, EncounterCustomItemRef, EncounterItemRow, CustomItemRow, ItemRow } from '@/shared/api'
+import type {
+  CreatureItemRow,
+  EncounterCustomItemRef,
+  EncounterItemRow,
+  CustomItemRow,
+  ItemRow,
+  EncounterLootStateRow,
+} from '@/shared/api'
 import { logError } from '@/shared/lib/error'
 import { formatEquipmentDamageFormula, parseInlineDamageFormula } from '../lib/equipment-strike'
 
 interface EncounterContext {
   encounterId: string
   combatantId: string
+  inventoryVersion?: number
   onInventoryChanged?: () => void
 }
+
+type EquipmentLootSourceKind = 'base' | 'encounter' | 'custom'
 
 export function useEquipment(
   items: CreatureItemRow[],
@@ -25,6 +37,8 @@ export function useEquipment(
 ) {
   const [overrides, setOverrides] = useState<EncounterItemRow[]>([])
   const [customOverrides, setCustomOverrides] = useState<EncounterCustomItemRef[]>([])
+  const [lootState, setLootState] = useState<EncounterLootStateRow[]>([])
+  const lootStateRef = useRef<EncounterLootStateRow[]>([])
   const [addQuery, setAddQuery] = useState('')
   const [addResults, setAddResults] = useState<ItemRow[]>([])
   const [customAddResults, setCustomAddResults] = useState<CustomItemRow[]>([])
@@ -35,13 +49,21 @@ export function useEquipment(
     Promise.all([
       loadItemOverrides(encounterContext.encounterId, encounterContext.combatantId),
       loadEncounterCustomItemRefs(encounterContext.encounterId, encounterContext.combatantId),
+      listEncounterLootState(encounterContext.encounterId),
     ])
-      .then(([itemRows, customRows]) => {
+      .then(([itemRows, customRows, lootRows]) => {
+        const combatantLootRows = lootRows.filter((row) => row.combatantId === encounterContext.combatantId)
         setOverrides(itemRows)
         setCustomOverrides(customRows)
+        lootStateRef.current = combatantLootRows
+        setLootState(combatantLootRows)
       })
       .catch(logError('load-item-overrides'))
-  }, [encounterContext?.encounterId, encounterContext?.combatantId])
+  }, [
+    encounterContext?.encounterId,
+    encounterContext?.combatantId,
+    encounterContext?.inventoryVersion,
+  ])
 
   const encounterId = encounterContext?.encounterId
   const combatantId = encounterContext?.combatantId
@@ -167,6 +189,61 @@ export function useEquipment(
     encounterContext?.onInventoryChanged?.()
   }, [encounterContext])
 
+  const getLootUsage = useCallback((
+    sourceItemKey: string,
+    sourceItemKind: EquipmentLootSourceKind,
+    quantity: number,
+  ) => {
+    const row = lootState.find((stateRow) => (
+      stateRow.sourceItemKey === sourceItemKey &&
+      stateRow.sourceItemKind === sourceItemKind
+    ))
+    const spentQuantity = Math.max(0, Math.min(quantity, row?.spentQuantity ?? 0))
+    return {
+      spentQuantity,
+      remainingQuantity: Math.max(0, quantity - spentQuantity),
+    }
+  }, [lootState])
+
+  const handleSpendLootItem = useCallback(async (
+    sourceItemKey: string,
+    sourceItemKind: EquipmentLootSourceKind,
+    quantity: number,
+    delta: number,
+  ) => {
+    if (!encounterContext) return
+    const current = lootStateRef.current.find((row) => (
+      row.sourceItemKey === sourceItemKey &&
+      row.sourceItemKind === sourceItemKind
+    ))
+    const spentQuantity = Math.max(0, Math.min(quantity, (current?.spentQuantity ?? 0) + delta))
+    const nextRow: EncounterLootStateRow = {
+      id: `encounter-loot-state-${encounterContext.encounterId}:${encounterContext.combatantId}:${sourceItemKind}:${sourceItemKey}`,
+      encounterId: encounterContext.encounterId,
+      combatantId: encounterContext.combatantId,
+      sourceItemKey,
+      sourceItemKind,
+      spentQuantity,
+      excluded: false,
+      updatedAt: new Date().toISOString(),
+    }
+    const nextState = [...lootStateRef.current.filter((row) => !(
+      row.sourceItemKey === sourceItemKey &&
+      row.sourceItemKind === sourceItemKind
+    )), nextRow]
+    lootStateRef.current = nextState
+    setLootState(nextState)
+    await setEncounterLootItemState(
+      encounterContext.encounterId,
+      encounterContext.combatantId,
+      sourceItemKey,
+      sourceItemKind,
+      spentQuantity,
+      false,
+    ).catch(logError('set-loot-item-state'))
+    encounterContext.onInventoryChanged?.()
+  }, [encounterContext])
+
   const removedIds = useMemo(
     () => new Set(
       overrides.filter((o) => o.isRemoved).map((o) => o.itemFoundryId ?? o.itemName)
@@ -219,5 +296,7 @@ export function useEquipment(
     addedCustomItems,
     visibleBase,
     totalCount,
+    getLootUsage,
+    handleSpendLootItem,
   }
 }

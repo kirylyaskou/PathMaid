@@ -47,6 +47,81 @@
     "save": "Save",
     "loading": "Loading…"
   },
+  "auth": {
+    "account": "Account",
+    "email": "Email",
+    "password": "Password",
+    "signOut": "Sign out",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "signIn": {
+      "title": "Sign in",
+      "description": "Sign in to sync your data across devices.",
+      "submit": "Sign in",
+      "switchToSignUp": "No account? Create one"
+    },
+    "signUp": {
+      "title": "Create account",
+      "description": "Create an account to enable cloud sync.",
+      "submit": "Create account",
+      "switchToSignIn": "Already have an account? Sign in",
+      "confirmEmail": "Account created. Check your inbox, confirm the email in your browser, then return here to sign in."
+    },
+    "errors": {
+      "invalid_credentials": "Invalid email or password.",
+      "email_not_confirmed": "Email not confirmed yet. Check your inbox.",
+      "user_already_exists": "An account with this email already exists.",
+      "invalid_email": "This email address does not look valid.",
+      "weak_password": "Password is too weak.",
+      "email_link_expired": "The confirmation link is invalid or expired.",
+      "auth_callback_failed": "The email confirmation reached PathMaid, but the session could not be created.",
+      "signup_disabled": "New account registration is disabled right now.",
+      "user_banned": "This account is blocked.",
+      "rate_limited": "Too many attempts. Please wait a moment and try again.",
+      "network": "Network error. Check your connection and try again.",
+      "server": "The auth server returned an error.",
+      "not_configured": "Cloud sync is not configured on this device.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "errorDetails": {
+      "invalid_credentials": "Supabase rejected the email/password pair. Check the address, keyboard layout, and password.",
+      "email_not_confirmed": "Open the latest confirmation email for this account, then return to PathMaid and sign in again.",
+      "user_already_exists": "Use Sign in instead. If the email was just confirmed, wait a moment and try logging in.",
+      "invalid_email": "Check for typos, spaces, or an unsupported email format.",
+      "weak_password": "Use a longer password. Supabase requires at least 6 characters and may reject common weak passwords.",
+      "email_link_expired": "Request a new confirmation email and open the newest link. Older links can stop working.",
+      "auth_callback_failed": "This usually means the confirmation link was opened on a different device/app session, was used twice, or the stored auth verifier was lost. Try signing in; if it still fails, register again and open the newest link on this device.",
+      "signup_disabled": "The Supabase project is refusing new signups. This is a service configuration issue, not a password problem.",
+      "user_banned": "Supabase reports that this account cannot sign in.",
+      "rate_limited": "Supabase temporarily blocked auth attempts for this email or network. Wait a few minutes before trying again.",
+      "network": "PathMaid could not reach the Supabase auth endpoint. Check internet, VPN/firewall, proxy, and system time.",
+      "server": "The request reached Supabase, but the auth service failed. Try again later.",
+      "not_configured": "The app build is missing Supabase URL/key configuration, so cloud login cannot start.",
+      "unknown": "PathMaid did not recognize this auth error yet. The backend response below should explain the actual failure.",
+      "backend": "Backend response: {{message}}{{meta}}"
+    }
+  },
+  "sync": {
+    "syncNow": "Sync now",
+    "syncing": "Syncing…",
+    "never": "Never synced",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago",
+    "daysAgo": "{{count}} d ago",
+    "lastSync": "Last sync: {{when}}",
+    "error": "Sync failed",
+    "signInToSync": "Sign in to enable cloud sync",
+    "syncedSummary": "Synced: {{pulled}} pulled, {{pushed}} pushed",
+    "syncedWithErrors": "Synced with {{count}} errors",
+    "autoSync": "Auto-sync",
+    "autoSyncDescription": "Automatically sync changes every minute when online.",
+    "pushAll": "Upload all to cloud",
+    "pullAll": "Download all from cloud",
+    "errors": {
+      "unknown": "Sync error. Please try again."
+    }
+  },
   "debug": {
     "title": "Debug Logs",
     "gateTitle": "Debug access",
@@ -565,6 +640,7 @@
     "addCreaturesOrHazards": "Add creatures or hazards to build an encounter",
     "loadIntoCombat": "Load into Combat",
     "reset": "Reset",
+    "loot": "Loot",
     "sortByLevel": "Sort by Level",
     "clear": "Clear",
     "creatures_one": "{{count}} creature",
@@ -581,6 +657,9 @@
     "resetEncounterDesc": "All creatures return to full HP. Conditions and round state are cleared.",
     "viewStatBlock": "View stat block",
     "xpValue": "{{xp}} XP",
+    "allyBudgetValue": "+{{xp}} budget",
+    "sideEnemy": "Enemy",
+    "sideAlly": "Ally",
     "partyLvl": "Party Lvl",
     "partySize": "Size",
     "encountersHeader": "Encounters",
@@ -977,6 +1056,7 @@
       "clickToFocus": "(click to focus)",
       "resetToBlueprint": "Reset to blueprint",
       "openEncounter": "Open encounter",
+      "showLoot": "Show loot",
       "blueprint": {
         "title": "Open Encounter",
         "blankEncounter": "Blank Encounter",
@@ -1068,6 +1148,9 @@
     },
     "encounter": {
       "threatAssessment": "Threat Assessment",
+      "allyBudget": "+{{xp}} ally budget",
+      "enemySpend": "Enemies {{xp}} XP",
+      "awardXp": "Award {{xp}} XP",
       "trivial": "Trivial: {{n}}",
       "low": "Low: {{n}}",
       "moderate": "Mod: {{n}}",

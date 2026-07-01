@@ -1,7 +1,7 @@
 // Combatant is a runtime concept: creature in an active combat slot.
 // Conditions are managed by ConditionManager (module-level) and stored in useConditionStore.
 
-import type { WeakEliteTier } from '@engine'
+import type { EncounterSide, WeakEliteTier } from '@engine'
 
 interface CombatantBase {
   id: string           // uuid — unique per combat slot
@@ -16,6 +16,7 @@ interface CombatantBase {
   baseMaxHp?: number
   // Initiative bonus (e.g. hazard stealth DC) — applied when combat starts.
   initiativeBonus?: number
+  side?: EncounterSide
 }
 
 /** NPC — creature from bestiary or session-only quick-add creature. */

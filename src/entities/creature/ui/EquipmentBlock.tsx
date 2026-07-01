@@ -5,11 +5,11 @@ import {
   Collapsible,
   CollapsibleContent,
 } from '@/shared/ui/collapsible'
-import { X, Backpack } from 'lucide-react'
+import { FlaskConical, Plus, X, Backpack } from 'lucide-react'
 import { SectionHeader } from '@/shared/ui/section-header'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
-import { getCustomItemsByIds, type CreatureItemRow, type CustomItemRef, type CustomItemRow } from '@/shared/api'
+import { getCustomItemsByIds, getItemsByIds, type CreatureItemRow, type CustomItemRef, type CustomItemRow, type ItemRow } from '@/shared/api'
 import { ITEM_TYPE_COLORS, ItemReferenceDrawer } from '@/entities/item'
 import { useEquipment } from '../model/use-equipment'
 import { formatEquipmentDamageFormula, parseInlineDamageFormula, type EquipmentAttackItem } from '../lib/equipment-strike'
@@ -17,6 +17,7 @@ import { formatEquipmentDamageFormula, parseInlineDamageFormula, type EquipmentA
 interface EncounterContext {
   encounterId: string
   combatantId: string
+  inventoryVersion?: number
   onInventoryChanged?: () => void
 }
 
@@ -38,6 +39,50 @@ interface EquipmentItemRowProps {
   foundryItemId?: string | null
   onItemClick?: (id: string) => void
   interactive: boolean
+  lootUsage?: {
+    spentQuantity: number
+    remainingQuantity: number
+  }
+  onSpendLoot?: (delta: number) => void
+}
+
+function LootUsageControls({
+  remainingQuantity,
+  spentQuantity,
+  onSpendLoot,
+}: {
+  remainingQuantity: number
+  spentQuantity: number
+  onSpendLoot: (delta: number) => void
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        className="inline-flex h-6 items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 text-[11px] font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={remainingQuantity <= 0}
+        title="Use one item"
+        aria-label="Use one item"
+        onClick={() => onSpendLoot(1)}
+      >
+        <FlaskConical className="h-3 w-3" />
+        Use
+      </button>
+      <span className="min-w-12 text-center text-[11px] font-medium text-muted-foreground">
+        {remainingQuantity} left
+      </span>
+      <button
+        type="button"
+        className="inline-flex h-6 w-6 items-center justify-center rounded border border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={spentQuantity <= 0}
+        title="Restore one item"
+        aria-label="Restore one item"
+        onClick={() => onSpendLoot(-1)}
+      >
+        <Plus className="h-3 w-3" />
+      </button>
+    </div>
+  )
 }
 
 function EquipmentItemRow({
@@ -48,6 +93,8 @@ function EquipmentItemRow({
   foundryItemId,
   onItemClick,
   interactive,
+  lootUsage,
+  onSpendLoot,
 }: EquipmentItemRowProps) {
   const typeColor = ITEM_TYPE_COLORS[item.type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
   const qty = item.qty > 1 ? ` ×${item.qty}` : ''
@@ -72,14 +119,25 @@ function EquipmentItemRow({
       )}
       {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
       {item.bulk && item.bulk !== '-' && <span className="text-xs text-muted-foreground shrink-0">L{item.bulk}</span>}
-      {interactive && onRemove && !isRemoved && (
-        <IconButton intent="danger" showOnHover onClick={onRemove} className="ml-auto shrink-0">
-          <X className="w-3 h-3" />
-        </IconButton>
-      )}
-      {interactive && onRestore && isRemoved && (
-        <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
-      )}
+      {(lootUsage && onSpendLoot) || (interactive && (onRemove || onRestore)) ? (
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {lootUsage && onSpendLoot && (
+            <LootUsageControls
+              remainingQuantity={lootUsage.remainingQuantity}
+              spentQuantity={lootUsage.spentQuantity}
+              onSpendLoot={onSpendLoot}
+            />
+          )}
+          {interactive && onRemove && !isRemoved && (
+            <IconButton intent="danger" showOnHover onClick={onRemove} className="shrink-0">
+              <X className="w-3 h-3" />
+            </IconButton>
+          )}
+          {interactive && onRestore && isRemoved && (
+            <button onClick={onRestore} className="text-xs text-primary hover:underline shrink-0">undo</button>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -91,6 +149,11 @@ interface CustomEquipmentItemRowProps {
   onRestore?: () => void
   isRemoved?: boolean
   interactive: boolean
+  lootUsage?: {
+    spentQuantity: number
+    remainingQuantity: number
+  }
+  onSpendLoot?: (delta: number) => void
 }
 
 function getLocalItemId(id: string): string {
@@ -105,6 +168,8 @@ function CustomEquipmentItemRow({
   onRestore,
   isRemoved,
   interactive,
+  lootUsage,
+  onSpendLoot,
 }: CustomEquipmentItemRowProps) {
   const typeColor = ITEM_TYPE_COLORS[item.item_type] ?? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
   const qty = quantity > 1 ? ` ×${quantity}` : ''
@@ -118,14 +183,25 @@ function CustomEquipmentItemRow({
       </span>
       <span className="font-medium flex-1 min-w-0 truncate">{item.name}{qty}</span>
       {stat && <span className="text-xs font-mono text-muted-foreground shrink-0">{stat}</span>}
-      {interactive && onRemove && !isRemoved && (
-        <IconButton intent="danger" showOnHover onClick={onRemove} className="ml-auto shrink-0">
-          <X className="w-3 h-3" />
-        </IconButton>
-      )}
-      {interactive && onRestore && isRemoved && (
-        <button onClick={onRestore} className="ml-auto text-xs text-primary hover:underline shrink-0">undo</button>
-      )}
+      {(lootUsage && onSpendLoot) || (interactive && (onRemove || onRestore)) ? (
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {lootUsage && onSpendLoot && (
+            <LootUsageControls
+              remainingQuantity={lootUsage.remainingQuantity}
+              spentQuantity={lootUsage.spentQuantity}
+              onSpendLoot={onSpendLoot}
+            />
+          )}
+          {interactive && onRemove && !isRemoved && (
+            <IconButton intent="danger" showOnHover onClick={onRemove} className="shrink-0">
+              <X className="w-3 h-3" />
+            </IconButton>
+          )}
+          {interactive && onRestore && isRemoved && (
+            <button onClick={onRestore} className="text-xs text-primary hover:underline shrink-0">undo</button>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -164,6 +240,7 @@ export function EquipmentBlock({
     handleRemoveBaseCustom, handleRestoreBaseCustom, handleRemoveAddedCustom,
     removedIds: _removedIds, removedCustomItemIds,
     addedItems, addedCustomItems, visibleBase, totalCount: baseTotalCount,
+    getLootUsage, handleSpendLootItem,
   } = useEquipment(items, encounterContext)
 
   const customRefs = customItemRefs ?? EMPTY_CUSTOM_REFS
@@ -204,25 +281,63 @@ export function EquipmentBlock({
   )
   const totalCount = baseTotalCount + visibleBaseCustomRefs.length
 
+  const catalogItemIds = useMemo(
+    () => Array.from(new Set([
+      ...visibleBase.flatMap((item) => item.foundry_item_id ? [item.foundry_item_id] : []),
+      ...addedItems.flatMap((item) => item.itemFoundryId ? [item.itemFoundryId] : []),
+    ])),
+    [addedItems, visibleBase],
+  )
+  const [catalogItems, setCatalogItems] = useState<ItemRow[]>([])
+
+  useEffect(() => {
+    if (catalogItemIds.length === 0) {
+      setCatalogItems([])
+      return
+    }
+    let cancelled = false
+    void getItemsByIds(catalogItemIds)
+      .then((rows) => {
+        if (!cancelled) setCatalogItems(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogItems([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [catalogItemIds])
+
+  const catalogById = useMemo(
+    () => new Map(catalogItems.map((item) => [item.id, item])),
+    [catalogItems],
+  )
+
   const attackItems = useMemo(
     () => [
       ...visibleBase.map((item) => {
         const localId = getLocalItemId(item.id)
+        const catalogItem = item.foundry_item_id ? catalogById.get(item.foundry_item_id) : undefined
         return {
           id: localId,
           name: item.item_name,
           itemType: item.item_type,
           damageFormula: item.damage_formula,
-          traits: item.traits,
-          descriptionLoc: itemsLocById?.get(localId)?.description,
+          traits: item.traits ?? catalogItem?.traits,
+          descriptionLoc: itemsLocById?.get(localId)?.description ?? catalogItem?.description ?? undefined,
         }
       }),
-      ...addedItems.map((item) => ({
-        id: item.itemFoundryId ?? item.id,
-        name: item.itemName,
-        itemType: item.itemType,
-        damageFormula: item.damageFormula,
-      })),
+      ...addedItems.map((item) => {
+        const catalogItem = item.itemFoundryId ? catalogById.get(item.itemFoundryId) : undefined
+        return {
+          id: item.itemFoundryId ?? item.id,
+          name: item.itemName,
+          itemType: item.itemType,
+          damageFormula: item.damageFormula,
+          traits: catalogItem?.traits,
+          descriptionLoc: catalogItem?.description ?? undefined,
+        }
+      }),
       ...visibleBaseCustomRefs.flatMap((ref) => {
         const item = customById.get(ref.customItemId)
         return item
@@ -232,6 +347,7 @@ export function EquipmentBlock({
               itemType: item.item_type,
               damageFormula: formatEquipmentDamageFormula(item.damage_formula, item.damage_type, item.description),
               traits: item.traits,
+              descriptionLoc: item.description ?? undefined,
             }]
           : []
       }),
@@ -244,11 +360,12 @@ export function EquipmentBlock({
               itemType: item.item_type,
               damageFormula: formatEquipmentDamageFormula(item.damage_formula, item.damage_type, item.description),
               traits: item.traits,
+              descriptionLoc: item.description ?? undefined,
             }]
           : []
       }),
     ],
-    [addedCustomItems, addedItems, customById, itemsLocById, visibleBase, visibleBaseCustomRefs],
+    [addedCustomItems, addedItems, catalogById, customById, itemsLocById, visibleBase, visibleBaseCustomRefs],
   )
 
   useEffect(() => {
@@ -285,6 +402,8 @@ export function EquipmentBlock({
                 foundryItemId={item.foundry_item_id}
                 onItemClick={(id) => setDrawerItemId(id)}
                 interactive={interactive}
+                lootUsage={interactive && item.item_type === 'consumable' ? getLootUsage(item.id, 'base', item.quantity) : undefined}
+                onSpendLoot={interactive && item.item_type === 'consumable' ? (delta) => handleSpendLootItem(item.id, 'base', item.quantity, delta) : undefined}
               />
             ))}
             {overrides.filter((o) => o.isRemoved).map((o) => {
@@ -335,6 +454,8 @@ export function EquipmentBlock({
                   quantity={ref.quantity}
                   onRemove={interactive ? () => handleRemoveBaseCustom(ref.customItemId) : undefined}
                   interactive={interactive}
+                  lootUsage={interactive && item.item_type === 'consumable' ? getLootUsage(ref.id, 'custom', ref.quantity) : undefined}
+                  onSpendLoot={interactive && item.item_type === 'consumable' ? (delta) => handleSpendLootItem(ref.id, 'custom', ref.quantity, delta) : undefined}
                 />
               )
             })}
@@ -346,6 +467,8 @@ export function EquipmentBlock({
                 foundryItemId={o.itemFoundryId}
                 onItemClick={(id) => setDrawerItemId(id)}
                 interactive={interactive}
+                lootUsage={o.itemType === 'consumable' ? getLootUsage(o.id, 'encounter', o.quantity) : undefined}
+                onSpendLoot={o.itemType === 'consumable' ? (delta) => handleSpendLootItem(o.id, 'encounter', o.quantity, delta) : undefined}
               />
             ))}
             {addedCustomItems.map((ref) => {
@@ -358,6 +481,8 @@ export function EquipmentBlock({
                   quantity={ref.quantity}
                   onRemove={() => handleRemoveAddedCustom(ref)}
                   interactive={interactive}
+                  lootUsage={item.item_type === 'consumable' ? getLootUsage(ref.id, 'custom', ref.quantity) : undefined}
+                  onSpendLoot={item.item_type === 'consumable' ? (delta) => handleSpendLootItem(ref.id, 'custom', ref.quantity, delta) : undefined}
                 />
               )
             })}
