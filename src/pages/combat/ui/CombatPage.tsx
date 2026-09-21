@@ -28,7 +28,7 @@ import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
 import type { WeakEliteTier } from '@/entities/creature'
 import { SpellcastingBlock } from '@/features/spellcasting'
 import { getHpAdjustment, applyTierToStatBlock } from '@engine'
-import { PCCombatCard } from '@/features/characters'
+import { PCCombatCard, CombatCharacterGroupPicker } from '@/features/characters'
 import { useShallow } from 'zustand/react/shallow'
 import { cn } from '@/shared/lib/utils'
 import { useAdvancedSettingsStore } from '@/shared/model'
@@ -162,11 +162,11 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, onShowLoot, classNa
         className={cn('flex flex-col h-full border-t-2 border-t-primary', className)}
       >
         <SnapshotSyncEffect tabId={tab.id} />
-        <div className="flex items-stretch shrink-0">
+        <div className="flex flex-col shrink-0">
           <div className="flex-1">
             <CombatControls />
           </div>
-          <div className="flex items-center gap-2 px-2 border-b border-border/50">
+          <div className="flex flex-wrap items-center gap-2 px-2 py-1 border-b border-border/50">
             {tab.encounterId && (
               <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleShowLoot}>
                 <Gift className="h-3.5 w-3.5" />
@@ -175,6 +175,7 @@ function CombatColumn({ tab, isActive, onActivate, onSelect, onShowLoot, classNa
             )}
             <QuickAddCombatantForm mode="creature" />
             <AddPCDialog />
+            <CombatCharacterGroupPicker />
           </div>
         </div>
         <ResizablePanelGroup direction="vertical" className="flex-1">
@@ -627,6 +628,7 @@ export function CombatPage() {
           <Button variant="outline" onClick={() => setShowSelector(true)}>
             {t('pages.combat.blueprint.title')}
           </Button>
+          <CombatCharacterGroupPicker />
           <BlueprintSelectorDialog open={showSelector} onOpenChange={setShowSelector} />
         </div>
       ) : (
@@ -696,12 +698,11 @@ export function CombatPage() {
               ) : (
                 // Single column mode
                 <div className="flex flex-col h-full">
-                  {/* Center header: combat controls + add buttons (share the same border-b) */}
-                  <div className="flex items-stretch shrink-0">
+                  <div className="flex flex-col shrink-0">
                     <div className="flex-1">
                       <CombatControls />
                     </div>
-                    <div className="flex items-center gap-2 px-2 border-b border-border/50">
+                    <div className="flex flex-wrap items-center gap-2 px-2 py-1 border-b border-border/50">
                       {activeEncounterId && (
                         <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => handleShowLoot(activeEncounterId)}>
                           <Gift className="h-3.5 w-3.5" />
@@ -710,6 +711,7 @@ export function CombatPage() {
                       )}
                       <QuickAddCombatantForm mode="creature" />
                       <AddPCDialog />
+                      <CombatCharacterGroupPicker />
                     </div>
                   </div>
 

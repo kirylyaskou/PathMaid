@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { logErrorWithToast } from '@/shared/lib/error'
 import { useCharacterGroups } from '../model/use-character-groups'
+import { addCharacterGroupToCombat } from '../model/add-character-group-to-combat'
 
 function GroupChoices({ onAdd, onClose }: {
   onAdd: (characters: CharacterRecord[]) => Promise<number>
@@ -60,4 +61,13 @@ export function CharacterGroupPicker({ onAdd }: { onAdd: (characters: CharacterR
       </Dialog>
     </>
   )
+}
+
+export function CombatCharacterGroupPicker() {
+  const { t } = useTranslation('common')
+  const add = useCallback(
+    (characters: CharacterRecord[]) => addCharacterGroupToCombat(characters, t('characterGroups.title')),
+    [t],
+  )
+  return <CharacterGroupPicker onAdd={add} />
 }
