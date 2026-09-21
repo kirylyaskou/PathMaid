@@ -11,6 +11,7 @@ import { logErrorWithToast } from '@/shared/lib/error'
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingPayload: NonNullable<ReturnType<typeof buildEncounterSavePayload>> | null = null
+let saveInFlight: Promise<void> = Promise.resolve()
 
 function buildEncounterSavePayload() {
   const tracker = useCombatTrackerStore.getState()
@@ -50,7 +51,8 @@ function buildEncounterSavePayload() {
 async function saveEncounterPayload(
   payload: NonNullable<ReturnType<typeof buildEncounterSavePayload>>
 ): Promise<void> {
-  await saveEncounterCombatState(
+  // Keep writes ordered so a reset can wait for every older auto-save.
+  const save = saveInFlight.then(() => saveEncounterCombatState(
     payload.encounterId,
     payload.round,
     payload.turn,
@@ -58,7 +60,9 @@ async function saveEncounterPayload(
     payload.isRunning,
     payload.combatants,
     payload.conditions
-  )
+  ))
+  saveInFlight = save.catch(() => {})
+  await save
   useCombatTrackerStore.getState().setLastSaveError(null)
 }
 
@@ -108,6 +112,12 @@ export function teardownEncounterAutoSave(): void {
     pendingPayload = null
     void saveEncounterPayloadSafely(payload)
   }
+}
+
+export async function stopEncounterAutoSave(): Promise<void> {
+  pendingPayload = null
+  teardownEncounterAutoSave()
+  await saveInFlight
 }
 
 /** Immediately persist the current encounter state (flush pending debounced save). */

@@ -26,9 +26,8 @@ export interface EncounterTab {
   // (blur overlay + Start button gate in UI). Default true for ad-hoc/migrated
   // running combats; false for tabs opened via builder Load-into-combat.
   isStarted: boolean
-  // deep-ish clone of the snapshot taken at load time, used by Refresh
-  // to restore the encounter to pristine pre-start state. Null for migrated
-  // tabs without a captured template; resetTab falls back to DB blueprint reload.
+  // Captured when loaded and replaced immediately before combat starts.
+  // Legacy tabs without a snapshot fall back to the saved encounter.
   templateSnapshot: TabSnapshot | null
 }
 
@@ -61,8 +60,8 @@ export interface EncounterTabsState {
   setActiveTab: (tabId: string) => void
   updateActiveSnapshot: () => void
   resetTab: (tabId: string) => Promise<void>
-  /** 63-01: mark a pre-start tab as started (removes blur + Start gate). */
-  startTab: (tabId: string) => void
+  /** Mark a tab as started and retain its pre-start roster for reset. */
+  startTab: (tabId: string, snapshot?: TabSnapshot) => void
   addCombatantToTab: (tabId: string, combatant: Combatant) => void
   getActiveTab: () => EncounterTab | undefined
   toggleSplitMode: () => void
@@ -287,10 +286,13 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
       }
     },
 
-    startTab: (tabId) => {
+    startTab: (tabId, snapshot) => {
       set((state) => {
         const t = state.openTabs.find((t) => t.id === tabId)
-        if (t) t.isStarted = true
+        if (t) {
+          t.isStarted = true
+          if (snapshot) t.templateSnapshot = snapshot
+        }
       })
     },
 

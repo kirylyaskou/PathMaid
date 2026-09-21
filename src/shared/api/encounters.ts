@@ -531,7 +531,7 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
     [encounterId]
   )
   await db.execute(
-    `UPDATE encounter_combatants SET hp=max_hp, temp_hp=0 WHERE encounter_id=?`,
+    `UPDATE encounter_combatants SET hp=max_hp, temp_hp=0, initiative=0 WHERE encounter_id=?`,
     [encounterId]
   )
   await db.execute(
@@ -540,6 +540,7 @@ export async function resetEncounterCombat(encounterId: string): Promise<void> {
     [encounterId]
   )
   // Reset spell slots — all slots restored on encounter reset
+  await db.execute('DELETE FROM encounter_combatant_effects WHERE encounter_id=?', [encounterId])
   await db.execute(
     `DELETE FROM encounter_spell_slots WHERE encounter_id=?`,
     [encounterId]

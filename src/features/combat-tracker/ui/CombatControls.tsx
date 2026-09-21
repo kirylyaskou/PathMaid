@@ -1,16 +1,13 @@
+import { useState } from 'react'
 import { Play, Square, Swords, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { useCombatTrackerStore } from '../model/store'
-import { clearAllManagers } from '@/entities/condition'
 import { useEncounterTabsStore } from '../model/encounter-tabs-store'
-import { clearTurnSnapshot } from '../lib/turn-manager'
+import { startActiveCombat, finishActiveCombat } from '../lib/combat-lifecycle'
+import { logErrorWithToast } from '@/shared/lib/error'
 import { useCombatantStore } from '@/entities/combatant'
-import {
-  useBattleFormOverridesStore,
-  useRollOptionsStore,
-} from '@/entities/spell-effect'
 import { useShallow } from 'zustand/react/shallow'
 
 export function CombatControls() {
@@ -18,72 +15,32 @@ export function CombatControls() {
   const { isRunning, round, turn, lastSaveError } = useCombatTrackerStore(
     useShallow((s) => ({ isRunning: s.isRunning, round: s.round, turn: s.turn, lastSaveError: s.lastSaveError }))
   )
-  const startCombat = useCombatTrackerStore((s) => s.startCombat)
-  const endCombat = useCombatTrackerStore((s) => s.endCombat)
-  const setActiveCombatant = useCombatTrackerStore((s) => s.setActiveCombatant)
+  const [busy, setBusy] = useState(false)
   const combatants = useCombatantStore(useShallow((s) => s.combatants))
-  const clearAllCombatants = useCombatantStore((s) => s.clearAll)
 
-  // 63-fix: pre-start gate — tab is opened in isStarted=false state after
-  // loadEncounterIntoCombat. We show a "Start" button until the GM taps it,
-  // regardless of whether the tracker is already running.
-  const activeTabStart = useEncounterTabsStore(useShallow((s) => {
-    const tab = s.openTabs.find((t) => t.id === s.activeTabId)
-    return {
-      activeTabId: tab?.id ?? null,
-      activeCombatantId: tab?.snapshot.activeCombatantId ?? null,
-      encounterId: tab?.encounterId ?? null,
-      isStarted: tab?.isStarted ?? true,
-      round: tab?.snapshot.round ?? 0,
-      turn: tab?.snapshot.turn ?? 0,
-    }
-  }))
-  const startTab = useEncounterTabsStore((s) => s.startTab)
-  const startEncounterCombat = useCombatTrackerStore((s) => s.startEncounterCombat)
-
-  const handleStart = () => {
-    if (combatants.length === 0) return
-    // Flip the tab flag first so TurnControls un-disable synchronously.
-    if (activeTabStart.activeTabId) startTab(activeTabStart.activeTabId)
-    // If a refreshed encounter tab is pre-start, keep its real encounter id.
-    if (!isRunning) {
-      if (activeTabStart.encounterId) {
-        startEncounterCombat(
-          activeTabStart.encounterId,
-          activeTabStart.round,
-          activeTabStart.turn,
-          activeTabStart.activeCombatantId,
-        )
-      } else {
-        startCombat(crypto.randomUUID())
-      }
-    }
-    // If no active combatant yet, sort by initiative and pick the first.
-    const activeId = useCombatTrackerStore.getState().activeCombatantId
-    if (!activeId) {
-      const sorted = [...combatants].sort((a, b) => b.initiative - a.initiative)
-      const orderedIds = sorted.map((c) => c.id)
-      useCombatantStore.getState().reorderInitiative(orderedIds)
-      setActiveCombatant(sorted[0].id)
-    }
+  const isStarted = useEncounterTabsStore((s) => s.openTabs.find((tab) => tab.id === s.activeTabId)?.isStarted ?? true)
+  const handleStart = async () => {
+    if (busy) return
+    setBusy(true)
+    try { await startActiveCombat() }
+    catch (err) { logErrorWithToast('combat.start')(err) }
+    finally { setBusy(false) }
   }
 
-  const handleEnd = () => {
-    clearTurnSnapshot()
-    endCombat()
-    clearAllManagers()
-    clearAllCombatants()
-    // 65-04 / 65-01: drop session-only effect scaffolding on encounter end.
-    useBattleFormOverridesStore.getState().clearAll()
-    useRollOptionsStore.getState().clearAll()
+  const handleEnd = async () => {
+    if (busy) return
+    setBusy(true)
+    try { await finishActiveCombat() }
+    catch (err) { logErrorWithToast('combat.finish')(err) }
+    finally { setBusy(false) }
   }
 
-  const showStart = !isRunning || !activeTabStart.isStarted
+  const showStart = !isRunning || !isStarted
 
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border/50">
       <Swords className="w-4 h-4 text-primary/70" />
-      {isRunning && activeTabStart.isStarted ? (
+      {isRunning && isStarted ? (
         <Badge variant="secondary" className="text-xs font-mono">
           R{round} T{turn + 1}
         </Badge>
@@ -101,18 +58,19 @@ export function CombatControls() {
           size="sm"
           className="h-7 text-xs gap-1"
           onClick={handleStart}
-          disabled={combatants.length === 0}
+          disabled={busy || combatants.length === 0}
         >
           <Play className="w-3 h-3" />
           {t('combatTracker.start')}
         </Button>
       )}
-      {isRunning && activeTabStart.isStarted && (
+      {isRunning && isStarted && (
         <Button
           size="sm"
           variant="destructive"
           className="h-7 text-xs gap-1"
           onClick={handleEnd}
+          disabled={busy}
         >
           <Square className="w-3 h-3" />
           {t('combatTracker.end')}

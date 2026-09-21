@@ -1,4 +1,23 @@
 {
+  "characterGroups": {
+    "title": "Character groups",
+    "create": "Create group",
+    "edit": "Edit group",
+    "name": "Group name",
+    "members": "Members",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleteHint": "Characters will remain in your library and encounters.",
+    "noCharacters": "Import characters or create your own copies of pregens first.",
+    "empty": "This group has no members yet",
+    "hint": "Create a group on the Characters page to add the whole party to combat at once.",
+    "addToCombat": "Add to combat",
+    "addGroup": "Add group",
+    "added": "Characters added: {{count}}",
+    "alreadyPresent": "All group members are already present"
+  },
   "actions": {
     "crit": "Crit",
     "critTooltip": "Roll critical damage ({{formula}})"

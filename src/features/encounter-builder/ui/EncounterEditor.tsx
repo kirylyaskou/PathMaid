@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Gift, Pencil, ArrowUpDown, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -18,9 +18,10 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
 import { cn } from '@/shared/lib/utils'
-import { useEncounterStore } from '@/entities/encounter'
+import { useEncounterStore, addCharacterGroupToEncounter } from '@/entities/encounter'
+import { CharacterGroupPicker } from '@/features/characters'
 import { saveEncounterCombatants, resetEncounterCombat, updateEncounterName, loadEncounterStagingCombatants } from '@/shared/api'
-import type { EncounterCombatantRow } from '@/shared/api'
+import type { EncounterCombatantRow, CharacterRecord } from '@/shared/api'
 import type { EncounterSide } from '@engine'
 import { logErrorWithToast } from '@/shared/lib/error'
 import {
@@ -94,6 +95,11 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
       cancelled = true
     }
   }, [encounterId, stagingPoolEnabled])
+
+  const handleAddGroup = useCallback(
+    (characters: CharacterRecord[]) => addCharacterGroupToEncounter(encounterId, characters),
+    [encounterId],
+  )
 
   if (!encounter) return null
 
@@ -280,6 +286,7 @@ export function EncounterEditor({ encounterId, partyLevel }: Props) {
     <div ref={dropRef} className={cn('flex flex-col h-full', isOver && 'border-dashed border border-primary/40 bg-primary/5')}>
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/50 shrink-0">
+        <div className="mb-3"><CharacterGroupPicker onAdd={handleAddGroup} /></div>
         {editingName ? (
           <Input
             autoFocus

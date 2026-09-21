@@ -19,7 +19,7 @@ import {
   type CharacterRecord,
 } from '@/shared/api'
 import { useCombatantStore } from '@/entities/combatant'
-import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel, createCombatantFromCharacter } from '@/features/characters'
+import { CharacterCard, ImportDialog, DeleteCharacterDialog, PCSheetPanel, CharacterGroupsPanel, createCombatantFromCharacter } from '@/features/characters'
 import { PregenPickerDialog } from '@/features/pregen-picker'
 import { useCombatTrackerStore } from '@/features/combat-tracker'
 
@@ -198,6 +198,7 @@ export function CharactersPage() {
       )}
 
       <div className="flex-1 overflow-y-auto p-4">
+        <CharacterGroupsPanel characters={characters} />
         {characters.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center gap-3">
             <Users className="w-10 h-10 text-muted-foreground/30" />

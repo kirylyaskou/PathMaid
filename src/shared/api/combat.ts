@@ -1,5 +1,22 @@
 import { getDb } from '@/shared/db'
 
+export async function saveCombatStartSnapshot(combatId: string, snapshotJson: string): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `INSERT INTO combat_start_snapshots (combat_id, snapshot_json) VALUES (?, ?)
+     ON CONFLICT(combat_id) DO UPDATE SET snapshot_json = excluded.snapshot_json`,
+    [combatId, snapshotJson],
+  )
+}
+
+export async function loadCombatStartSnapshot(combatId: string): Promise<string | null> {
+  const db = await getDb()
+  const rows = await db.select<{ snapshot_json: string }[]>(
+    'SELECT snapshot_json FROM combat_start_snapshots WHERE combat_id = ?', [combatId],
+  )
+  return rows[0]?.snapshot_json ?? null
+}
+
 export interface CombatCombatantRow {
   id: string
   creatureRef: string

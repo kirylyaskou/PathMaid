@@ -8,6 +8,7 @@ import { logErrorWithToast } from '@/shared/lib/error'
 
 let unsubscribers: Array<() => void> = []
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let saveInFlight: Promise<void> = Promise.resolve()
 
 function buildSnapshot(): CombatSnapshot | null {
   const tracker = useCombatTrackerStore.getState()
@@ -34,7 +35,9 @@ function debouncedSave(): void {
     const snapshot = buildSnapshot()
     if (snapshot) {
       try {
-        await saveCombatState(snapshot)
+        const save = saveInFlight.then(() => saveCombatState(snapshot))
+        saveInFlight = save.catch(() => {})
+        await save
         useCombatTrackerStore.getState().setLastSaveError(null)
       } catch (err) {
         logErrorWithToast('combat-auto-save')(err)
@@ -61,6 +64,11 @@ export function teardownAutoSave(): void {
     clearTimeout(saveTimer)
     saveTimer = null
   }
+}
+
+export async function stopAutoSave(): Promise<void> {
+  teardownAutoSave()
+  await saveInFlight
 }
 
 export async function loadActiveCombat(): Promise<boolean> {
