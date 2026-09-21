@@ -46,52 +46,47 @@ export async function seedGenericCreatures(
     return
   }
 
-  await db.execute('BEGIN TRANSACTION', [])
-  try {
-    await db.execute('DELETE FROM entities WHERE source_pack = ?', [SOURCE_PACK])
+  // Each execute call can use a different pooled connection, so a transaction
+  // cannot safely span these calls. A failed seed is replaced on the next run.
+  await db.execute('DELETE FROM entities WHERE source_pack = ?', [SOURCE_PACK])
 
-    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-      const chunk = rows.slice(i, i + CHUNK_SIZE)
-      const placeholders = chunk
-        .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .join(', ')
-      const values = chunk.flatMap((row) => [
-        row.id,
-        row.name,
-        row.type,
-        row.level,
-        row.hp,
-        row.ac,
-        row.fort,
-        row.ref,
-        row.will,
-        row.perception,
-        row.traits,
-        row.rarity,
-        row.size,
-        row.source_pack,
-        JSON.stringify(row.raw_json),
-        row.source_name,
-        row.source_adventure,
-      ])
-
-      await db.execute(
-        `INSERT OR REPLACE INTO entities
-          (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json, source_name, source_adventure)
-         VALUES ${placeholders}`,
-        values,
-      )
-    }
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE)
+    const placeholders = chunk
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .join(', ')
+    const values = chunk.flatMap((row) => [
+      row.id,
+      row.name,
+      row.type,
+      row.level,
+      row.hp,
+      row.ac,
+      row.fort,
+      row.ref,
+      row.will,
+      row.perception,
+      row.traits,
+      row.rarity,
+      row.size,
+      row.source_pack,
+      JSON.stringify(row.raw_json),
+      row.source_name,
+      row.source_adventure,
+    ])
 
     await db.execute(
-      'INSERT OR REPLACE INTO sync_metadata (key, value) VALUES (?, ?)',
-      [SEED_VERSION_KEY, SEED_VERSION],
+      `INSERT OR REPLACE INTO entities
+        (id, name, type, level, hp, ac, fort, ref, will, perception, traits, rarity, size, source_pack, raw_json, source_name, source_adventure)
+       VALUES ${placeholders}`,
+      values,
     )
-    await db.execute('COMMIT', [])
-  } catch (err) {
-    await db.execute('ROLLBACK', [])
-    throw err
   }
+
+  await db.execute(
+    'INSERT OR REPLACE INTO sync_metadata (key, value) VALUES (?, ?)',
+    [SEED_VERSION_KEY, SEED_VERSION],
+  )
 
   if (options.rebuildFts ?? true) {
     await db.execute("INSERT INTO entities_fts(entities_fts) VALUES('rebuild')", [])
