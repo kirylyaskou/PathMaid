@@ -11,6 +11,23 @@ Repository: [github.com/kirylyaskou/PathMaid](https://github.com/kirylyaskou/Pat
 - [Инженерный аудит и план рефакторинга](docs/refactoring-plan.md)
 - [Архитектурные графы рефакторинга](docs/architecture-graphs.md)
 
+## Android releases
+
+The release workflow builds a signed ARM64 APK and attaches it to the same GitHub release as the desktop installers. Assets include `PathMaid_<version>_android_arm64.apk` and the stable download alias `PathMaid_android_arm64.apk`. Publication waits for all desktop and Android builds to succeed.
+
+Configure these repository Actions secrets before running a release:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEY_BASE64` | Base64-encoded Android signing keystore |
+| `ANDROID_KEY_ALIAS` | Signing key alias in the keystore |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore password |
+| `ANDROID_KEY_PASSWORD` | Signing key password (may be the same as the keystore password) |
+
+Use the same keystore for subsequent releases so Android can install updates over the existing app. Keep the keystore and passwords outside the repository. See [Tauri's Android signing guide](https://v2.tauri.app/distribute/sign/android/) for key creation. The workflow also requires the existing `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` secrets.
+
+Android uses manual APK installation and updates. The desktop Python/PaddleOCR sidecar is excluded from the APK, so OCR import is unavailable on Android.
+
 ## Licenses
 
 PathMaid bundles game content and community translations subject to multiple licenses. Full license texts and attribution chains are committed under [`LICENSES/`](LICENSES/):

@@ -31,6 +31,7 @@ jobs:
             - \`PathMaid_*_x64-setup.exe\` / \`PathMaid_*_x64_en-US.msi\` — Windows
             - \`PathMaid_*_aarch64.dmg\` — macOS (Apple Silicon, manual install only — auto-update disabled on macOS until notarization is configured)
             - \`PathMaid_*_amd64.AppImage\` / \`PathMaid_*_amd64.deb\` — Linux
+            - \`PathMaid_*_android_arm64.apk\` — Android (ARM64, manual install; desktop OCR is unavailable)
 
             ## Auto-update
 
@@ -248,8 +249,107 @@ jobs:
           cp "${matches[0]}" "$alias_path"
           gh release upload "$GITHUB_REF_NAME" "$alias_path" --clobber
 
+  build-android:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Android release config
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          for name in ANDROID_KEY_BASE64 ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD ANDROID_KEYSTORE_PASSWORD VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub Actions secret: $name"
+              exit 1
+            fi
+          done
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK and build tools
+        run: |
+          sdkmanager "ndk;28.2.13676358" "build-tools;35.0.0"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android-arm64
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Initialize Android project
+        run: pnpm exec tauri android init --ci --skip-targets-install
+
+      - name: Build Android APK
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: pnpm exec tauri android build --ci --apk --target aarch64
+
+      - name: Sign and verify Android APK
+        env:
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          apks=(src-tauri/gen/android/app/build/outputs/apk/**/release/*-unsigned.apk)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one unsigned release APK, found ${#apks[@]}"
+            exit 1
+          fi
+
+          keystore="$RUNNER_TEMP/pathmaid-android.jks"
+          trap 'rm -f "$keystore"' EXIT
+          umask 077
+          printf '%s' "$ANDROID_KEY_BASE64" | base64 --decode > "$keystore"
+          version="$(node -p "require('./package.json').version")"
+          mkdir -p target/release-aliases
+          apk="target/release-aliases/PathMaid_${version}_android_arm64.apk"
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          "$tools/zipalign" -P 16 -f 4 "${apks[0]}" "$apk"
+          "$tools/apksigner" sign --ks "$keystore" --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD "$apk"
+          "$tools/apksigner" verify "$apk"
+          "$tools/zipalign" -c -P 16 4 "$apk"
+          cp "$apk" target/release-aliases/PathMaid_android_arm64.apk
+
+      - name: Upload Android release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" target/release-aliases/*.apk --clobber
+
   publish-release:
-    needs: [create-release, build]
+    needs: [create-release, build, build-android]
     runs-on: ubuntu-latest
     steps:
       - name: Publish release
