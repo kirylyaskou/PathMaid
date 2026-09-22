@@ -93,7 +93,10 @@ export async function runMigrations(db: Database): Promise<void> {
     for (let i = 0; i < statements.length; i++) {
       const stmt = statements[i]
       try {
-        await db.execute(stmt, [])
+        // SQLx can switch pooled connections between statements. Read the schema
+        // on the same connection before preparing DDL so a preceding DROP/CREATE
+        // cannot leave this connection's schema cache stale.
+        await db.execute(`SELECT 1 FROM sqlite_master LIMIT 0; ${stmt}`, [])
       } catch (err) {
         // SQLite has no `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. A migration
         // that adds many columns can be interrupted mid-way (crash, force-quit);
