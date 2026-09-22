@@ -1,6 +1,6 @@
 {
   "name": "pathmaid",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "Pathfinder 2e DM Assistant",
   "type": "module",
   "scripts": {
