@@ -214,6 +214,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         run: |
           set -euo pipefail
 
@@ -247,7 +248,15 @@ jobs:
 
           mkdir -p "$(dirname "$alias_path")"
           cp "${matches[0]}" "$alias_path"
-          gh release upload "$GITHUB_REF_NAME" "$alias_path" --clobber
+          asset_name="$(basename "$alias_path")"
+          asset_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --paginate \
+            --jq ".[] | select(.name == \"$asset_name\") | .id")"
+          if [ -n "$asset_id" ]; then
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id"
+          fi
+          upload_url="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.upload_url | split("{")[0]')"
+          gh api --method POST "$upload_url?name=$asset_name" \
+            --header 'Content-Type: application/octet-stream' --input "$alias_path" --jq '.name'
 
   build-android:
     needs: create-release
@@ -348,7 +357,21 @@ jobs:
       - name: Upload Android release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" target/release-aliases/*.apk --clobber
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        run: |
+          set -euo pipefail
+          upload_url="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq '.upload_url | split("{")[0]')"
+          for apk in target/release-aliases/*.apk; do
+            asset_name="$(basename "$apk")"
+            asset_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --paginate \
+              --jq ".[] | select(.name == \"$asset_name\") | .id")"
+            if [ -n "$asset_id" ]; then
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id"
+            fi
+            encoded_name="$(jq -rn --arg name "$asset_name" '$name | @uri')"
+            gh api --method POST "$upload_url?name=$encoded_name" \
+              --header 'Content-Type: application/vnd.android.package-archive' --input "$apk" --jq '.name'
+          done
 
   publish-release:
     needs: [create-release, build, build-android]
@@ -362,6 +385,14 @@ jobs:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
             const isPrerelease = tag.includes('-');
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.RELEASE_ID,
+            });
+            if (!assets.some(asset => asset.name === 'PathMaid_android_arm64.apk' && asset.size > 0)) {
+              throw new Error('Android APK is missing from the release being published');
+            }
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
