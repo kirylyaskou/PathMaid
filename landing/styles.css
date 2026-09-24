@@ -37,13 +37,14 @@
     .hero-bottom { position:relative; max-width:1600px; display:flex; justify-content:space-between; align-items:center; gap:2rem; border-top:1px solid #24251e40; margin:1rem auto 0; padding-top:1.2rem; font-size:.7rem; letter-spacing:.045em; text-transform:uppercase; }
     .hero-bottom a { display:flex; align-items:center; gap:1rem; }
     .hero-bottom b { font-size:1.4rem; font-weight:400; }
-    .intro { position:relative; display:grid; grid-template-columns:.45fr 1fr; gap:4rem; padding:7rem 7vw; max-width:1700px; margin:auto; }
-    .intro .aside { display:flex; flex-direction:column; justify-content:space-between; gap:2rem; }
+    .intro { position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:2rem 3rem; align-items:center; padding:6rem 7vw; max-width:1700px; margin:auto; }
+    .intro .aside { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:2rem; }
     .chapter { font-size:.76rem; font-weight:550; letter-spacing:.07em; text-transform:uppercase; }
-    .intro-mark { width:5rem; height:5rem; color:var(--berry); font-family:Georgia,serif; font-size:6rem; line-height:.9; transform:rotate(-12deg); }
+    .intro-mark { color:var(--berry); font-family:Georgia,serif; font-size:4rem; line-height:.8; transform:rotate(-12deg); }
     .intro h2 { max-width:18ch; font-size:clamp(2.1rem,4.2vw,4.2rem); font-weight:600; line-height:1.13; letter-spacing:-.05em; }
     .intro h2 em { font-style:normal; color:var(--berry); }
-    .intro p { max-width:32rem; margin-top:1.8rem; font-size:1rem; line-height:1.7; }
+    .intro-copy p { max-width:32rem; margin-top:1.8rem; font-size:1rem; line-height:1.7; }
+    .intro-art { width:100%; height:auto; justify-self:end; }
     .features { padding:5rem 5vw 2rem; background:var(--berry); color:var(--paper); }
     .feature-heading { display:flex; align-items:end; justify-content:space-between; gap:2rem; max-width:1600px; margin:auto; }
     .feature-heading h2 { margin-top:1.8rem; font-size:clamp(3.3rem,6.4vw,6.5rem); font-weight:800; line-height:.98; letter-spacing:-.065em; }
@@ -134,10 +135,10 @@
       .hero-bottom { gap:1rem; font-size:.58rem; line-height:1.5; }
       .hero-bottom a { white-space:nowrap; }
       .intro { padding:3.5rem 1.5rem; grid-template-columns:1fr; gap:2rem; }
-      .intro .aside { flex-direction:row; align-items:center; }
-      .intro-mark { font-size:3rem; width:2rem; height:2rem; }
+      .intro-mark { font-size:3rem; }
       .intro h2 { font-size:2.1rem; max-width:22ch; }
-      .intro p { font-size:.9rem; }
+      .intro-copy p { font-size:.9rem; }
+      .intro-art { max-width:35rem; justify-self:center; }
       .features { padding:3.5rem 1.5rem 1rem; }
       .feature-heading { display:block; }
       .feature-heading h2 { font-size:3.5rem; }
