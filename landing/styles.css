@@ -17,7 +17,7 @@
     .language-switcher a:hover,.language-switcher a[aria-current="page"] { border-color:var(--ink); }
     .nav-download { display:flex; gap:1.5rem; align-items:center; font-size:.9rem; font-weight:600; }
     .nav-download span { font-size:1.6rem; }
-    .hero { position:relative; min-height:min(960px,100svh); padding:10rem 5vw 2rem; background:var(--lemon); overflow:hidden; isolation:isolate; }
+    .hero { position:relative; padding:10rem 5vw 2rem; background:var(--lemon); overflow:hidden; isolation:isolate; }
     .hero-main { display:grid; grid-template-columns:1.06fr .94fr; max-width:1600px; margin:auto; align-items:center; }
     .hero-copy { z-index:2; padding-bottom:3rem; }
     .kicker { display:flex; align-items:center; gap:.55rem; font-size:.72rem; font-weight:650; letter-spacing:.08em; text-transform:uppercase; }
@@ -104,9 +104,8 @@
     .platforms small { display:block; margin-top:.35rem; font-size:.7rem; font-weight:400; }
     footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem; border-top:1px solid #f8f5e92b; margin-top:4rem; padding-top:1.4rem; font-size:.7rem; line-height:1.5; }
     footer p { max-width:38rem; }
-    @media(min-width:1800px) { .hero { min-height:1000px; } }
     @media(max-width:1000px) {
-      .hero { min-height:0; padding-top:9rem; }
+      .hero { padding-top:9rem; }
       h1 { font-size:7.8vw; }
       .hero-art { height:52vw; margin-top:0; }
       .hero-body { font-size:.92rem; }
