@@ -42,11 +42,12 @@ Use these generation targets:
 | `cloud-sync-guide.png` | 1254 x 1254 current, target 1200 x 1200+ | Cloud sync section art. Current file is wired into the page. |
 | `feature-wide.png` | 1774 x 887 current, target 2:1 | Wide transformation banner for the middle showcase. Current file is wired into the page. |
 | `auth-confirmed-success.png` | 1448 x 1086 current | Email confirmation success page background. |
-| `service-card-encyclopedia.png` | 1505 x 1045 current, target 720 x 500+ | Reference section illustration. |
+| `reference-bestiary.png`, `reference-spells.png`, `reference-items.png`, `reference-hazards.png` | About 1520 x 876 each | Switchable reference UI screenshots. |
+| `reference-reaction.png` | 1254 x 1254 | The two foreground characters framing the reference UI. |
 | `service-card-combat.png` | 1505 x 1045 current, target 720 x 500+ | Combat section illustration. |
 | `service-card-pathbuilder.png` | 1469 x 1071 current, target 720 x 500+ | Pathbuilder section illustration. |
 | `service-card-custom.png` | 1462 x 1076 current, target 720 x 500+ | Custom creature section illustration. |
 | `service-card-campaign.png` | 1436 x 1096 current, target 720 x 500+ | Campaign section illustration. |
 | `og-image.png` | 1200 x 630 | Future social sharing image. Not wired yet. |
 
-The current illustrations remain wired into the light design as temporary assets. Keep the filenames when replacing them with final artwork so both language pages update together. The wide artwork appears between the five feature stories and cloud sync.
+The remaining illustrations stay wired into the light design as temporary assets. Keep their filenames when replacing them with final artwork so both language pages update together. The wide artwork appears between the five feature stories and cloud sync.

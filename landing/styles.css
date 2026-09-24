@@ -60,9 +60,31 @@
     .service-details li::before { content:'↗'; font-size:1rem; }
     .service-art { margin:0; width:100%; transform:translate3d(0,var(--drift,0px),0); }
     .service-art img { width:100%; height:auto; aspect-ratio:4/3; object-fit:contain; }
-    .service-art figcaption { display:flex; justify-content:space-between; gap:1rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid color-mix(in srgb,currentColor 25%,transparent); font-size:.7rem; font-weight:550; text-transform:uppercase; letter-spacing:.04em; line-height:1.4; }
-    .service-art figcaption span:last-child { white-space:nowrap; }
+    .service-art figcaption,.reference-showcase figcaption { display:flex; justify-content:space-between; gap:1rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid color-mix(in srgb,currentColor 25%,transparent); font-size:.7rem; font-weight:550; text-transform:uppercase; letter-spacing:.04em; line-height:1.4; }
+    .service-art figcaption span:last-child,.reference-showcase figcaption span:last-child { white-space:nowrap; }
     .reference-story { background:var(--berry); color:var(--paper); }
+    .reference-story .service-layout { grid-template-columns:1fr; gap:3rem; }
+    .reference-story .service-copy { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:5vw; }
+    .reference-story .service-copy .chapter { grid-column:1/-1; }
+    .reference-story .service-copy h3 { grid-column:1; grid-row:2/4; }
+    .reference-story .service-copy>p:not(.chapter),.reference-story .service-details { grid-column:2; }
+    .reference-story .service-details { margin-top:1rem; }
+    .reference-showcase { width:100%; max-width:1320px; margin:0 auto; }
+    .reference-controls { display:none; flex-wrap:wrap; gap:.55rem; margin-bottom:1.25rem; }
+    .reference-showcase.is-ready .reference-controls { display:flex; }
+    .reference-controls button { padding:.6rem .95rem; border:1px solid currentColor; border-radius:2rem; background:transparent; color:inherit; font:inherit; font-size:.76rem; font-weight:650; cursor:pointer; transition:background .2s,color .2s,transform .2s; }
+    .reference-controls button:hover { transform:translateY(-2px); }
+    .reference-controls button[aria-pressed="true"] { border-color:var(--lemon); background:var(--lemon); color:var(--ink); }
+    .reference-controls button:focus-visible { outline:3px solid var(--lemon); outline-offset:3px; }
+    .reference-stage { position:relative; aspect-ratio:1520/876; margin-bottom:clamp(4rem,11vw,10rem); border:1px solid var(--lemon); background:#1a0f0a; box-shadow:12px 12px 0 var(--ink); isolation:isolate; }
+    .reference-slide { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transform:translateX(3%) scale(.98); transition:opacity .55s ease,transform .7s var(--ease); pointer-events:none; }
+    .reference-slide.is-active { opacity:1; transform:translateX(0) scale(1); }
+    .reference-reaction { position:absolute; z-index:2; bottom:-21%; width:30%; aspect-ratio:710/1254; overflow:hidden; pointer-events:none; filter:drop-shadow(0 1rem 1.5rem #1a0f0a88); }
+    .reference-reaction-left { left:-2%; }
+    .reference-reaction-right { right:-2%; width:23%; aspect-ratio:544/1254; }
+    .reference-reaction img { position:absolute; bottom:0; height:auto; max-width:none; }
+    .reference-reaction-left img { left:0; width:176.62%; }
+    .reference-reaction-right img { right:0; width:230.51%; }
     .combat-story { background:var(--lemon); }
     .combat-story .service-layout,.campaign-story .service-layout { grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr); }
     .combat-story .service-art,.campaign-story .service-art { grid-column:1; grid-row:1; }
@@ -150,7 +172,15 @@
       .service-story .service-copy,.service-story .service-art { grid-column:auto; grid-row:auto; }
       .service-copy h3,.cloud-story h2 { font-size:clamp(2rem,8vw,3.2rem); }
       .service-copy>p:not(.chapter) { font-size:.92rem; }
-      .service-art figcaption { font-size:.6rem; }
+      .service-art figcaption,.reference-showcase figcaption { font-size:.6rem; }
+      .reference-story .service-copy { display:block; }
+      .reference-story .service-layout { gap:2rem; }
+      .reference-controls { gap:.4rem; }
+      .reference-controls button { padding:.5rem .7rem; font-size:.68rem; }
+      .reference-stage { box-shadow:6px 6px 0 var(--ink); }
+      .reference-reaction { bottom:-18%; }
+      .reference-reaction-left { width:34%; }
+      .reference-reaction-right { right:1%; width:34%; }
       .start { padding:3.5rem 1.5rem; grid-template-columns:1fr; gap:3rem; }
       .wide-story { padding:3.5rem 1.5rem; }
       .wide-copy { display:block; }

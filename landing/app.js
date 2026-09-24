@@ -25,6 +25,57 @@
     applyDownloads();
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const referenceGallery = document.querySelector('[data-reference-gallery]');
+    if (referenceGallery) {
+      const slides = [...referenceGallery.querySelectorAll('.reference-slide')];
+      const buttons = [...referenceGallery.querySelectorAll('[data-reference-index]')];
+      const title = referenceGallery.querySelector('[data-reference-title]');
+      const count = referenceGallery.querySelector('[data-reference-count]');
+      let activeIndex = 0;
+      let timer = 0;
+      let visible = false;
+      let paused = false;
+
+      function showReference(index) {
+        if (index === activeIndex) return;
+        slides[activeIndex].classList.remove('is-active');
+        slides[activeIndex].setAttribute('aria-hidden', 'true');
+        buttons[activeIndex].setAttribute('aria-pressed', 'false');
+        activeIndex = index;
+        slides[activeIndex].classList.add('is-active');
+        slides[activeIndex].setAttribute('aria-hidden', 'false');
+        buttons[activeIndex].setAttribute('aria-pressed', 'true');
+        title.textContent = buttons[activeIndex].textContent;
+        count.textContent = `${String(activeIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      }
+
+      function syncReferenceTimer() {
+        clearInterval(timer);
+        timer = 0;
+        if (visible && !paused && !document.hidden && !reducedMotion.matches) {
+          timer = setInterval(() => showReference((activeIndex + 1) % slides.length), 6000);
+        }
+      }
+
+      buttons.forEach((button, index) => button.addEventListener('click', () => {
+        showReference(index);
+        syncReferenceTimer();
+      }));
+      referenceGallery.addEventListener('mouseenter', () => { paused = true; syncReferenceTimer(); });
+      referenceGallery.addEventListener('mouseleave', () => { paused = false; syncReferenceTimer(); });
+      referenceGallery.addEventListener('focusin', () => { paused = true; syncReferenceTimer(); });
+      referenceGallery.addEventListener('focusout', event => {
+        if (!referenceGallery.contains(event.relatedTarget)) { paused = false; syncReferenceTimer(); }
+      });
+      document.addEventListener('visibilitychange', syncReferenceTimer);
+      reducedMotion.addEventListener('change', syncReferenceTimer);
+      new IntersectionObserver(entries => {
+        visible = entries[0].isIntersecting;
+        syncReferenceTimer();
+      }, { threshold: 0.2 }).observe(referenceGallery);
+      referenceGallery.classList.add('is-ready');
+    }
+
     const revealItems = [...document.querySelectorAll('[data-reveal]')];
     const revealObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {

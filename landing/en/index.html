@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=reference-gallery">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -56,7 +56,23 @@
       <section class="service-story reference-story" id="reference" aria-labelledby="reference-title">
         <div class="service-layout">
           <div class="service-copy" data-reveal><p class="chapter">01 / Reference</p><h3 id="reference-title">“Just a moment,<br>I’ll find it.”</h3><p>Keep the reference library on your desk. Find a rule, spell, or creature quickly and get back to the game.</p><ul class="service-details"><li>Creatures, spells, and items</li><li>Conditions, hazards, actions, and rules</li><li>Search the downloaded database offline</li></ul></div>
-          <figure class="service-art" data-parallax="0.07" data-reveal><img src="../assets/service-card-encyclopedia.png" alt="Tilta with the Pathfinder 2e rules reference" width="1505" height="1045" loading="lazy" decoding="async"><figcaption><span>The library is always close</span><span>01 / 05</span></figcaption></figure>
+          <figure class="reference-showcase" data-reference-gallery data-reveal>
+            <div class="reference-controls" role="group" aria-label="Reference sections">
+              <button type="button" data-reference-index="0" aria-pressed="true">Bestiary</button>
+              <button type="button" data-reference-index="1" aria-pressed="false">Spells</button>
+              <button type="button" data-reference-index="2" aria-pressed="false">Items</button>
+              <button type="button" data-reference-index="3" aria-pressed="false">Hazards</button>
+            </div>
+            <div class="reference-stage">
+              <img class="reference-slide is-active" src="../assets/reference-bestiary.png" alt="PathMaid bestiary showing a creature's statistics and attacks" width="1524" height="878" loading="lazy" decoding="async" aria-hidden="false">
+              <img class="reference-slide" src="../assets/reference-spells.png" alt="PathMaid spell list with a spell description open" width="1520" height="876" loading="lazy" decoding="async" aria-hidden="true">
+              <img class="reference-slide" src="../assets/reference-items.png" alt="PathMaid item catalog with search and filters" width="1516" height="877" loading="lazy" decoding="async" aria-hidden="true">
+              <img class="reference-slide" src="../assets/reference-hazards.png" alt="PathMaid hazard list with expanded trap details" width="1522" height="875" loading="lazy" decoding="async" aria-hidden="true">
+              <div class="reference-reaction reference-reaction-left" aria-hidden="true"><img src="../assets/reference-reaction.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></div>
+              <div class="reference-reaction reference-reaction-right" aria-hidden="true"><img src="../assets/reference-reaction.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></div>
+            </div>
+            <figcaption><span data-reference-title>Bestiary</span><span data-reference-count>01 / 04</span></figcaption>
+          </figure>
         </div>
       </section>
       <section class="service-story combat-story" id="combat" aria-labelledby="combat-title">
@@ -104,6 +120,6 @@
       <footer><p>PathMaid is an independent Pathfinder 2e GM assistant and is not endorsed by Paizo.</p><a href="https://github.com/kirylyaskou/PathMaid" target="_blank" rel="noopener noreferrer">GitHub ↗</a></footer>
     </section>
   </main>
-  <script src="../app.js"></script>
+  <script src="../app.js?v=reference-gallery"></script>
 </body>
 </html>

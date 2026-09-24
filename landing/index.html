@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=reference-gallery">
 </head>
 <body>
   <a class="skip" href="#main">Перейти к содержимому</a>
@@ -56,7 +56,23 @@
       <section class="service-story reference-story" id="reference" aria-labelledby="reference-title">
         <div class="service-layout">
           <div class="service-copy" data-reveal><p class="chapter">01 / Справочник</p><h3 id="reference-title">«Секундочку,<br>сейчас найду».</h3><p>Все эти книги теперь помещаются на вашем столе. Находите нужное правило, заклинание или существо — и возвращайтесь к игре.</p><ul class="service-details"><li>Существа, заклинания и предметы</li><li>Состояния, опасности, действия и правила</li><li>Поиск по загруженной базе без интернета</li></ul></div>
-          <figure class="service-art" data-parallax="0.07" data-reveal><img src="./assets/service-card-encyclopedia.png" alt="Тилта со справочником правил Pathfinder 2e" width="1505" height="1045" loading="lazy" decoding="async"><figcaption><span>Библиотека всегда под рукой</span><span>01 / 05</span></figcaption></figure>
+          <figure class="reference-showcase" data-reference-gallery data-reveal>
+            <div class="reference-controls" role="group" aria-label="Разделы справочника">
+              <button type="button" data-reference-index="0" aria-pressed="true">Бестиарий</button>
+              <button type="button" data-reference-index="1" aria-pressed="false">Заклинания</button>
+              <button type="button" data-reference-index="2" aria-pressed="false">Предметы</button>
+              <button type="button" data-reference-index="3" aria-pressed="false">Опасности</button>
+            </div>
+            <div class="reference-stage">
+              <img class="reference-slide is-active" src="./assets/reference-bestiary.png" alt="Бестиарий PathMaid с характеристиками и атаками выбранного существа" width="1524" height="878" loading="lazy" decoding="async" aria-hidden="false">
+              <img class="reference-slide" src="./assets/reference-spells.png" alt="Список заклинаний PathMaid с открытым описанием заклинания" width="1520" height="876" loading="lazy" decoding="async" aria-hidden="true">
+              <img class="reference-slide" src="./assets/reference-items.png" alt="Каталог предметов PathMaid с поиском и фильтрами" width="1516" height="877" loading="lazy" decoding="async" aria-hidden="true">
+              <img class="reference-slide" src="./assets/reference-hazards.png" alt="Список опасностей PathMaid с подробностями ловушки" width="1522" height="875" loading="lazy" decoding="async" aria-hidden="true">
+              <div class="reference-reaction reference-reaction-left" aria-hidden="true"><img src="./assets/reference-reaction.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></div>
+              <div class="reference-reaction reference-reaction-right" aria-hidden="true"><img src="./assets/reference-reaction.png" alt="" width="1254" height="1254" loading="lazy" decoding="async"></div>
+            </div>
+            <figcaption><span data-reference-title>Бестиарий</span><span data-reference-count>01 / 04</span></figcaption>
+          </figure>
         </div>
       </section>
       <section class="service-story combat-story" id="combat" aria-labelledby="combat-title">
@@ -104,6 +120,6 @@
       <footer><p>PathMaid — независимый помощник мастера Pathfinder 2e. Не одобрен Paizo.</p><a href="https://github.com/kirylyaskou/PathMaid" target="_blank" rel="noopener noreferrer">GitHub ↗</a></footer>
     </section>
   </main>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=reference-gallery"></script>
 </body>
 </html>
