@@ -1,295 +1,108 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta
-      name="description"
-      content="PathMaid is an all-in-one desktop GM screen for Pathfinder 2e with cloud sync between devices."
-    >
-    <title>PathMaid - Let the maid handle the mess</title>
-    <link rel="icon" type="image/png" sizes="128x128" href="./assets/pathmaid-icon-128.png">
-    <link rel="stylesheet" href="./tokens.css">
-    <link rel="stylesheet" href="./styles.css">
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="PathMaid">
-        <span class="brand-mark" aria-hidden="true">
-          <img src="./assets/pathmaid-icon-128.png" alt="">
-        </span>
-        <span>PathMaid</span>
-      </a>
-      <nav class="site-nav" aria-label="Primary navigation">
-        <a href="#cloud" data-i18n="nav.cloud">Cloud Sync</a>
-        <a href="#features" data-i18n="nav.features">Features</a>
-        <a href="#service" data-i18n="nav.service">Benefits</a>
-        <a href="#downloads" data-i18n="nav.downloads">Downloads</a>
-      </nav>
-      <div class="language-switcher" aria-label="Language">
-        <button class="language-button" type="button" data-locale="en" aria-pressed="true">EN</button>
-        <button class="language-button" type="button" data-locale="ru" aria-pressed="false">RU</button>
-      </div>
-    </header>
-
-    <main id="top">
-      <section class="hero section-band">
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PathMaid — помощник мастера Pathfinder 2e: справочник правил, трекер боя, импорт персонажей Pathbuilder, кампании и облачная синхронизация. Скачать для Windows, macOS, Linux и Android.">
+  <title>PathMaid — помощник мастера Pathfinder 2e</title>
+  <link rel="canonical" href="https://www.pathmaid.site/">
+  <link rel="alternate" hreflang="ru" href="https://www.pathmaid.site/">
+  <link rel="alternate" hreflang="en" href="https://www.pathmaid.site/en/">
+  <link rel="alternate" hreflang="x-default" href="https://www.pathmaid.site/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PathMaid">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:title" content="PathMaid — помощник мастера Pathfinder 2e">
+  <meta property="og:description" content="Правила, существа, бой и кампании — на одном столе. Скачайте PathMaid для Windows, macOS, Linux или Android.">
+  <meta property="og:url" content="https://www.pathmaid.site/">
+  <meta property="og:image" content="https://www.pathmaid.site/assets/feature-wide.png">
+  <meta property="og:image:alt" content="Иллюстрация PathMaid для мастеров Pathfinder 2e">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"PathMaid","url":"https://www.pathmaid.site/"}</script>
+  <link rel="icon" type="image/png" sizes="128x128" href="./assets/pathmaid-icon-128.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Перейти к содержимому</a>
+  <header class="page-nav">
+    <a class="wordmark" href="#home" aria-label="PathMaid — на главную">pathmaid<span>.</span></a>
+    <div class="nav-actions"><nav class="language-switcher" aria-label="Язык"><a href="./" aria-current="page">RU</a><a href="./en/" lang="en">EN</a></nav><a class="nav-download" href="#download">Забрать мейду <span aria-hidden="true">↗</span></a></div>
+  </header>
+  <main id="main">
+    <section class="hero" id="home" aria-labelledby="hero-title">
+      <div class="hero-main">
         <div class="hero-copy">
-          <h1 data-i18n="hero.title">Let the maid handle the mess.</h1>
-          <p class="lede" data-i18n="hero.lede">
-            The all-in-one GM screen: bestiary, combat tracker, custom creatures, knowledge base,
-            and cross-platform tools ready for any table.
-          </p>
-          <div class="hero-actions" aria-label="Download PathMaid">
-            <a class="download-button" data-download="windows" href="#" data-i18n="downloads.windows">
-              Download for Windows
-            </a>
-            <a class="download-button" data-download="macos" href="#" data-i18n="downloads.macos">
-              Download for macOS
-            </a>
-            <a class="download-button" data-download="linux" href="#" data-i18n="downloads.linux">
-              Download for Linux
-            </a>
-          </div>
+          <p class="kicker">Помощник мастера · Pathfinder 2e</p>
+          <h1 id="hero-title">Вы ведёте<br>историю.<br><span class="last-line">Я приберу.</span></h1>
+          <p class="hero-body">Я — PathMaid. Приберу правила, существ и инициативу, пока вы придумываете, что за следующей дверью.</p>
+          <div class="hero-actions"><a class="primary-link" href="#download">Забрать мейду <span aria-hidden="true">↗</span></a><a class="text-link" href="#features">Что она умеет ↓</a></div>
         </div>
-
-        <figure class="hero-art hero-art-filled" data-asset-slot="hero-character">
-          <img src="./assets/hero-character.png" alt="PathMaid mascot serving potions beside a mimic chest">
-        </figure>
-      </section>
-
-      <section id="cloud" class="section-band cloud-section">
-        <div class="cloud-copy">
-          <p class="eyebrow" data-i18n="cloud.eyebrow">Now with cloud sync</p>
-          <h2 data-i18n="cloud.title">Your campaign follows every device.</h2>
-          <p class="cloud-body" data-i18n="cloud.body">
-            Sign in once and keep campaigns, encounters, custom creatures, notes, and uploaded images
-            synchronized across your desktop installs. Prep on one machine, run on another, and keep
-            going when the internet drops.
-          </p>
-          <div class="cloud-points">
-            <article class="cloud-point">
-              <h3 data-i18n="cloud.local.title">Offline first</h3>
-              <p data-i18n="cloud.local.body">
-                Local data stays on your machine and sync catches up when the connection returns.
-              </p>
-            </article>
-            <article class="cloud-point">
-              <h3 data-i18n="cloud.assets.title">Images included</h3>
-              <p data-i18n="cloud.assets.body">
-                Campaign artwork and handouts travel with the campaign, not just database rows.
-              </p>
-            </article>
-            <article class="cloud-point">
-              <h3 data-i18n="cloud.devices.title">One GM, many desks</h3>
-              <p data-i18n="cloud.devices.body">
-                Move between Windows, macOS, and Linux without rebuilding the same workspace.
-              </p>
-            </article>
-          </div>
-        </div>
-
-        <figure class="cloud-art asset-slot">
-          <img
-            src="./assets/cloud-sync-guide.png"
-            alt="PathMaid mascot surfing through the internet with the words Welcome to the Internet, I'll be your guide"
-          >
-        </figure>
-      </section>
-
-      <section id="features" class="section-band feature-slider-section">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="features.eyebrow">The service menu</p>
-          <h2 data-i18n="features.title">Five ways to make GM life easier by trusting PathMaid</h2>
-        </div>
-        <div class="feature-slider" data-slider>
-          <div class="slider-viewport" aria-live="polite">
-            <article class="slider-slide is-active" data-slide="0">
-              <div class="slide-copy">
-                <h3 data-i18n="features.encyclopedia.title">Universal knowledge base</h3>
-                <p data-i18n="features.encyclopedia.body">
-                  Keep the PF2e reference library in one place and work without internet access.
-                  Creatures, spells, items, conditions, hazards, actions, and rules stay fast to search.
-                </p>
-              </div>
-              <figure class="slide-art asset-slot" data-asset-slot="service-card-encyclopedia">
-                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-                <img
-                  class="slide-art-picture card-ratio"
-                  src="./assets/service-card-encyclopedia.png"
-                  alt="PathMaid mascot presenting a magical PF2e encyclopedia"
-                >
-              </figure>
-            </article>
-            <article class="slider-slide" data-slide="1">
-              <div class="slide-copy">
-                <h3 data-i18n="features.combat.title">The combat tracker you deserve</h3>
-                <p data-i18n="features.combat.body">
-                  Build encounters, apply conditions, track effects, and let PathMaid handle the math
-                  for you. Or at least most of it.
-                </p>
-              </div>
-              <figure class="slide-art asset-slot" data-asset-slot="service-card-combat">
-                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-                <img
-                  class="slide-art-picture card-ratio"
-                  src="./assets/service-card-combat.png"
-                  alt="PathMaid mascot managing initiative order for an encounter"
-                >
-              </figure>
-            </article>
-            <article class="slider-slide" data-slide="2">
-              <div class="slide-copy">
-                <h3 data-i18n="features.pathbuilder.title">Pathbuilder character import</h3>
-                <p data-i18n="features.pathbuilder.body">
-                  Bring player characters into the GM workspace in two clicks and put the facts on the table.
-                </p>
-              </div>
-              <figure class="slide-art asset-slot" data-asset-slot="service-card-pathbuilder">
-                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-                <img
-                  class="slide-art-picture card-ratio"
-                  src="./assets/service-card-pathbuilder.png"
-                  alt="PathMaid mascot pulling a character from a magical device"
-                >
-              </figure>
-            </article>
-            <article class="slider-slide" data-slide="3">
-              <div class="slide-copy">
-                <h3 data-i18n="features.custom.title">Custom creature builder</h3>
-                <p data-i18n="features.custom.body">
-                  Create, defeat, import, and export. Your bestiary has never been easier to shape.
-                </p>
-              </div>
-              <figure class="slide-art asset-slot" data-asset-slot="service-card-custom">
-                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-                <img
-                  class="slide-art-picture card-ratio"
-                  src="./assets/service-card-custom.png"
-                  alt="PathMaid mascot building a custom creature in a fantasy workshop"
-                >
-              </figure>
-            </article>
-            <article class="slider-slide" data-slide="4">
-              <div class="slide-copy">
-                <span class="status-pill" data-i18n="features.campaign.status">In progress</span>
-                <h3 data-i18n="features.campaign.title">Campaign manager</h3>
-                <p data-i18n="features.campaign.body">
-                  Campaign organization is actively evolving, so PathMaid can help keep long,
-                  complicated campaigns in order too.
-                </p>
-              </div>
-              <figure class="slide-art asset-slot" data-asset-slot="service-card-campaign">
-                <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-                <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-                <img
-                  class="slide-art-picture card-ratio"
-                  src="./assets/service-card-campaign.png"
-                  alt="PathMaid mascot carrying campaign volumes for a game master"
-                >
-              </figure>
-            </article>
-          </div>
-          <div class="slider-controls">
-            <button class="slider-button" type="button" data-slider-prev data-i18n="slider.prev">Previous</button>
-            <div class="slider-dots" aria-label="Feature slides">
-              <button class="slider-dot is-active" type="button" data-slide-to="0" aria-label="Feature 1"></button>
-              <button class="slider-dot" type="button" data-slide-to="1" aria-label="Feature 2"></button>
-              <button class="slider-dot" type="button" data-slide-to="2" aria-label="Feature 3"></button>
-              <button class="slider-dot" type="button" data-slide-to="3" aria-label="Feature 4"></button>
-              <button class="slider-dot" type="button" data-slide-to="4" aria-label="Feature 5"></button>
-            </div>
-            <button class="slider-button" type="button" data-slider-next data-i18n="slider.next">Next</button>
-          </div>
+        <div class="hero-art" data-parallax="0.09"><img src="./assets/hero-character.png" alt="Тилта с метёлкой и подносом рядом с сундуком-мимиком" width="1106" height="1422" fetchpriority="high"><p class="hand-note" aria-hidden="true">Да, и за вашим<br>гоблином тоже.<span>↙</span></p></div>
+      </div>
+      <div class="hero-bottom"><span>Windows · macOS · Linux · Android</span><a href="#story">Знакомимся поближе <b aria-hidden="true">↓</b></a></div>
+    </section>
+    <section class="intro" id="story" aria-labelledby="intro-title">
+      <div class="aside"><p class="chapter">01 / К вашим услугам</p><span class="intro-mark" aria-hidden="true">✳</span></div>
+      <div data-reveal><h2 id="intro-title">У хорошего мастера<br>есть план.<br><em>И кто-то, кто помнит<br>все модификаторы.</em></h2><p>Книги открыты. Герои готовы. Кто-то снова спрашивает про состояние «Напуган». Для таких моментов и нужна мейда: всё, что помогает вести Pathfinder 2e, собрано в одном приложении.</p></div>
+    </section>
+    <div id="features">
+      <div class="features">
+        <div class="feature-heading" data-reveal><div><p class="chapter">02 / В хороших руках</p><h2>Сложная игра.<br>Лёгкая рутина.</h2></div><p>Пять помощников на одном столе.<br>Одна очень занятая мейда.</p></div>
+      </div>
+      <section class="service-story reference-story" id="reference" aria-labelledby="reference-title">
+        <div class="service-layout">
+          <div class="service-copy" data-reveal><p class="chapter">01 / Справочник</p><h3 id="reference-title">«Секундочку,<br>сейчас найду».</h3><p>Все эти книги теперь помещаются на вашем столе. Находите нужное правило, заклинание или существо — и возвращайтесь к игре.</p><ul class="service-details"><li>Существа, заклинания и предметы</li><li>Состояния, опасности, действия и правила</li><li>Поиск по загруженной базе без интернета</li></ul></div>
+          <figure class="service-art" data-parallax="0.07" data-reveal><img src="./assets/service-card-encyclopedia.png" alt="Тилта со справочником правил Pathfinder 2e" width="1505" height="1045" loading="lazy" decoding="async"><figcaption><span>Библиотека всегда под рукой</span><span>01 / 05</span></figcaption></figure>
         </div>
       </section>
-
-      <section id="service" class="section-band service-section">
-        <div class="section-heading">
-          <h2 data-i18n="service.title">Less prep. More play.</h2>
-        </div>
-        <div class="service-grid">
-          <article class="service-item">
-            <h3 data-i18n="service.clean.title">One clean desk</h3>
-            <p data-i18n="service.clean.body">Stop switching between rules pages, sheets, encounter notes, and Foundry exports mid-scene.</p>
-          </article>
-          <article class="service-item">
-            <h3 data-i18n="service.speed.title">Faster rulings</h3>
-            <p data-i18n="service.speed.body">Searchable current data means fewer pauses while the table waits for a spell, trait, or condition.</p>
-          </article>
-          <article class="service-item">
-            <h3 data-i18n="service.control.title">Everything in your hands</h3>
-            <p data-i18n="service.control.body">You control every important part of the game. The only remaining task is remembering to enjoy it.</p>
-          </article>
+      <section class="service-story combat-story" id="combat" aria-labelledby="combat-title">
+        <div class="service-layout">
+          <div class="service-copy" data-reveal><p class="chapter">02 / Трекер боёв</p><h3 id="combat-title">Драка — ваша.<br>Рутина — моя.</h3><p>Соберите энкаунтер и ведите бой в одном месте. Кто ходит, сколько осталось HP и когда закончится эффект — мейда поможет за этим уследить.</p><ul class="service-details"><li>Порядок инициативы и раунды</li><li>HP, урон, лечение и спасброски</li><li>Состояния и длительности эффектов</li><li>Слабости, сопротивления и иммунитеты</li><li>Ослабленные и элитные противники</li></ul></div>
+          <figure class="service-art" data-parallax="-0.065" data-reveal><img src="./assets/service-card-combat.png" alt="Тилта ведёт бой за игровым столом" width="1505" height="1045" loading="lazy" decoding="async"><figcaption><span>Пока вы описываете критический удар</span><span>02 / 05</span></figcaption></figure>
         </div>
       </section>
-
-      <section class="section-band showcase-section">
-        <div class="showcase-copy">
-          <h2 data-i18n="showcase.title">From prep pile to service tray.</h2>
-          <p data-i18n="showcase.body">
-            PathMaid turns scattered notes, books, imports, and encounter work into a prepared GM desk.
-            The hardest part is simply starting.
-          </p>
-        </div>
-        <figure class="wide-art wide-art-filled" data-asset-slot="feature-wide">
-          <span class="frame-corner frame-corner-top frame-corner-left" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner-top frame-corner-right" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner-bottom frame-corner-left" aria-hidden="true"></span>
-          <span class="frame-corner frame-corner-bottom frame-corner-right" aria-hidden="true"></span>
-          <img
-            src="./assets/feature-wide.png"
-            alt="PathMaid mascot moving from campaign prep to polished service"
-          >
-        </figure>
-      </section>
-
-      <section id="downloads" class="section-band download-section">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="downloadShelf.eyebrow">Release shelf</p>
-          <h2 data-i18n="downloadShelf.title">Download PathMaid</h2>
-        </div>
-        <div class="download-grid">
-          <article class="download-card">
-            <span class="platform-label">Windows</span>
-            <p data-i18n="downloadShelf.windows">Windows build for your prep desk.</p>
-            <a class="download-link" data-download="windows" href="#" data-i18n="downloads.windows">Download for Windows</a>
-          </article>
-          <article class="download-card">
-            <span class="platform-label">macOS</span>
-            <p data-i18n="downloadShelf.macos">macOS build for your prep desk.</p>
-            <a class="download-link" data-download="macos" href="#" data-i18n="downloads.macos">Download for macOS</a>
-          </article>
-          <article class="download-card">
-            <span class="platform-label">Linux</span>
-            <p data-i18n="downloadShelf.linux">Linux build for your prep desk.</p>
-            <a class="download-link" data-download="linux" href="#" data-i18n="downloads.linux">Download for Linux</a>
-          </article>
+      <section class="service-story import-story" id="pathbuilder" aria-labelledby="pathbuilder-title">
+        <div class="service-layout">
+          <div class="service-copy" data-reveal><p class="chapter">03 / Импорт из Pathbuilder</p><h3 id="pathbuilder-title">Все герои.<br>Вся партия.<br>Уже здесь.</h3><p>Игроки собирают персонажей в Pathbuilder, а вы переносите их в PathMaid. Данные героев оказываются рядом с энкаунтером — без переписывания листов вручную.</p><ul class="service-details"><li>Импорт готовых персонажей</li><li>Данные партии в рабочем месте мастера</li><li>Герои рядом с противниками в бою</li></ul></div>
+          <figure class="service-art" data-parallax="0.065" data-reveal><img src="./assets/service-card-pathbuilder.png" alt="Тилта встречает героев, импортированных из Pathbuilder" width="1469" height="1071" loading="lazy" decoding="async"><figcaption><span>Персонажей доставили</span><span>03 / 05</span></figcaption></figure>
         </div>
       </section>
-    </main>
-
-    <footer class="site-footer">
-      <p data-i18n="footer.disclaimer">
-        PathMaid is an independent Pathfinder 2e GM assistant and is not endorsed by Paizo.
-      </p>
-      <a href="https://github.com/" data-i18n="footer.github">GitHub</a>
-    </footer>
-
-    <script src="./app.js"></script>
-  </body>
+      <section class="service-story campaign-story" id="campaigns" aria-labelledby="campaigns-title">
+        <div class="service-layout">
+          <div class="service-copy" data-reveal><p class="chapter">04 / Менеджер кампаний</p><h3 id="campaigns-title">У этой истории<br>есть продолжение.</h3><p>Соберите материалы кампании в одном месте: заметки, документы, изображения и связи между ними. Вернуться к следующей сессии проще, когда всё разложено по полкам.</p><ul class="service-details"><li>Материалы и заметки кампании</li><li>Связи между документами</li><li>Изображения и раздаточные материалы</li></ul><p class="development-note">Менеджер кампаний развивается. Пожелания мастеров помогают выбирать, что добавить дальше.</p></div>
+          <figure class="service-art" data-parallax="-0.065" data-reveal><img src="./assets/service-card-campaign.png" alt="Тилта с материалами кампании" width="1436" height="1096" loading="lazy"><figcaption><span>Даже если кампаний больше одной</span><span>04 / 05</span></figcaption></figure>
+        </div>
+      </section>
+      <section class="service-story monster-story" id="monsters" aria-labelledby="monsters-title">
+        <div class="service-layout">
+          <div class="service-copy" data-reveal><p class="chapter">05 / Конструктор монстров</p><h3 id="monsters-title">По вашему<br>особому заказу.</h3><p>Бестиарий не успевает за вашей фантазией? Создавайте собственных существ, редактируйте их характеристики и сохраняйте для будущих встреч с партией.</p><ul class="service-details"><li>Свои существа и их характеристики</li><li>Личная коллекция противников</li><li>Импорт и экспорт готовых существ</li></ul></div>
+          <figure class="service-art" data-parallax="0.07" data-reveal><img src="./assets/service-card-custom.png" alt="Тилта создаёт необычное существо" width="1462" height="1076" loading="lazy"><figcaption><span>Партия точно скажет спасибо. Наверное.</span><span>05 / 05</span></figcaption></figure>
+        </div>
+      </section>
+    </div>
+    <section class="wide-story" aria-labelledby="wide-title">
+      <div class="wide-copy"><p class="chapter">03 / Время для истории</p><h2 id="wide-title">Меньше рутины.<br>Больше приключений.</h2><p>Пусть заметки, правила и энкаунтеры будут готовы к началу игры. Историю всё равно рассказываете вы.</p></div>
+      <img src="./assets/feature-wide.png" alt="Путь Тилты от кипы материалов к готовому игровому столу" width="1774" height="887" loading="lazy" decoding="async">
+    </section>
+    <section class="service-story cloud-story" id="cloud" aria-labelledby="cloud-title">
+      <div class="service-layout">
+        <div class="service-copy" data-reveal><p class="chapter">04 / Облачная синхронизация</p><h2 id="cloud-title">Другой компьютер.<br>Та же кампания.</h2><p>Готовьтесь на одном устройстве, ведите игру на другом. Войдите в аккаунт, чтобы кампании, энкаунтеры, свои существа, заметки и изображения были рядом с вами.</p><ul class="service-details"><li>Материалы и изображения переезжают вместе с кампанией</li><li>Локальные данные остаются доступны без интернета</li><li>Синхронизация подхватит изменения после подключения</li></ul><div class="cloud-note" aria-label="Настольные платформы"><span>Windows</span><span>macOS</span><span>Linux</span></div></div>
+        <figure class="service-art" data-parallax="-0.06" data-reveal><img src="./assets/cloud-sync-guide.png" alt="Тилта сопровождает данные кампании между устройствами" width="1254" height="1254" loading="lazy"><figcaption><span>Я покажу дорогу</span><span>↗</span></figcaption></figure>
+      </div>
+    </section>
+    <section class="start" id="start" aria-labelledby="start-title">
+      <div class="start-copy" data-reveal><p class="chapter">05 / Первое поручение</p><h2 id="start-title">Ну что,<br>к столу?</h2><p>Четыре шага — и можно знакомить мейду со своей кампанией.</p></div>
+      <ol class="steps"><li><span>01</span><div><h3>Установите PathMaid</h3><p><a href="#download">Выберите сборку</a> для вашего устройства.</p></div></li><li><span>02</span><div><h3>Подгрузите актуальную базу</h3><p>Откройте настройки приложения и загрузите базу данных.</p></div></li><li><span>03</span><div><h3>Соберите энкаунтер</h3><p>Подберите противников и добавьте героев. Дальше — ваша история.</p></div></li><li><span>04</span><div><h3>Приходите пообщаться</h3><p>Фидбэк, вопросы и идеи ждём <a href="https://t.me/+kTksdzqRPQgxNDQy" target="_blank" rel="noopener noreferrer">в нашей Telegram-группе ↗</a>.</p></div></li></ol>
+    </section>
+    <section class="download" id="download" aria-labelledby="download-title">
+      <div class="download-top" data-reveal><div><p class="chapter">06 / Заберите её с собой</p><h2 id="download-title">Мейда готова.<br>А ваша партия?</h2></div><p>Выберите свою платформу.<br>До встречи за игровым столом.</p></div>
+      <div class="platforms"><a data-download="windows" href="https://github.com/kirylyaskou/PathMaid/releases/latest" target="_blank" rel="noopener noreferrer"><span>Windows<small>Сборка для Windows</small></span><span aria-hidden="true">↗</span></a><a data-download="macos" href="https://github.com/kirylyaskou/PathMaid/releases/latest" target="_blank" rel="noopener noreferrer"><span>macOS<small>Сборка для macOS</small></span><span aria-hidden="true">↗</span></a><a data-download="linux" href="https://github.com/kirylyaskou/PathMaid/releases/latest" target="_blank" rel="noopener noreferrer"><span>Linux<small>Сборка для Linux</small></span><span aria-hidden="true">↗</span></a><a data-download="android" href="https://github.com/kirylyaskou/PathMaid/releases/latest" target="_blank" rel="noopener noreferrer"><span>Android<small>Сборка для Android</small></span><span aria-hidden="true">↗</span></a></div>
+      <footer><p>PathMaid — независимый помощник мастера Pathfinder 2e. Не одобрен Paizo.</p><a href="https://github.com/kirylyaskou/PathMaid" target="_blank" rel="noopener noreferrer">GitHub ↗</a></footer>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
 </html>
