@@ -47,7 +47,8 @@ Use these generation targets:
 | `combat-ui.png` | 1644 x 1004 | Combat tracker UI revealed between shatter transitions. |
 | `combat-meme.png` | 1617 x 973 | Foreground meme that breaks apart and reassembles over the combat UI. |
 | `service-card-pathbuilder.png` | 1448 x 1086 current, target 720 x 500+ | Tilta in the Pathbuilder delivery van. |
-| `service-card-custom.png` | 1462 x 1076 current, target 720 x 500+ | Custom creature section illustration. |
+| `monster-ui.png` | 1613 x 1041 | Custom creature editor screenshot. |
+| `service-card-custom.png` | 1448 x 1086 | Tilta in front of the creature editor. |
 | `campaign-ui.png` | 1615 x 1042 | Campaign document graph screenshot. |
 | `service-card-campaign.png` | 1432 x 1098 | Tilta pointing at the campaign graph. |
 | `og-image.png` | 1200 x 630 | Future social sharing image. Not wired yet. |
