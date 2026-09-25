@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=reference-gallery">
+  <link rel="stylesheet" href="../styles.css?v=combat-glass">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -78,7 +78,17 @@
       <section class="service-story combat-story" id="combat" aria-labelledby="combat-title">
         <div class="service-layout">
           <div class="service-copy" data-reveal><p class="chapter">02 / Combat tracker</p><h3 id="combat-title">The fight is yours.<br>The bookkeeping is mine.</h3><p>Build an encounter and run combat in one place. Track turns, HP, and effect durations while you narrate the action.</p><ul class="service-details"><li>Initiative order and rounds</li><li>HP, damage, healing, and saves</li><li>Conditions and effect durations</li><li>Weaknesses, resistances, and immunities</li><li>Weak and elite opponents</li></ul></div>
-          <figure class="service-art" data-parallax="-0.065" data-reveal><img src="../assets/service-card-combat.png" alt="Tilta runs combat at the game table" width="1505" height="1045" loading="lazy" decoding="async"><figcaption><span>While you describe the critical hit</span><span>02 / 05</span></figcaption></figure>
+          <figure class="combat-showcase" data-combat-showcase data-reveal>
+            <div class="combat-stage">
+              <img class="combat-ui" src="../assets/combat-ui.png" alt="PathMaid combat tracker showing initiative, health, conditions, and creature details" width="1644" height="1004" loading="lazy" decoding="async">
+              <div class="combat-shards" role="img" aria-label="Tilta before the fight: Goblin Boblin takes a turn while the villain prepares">
+                <span class="combat-shard combat-shard-1"></span><span class="combat-shard combat-shard-2"></span><span class="combat-shard combat-shard-3"></span><span class="combat-shard combat-shard-4"></span>
+                <span class="combat-shard combat-shard-5"></span><span class="combat-shard combat-shard-6"></span><span class="combat-shard combat-shard-7"></span><span class="combat-shard combat-shard-8"></span>
+              </div>
+              <svg class="combat-fracture" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M50 0 47 39 0 25 M47 39 78 32 100 0 M78 32 62 51 100 50 M62 51 72 82 100 100 M72 82 48 67 50 100 M48 67 25 78 0 100 M25 78 36 50 0 25 M36 50 47 39 M47 39 62 51 M62 51 48 67 M48 67 36 50"/></svg>
+            </div>
+            <figcaption><span>While you describe the critical hit</span><span>02 / 05</span></figcaption>
+          </figure>
         </div>
       </section>
       <section class="service-story import-story" id="pathbuilder" aria-labelledby="pathbuilder-title">
@@ -120,6 +130,6 @@
       <footer><p>PathMaid is an independent Pathfinder 2e GM assistant and is not endorsed by Paizo.</p><a href="https://github.com/kirylyaskou/PathMaid" target="_blank" rel="noopener noreferrer">GitHub ↗</a></footer>
     </section>
   </main>
-  <script src="../app.js?v=reference-gallery"></script>
+  <script src="../app.js?v=combat-glass"></script>
 </body>
 </html>

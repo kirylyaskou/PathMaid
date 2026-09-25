@@ -25,6 +25,13 @@
     applyDownloads();
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const combatShowcase = document.querySelector('[data-combat-showcase]');
+    if (combatShowcase) {
+      new IntersectionObserver(([entry]) => {
+        combatShowcase.classList.toggle('is-playing', entry.isIntersecting);
+      }, { threshold: 0.25 }).observe(combatShowcase);
+    }
+
     const referenceGallery = document.querySelector('[data-reference-gallery]');
     if (referenceGallery) {
       const slides = [...referenceGallery.querySelectorAll('.reference-slide')];

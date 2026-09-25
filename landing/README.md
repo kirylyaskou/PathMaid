@@ -44,7 +44,8 @@ Use these generation targets:
 | `auth-confirmed-success.png` | 1448 x 1086 current | Email confirmation success page background. |
 | `reference-bestiary.png`, `reference-spells.png`, `reference-items.png`, `reference-hazards.png` | About 1520 x 876 each | Switchable reference UI screenshots. |
 | `reference-reaction.png` | 1254 x 1254 | The two foreground characters framing the reference UI. |
-| `service-card-combat.png` | 1505 x 1045 current, target 720 x 500+ | Combat section illustration. |
+| `combat-ui.png` | 1644 x 1004 | Combat tracker UI revealed between shatter transitions. |
+| `combat-meme.png` | 1617 x 973 | Foreground meme that breaks apart and reassembles over the combat UI. |
 | `service-card-pathbuilder.png` | 1469 x 1071 current, target 720 x 500+ | Pathbuilder section illustration. |
 | `service-card-custom.png` | 1462 x 1076 current, target 720 x 500+ | Custom creature section illustration. |
 | `service-card-campaign.png` | 1436 x 1096 current, target 720 x 500+ | Campaign section illustration. |
