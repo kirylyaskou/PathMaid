@@ -158,6 +158,15 @@
     .price-art::before { content:''; position:absolute; z-index:-1; inset:10% 0 3%; background:var(--lemon); clip-path:polygon(10% 0,88% 3%,100% 24%,93% 94%,65% 100%,0 86%,4% 23%); transform:rotate(-5deg); }
     .price-art::after { content:''; position:absolute; z-index:-1; right:-3%; bottom:6%; width:34%; height:32%; background:var(--berry); clip-path:polygon(0 16%,91% 0,100% 83%,19% 100%); transform:rotate(10deg); }
     .price-art img { aspect-ratio:1122/1402; }
+    .community-story { background:#dbe2a7; }
+    .community-story .service-layout { grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); }
+    .community-story h2 { margin:1.8rem 0 1.5rem; font-size:clamp(2.6rem,4.5vw,5rem); font-weight:800; line-height:1.02; letter-spacing:-.065em; }
+    .community-copy>p:not(.chapter) { max-width:32rem; margin-top:1.2rem; }
+    .community-actions { display:flex; align-items:center; flex-wrap:wrap; gap:1rem 1.5rem; margin-top:2rem; }
+    .community-art { position:relative; isolation:isolate; max-width:52rem; justify-self:center; }
+    .community-art::before { content:''; position:absolute; z-index:-1; inset:9% 2% 3%; background:var(--blue); clip-path:polygon(7% 0,86% 4%,100% 23%,95% 88%,70% 100%,0 86%,3% 24%); transform:rotate(-4deg); }
+    .community-art::after { content:''; position:absolute; z-index:-1; top:7%; right:0; width:22%; height:28%; background:var(--berry); clip-path:polygon(13% 0,100% 15%,81% 100%,0 80%); transform:rotate(8deg); }
+    .community-art img { aspect-ratio:4/3; }
     [data-reveal] { transition:opacity .8s var(--ease),translate .8s var(--ease); }
     [data-reveal].is-pending { opacity:0; translate:0 2.5rem; }
     .hero-art[data-parallax] { transform:translate3d(0,var(--drift,0px),0); }
@@ -221,6 +230,7 @@
       .service-story { padding:3.5rem 1.5rem; }
       .service-story .service-layout { grid-template-columns:1fr; gap:2.8rem; }
       .service-story .service-copy,.service-story .service-art { grid-column:auto; grid-row:auto; }
+      .community-copy { order:-1; }
       .service-copy h3,.cloud-story h2 { font-size:clamp(2rem,8vw,3.2rem); }
       .service-copy>p:not(.chapter) { font-size:.92rem; }
       .service-art figcaption,.reference-showcase figcaption,.combat-showcase figcaption,.campaign-showcase figcaption,.monster-showcase figcaption { font-size:.6rem; }
