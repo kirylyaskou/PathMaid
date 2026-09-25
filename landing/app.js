@@ -37,7 +37,6 @@
       const slides = [...referenceGallery.querySelectorAll('.reference-slide')];
       const buttons = [...referenceGallery.querySelectorAll('[data-reference-index]')];
       const title = referenceGallery.querySelector('[data-reference-title]');
-      const count = referenceGallery.querySelector('[data-reference-count]');
       let activeIndex = 0;
       let timer = 0;
       let visible = false;
@@ -53,7 +52,6 @@
         slides[activeIndex].setAttribute('aria-hidden', 'false');
         buttons[activeIndex].setAttribute('aria-pressed', 'true');
         title.textContent = buttons[activeIndex].textContent;
-        count.textContent = `${String(activeIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
       }
 
       function syncReferenceTimer() {
