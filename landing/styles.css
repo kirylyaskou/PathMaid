@@ -115,6 +115,10 @@
     .campaign-story .service-art { grid-column:1; grid-row:1; }
     .campaign-story .service-copy { grid-column:2; }
     .import-story { background:var(--paper); }
+    .import-story .service-art { position:relative; isolation:isolate; }
+    .import-story .service-art::before { content:''; position:absolute; inset:9% -2% 16% 3%; background:var(--blue); clip-path:polygon(8% 0,88% 3%,100% 27%,94% 93%,76% 100%,0 88%,3% 17%); transform:rotate(-4deg); }
+    .import-story .service-art::after { content:''; position:absolute; right:-3%; bottom:20%; width:24%; height:28%; background:var(--berry); clip-path:polygon(24% 0,100% 9%,77% 100%,0 85%); transform:rotate(9deg); }
+    .import-story .service-art img,.import-story .service-art figcaption { position:relative; z-index:1; }
     .campaign-story { background:var(--ink); color:var(--paper); }
     .service-copy>p.development-note { margin-top:1.4rem; font-size:.76rem; opacity:.8; }
     .monster-story { background:var(--rose); }

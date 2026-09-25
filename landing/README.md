@@ -46,7 +46,7 @@ Use these generation targets:
 | `reference-reaction.png` | 1254 x 1254 | The two foreground characters framing the reference UI. |
 | `combat-ui.png` | 1644 x 1004 | Combat tracker UI revealed between shatter transitions. |
 | `combat-meme.png` | 1617 x 973 | Foreground meme that breaks apart and reassembles over the combat UI. |
-| `service-card-pathbuilder.png` | 1469 x 1071 current, target 720 x 500+ | Pathbuilder section illustration. |
+| `service-card-pathbuilder.png` | 1448 x 1086 current, target 720 x 500+ | Tilta in the Pathbuilder delivery van. |
 | `service-card-custom.png` | 1462 x 1076 current, target 720 x 500+ | Custom creature section illustration. |
 | `service-card-campaign.png` | 1436 x 1096 current, target 720 x 500+ | Campaign section illustration. |
 | `og-image.png` | 1200 x 630 | Future social sharing image. Not wired yet. |
