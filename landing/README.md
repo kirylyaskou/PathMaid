@@ -40,6 +40,7 @@ Use these generation targets:
 | `hero-character.png` | 1106 x 1422 current, target 1080 x 1320+ | Main mascot art for the first screen. Current file is wired into the hero. |
 | `intro-tilta-mage.png` | 1448 x 1086 | Tilta and the wizard in the introduction section. |
 | `cloud-sync-guide.png` | 1254 x 1254 current, target 1200 x 1200+ | Cloud sync section art. Current file is wired into the page. |
+| `pricing-tilta.png` | 1122 x 1402 | Artwork for the free pricing section. |
 | `feature-wide.png` | 1774 x 887 current, target 2:1 | Social sharing preview image. |
 | `auth-confirmed-success.png` | 1448 x 1086 current | Email confirmation success page background. |
 | `reference-bestiary.png`, `reference-spells.png`, `reference-items.png`, `reference-hazards.png` | About 1520 x 876 each | Switchable reference UI screenshots. |
