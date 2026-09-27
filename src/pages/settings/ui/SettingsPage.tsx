@@ -486,17 +486,6 @@ function AboutSection({ currentVersion }: { currentVersion: string }) {
           </pre>
         </CollapsibleContent>
       </Collapsible>
-
-      <p className="mt-4 text-sm">
-        <a
-          href="https://github.com/kirylyaskou/PathMaid"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline hover:text-primary/80"
-        >
-          {t('about.githubLink')}
-        </a>
-      </p>
     </section>
   )
 }

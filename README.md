@@ -3,8 +3,6 @@
 PathMaid — desktop assistant for Game Masters running [Pathfinder Second Edition](https://paizo.com/pathfinder).
 Built with Tauri 2 + React 19. Bestiary, encounter builder, combat tracker, spell reference, items reference — all offline, all local.
 
-Repository: [github.com/kirylyaskou/PathMaid](https://github.com/kirylyaskou/PathMaid)
-
 ## Developer Docs
 
 - [Вводный документ для разработчика](docs/developer-onboarding.md)
