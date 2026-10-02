@@ -58,6 +58,8 @@ export interface PcCombatant extends CombatantBase {
 export interface HazardCombatant extends CombatantBase {
   kind: 'hazard'
   creatureRef: string  // hazard entity id
+  hazardDisabled?: boolean
+  hazardCheckProgress?: number
 }
 
 export type Combatant = NpcCombatant | PcCombatant | HazardCombatant
@@ -92,3 +94,4 @@ export interface StagingCombatant {
 /** Allowed fields for updateCombatant. Excludes id, kind, and HP fields that have dedicated setters
  *  (updateHp, updateTempHp, setMaxHp) so direct Object.assign cannot bypass their guards. */
 export type CombatantPatch = Omit<Partial<NpcCombatant>, 'id' | 'kind' | 'hp' | 'maxHp' | 'tempHp'>
+  & Pick<Partial<HazardCombatant>, 'hazardDisabled' | 'hazardCheckProgress'>

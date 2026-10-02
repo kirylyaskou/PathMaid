@@ -13,7 +13,7 @@ import { actionCostLabel, resolveFoundryTokensForSpell } from '../lib/spellcasti
 import { parseJsonArray, parseJsonOrNull } from '@/shared/lib/json'
 import { useContentTranslation, useCurrentLocale, getTraitLabel, type SpellStructuredLoc } from '@/shared/i18n'
 import { SafeHtml } from '@/shared/lib/safe-html'
-import { extractHeightening, applyHeightenedScalings } from '@/entities/spell'
+import { extractHeightening, applyHeightenedScalings, resolveSpellDamageFormula } from '@/entities/spell'
 
 type IntervalHeighten = { type: 'interval'; perRanks: number; damage: Record<string, string> }
 type FixedHeightenDamageEntry = { formula?: string; type?: string; damageType?: string; category?: string | null }
@@ -140,14 +140,14 @@ export function SpellCard({ foundryId, name, source, combatId, castRank, castCon
         const rawFormula = d.formula ?? d.damage ?? null
         if (!rawFormula) return null
         // Interval heighten additively scales each damage key.
-        let formula = rawFormula
+        let formula = resolveSpellDamageFormula(rawFormula, effectiveRank)
         if (
           heighten?.type === 'interval' &&
           effectiveRank > baseRank &&
           heighten.damage[key]
         ) {
           formula = heightenFormula(
-            rawFormula,
+            formula,
             { perRanks: heighten.perRanks, add: heighten.damage[key] },
             effectiveRank,
             baseRank,

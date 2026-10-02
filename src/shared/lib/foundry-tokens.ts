@@ -87,8 +87,9 @@ export function resolveFoundryTokens(text: string, options: ResolveFoundryTokens
         const m = primary.match(/^(.+?)\[([^\]]+)\]$/)
         if (!m) return resolveItemLevelExpr(primary, itemLevel)
         const rawFormula = resolveItemLevelExpr(m[1]!.trim(), itemLevel)
-        // `(4)` → `4` when the formula resolved to a bare number.
-        const formula = /^\(\s*-?\d+(?:\.\d+)?\s*\)$/.test(rawFormula) ? rawFormula.slice(1, -1).trim() : rawFormula
+          .replace(/(\d+(?:d\d+)?(?:\s*[+-]\s*\d+)?)\[(precision|splash)\]/gi, '$1 $2')
+        // `(4)` and `(3 splash)` do not need enclosing parentheses.
+        const formula = /^\(\s*-?\d+(?:\.\d+)?(?:\s+(?:precision|splash))?\s*\)$/.test(rawFormula) ? rawFormula.slice(1, -1).trim() : rawFormula
         const types = m[2]!.split(/,\s*/).map((t) => t.split('|')[0]!.trim()).filter(Boolean).join(' ')
         return `${formula} ${types}`.trim()
       })

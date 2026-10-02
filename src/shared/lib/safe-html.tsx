@@ -37,6 +37,7 @@ import { cn } from '@/shared/lib/utils'
 import { actionCostLabel } from '@/shared/lib/pf2e-display'
 import { parseFoundryUuid, resolveFoundryRefs } from '@/shared/api/foundry-refs'
 import type { ResolvedFoundryRef } from '@/shared/api/foundry-refs'
+import { resolveFoundryTokens } from './foundry-tokens'
 
 const ALLOWED_TAGS = [
   // Text structure
@@ -212,12 +213,14 @@ function preprocessFoundryTokens(html: string, resolvedRefs: Record<string, Reso
   })
   out = out.replace(/@Trait\[([^\]]+)\]\{([^}]+)\}/g, '<span class="pf2e-trait" data-trait="$1">$2</span>')
   out = out.replace(/@Trait\[([^\]]+)\]/g, '<span class="pf2e-trait" data-trait="$1">$1</span>')
-  out = out.replace(/@Check\[[^\]]+\]\{([^}]+)\}/g, '<span class="pf2e-check">$1</span>')
-  out = out.replace(/@Damage\[([^\]]+)\]/g, (_m, body: string) => {
-    // `@Damage[2d6[fire]]` / `@Damage[1d4[poison]]` — strip nested type.
-    const inner = body.replace(/\[([^\]]+)\]/g, ' $1')
-    return `<span class="pf2e-damage">${inner}</span>`
+  out = out.replace(/@Check\[([^\]]+)\](?:\{([^}]+)\})?/g, (_match, body: string, label: string | undefined) => {
+    const dc = body.match(/(?:^|\|)dc:(\d+)/)?.[1]
+    const text = label ? `${label}${dc ? ` (DC ${dc})` : ''}` : resolveFoundryTokens(`@Check[${body}]`)
+    return `<span class="pf2e-check">${escapeHtml(text)}</span>`
   })
+  out = out.replace(/@Damage\[((?:[^[\]]|\[[^\]]*\])*)\](?:\{[^}]+\})?/g, (_match, body: string) =>
+    `<span class="pf2e-damage">${escapeHtml(resolveFoundryTokens(`@Damage[${body}]`))}</span>`
+  )
   // `[[/act steal]]{Воровства}` / `[[/gmr 1d6 #label]]{1d6 раундов}` —
   // chat-command tokens. Drop the command body, keep the visible label.
   out = out.replace(/\[\[\/(act|gmr|r|br)\s+[^\]]+\]\]\{([^}]+)\}/g, '<span class="pf2e-action">$2</span>')

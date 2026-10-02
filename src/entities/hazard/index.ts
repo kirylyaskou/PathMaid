@@ -1,1 +1,5 @@
 export type { Hazard } from './model/types'
+export { createCombatantFromHazard } from './lib/combatant'
+export { requiredDisableChecks, advanceDisableCheck } from './lib/disable-checks'
+export { hazardDamageRolls } from './lib/damage-templates'
+export type { HazardDamageTemplate } from './lib/damage-templates'

@@ -43,7 +43,7 @@ export function SpellReferenceDrawer({ spellId, onClose }: SpellReferenceDrawerP
 
   const traditions = parseJsonArray(spell?.traditions)
   const traits = parseJsonArray(spell?.traits)
-  const damageDisplay = parseDamageDisplay(spell?.damage ?? null)
+  const damageDisplay = parseDamageDisplay(spell?.damage ?? null, spell?.rank)
   const areaDisplay = parseAreaDisplay(spell?.area ?? null)
 
   const { data: translation } = useContentTranslation('spell', spell?.name, spell?.rank ?? null)

@@ -3,17 +3,20 @@ import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import { SearchInput } from '@/shared/ui/search-input'
 import { LevelBadge } from '@/shared/ui/level-badge'
-import { getAllHazards } from '@/shared/api'
+import { deleteCustomHazard, getAllHazards } from '@/shared/api'
 import type { HazardRow } from '@/shared/api'
 import { cn } from '@/shared/lib/utils'
-import { sanitizeFoundryText } from '@/shared/lib/foundry-tokens'
+import { damageTypeChip } from '@/shared/lib/damage-colors'
 import { parseJsonArray } from '@/shared/lib/json'
-import { logError } from '@/shared/lib/error'
+import { logError, logErrorWithToast } from '@/shared/lib/error'
+import { Button } from '@/shared/ui/button'
 import { stripRarityMarker } from '@/shared/lib/display-name'
-import { useCurrentLocale } from '@/shared/i18n'
+import { getSkillLabel, getTraitLabel, useCurrentLocale } from '@/shared/i18n'
 import { NoTranslationBadge } from '@/shared/ui/no-translation-badge'
 import { SafeHtml } from '@/shared/lib/safe-html'
 import type { MonsterStructuredLoc } from '@/shared/i18n'
+import { HazardEditorDialog } from './HazardEditorDialog'
+import { requiredDisableChecks } from '@/entities/hazard'
 
 function parseStructured(json: string | null): MonsterStructuredLoc | null {
   if (!json) return null
@@ -26,12 +29,14 @@ function parseStructured(json: string | null): MonsterStructuredLoc | null {
 
 type TypeFilter = 'all' | 'simple' | 'complex'
 
-const sanitize = sanitizeFoundryText
-
 interface HazardAction {
   name: string
   actionType: string
+  trigger?: string
   description: string | null
+  damage?: Array<{ formula: string; type: string }>
+  damageFormula?: string
+  damageType?: string
 }
 
 const ACTION_TYPE_LABEL: Record<string, string> = {
@@ -41,10 +46,13 @@ const ACTION_TYPE_LABEL: Record<string, string> = {
   free: '◇',
 }
 
-function HazardCard({ hazard, expanded, onToggle }: {
+function HazardCard({ hazard, expanded, onToggle, onEdit, onClone, onDelete }: {
   hazard: HazardRow
   expanded: boolean
   onToggle: () => void
+  onEdit: () => void
+  onClone: () => void
+  onDelete: () => void
 }) {
   const { t } = useTranslation('common')
   const traits = parseJsonArray(hazard.traits)
@@ -68,8 +76,10 @@ function HazardCard({ hazard, expanded, onToggle }: {
   const descriptionText = isRu ? (structured?.descriptionHazard ?? structured?.description ?? hazard.description) : hazard.description
   const disableText = isRu ? (structured?.disableDetails ?? hazard.disable_details) : hazard.disable_details
   const resetText = isRu ? (structured?.resetDetails ?? hazard.reset_details) : hazard.reset_details
+  const routineText = isRu ? (structured?.routineDetails ?? hazard.routine_details) : hazard.routine_details
   const stealthText = isRu ? (structured?.stealthDetails ?? hazard.stealth_details) : hazard.stealth_details
-  const showUntranslated = locale === 'ru' && !hazard.name_loc
+  const showUntranslated = locale === 'ru' && !hazard.name_loc && !hazard.is_custom
+  const required = requiredDisableChecks(hazard)
 
   return (
     <div
@@ -108,6 +118,11 @@ function HazardCard({ hazard, expanded, onToggle }: {
       {/* Expanded detail */}
       {expanded && (
         <div className="px-3 pb-3 border-t border-border/30 pt-2 space-y-2">
+          <div className="flex gap-2" onClick={(event) => event.stopPropagation()}>
+            {hazard.is_custom && <Button variant="outline" size="sm" onClick={onEdit}>{t('pages.hazards.edit')}</Button>}
+            <Button variant="outline" size="sm" onClick={onClone}>{t('pages.hazards.clone')}</Button>
+            {hazard.is_custom && <Button variant="destructive" size="sm" onClick={onDelete}>{t('pages.hazards.delete')}</Button>}
+          </div>
           {/* Stat line: AC / Hardness / HP */}
           <div className="flex flex-wrap gap-3 text-xs">
             {hazard.ac != null && (
@@ -144,10 +159,12 @@ function HazardCard({ hazard, expanded, onToggle }: {
           )}
 
           {/* Disable */}
-          {disableText && (
+          {(disableText || required || hazard.disable_checks?.length) && (
             <div>
               <p className="text-xs font-semibold text-amber-300/80 mb-0.5">{t('pages.hazards.disable')}</p>
-              <SafeHtml html={disableText} className="text-xs text-foreground/80 leading-relaxed" />
+              {hazard.disable_checks?.map((check, index) => <p key={index} className="text-xs text-foreground/80">{getSkillLabel(check.skill.charAt(0).toUpperCase() + check.skill.slice(1), locale)} · DC {check.dc} · {t(`pages.hazards.rank.${check.rank}`)}</p>)}
+              {disableText && <SafeHtml html={disableText} className="text-xs text-foreground/80 leading-relaxed" />}
+              {required && (hazard.required_successes || !disableText) && <p className="text-xs text-muted-foreground">{t('pages.hazards.requiredCount', { required })}</p>}
             </div>
           )}
 
@@ -159,12 +176,20 @@ function HazardCard({ hazard, expanded, onToggle }: {
             </div>
           )}
 
+          {routineText && (
+            <div>
+              <p className="text-xs font-semibold text-orange-300/80 mb-0.5">{t('pages.hazards.routine')}</p>
+              <SafeHtml html={routineText} className="text-xs text-foreground/80 leading-relaxed" />
+            </div>
+          )}
+
           {/* Actions */}
           {actions.length > 0 && (
             <div className="space-y-1.5">
               {actions.map((action, i) => {
                 const ruDescription = isRu ? itemDescByName.get(action.name.toLowerCase()) : undefined
                 const desc = ruDescription ?? action.description
+                const damage = action.damage?.length ? action.damage : action.damageFormula ? [{ formula: action.damageFormula, type: action.damageType ?? '' }] : []
                 return (
                   <div key={i} className="rounded bg-secondary/40 px-2 py-1.5">
                     <div className="flex items-center gap-1.5 mb-0.5">
@@ -173,11 +198,9 @@ function HazardCard({ hazard, expanded, onToggle }: {
                       </span>
                       <span className="text-xs font-semibold">{action.name}</span>
                     </div>
-                    {desc && (
-                      ruDescription
-                        ? <SafeHtml html={desc} className="text-xs text-foreground/70 leading-relaxed" />
-                        : <p className="text-xs text-foreground/70 leading-relaxed">{sanitize(desc)}</p>
-                    )}
+                    {action.trigger && <p className="text-xs text-foreground/70">{t('pages.hazards.trigger')}: {action.trigger}</p>}
+                    {desc && <SafeHtml html={desc} className="text-xs text-foreground/70 leading-relaxed" />}
+                    {damage.length > 0 && <div className="mt-1 flex flex-wrap items-center gap-1 text-xs font-mono">{damage.map((entry, damageIndex) => <span key={damageIndex} className="inline-flex items-center gap-1">{damageIndex > 0 && <span>+</span>}{entry.formula}{entry.type && <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold', damageTypeChip(entry.type))}>{getTraitLabel(entry.type, locale)}</span>}</span>)}</div>}
                   </div>
                 )
               })}
@@ -215,6 +238,20 @@ export function HazardsPage() {
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<HazardRow | null | undefined>(undefined)
+
+  const refresh = () => getAllHazards().then(setAllHazards).catch(logErrorWithToast('load-hazards'))
+
+  const deleteHazard = async (hazard: HazardRow) => {
+    if (!window.confirm(t('pages.hazards.confirmDelete', { name: hazard.name }))) return
+    try {
+      await deleteCustomHazard(hazard.id)
+      if (expandedId === hazard.id) setExpandedId(null)
+      await refresh()
+    } catch (error) {
+      logErrorWithToast('delete-custom-hazard')(error)
+    }
+  }
 
   useEffect(() => {
     getAllHazards()
@@ -245,6 +282,7 @@ export function HazardsPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
       <div className="p-3 border-b border-border/50 space-y-2 shrink-0">
+        <Button size="sm" onClick={() => setEditing(null)}>{t('pages.hazards.create')}</Button>
         <SearchInput
           placeholder={t('pages.hazards.searchPlaceholder')}
           value={query}
@@ -305,9 +343,13 @@ export function HazardsPage() {
             hazard={hazard}
             expanded={expandedId === hazard.id}
             onToggle={() => setExpandedId((prev) => (prev === hazard.id ? null : hazard.id))}
+            onEdit={() => setEditing(hazard)}
+            onClone={() => setEditing({ ...hazard, id: '', is_custom: false, source_book: null, source_pack: null })}
+            onDelete={() => void deleteHazard(hazard)}
           />
         ))}
       </div>
+      {editing !== undefined && <HazardEditorDialog initial={editing} onClose={() => setEditing(undefined)} onSaved={() => { setEditing(undefined); void refresh() }} />}
     </div>
   )
 }

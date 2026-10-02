@@ -29,6 +29,8 @@ export interface EncounterCombatantRow {
   isHazard: boolean        // true for hazard rows
   hazardRef: string | null // hazard.id for hazard rows, null for creatures
   hazardType?: 'simple' | 'complex' // from JOIN with hazards table; undefined for non-hazards
+  hazardDisabled?: boolean
+  hazardCheckProgress?: number
   side: EncounterSide
   perception?: number
 }
@@ -136,11 +138,11 @@ export async function saveEncounterCombatants(
     await db.execute(
       `INSERT INTO encounter_combatants
          (id, encounter_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp,
-          is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref, side, perception)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref, side, perception, hazard_disabled, hazard_check_progress)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [c.id, encounterId, c.creatureRef, c.displayName, c.initiative,
        c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, c.weakEliteTier, c.creatureLevel, i,
-       c.isHazard ? 1 : 0, c.hazardRef ?? null, c.side ?? 'enemy', c.perception ?? null]
+       c.isHazard ? 1 : 0, c.hazardRef ?? null, c.side ?? 'enemy', c.perception ?? null, c.hazardDisabled ? 1 : 0, c.hazardCheckProgress ?? 0]
     )
   }
   await cleanupEncounterLootState(db, encounterId, combatants.map((c) => c.id))
@@ -155,11 +157,11 @@ export async function insertEncounterCombatant(
   await db.execute(
     `INSERT OR IGNORE INTO encounter_combatants
        (id, encounter_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp,
-        is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref, side, perception)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_npc, weak_elite_tier, creature_level, sort_order, is_hazard, hazard_ref, side, perception, hazard_disabled, hazard_check_progress)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [c.id, encounterId, c.creatureRef ?? null, c.displayName, c.initiative,
      c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, c.weakEliteTier ?? 'normal', c.creatureLevel ?? 0,
-     sortOrder, c.isHazard ? 1 : 0, c.hazardRef ?? null, c.side ?? 'enemy', null]
+     sortOrder, c.isHazard ? 1 : 0, c.hazardRef ?? null, c.side ?? 'enemy', null, c.hazardDisabled ? 1 : 0, c.hazardCheckProgress ?? 0]
   )
 }
 
@@ -169,15 +171,17 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
     id: string; encounter_id: string; creature_ref: string | null; display_name: string;
     initiative: number; hp: number; max_hp: number; temp_hp: number; is_npc: number;
     weak_elite_tier: string; creature_level: number; sort_order: number;
-    is_hazard: number; hazard_ref: string | null; hazard_type: string | null;
+    is_hazard: number; hazard_ref: string | null; hazard_type: string | null; hazard_disabled: number; hazard_check_progress: number;
     side: string | null;
     perception: number | null
   }>>(
     `SELECT ec.id, ec.encounter_id, ec.creature_ref, ec.display_name, ec.initiative,
             ec.hp, ec.max_hp, ec.temp_hp, ec.is_npc, ec.weak_elite_tier, ec.creature_level,
-            ec.sort_order, ec.is_hazard, ec.hazard_ref, ec.side, ec.perception, h.hazard_type
+            ec.sort_order, ec.is_hazard, ec.hazard_ref, ec.side, ec.perception, ec.hazard_disabled, ec.hazard_check_progress,
+            COALESCE(h.hazard_type, ch.hazard_type) AS hazard_type
      FROM encounter_combatants ec
      LEFT JOIN hazards h ON ec.hazard_ref = h.id
+     LEFT JOIN custom_hazards ch ON ec.hazard_ref = ch.id
      WHERE ec.encounter_id = ?
      ORDER BY ec.sort_order`,
     [encounterId]
@@ -197,6 +201,8 @@ export async function loadEncounterCombatants(encounterId: string): Promise<Enco
     sortOrder: r.sort_order,
     isHazard: r.is_hazard === 1,
     hazardRef: r.hazard_ref ?? null,
+    hazardDisabled: r.hazard_disabled === 1,
+    hazardCheckProgress: r.hazard_check_progress,
     hazardType: r.hazard_type ? (r.hazard_type as 'simple' | 'complex') : undefined,
     side: r.side === 'ally' ? 'ally' : 'enemy',
     perception: r.perception ?? undefined,
@@ -264,7 +270,7 @@ export async function saveEncounterCombatState(
   turn: number,
   activeCombatantId: string | null,
   isRunning: boolean,
-  combatants: Array<{ id: string; hp: number; tempHp: number; initiative: number }>,
+  combatants: Array<{ id: string; hp: number; tempHp: number; initiative: number; hazardDisabled?: boolean; hazardCheckProgress?: number }>,
   conditions: EncounterConditionRow[]
 ): Promise<void> {
   const db = await getDb()
@@ -274,8 +280,8 @@ export async function saveEncounterCombatState(
   )
   for (const c of combatants) {
     await db.execute(
-      `UPDATE encounter_combatants SET hp=?, temp_hp=?, initiative=? WHERE id=? AND encounter_id=?`,
-      [c.hp, c.tempHp, c.initiative, c.id, encounterId]
+      `UPDATE encounter_combatants SET hp=?, temp_hp=?, initiative=?, hazard_disabled=?, hazard_check_progress=? WHERE id=? AND encounter_id=?`,
+      [c.hp, c.tempHp, c.initiative, c.hazardDisabled ? 1 : 0, c.hazardCheckProgress ?? 0, c.id, encounterId]
     )
   }
   await cleanupEncounterLootState(db, encounterId, combatants.map((c) => c.id))

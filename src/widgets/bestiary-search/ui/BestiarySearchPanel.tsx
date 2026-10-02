@@ -24,8 +24,9 @@ import {
   type CustomCreatureRow,
 } from '@/entities/creature'
 import { searchCreaturesFiltered, fetchDistinctLibrarySources, getAllCustomCreatures, insertEncounterCombatant } from '@/shared/api'
-import type { CreatureRow, LibrarySourceOption } from '@/shared/api'
-import { useCombatantStore } from '@/entities/combatant'
+import type { CreatureRow, HazardRow, LibrarySourceOption } from '@/shared/api'
+import { useCombatantStore, toEncounterCombatant } from '@/entities/combatant'
+import { createCombatantFromHazard } from '@/entities/hazard'
 import { createCombatantFromCreature } from '@/features/combat-tracker'
 import { useShallow } from 'zustand/react/shallow'
 import { logErrorWithToast } from '@/shared/lib/error'
@@ -86,6 +87,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
   const [activeTab, setActiveTab] = useState<LeftTab>('bestiary')
   const [query, setQuery] = useState('')
   const [creatureType, setCreatureType] = useState('__all__')
+  const [sortOrder, setSortOrder] = useState<'name' | 'level-asc' | 'level-desc'>('name')
   const [results, setResults] = useState<CreatureRow[]>([])
   const [loading, setLoading] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(true)
@@ -148,6 +150,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
             query: query.trim() || undefined,
             traits: creatureType !== '__all__' ? [creatureType] : undefined,
             sourceAdventure: sourceFilter,
+            sort: sortOrder,
           },
           50
         )
@@ -158,7 +161,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
     }
     const timer = setTimeout(search, 200)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [query, creatureType, activeTab, sourceFilter])
+  }, [query, creatureType, activeTab, sourceFilter, sortOrder])
 
   // eager-fetch custom creatures and resolve each to a
   // CreatureRow. Cheap in practice (tens of entries at most).
@@ -195,9 +198,20 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
     if (!customContentEnabled) return []
     if (sourceFilter !== null) return []
     const q = query.trim().toLowerCase()
-    if (!q) return customRows.slice(0, 20)
-    return customRows.filter((r) => r.name.toLowerCase().includes(q)).slice(0, 20)
-  }, [customContentEnabled, customRows, query, sourceFilter])
+    const matching = q ? customRows.filter((r) => r.name.toLowerCase().includes(q)) : [...customRows]
+    if (sortOrder !== 'name') {
+      const direction = sortOrder === 'level-asc' ? 1 : -1
+      matching.sort((a, b) => direction * ((a.level ?? 0) - (b.level ?? 0)) || a.name.localeCompare(b.name))
+    }
+    return matching.slice(0, 20)
+  }, [customContentEnabled, customRows, query, sourceFilter, sortOrder])
+
+  const sortedResults = useMemo(() => {
+    const rows = [...customFiltered, ...results]
+    if (sortOrder === 'name') return rows
+    const direction = sortOrder === 'level-asc' ? 1 : -1
+    return rows.sort((a, b) => direction * ((a.level ?? 0) - (b.level ?? 0)) || a.name.localeCompare(b.name))
+  }, [customFiltered, results, sortOrder])
 
   useEffect(() => {
     setSelectedTier('normal')
@@ -256,6 +270,24 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
     [combatants, addCombatant, selectedTier, encounterId]
   )
 
+  const handleAddHazard = useCallback(async (hazard: HazardRow) => {
+    const combatant = createCombatantFromHazard(hazard)
+    if (encounterId) {
+      const sortOrder = useCombatantStore.getState().combatants.length
+      try {
+        await insertEncounterCombatant(
+          encounterId,
+          toEncounterCombatant(combatant, encounterId, sortOrder),
+          sortOrder,
+        )
+      } catch (error) {
+        logErrorWithToast('hazard-add-insert')(error)
+        return
+      }
+    }
+    addCombatant(combatant)
+  }, [addCombatant, encounterId])
+
   return (
     <div className="flex flex-col h-full">
       {/* Tab toggle row */}
@@ -276,7 +308,7 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
       </div>
 
       {/* Hazards tab */}
-      {activeTab === 'hazards' && <HazardSearchPanel />}
+      {activeTab === 'hazards' && <HazardSearchPanel onAdd={handleAddHazard} />}
 
       {/* Characters tab */}
       {activeTab === 'characters' && <CharactersTab encounterId={encounterId} />}
@@ -317,6 +349,16 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as typeof sortOrder)}>
+              <SelectTrigger className="h-7 text-xs" aria-label={t('bestiarySearch.sortLabel')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">{t('bestiarySearch.sortName')}</SelectItem>
+                <SelectItem value="level-asc">{t('bestiarySearch.sortLevelAsc')}</SelectItem>
+                <SelectItem value="level-desc">{t('bestiarySearch.sortLevelDesc')}</SelectItem>
               </SelectContent>
             </Select>
             {/* Tier chips */}
@@ -379,25 +421,13 @@ export function BestiarySearchPanel({ encounterId }: { encounterId?: string }) {
                     : t('bestiarySearch.noCreaturesFound')}
                 </p>
               )}
-              {/* Custom creatures rendered first with a gold
-                  accent + "custom" pill so they stand out. Same pipeline as
-                  bestiary entries. */}
-              {customFiltered.map((row) => (
-                <DraggableBestiaryRow key={`custom-${row.id}`} row={row} tier={selectedTier}>
-                  <BestiaryResultRow
-                    row={row}
-                    tier={selectedTier}
-                    onAdd={() => handleAdd(row)}
-                    isCustom
-                  />
-                </DraggableBestiaryRow>
-              ))}
-              {results.map((row) => (
+              {sortedResults.map((row) => (
                 <DraggableBestiaryRow key={row.id} row={row} tier={selectedTier}>
                   <BestiaryResultRow
                     row={row}
                     tier={selectedTier}
                     onAdd={() => handleAdd(row)}
+                    isCustom={row.id.startsWith('custom-')}
                   />
                 </DraggableBestiaryRow>
               ))}

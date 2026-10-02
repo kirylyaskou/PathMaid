@@ -103,7 +103,8 @@ export function rollDice(
   label?: string,
   context?: { source?: string; combatId?: string; notes?: string[] },
 ): Roll {
-  const parsed = parseFormula(formula)
+  const multiplied = formula.trim().replace(/\s+/g, '').replace(/^\((.*)\)$/, '$1').match(/^(\d+)\*(\d*d\d+)$/i)
+  const parsed = parseFormula(multiplied?.[2] ?? formula)
   const diceEntries: DiceEntry[] = []
 
   for (const { count, sides } of parsed.dice) {
@@ -115,7 +116,7 @@ export function rollDice(
     }
   }
 
-  const total = diceEntries.reduce((sum, d) => sum + d.value, 0) + parsed.modifier
+  const total = (diceEntries.reduce((sum, d) => sum + d.value, 0) + parsed.modifier) * (multiplied ? Number(multiplied[1]) : 1)
 
   return {
     id: crypto.randomUUID(),

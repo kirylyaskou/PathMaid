@@ -2,7 +2,7 @@ import {
   loadCombatStartSnapshot, saveCombatStartSnapshot, saveCombatState,
   saveEncounterCombatants, saveEncounterStagingCombatants, resetEncounterCombat,
 } from '@/shared/api'
-import { useCombatantStore, resetCombatant, toEncounterCombatant } from '@/entities/combatant'
+import { useCombatantStore, resetCombatant, toEncounterCombatant, shouldSkipTurn } from '@/entities/combatant'
 import { clearCombatantManager } from '@/entities/condition'
 import { useBattleFormOverridesStore, useRollOptionsStore, useEffectStore } from '@/entities/spell-effect'
 import { useEncounterStore } from '@/entities/encounter'
@@ -31,7 +31,7 @@ export async function startActiveCombat(): Promise<void> {
   if (!snapshot.activeCombatantId) {
     const sorted = [...snapshot.combatants].sort((a, b) => b.initiative - a.initiative)
     useCombatantStore.getState().reorderInitiative(sorted.map((c) => c.id))
-    tracker.setActiveCombatant(sorted[0].id)
+    tracker.setActiveCombatant(sorted.find((c) => !shouldSkipTurn(c))?.id ?? null)
   }
 }
 
@@ -71,7 +71,9 @@ export async function finishActiveCombat(): Promise<void> {
       await saveCombatState({
         id: current.combatId, name: tab?.name ?? 'Combat', round: 0, turn: 0,
         activeCombatantId: null, isRunning: false, conditions: [],
-        combatants: fresh.combatants.map((c) => ({ ...c, isNPC: c.kind !== 'pc', level: c.level ?? null })),
+        combatants: fresh.combatants.map((c) => ({
+          ...c, isNPC: c.kind === 'npc', isHazard: c.kind === 'hazard', level: c.level ?? null,
+        })),
       })
     }
 

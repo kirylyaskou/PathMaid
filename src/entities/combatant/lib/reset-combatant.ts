@@ -9,5 +9,9 @@ export function resetCombatant(combatant: Combatant): Combatant {
     delete reset.shieldRaised
     delete reset.mapIndex
   }
+  if (reset.kind === 'hazard') {
+    reset.hazardDisabled = false
+    reset.hazardCheckProgress = 0
+  }
   return reset
 }

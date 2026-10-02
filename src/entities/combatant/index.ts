@@ -1,5 +1,6 @@
 export { useCombatantStore } from './model/store'
 export { createCombatantFromCharacter, createCharacterGroupCombatants, toEncounterCombatant } from './lib/character'
+export { shouldSkipTurn } from './lib/turn-state'
 export { resetCombatant } from './lib/reset-combatant'
 export type { CombatantState } from './model/store'
 export type { Combatant, NpcCombatant, PcCombatant, HazardCombatant, CombatantPatch, StagingCombatant } from './model/types'

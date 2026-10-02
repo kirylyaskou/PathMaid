@@ -57,6 +57,7 @@ export function useCombatantHp(combatantId: string) {
     if (remaining > 0) updateHp(combatantId, -remaining)
     const newHp = Math.max(0, hpBefore - remaining)
     if (newHp === 0 && hpBefore > 0) {
+      if (current.kind === 'hazard') return
       // Mortal toggle: skip dying flow, set permaDead instantly.
       if (isNpc(current) && current.mortal === true) {
         useCombatantStore.getState().updateCombatant(combatantId, { permaDead: true })

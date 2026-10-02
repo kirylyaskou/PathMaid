@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Skull } from 'lucide-react'
+import { User, Skull, AlertTriangle } from 'lucide-react'
 import { Separator } from '@/shared/ui/separator'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { useShallow } from 'zustand/react/shallow'
 import { fetchCreatureStatBlockData } from '@/entities/creature'
@@ -21,6 +23,8 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
     useShallow((s) => s.combatants.find((c) => c.id === combatantId))
   )
   const [creature, setCreature] = useState<CreatureStatBlockData | null>(null)
+  const [hazardDamage, setHazardDamage] = useState(0)
+  const updateHp = useCombatantStore((s) => s.updateHp)
 
   useEffect(() => {
     if (!combatant || !combatant.creatureRef || combatant.kind !== 'npc') {
@@ -52,6 +56,31 @@ export function CombatantDetail({ combatantId }: CombatantDetailProps) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         <p className="text-sm">{t('combatantDetail.notFound')}</p>
+      </div>
+    )
+  }
+
+  if (combatant.kind === 'hazard') {
+    return (
+      <div className="h-full overflow-y-auto p-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="h-6 w-6 text-amber-500" />
+          <div>
+            <h2 className="text-lg font-semibold">{combatant.displayName}</h2>
+            <p className="text-xs text-muted-foreground">{t('combatantDetail.initiativeLabel')} {combatant.initiative}</p>
+          </div>
+          {combatant.hazardDisabled && <span className="ml-auto text-amber-400 font-bold">DISABLED!</span>}
+        </div>
+        {combatant.maxHp > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm">HP {combatant.hp}/{combatant.maxHp}</p>
+            <div className="flex items-center gap-2">
+              <Input className="w-20" type="number" min={0} value={hazardDamage} onChange={(e) => setHazardDamage(Math.max(0, Number(e.target.value) || 0))} aria-label={t('pages.hazards.finalDamage')} />
+              <Button size="sm" disabled={hazardDamage <= 0} onClick={() => { updateHp(combatant.id, -hazardDamage); setHazardDamage(0) }}>{t('pages.hazards.applyDamage')}</Button>
+              <Button variant="outline" size="sm" disabled={hazardDamage <= 0} onClick={() => { updateHp(combatant.id, hazardDamage); setHazardDamage(0) }}>+HP</Button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }

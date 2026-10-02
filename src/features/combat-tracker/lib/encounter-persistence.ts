@@ -1,4 +1,4 @@
-import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingCombatants, recordError } from '@/shared/api'
+import { saveEncounterCombatState, loadEncounterState, loadEncounterStagingCombatants, getHazardById, recordError } from '@/shared/api'
 import type { EncounterConditionRow } from '@/shared/api'
 import { useCombatantStore, kindFromLegacy, type Combatant, type StagingCombatant } from '@/entities/combatant'
 import { useConditionStore, hydrateManager, clearAllManagers } from '@/entities/condition'
@@ -34,6 +34,8 @@ function buildEncounterSavePayload() {
       hp: c.hp,
       tempHp: c.tempHp,
       initiative: c.initiative,
+      hazardDisabled: c.kind === 'hazard' && c.hazardDisabled === true,
+      hazardCheckProgress: c.kind === 'hazard' ? c.hazardCheckProgress ?? 0 : 0,
     })),
     conditions: conditions
       .filter((c) => dbCombatantIds.has(c.combatantId))
@@ -148,13 +150,17 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
     const needsInitiative = !snapshot.isRunning && snapshot.round === 0
     const stagingRowsEarly = await loadEncounterStagingCombatants(encounterId)
     const uniqueRefs = [...new Set([
-      ...snapshot.combatants.filter((c) => c.isNPC && c.creatureRef).map((c) => c.creatureRef),
+      ...snapshot.combatants.filter((c) => c.isNPC && !c.isHazard && c.creatureRef).map((c) => c.creatureRef),
       ...stagingRowsEarly.filter((r) => r.creatureRef).map((r) => r.creatureRef),
     ])]
     const creatureData = new Map<string, Awaited<ReturnType<typeof fetchCreatureStatBlockData>>>()
     await Promise.all(uniqueRefs.map(async (ref) => {
       const stat = await fetchCreatureStatBlockData(ref)
       if (stat) creatureData.set(ref, stat)
+    }))
+    const hazardData = new Map<string, Awaited<ReturnType<typeof getHazardById>>>()
+    await Promise.all(snapshot.combatants.filter((c) => c.isHazard && c.creatureRef).map(async (c) => {
+      hazardData.set(c.creatureRef, await getHazardById(c.creatureRef))
     }))
 
     // Build combatants with initiative rolls and IWR data
@@ -164,6 +170,8 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
       let initiative = c.initiative
       if (needsInitiative && (c.isNPC || c.isHazard) && stat) {
         initiative = rollInitiative(stat.perception ?? 0)
+      } else if (needsInitiative && c.isHazard) {
+        initiative = rollInitiative(hazardData.get(c.creatureRef)?.stealth_dc ?? 0)
       }
 
       const immunities = stat?.immunities.map((i) => (typeof i === 'string' ? i : i.type)) ?? []
@@ -181,8 +189,9 @@ export async function loadEncounterIntoCombat(encounterId: string): Promise<bool
         maxHp: c.maxHp,
         tempHp: c.tempHp,
         side: c.side,
+        ...(kind === 'hazard' ? { hazardDisabled: c.hazardDisabled ?? false, hazardCheckProgress: c.hazardCheckProgress ?? 0, initiativeBonus: hazardData.get(c.creatureRef)?.stealth_dc ?? 0 } : {}),
         ...(kind === 'npc' ? { mortal: true } : {}),
-        ...(stat?.level != null ? { level: stat.level } : {}),
+        ...((stat?.level ?? c.creatureLevel) != null ? { level: stat?.level ?? c.creatureLevel } : {}),
         ...(stat?.fort != null ? { fort: stat.fort } : {}),
         ...(c.weakEliteTier && c.weakEliteTier !== 'normal' ? { weakEliteTier: c.weakEliteTier } : {}),
         ...(immunities.length > 0 ? { iwrImmunities: immunities } : {}),

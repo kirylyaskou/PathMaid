@@ -243,6 +243,7 @@ export const useEncounterTabsStore = create<EncounterTabsState>()(
               tempHp: 0,
               kind,
               side: ec.side,
+              ...(kind === 'hazard' ? { hazardDisabled: false, hazardCheckProgress: 0 } : {}),
               ...(kind === 'npc' ? { mortal: true } : {}),
             }
           })

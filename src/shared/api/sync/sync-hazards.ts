@@ -5,7 +5,36 @@ import type { RawEntity } from './types'
 interface RawHazardAction {
   name: string
   actionType: string
+  trigger: string | null
   description: string | null
+  bonus?: number
+  damage?: Array<{ formula: string; type: string; persistent?: boolean }>
+}
+
+export function extractHazardActions(rawItems: unknown[]): RawHazardAction[] {
+  const actions: RawHazardAction[] = []
+  for (const item of rawItems) {
+    const it = item as Record<string, unknown>
+    if (it.type !== 'action' && it.type !== 'melee') continue
+    const itSys = (it.system as Record<string, unknown>) ?? {}
+    const actionTypeSys = (itSys.actionType as Record<string, unknown>) ?? {}
+    const damageRolls = itSys.damageRolls as Record<string, { damage?: string; damageType?: string; category?: string }> | undefined
+    actions.push({
+      name: it.name as string,
+      actionType: it.type === 'melee' ? 'melee' : (actionTypeSys.value as string) ?? 'passive',
+      trigger: typeof itSys.trigger === 'string' ? itSys.trigger : null,
+      description: (itSys.description as Record<string, unknown>)?.value as string ?? null,
+      ...(it.type === 'melee' && {
+        bonus: (itSys.bonus as { value?: number } | undefined)?.value,
+        damage: Object.values(damageRolls ?? {}).map((roll) => ({
+          formula: roll.damage ?? '',
+          type: roll.damageType ?? '',
+          persistent: roll.category === 'persistent' || roll.damageType === 'bleed',
+        })).filter((roll) => roll.formula),
+      }),
+    })
+  }
+  return actions
 }
 
 interface RawHazard {
@@ -23,6 +52,7 @@ interface RawHazard {
   description: string | null
   disable_details: string | null
   reset_details: string | null
+  routine_details: string | null
   traits: string | null
   source_book: string | null
   source_pack: string | null
@@ -47,23 +77,12 @@ export async function extractAndInsertHazards(entities: RawEntity[]): Promise<vo
 
       // Parse hazard actions from items array
       const rawItems: unknown[] = raw.items ?? []
-      const actions: RawHazardAction[] = []
-      for (const item of rawItems) {
-        const it = item as Record<string, unknown>
-        if (it.type !== 'action') continue
-        const itSys = (it.system as Record<string, unknown>) ?? {}
-        const actionTypeSys = (itSys.actionType as Record<string, unknown>) ?? {}
-        actions.push({
-          name: it.name as string,
-          actionType: (actionTypeSys.value as string) ?? 'passive',
-          description: (itSys.description as Record<string, unknown>)?.value as string ?? null,
-        })
-      }
+      const actions = extractHazardActions(rawItems)
 
       const stealthRaw = attrs.stealth as Record<string, unknown> | undefined
       const hpRaw = attrs.hp as Record<string, unknown> | undefined
       const traits = sys.traits?.value
-      const hasHealth = attrs.hasHealth ? 1 : 0
+      const hasHealth = attrs.hasHealth === false ? 0 : typeof hpRaw?.max === 'number' && hpRaw.max > 0 ? 1 : 0
 
       hazards.push({
         id: entity.id,
@@ -77,9 +96,10 @@ export async function extractAndInsertHazards(entities: RawEntity[]): Promise<vo
         hardness: typeof attrs.hardness === 'number' ? attrs.hardness : null,
         hp: typeof hpRaw?.max === 'number' ? hpRaw.max : null,
         has_health: hasHealth,
-        description: details.description?.value ?? null,
+        description: typeof details.description === 'string' ? details.description : details.description?.value ?? null,
         disable_details: typeof details.disable === 'string' ? details.disable : null,
         reset_details: typeof details.reset === 'string' && details.reset ? details.reset : null,
+        routine_details: typeof details.routine === 'string' && details.routine ? details.routine : null,
         traits: Array.isArray(traits) && traits.length ? JSON.stringify(traits) : null,
         source_book: details.publication?.title || null,
         source_pack: entity.source_pack,
@@ -93,16 +113,16 @@ export async function extractAndInsertHazards(entities: RawEntity[]): Promise<vo
   for (let i = 0; i < hazards.length; i += BATCH_SIZE) {
     const batch = hazards.slice(i, i + BATCH_SIZE)
     const placeholders = batch
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
     const values = batch.flatMap((h) => [
       h.id, h.name, h.level, h.is_complex, h.hazard_type,
       h.stealth_dc, h.stealth_details, h.ac, h.hardness, h.hp, h.has_health,
-      h.description, h.disable_details, h.reset_details,
+      h.description, h.disable_details, h.reset_details, h.routine_details,
       h.traits, h.source_book, h.source_pack, h.actions_json,
     ])
     await db.execute(
-      `INSERT OR REPLACE INTO hazards (id, name, level, is_complex, hazard_type, stealth_dc, stealth_details, ac, hardness, hp, has_health, description, disable_details, reset_details, traits, source_book, source_pack, actions_json) VALUES ${placeholders}`,
+      `INSERT OR REPLACE INTO hazards (id, name, level, is_complex, hazard_type, stealth_dc, stealth_details, ac, hardness, hp, has_health, description, disable_details, reset_details, routine_details, traits, source_book, source_pack, actions_json) VALUES ${placeholders}`,
       values
     )
   }

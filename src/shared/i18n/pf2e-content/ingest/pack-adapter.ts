@@ -30,6 +30,7 @@ export interface BabeleActorEntry {
   descriptionHazard?: string
   disable?: string
   reset?: string
+  routine?: string
   Hdescription?: string
   skills?: Record<string, { details?: string }>
   items?: Array<{
@@ -258,6 +259,7 @@ export function adaptBabeleActorEntry(
     ...(entry.descriptionHazard !== undefined && { descriptionHazard: entry.descriptionHazard }),
     ...(entry.disable !== undefined && { disableDetails: entry.disable }),
     ...(entry.reset !== undefined && { resetDetails: entry.reset }),
+    ...(entry.routine !== undefined && { routineDetails: entry.routine }),
     ...(entry.Hdescription !== undefined && { hDescription: entry.Hdescription }),
     ...(entry.skills !== undefined && { skillsDetails: entry.skills }),
     items,

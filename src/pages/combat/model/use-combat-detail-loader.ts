@@ -132,7 +132,8 @@ export function useCombatDetailLoader() {
       return
     }
 
-    // Hazard branch — leave right panel sticky (no update)
+    setLastNpcStatBlock(null)
+    setSelectedPcBuild(null)
   }, [applyShieldBonus])
 
   return {

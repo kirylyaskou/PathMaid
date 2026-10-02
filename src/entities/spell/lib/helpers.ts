@@ -7,13 +7,18 @@ export const TRADITION_COLORS: Record<string, string> = {
   primal:  'bg-green-500/20 text-green-300 border-green-500/40',
 }
 
-export function parseDamageDisplay(damageJson: string | null): string {
+export function resolveSpellDamageFormula(formula: string, rank: number): string {
+  return formula.replace(/@item\.rank/g, String(rank))
+}
+
+export function parseDamageDisplay(damageJson: string | null, rank?: number): string {
   if (!damageJson) return '—'
   try {
     const dmg = JSON.parse(damageJson) as Record<string, { formula?: string; damage?: string; damageType?: string; type?: string }>
     const first = Object.values(dmg)[0]
     if (!first) return '—'
-    return `${first.formula ?? first.damage ?? '?'} ${first.damageType ?? first.type ?? ''}`.trim() || '—'
+    const formula = first.formula ?? first.damage ?? '?'
+    return `${rank == null ? formula : resolveSpellDamageFormula(formula, rank)} ${first.damageType ?? first.type ?? ''}`.trim() || '—'
   } catch {
     return '—'
   }

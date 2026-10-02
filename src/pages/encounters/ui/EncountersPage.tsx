@@ -96,7 +96,7 @@ export function EncountersPage() {
     // the XP budget. Use getAdjustedLevel from the engine (also applies the
     // display clamp for level -1/0/1) rather than the ad-hoc ternary.
     const creatureLevels = selectedEncounter.combatants
-      .filter((c) => !c.isHazard)
+      .filter((c) => c.isNPC && !c.isHazard)
       .map((c) => ({
         level: getAdjustedLevel(c.weakEliteTier, c.creatureLevel),
         side: c.side,

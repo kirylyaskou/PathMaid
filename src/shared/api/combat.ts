@@ -26,6 +26,9 @@ export interface CombatCombatantRow {
   maxHp: number
   tempHp: number
   isNPC: boolean
+  isHazard?: boolean
+  hazardDisabled?: boolean
+  hazardCheckProgress?: number
   level: number | null
 }
 
@@ -60,9 +63,10 @@ export async function saveCombatState(state: CombatSnapshot): Promise<void> {
   for (let i = 0; i < state.combatants.length; i++) {
     const c = state.combatants[i]
     await db.execute(
-      `INSERT INTO combat_combatants (id, combat_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp, is_npc, sort_order, level)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [c.id, state.id, c.creatureRef, c.displayName, c.initiative, c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, i, c.level ?? null]
+      `INSERT INTO combat_combatants (id, combat_id, creature_ref, display_name, initiative, hp, max_hp, temp_hp, is_npc, sort_order, level, is_hazard, hazard_disabled, hazard_check_progress)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [c.id, state.id, c.creatureRef, c.displayName, c.initiative, c.hp, c.maxHp, c.tempHp, c.isNPC ? 1 : 0, i, c.level ?? null,
+       c.isHazard ? 1 : 0, c.hazardDisabled ? 1 : 0, c.hazardCheckProgress ?? 0]
     )
   }
   for (const cond of state.conditions) {
@@ -86,7 +90,7 @@ export async function loadCombatState(combatId: string): Promise<CombatSnapshot 
   const rows = await db.select<Array<{
     id: string; creature_ref: string | null; display_name: string;
     initiative: number; hp: number; max_hp: number; temp_hp: number;
-    is_npc: number; sort_order: number; level: number | null
+    is_npc: number; sort_order: number; level: number | null; is_hazard: number; hazard_disabled: number; hazard_check_progress: number
   }>>(
     'SELECT * FROM combat_combatants WHERE combat_id = ? ORDER BY sort_order',
     [combatId]
@@ -100,6 +104,9 @@ export async function loadCombatState(combatId: string): Promise<CombatSnapshot 
     maxHp: r.max_hp,
     tempHp: r.temp_hp,
     isNPC: r.is_npc === 1,
+    isHazard: r.is_hazard === 1,
+    hazardDisabled: r.hazard_disabled === 1,
+    hazardCheckProgress: r.hazard_check_progress,
     level: r.level,
   }))
 

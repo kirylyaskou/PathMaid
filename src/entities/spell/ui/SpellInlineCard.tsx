@@ -55,7 +55,7 @@ export function SpellInlineCard({ spellId, spellName, compact }: SpellInlineCard
 
   const traditions = parseJsonArray(spell.traditions)
   const traits = parseJsonArray(spell.traits)
-  const damageDisplay = parseDamageDisplay(spell.damage)
+  const damageDisplay = parseDamageDisplay(spell.damage, spell.rank)
   const areaDisplay = parseAreaDisplay(spell.area)
 
   return (

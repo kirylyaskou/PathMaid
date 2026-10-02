@@ -1,4 +1,4 @@
-import { isNpc, useCombatantStore, type Combatant } from '@/entities/combatant'
+import { shouldSkipTurn, useCombatantStore, type Combatant } from '@/entities/combatant'
 import { useConditionStore, endTurnConditions, clearCombatantManager, hydrateManager, type ActiveCondition } from '@/entities/condition'
 import { useEffectStore } from '@/entities/spell-effect'
 import type { ActiveEffect } from '@/entities/spell-effect'
@@ -17,10 +17,6 @@ interface TurnSnapshot {
 }
 
 let lastSnapshot: TurnSnapshot | null = null
-
-function shouldSkipTurn(combatant: Combatant): boolean {
-  return isNpc(combatant) && combatant.mortal === true && combatant.hp <= 0
-}
 
 function getNextTurn(
   combatants: Combatant[],

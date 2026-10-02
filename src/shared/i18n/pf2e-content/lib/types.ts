@@ -26,6 +26,7 @@ export interface MonsterStructuredLoc {
   descriptionHazard?: string
   disableDetails?: string
   resetDetails?: string
+  routineDetails?: string
   hDescription?: string
   skillsDetails?: Record<string, { details?: string }>
   items: Array<{

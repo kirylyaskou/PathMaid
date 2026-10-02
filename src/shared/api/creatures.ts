@@ -86,6 +86,7 @@ export async function searchCreatures(
 
 export interface CreatureFilters {
   query?: string
+  sort?: 'name' | 'level-asc' | 'level-desc'
   levelMin?: number | null
   levelMax?: number | null
   rarity?: string | null
@@ -154,8 +155,13 @@ export async function searchCreaturesFiltered(
 
   params.push(limit, offset)
   const where = conditions.join(' AND ')
+  const order = filters.sort === 'level-asc'
+    ? 'e.level ASC, e.name ASC'
+    : filters.sort === 'level-desc'
+      ? 'e.level DESC, e.name ASC'
+      : 'e.name ASC'
   return db.select<CreatureRow[]>(
-    `SELECT e.* FROM entities e WHERE ${where} ORDER BY e.name LIMIT ? OFFSET ?`,
+    `SELECT e.* FROM entities e WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
     params
   )
 }

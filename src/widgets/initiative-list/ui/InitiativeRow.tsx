@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, X, User, Skull, Info, Dices } from 'lucide-react'
+import { GripVertical, X, User, Skull, Info, Dices, AlertTriangle } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useShallow } from 'zustand/react/shallow'
 import { useCombatantStore, isNpc } from '@/entities/combatant'
 import { fetchCreatureStatBlockData } from '@/entities/creature'
+import { getHazardById } from '@/shared/api'
+import { logError } from '@/shared/lib/error'
 import { applyCondition } from '@/entities/condition'
 import { useHotkeyStore } from '@/shared/model'
 import type { ConditionSlug } from '@engine'
@@ -57,6 +59,18 @@ export function InitiativeRow({
   useEffect(() => {
     if (!popoverOpen) return
     setManualValue(String(combatant.initiative))
+    if (combatant.kind === 'hazard') {
+      setSelectedSkill('Stealth')
+      if (combatant.initiativeBonus != null) {
+        setSkills([{ name: 'Stealth', modifier: combatant.initiativeBonus }])
+      } else {
+        setSkills([])
+        getHazardById(combatant.creatureRef).then((hazard) => {
+          setSkills([{ name: 'Stealth', modifier: hazard?.stealth_dc ?? 0 }])
+        }).catch(logError('hazard-initiative'))
+      }
+      return
+    }
     const ref = combatant.creatureRef
     if (!ref) { setSkills([]); return }
     fetchCreatureStatBlockData(ref).then((creature) => {
@@ -71,7 +85,7 @@ export function InitiativeRow({
       // Keep selected skill if still present, else reset to Perception
       setSelectedSkill((prev) => opts.some((o) => o.name === prev) ? prev : 'Perception')
     })
-  }, [popoverOpen, combatant.creatureRef, combatant.initiative])
+  }, [popoverOpen, combatant.creatureRef, combatant.initiative, combatant.kind, combatant.initiativeBonus])
 
   function handleManualSet() {
     const val = parseInt(manualValue, 10)
@@ -119,7 +133,7 @@ export function InitiativeRow({
         isSelected && !isActive && 'bg-accent/50 border-accent/30',
         !isActive && !isSelected && 'hover:bg-accent/30',
         isDragging && 'opacity-50',
-        combatant.hp === 0 && 'opacity-50'
+        ((combatant.maxHp > 0 && combatant.hp === 0) || (combatant.kind === 'hazard' && combatant.hazardDisabled)) && 'opacity-50'
       )}
       onClick={handleRowClick}
     >
@@ -198,7 +212,9 @@ export function InitiativeRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          {combatant.kind !== 'pc' ? (
+          {combatant.kind === 'hazard' ? (
+            <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+          ) : combatant.kind !== 'pc' ? (
             <Skull className="w-3 h-3 text-destructive/60 shrink-0" />
           ) : (
             <User className="w-3 h-3 text-primary/60 shrink-0" />
@@ -222,8 +238,9 @@ export function InitiativeRow({
             </span>
           )}
           <span className="text-sm font-medium truncate">{combatant.displayName}</span>
+          {combatant.kind === 'hazard' && combatant.hazardDisabled && <span className="text-[10px] font-bold text-amber-400">DISABLED!</span>}
         </div>
-        <div className="mt-0.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+        {combatant.maxHp > 0 && <div className="mt-0.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
           <div
             className={cn(
               'h-full rounded-full transition-all',
@@ -233,7 +250,7 @@ export function InitiativeRow({
             )}
             style={{ width: `${hpPercent}%` }}
           />
-        </div>
+        </div>}
         {conditions.length > 0 && (
           <div className="flex flex-wrap gap-0.5 mt-0.5">
             {conditions.slice(0, 4).map((c) => (
@@ -254,10 +271,10 @@ export function InitiativeRow({
       </div>
 
       <span className="text-xs font-mono text-muted-foreground shrink-0">
-        {combatant.hp}/{combatant.maxHp}
+        {combatant.maxHp > 0 ? `${combatant.hp}/${combatant.maxHp}` : ''}
       </span>
 
-      {combatant.creatureRef && onCreatureClick && (
+      {combatant.kind !== 'hazard' && combatant.creatureRef && onCreatureClick && (
         <button
           type="button"
           className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-primary cursor-pointer transition-colors shrink-0"

@@ -10,6 +10,7 @@ import { BestiarySearchPanel } from '@/widgets/bestiary-search'
 import { useRoll } from '@/widgets/roll-history'
 import {
   CombatantDetail,
+  HazardCombatCard,
   PersistentDamageDialog,
   DyingCascadeDialog,
   SickenedFortitudeSaveDialog,
@@ -21,7 +22,8 @@ import {
   setupEncounterAutoSave, teardownEncounterAutoSave,
 } from '@/features/combat-tracker'
 import type { EncounterTab } from '@/features/combat-tracker'
-import { useCombatantStore } from '@/entities/combatant'
+import { useCombatantStore, toEncounterCombatant } from '@/entities/combatant'
+import { createCombatantFromHazard } from '@/entities/hazard'
 import type { NpcCombatant, StagingCombatant } from '@/entities/combatant'
 import { useEncounterStore } from '@/entities/encounter'
 import { CreatureStatBlock, toCreature, extractIwr } from '@/entities/creature'
@@ -520,45 +522,21 @@ export function CombatPage() {
 
     // Route 0.5: Hazard add from HazardSearchPanel drag
     if (dragData?.type === 'hazard-add' && dragData.hazardRow) {
-      const hr = dragData.hazardRow
-      const hazardId = crypto.randomUUID()
+      const combatant = createCombatantFromHazard(dragData.hazardRow)
       if (combatId && isEncounterBacked) {
         const sortOrder = useCombatantStore.getState().combatants.length
         try {
-          await insertEncounterCombatant(combatId, {
-            id: hazardId,
-            encounterId: combatId,
-            creatureRef: `hazard-${hr.id}`,
-            displayName: hr.name,
-            initiative: 0,
-            hp: hr.hp ?? 0,
-            maxHp: hr.hp ?? 0,
-            tempHp: 0,
-            isNPC: false,
-            weakEliteTier: 'normal',
-            creatureLevel: 0,
+          await insertEncounterCombatant(
+            combatId,
+            toEncounterCombatant(combatant, combatId, sortOrder),
             sortOrder,
-            isHazard: true,
-            hazardRef: hr.id,
-            side: 'enemy',
-          }, sortOrder)
+          )
         } catch (err) {
           logErrorWithToast('hazard-drag-insert')(err)
           return
         }
       }
-      useCombatantStore.getState().addCombatant({
-        id: hazardId,
-        creatureRef: `hazard-${hr.id}`,
-        displayName: hr.name,
-        initiative: 0,
-        hp: hr.hp ?? 0,
-        maxHp: hr.hp ?? 0,
-        tempHp: 0,
-        kind: 'hazard',
-        side: 'enemy',
-        initiativeBonus: hr.stealth_dc ?? 0,
-      })
+      useCombatantStore.getState().addCombatant(combatant)
       return
     }
 
@@ -755,7 +733,8 @@ export function CombatPage() {
             <ResizablePanel defaultSize={40} minSize={28} className="min-w-0 overflow-hidden">
               <div className="h-full overflow-y-auto">
                 {/* PC selected */}
-                {selectedPcBuild && selectedCombatant && (
+                {selectedCombatant?.kind === 'hazard' && <HazardCombatCard key={selectedCombatant.id} combatantId={selectedCombatant.id} />}
+                {selectedPcBuild && selectedCombatant?.kind === 'pc' && (
                   <PCCombatCard build={selectedPcBuild} combatant={selectedCombatant} encounterId={activeEncounterId ?? undefined} />
                 )}
 
@@ -763,7 +742,7 @@ export function CombatPage() {
                     stat values per Monster Core pg. 6-7. HP is already baked
                     in at add-time via getHpAdjustment so applyTierToStatBlock
                     deliberately skips it. */}
-                {!selectedPcBuild && displayedNpcStatBlock && (
+                {selectedCombatant?.kind === 'npc' && displayedNpcStatBlock && (
                   <CreatureStatBlock
                     creature={displayedNpcStatBlock}
                     className="rounded-none border-x-0 border-t-0"
@@ -782,14 +761,14 @@ export function CombatPage() {
                 )}
 
                 {/* Loading */}
-                {(statBlockLoading || pcBuildLoading) && !lastNpcStatBlock && !selectedPcBuild && (
+                {selectedCombatant?.kind !== 'hazard' && (statBlockLoading || pcBuildLoading) && !lastNpcStatBlock && !selectedPcBuild && (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
                   </div>
                 )}
 
                 {/* Empty */}
-                {!selectedPcBuild && !lastNpcStatBlock && !statBlockLoading && !pcBuildLoading && (
+                {selectedCombatant?.kind !== 'hazard' && !selectedPcBuild && !lastNpcStatBlock && !statBlockLoading && !pcBuildLoading && (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
                     <Shield className="w-8 h-8 opacity-30" />
                     <p className="text-sm">{t('pages.combat.selectCreatureStatBlock')}</p>

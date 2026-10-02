@@ -24,7 +24,9 @@ function buildSnapshot(): CombatSnapshot | null {
     turn: tracker.turn,
     activeCombatantId: tracker.activeCombatantId,
     isRunning: tracker.isRunning,
-    combatants: combatants.map((c) => ({ ...c, level: c.level ?? null, isNPC: c.kind !== 'pc' })),
+    combatants: combatants.map((c) => ({
+      ...c, level: c.level ?? null, isNPC: c.kind === 'npc', isHazard: c.kind === 'hazard',
+    })),
     conditions,
   }
 }
@@ -82,7 +84,7 @@ export async function loadActiveCombat(): Promise<boolean> {
 
     useCombatantStore.getState().setCombatants(
       snapshot.combatants.map((c) => {
-        const kind = kindFromLegacy(c.isNPC, false)
+        const kind = kindFromLegacy(c.isNPC, c.isHazard ?? false)
         return {
           ...c,
           level: c.level ?? undefined,

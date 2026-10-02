@@ -1,4 +1,4 @@
-import { AlertTriangle, Skull, X } from 'lucide-react'
+import { AlertTriangle, Skull, X, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/shared/ui/button'
 import { LevelBadge } from '@/shared/ui/level-badge'
@@ -28,6 +28,7 @@ export function EncounterRosterItem({
   const c = combatant
   const adjustedLevel = getAdjustedLevel(c.weakEliteTier, c.creatureLevel)
   const isHazard = c.isHazard === true
+  const isPc = !c.isNPC && !isHazard
   const side = c.side ?? 'enemy'
   const xpResult = isHazard
     ? getHazardXp(c.creatureLevel, partyLevel, c.hazardType ?? 'simple')
@@ -40,10 +41,11 @@ export function EncounterRosterItem({
         isHazard
           ? 'border-l-2 border-amber-600/60 bg-amber-950/30 hover:bg-amber-950/50'
           : 'bg-secondary/30 hover:bg-secondary/50',
-        side === 'ally' && 'border-l-2 border-emerald-600/60 bg-emerald-950/20 hover:bg-emerald-950/30',
+        side === 'ally' && !isPc && 'border-l-2 border-emerald-600/60 bg-emerald-950/20 hover:bg-emerald-950/30',
       )}
     >
       {isHazard && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+      {isPc && <User className="w-3.5 h-3.5 text-primary shrink-0" />}
       <LevelBadge level={adjustedLevel} size="sm" />
       {!isHazard && c.weakEliteTier !== 'normal' && (
         <span
@@ -72,7 +74,9 @@ export function EncounterRosterItem({
           {c.displayName}
         </button>
       )}
-      {xpResult.xp != null ? (
+      {isPc ? (
+        <span className="text-xs font-semibold text-primary">PC</span>
+      ) : xpResult.xp != null ? (
         <span className="text-xs font-mono text-muted-foreground">
           {side === 'ally'
             ? t('encounterBuilder.allyBudgetValue', { xp: xpResult.xp })
@@ -84,7 +88,7 @@ export function EncounterRosterItem({
           <span className="text-xs font-mono">???</span>
         </span>
       )}
-      <div className="flex shrink-0 rounded border border-border/60 bg-background/50 p-0.5">
+      {!isPc && <div className="flex shrink-0 rounded border border-border/60 bg-background/50 p-0.5">
         <button
           type="button"
           className={cn(
@@ -105,7 +109,7 @@ export function EncounterRosterItem({
         >
           {t('encounterBuilder.sideAlly')}
         </button>
-      </div>
+      </div>}
       <Button
         variant="ghost"
         size="icon"
