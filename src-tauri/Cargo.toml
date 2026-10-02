@@ -1,6 +1,6 @@
 [package]
 name = "pathmaid"
-version = "3.2.3"
+version = "3.2.4"
 description = "Pathfinder 2e DM Assistant"
 authors = ["you"]
 edition = "2021"
